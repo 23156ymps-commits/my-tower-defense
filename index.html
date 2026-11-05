@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元素合成塔防 - 原型測試</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <h1>元素合成塔防</h1>
+
+    <!-- 頂部 HUD 面板 -->
+    <div id="hud-container">
+        <div class="hud-item">💰 金幣：<span id="gold-display">0</span></div>
+    </div>
+
+    <!-- 打靶木樁展示區 -->
+    <div id="target-section">
+        <div id="damage-floating-container"></div>
+        <div id="dummy-card">
+            <div id="dummy-icon">🌿</div>
+            <div id="dummy-info">
+                <div id="dummy-name">蔓藤巨魔</div>
+                <div id="dummy-weakness-tag">弱點：🔥 火 (200%)</div>
+                <div id="hp-bar-bg">
+                    <div id="hp-bar-fill"></div>
+                    <span id="hp-text">200 / 200</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 木樁切換按鈕 -->
+        <div id="dummy-switcher">
+            <button class="dummy-btn active" data-type="wood">🌿 蔓藤 (弱火)</button>
+            <button class="dummy-btn" data-type="lava">🌋 熔岩 (弱冰)</button>
+            <button class="dummy-btn" data-type="air">💧 機械 (弱雷)</button>
+        </div>
+    </div>
+
+    <!-- 3x3 棋盤容器 -->
+    <div id="grid-board"></div>
+
+    <!-- 屬性獨立召喚控制區 -->
+    <div id="element-spawner-container"></div>
+
+    <!-- 工具按鈕區 -->
+    <div class="debug-controls">
+        <button id="delete-tower-btn" class="delete-tower-btn">🗑️ 確定清除</button>
+        <button id="add-gold-btn" class="debug-btn">+500 💰</button>
+        <button id="clear-gold-btn" class="debug-btn-danger">清空 💰</button>
+    </div>
+
+    <!-- 狀態提示列 -->
+    <p id="msg-text">點選塔後按「確定清除」可拔除該塔；買得越多越貴，善用剋制賺錢！</p>
+
+    <script src="game.js"></script>
+</body>
+
+</html>
