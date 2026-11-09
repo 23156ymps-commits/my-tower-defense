@@ -13,11 +13,12 @@
 
     <!-- 頂部 HUD 面板 -->
     <div id="hud-container">
+        <div class="hud-item">❤️ 基地血量：<span id="base-hp-display">20</span></div>
         <div class="hud-item">💰 金幣：<span id="gold-display">0</span></div>
     </div>
 
-    <!-- 打靶木樁展示區 -->
-    <div id="target-section">
+    <!-- 打靶木樁展示區（已功成身退，予以隱藏） -->
+    <div id="target-section" style="display: none;">
         <div id="damage-floating-container"></div>
         <div id="dummy-card">
             <div id="dummy-icon">🌿</div>
@@ -30,8 +31,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- 木樁切換按鈕 -->
         <div id="dummy-switcher">
             <button class="dummy-btn active" data-type="wood">🌿 蔓藤 (弱火)</button>
             <button class="dummy-btn" data-type="lava">🌋 熔岩 (弱冰)</button>
@@ -39,8 +38,18 @@
         </div>
     </div>
 
-    <!-- 3x3 棋盤容器 -->
-    <div id="grid-board"></div>
+    <!-- 木樁切換按鈕 -->
+    <div id="dummy-switcher">
+        <button class="dummy-btn active" data-type="wood">🌿 蔓藤 (弱火)</button>
+        <button class="dummy-btn" data-type="lava">🌋 熔岩 (弱冰)</button>
+        <button class="dummy-btn" data-type="air">💧 機械 (弱雷)</button>
+    </div>
+    </div>
+
+    <!-- 15x10 棋盤容器（包含怪物渲染層） -->
+    <div id="grid-board" style="position: relative;">
+        <div id="monster-layer"></div>
+    </div>
 
     <!-- 屬性獨立召喚控制區 -->
     <div id="element-spawner-container"></div>
@@ -53,7 +62,7 @@
     </div>
 
     <!-- 狀態提示列 -->
-    <p id="msg-text">點選塔後按「確定清除」可拔除該塔；買得越多越貴，善用剋制賺錢！</p>
+    <p id="msg-text">點選塔後按「確定清除」可拔除該塔；怪物會沿著深色跑道前進！</p>
 
     <script src="game.js"></script>
 </body>

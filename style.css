@@ -1,4 +1,13 @@
+/* 全域鎖死滾動，禁止滾動動畫與視窗晃動 */
+html,
 body {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    scroll-behavior: auto !important;
+    user-select: none;
     font-family: Arial, sans-serif;
     background-color: #1a1a26;
     color: #fff;
@@ -6,149 +15,91 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
-    margin: 0;
-    user-select: none;
-    padding: 10px 0;
-    box-sizing: border-box;
+}
+
+h1 {
+    margin: 0 0 6px 0;
+    font-size: 20px;
 }
 
 /* 頂部 HUD 面板 */
 #hud-container {
     display: flex;
     gap: 20px;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
     background-color: #262638;
-    padding: 8px 24px;
+    padding: 4px 16px;
     border-radius: 20px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 }
 
 .hud-item {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: bold;
     color: #f1c40f;
 }
 
-/* ==================== 木樁目標區 ==================== */
+/* 壓縮木樁展示區 */
 #target-section {
     position: relative;
     background-color: #222233;
-    padding: 12px 18px;
-    border-radius: 14px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-    margin-bottom: 14px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    margin-bottom: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 310px;
-}
-
-#damage-floating-container {
-    position: absolute;
-    top: 10px;
-    left: 0;
-    width: 100%;
-    height: 60px;
-    pointer-events: none;
-}
-
-.floating-dmg {
-    position: absolute;
-    font-weight: 900;
-    animation: floatDamage 0.75s ease-out forwards;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.floating-dmg.normal {
-    font-size: 15px;
-    color: #ecf0f1;
-}
-
-.floating-dmg.weakness {
-    font-size: 22px;
-    color: #ff3838;
-    text-shadow: 0 0 8px #ff9f1a, 0 2px 4px #000;
-}
-
-@keyframes floatDamage {
-    0% {
-        opacity: 0;
-        transform: translateY(0) scale(0.8);
-    }
-
-    20% {
-        opacity: 1;
-        transform: translateY(-10px) scale(1.1);
-    }
-
-    80% {
-        opacity: 0.9;
-        transform: translateY(-25px) scale(1);
-    }
-
-    100% {
-        opacity: 0;
-        transform: translateY(-38px) scale(0.9);
-    }
+    width: 320px;
 }
 
 #dummy-card {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     width: 100%;
 }
 
 #dummy-icon {
-    font-size: 40px;
-    width: 56px;
-    height: 56px;
+    font-size: 32px;
+    width: 44px;
+    height: 44px;
     background-color: #2e2e44;
-    border-radius: 12px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-    transition: transform 0.1s ease;
-}
-
-.hit-flash {
-    transform: scale(0.9) !important;
-    filter: brightness(1.6);
 }
 
 #dummy-info {
-    flex-grow: 1;
+    flex: 1;
 }
 
 #dummy-name {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: bold;
 }
 
 #dummy-weakness-tag {
     font-size: 12px;
     color: #f39c12;
-    margin: 2px 0 6px 0;
-    font-weight: 600;
+    margin: 2px 0 4px 0;
 }
 
 #hp-bar-bg {
     position: relative;
     width: 100%;
-    height: 18px;
-    background-color: #3b3b55;
-    border-radius: 9px;
+    height: 12px;
+    background-color: #111;
+    border-radius: 6px;
     overflow: hidden;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 #hp-bar-fill {
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, #2ecc71, #27ae60);
-    transition: width 0.15s ease-out, background-color 0.2s;
+    transition: width 0.15s ease;
 }
 
 #hp-text {
@@ -156,55 +107,110 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 11px;
+    font-size: 9px;
     font-weight: bold;
     color: #fff;
-    text-shadow: 0 1px 2px #000;
+    text-shadow: 1px 1px 2px #000;
 }
 
 #dummy-switcher {
     display: flex;
-    gap: 6px;
-    margin-top: 10px;
+    gap: 4px;
+    margin-top: 6px;
     width: 100%;
 }
 
 .dummy-btn {
     flex: 1;
-    padding: 6px 4px;
-    font-size: 11px;
+    padding: 4px 2px;
+    font-size: 10px;
     background-color: #35354e;
     border: 1px solid #4a4a68;
-    border-radius: 6px;
+    border-radius: 4px;
     color: #bbb;
     cursor: pointer;
-    transition: all 0.2s;
 }
 
 .dummy-btn.active {
     background-color: #8e44ad;
-    border-color: #a29bfe;
+    border-color: #9b59b6;
     color: #fff;
     font-weight: bold;
 }
 
-/* ==================== 3x3 棋盤容器 ==================== */
-#grid-board {
-    display: grid;
-    grid-template-columns: repeat(3, 95px);
-    grid-template-rows: repeat(3, 95px);
-    gap: 12px;
-    background-color: #262638;
-    padding: 16px;
-    border-radius: 14px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+/* 浮動傷害數字容器 */
+#damage-floating-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
 }
 
-.cell {
-    width: 95px;
-    height: 95px;
-    background-color: #35354e;
+.floating-dmg {
+    position: absolute;
+    font-weight: bold;
+    font-size: 16px;
+    animation: floatUp 0.75s ease-out forwards;
+}
+
+.floating-dmg.normal {
+    color: #ecf0f1;
+}
+
+.floating-dmg.weakness {
+    color: #e74c3c;
+    font-size: 20px;
+    text-shadow: 0 0 6px #c0392b;
+}
+
+@keyframes floatUp {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-25px);
+        opacity: 0;
+    }
+}
+
+.hit-flash {
+    animation: flash 0.15s ease;
+}
+
+@keyframes flash {
+
+    0%,
+    100% {
+        filter: brightness(1);
+    }
+
+    50% {
+        filter: brightness(2);
+    }
+}
+
+/* 15x10 戰場地圖容器 (單格 34px) */
+#grid-board {
+    display: grid;
+    grid-template-columns: repeat(15, 34px);
+    grid-template-rows: repeat(10, 34px);
+    gap: 3px;
+    background-color: #262638;
+    padding: 8px;
     border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* 格子本體 */
+.cell {
+    width: 34px;
+    height: 34px;
+    background-color: #35354e;
+    border-radius: 5px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -213,26 +219,33 @@ body {
 }
 
 .cell.selected {
-    outline: 3px solid #f1c40f;
+    outline: 2px solid #f1c40f;
 }
 
 .cell.drag-over {
     background-color: #444463;
-    outline: 3px dashed #2ecc71;
+    outline: 2px dashed #2ecc71;
 }
 
+/* 跑道格子：深灰石磚色，與可放塔的格子區隔 */
+.cell.path-cell {
+    background-color: #20202e;
+    border: 1px dashed rgba(255, 255, 255, 0.18);
+}
+
+/* 塔本體 */
 .tower {
-    width: 80px;
-    height: 80px;
-    border-radius: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     color: #ffffff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     cursor: grab;
-    transition: transform 0.15s ease, opacity 0.15s ease;
+    transition: transform 0.1s ease, opacity 0.1s ease;
 }
 
 .tower:active {
@@ -245,15 +258,15 @@ body {
 }
 
 .tower-icon {
-    font-size: 28px;
-    line-height: 1.1;
+    font-size: 14px;
+    line-height: 1;
     pointer-events: none;
 }
 
 .tower-name {
-    font-size: 13px;
+    font-size: 7px;
     font-weight: bold;
-    margin-top: 4px;
+    margin-top: 1px;
     pointer-events: none;
 }
 
@@ -274,36 +287,84 @@ body {
 }
 
 .lv-3 {
-    border: 3px solid #ffd700;
-    box-shadow: 0 0 12px #ffd700;
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 8px #ffd700;
 }
 
-/* ==================== 獨立召喚控制列 ==================== */
-#element-spawner-container {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
+/* 怪物實體層（強制置頂於所有格子之上） */
+#monster-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* 穿透點擊，不擋住底下的格子拖曳與放塔 */
+    z-index: 10;
+    /* 🌟 關鍵：強制浮在 150 個格子最上層 */
 }
 
-.spawn-card-btn {
-    padding: 8px 12px;
-    font-size: 12px;
-    font-weight: bold;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.2s, transform 0.1s;
-    color: #fff;
+.monster-unit {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
-    min-width: 88px;
+    justify-content: center;
+    background-color: rgba(46, 46, 68, 0.9);
+    /* 加上深色底盤，避免被背景吃掉 */
+    border: 1px solid #e74c3c;
+    /* 紅色邊框，一眼看清怪物位置 */
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    z-index: 11;
+    transition: top 0.05s linear, left 0.05s linear;
 }
 
-.spawn-card-btn:hover:not(.btn-disabled) {
-    transform: translateY(-2px);
+.monster-unit .m-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.monster-unit .m-hp-bar {
+    width: 26px;
+    height: 4px;
+    background-color: #111;
+    border-radius: 2px;
+    margin-top: 2px;
+    overflow: hidden;
+    border: 1px solid #444;
+}
+
+.monster-unit .m-hp-fill {
+    width: 100%;
+    height: 100%;
+    background-color: #2ecc71;
+    /* 綠色血條，殘血再變紅 */
+}
+
+/* 下方控制按鈕區 */
+#element-spawner-container {
+    margin-top: 8px;
+    display: flex;
+    gap: 6px;
+}
+
+.spawn-card-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: bold;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .btn-type-fire {
@@ -323,95 +384,66 @@ body {
     color: #888899 !important;
     box-shadow: none !important;
     cursor: not-allowed !important;
-    pointer-events: auto !important;
 }
 
-/* 工具按鈕列 */
-.debug-controls {
-    margin-top: 12px;
-    display: flex;
-    gap: 8px;
-}
-
-/* 確定清除按鈕 */
-.delete-tower-btn {
-    padding: 6px 14px;
-    font-size: 12px;
-    background-color: #e67e22;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.2s;
-}
-
-.delete-tower-btn:hover {
-    background-color: #d35400;
-}
-
-.debug-btn {
-    padding: 6px 12px;
-    font-size: 12px;
-    background-color: #8e44ad;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    cursor: pointer;
-}
-
-.debug-btn:hover {
-    background-color: #732d91;
-}
-
-.debug-btn-danger {
-    padding: 6px 12px;
-    font-size: 12px;
-    background-color: #7f8c8d;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    cursor: pointer;
-}
-
-.debug-btn-danger:hover {
-    background-color: #636e72;
-}
-
-/* 抖動受擊動畫 */
 .shake-anim {
-    animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both !important;
-    outline: 3px solid #e74c3c !important;
+    animation: shake 0.35s ease-in-out;
 }
 
 @keyframes shake {
 
-    10%,
-    90% {
-        transform: translate3d(-6px, 0, 0);
+    0%,
+    100% {
+        transform: translateX(0);
     }
 
-    20%,
-    80% {
-        transform: translate3d(8px, 0, 0);
+    20% {
+        transform: translateX(-6px);
     }
 
-    30%,
-    50%,
-    70% {
-        transform: translate3d(-10px, 0, 0);
+    40% {
+        transform: translateX(6px);
     }
 
-    40%,
     60% {
-        transform: translate3d(10px, 0, 0);
+        transform: translateX(-4px);
+    }
+
+    80% {
+        transform: translateX(4px);
     }
 }
 
+.debug-controls {
+    margin-top: 6px;
+    display: flex;
+    gap: 6px;
+}
+
+.debug-controls button {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: bold;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.delete-tower-btn {
+    background-color: #e67e22;
+}
+
+.debug-btn {
+    background-color: #8e44ad;
+}
+
+.debug-btn-danger {
+    background-color: #7f8c8d;
+}
+
 #msg-text {
-    margin-top: 10px;
-    color: #aaaab8;
-    font-size: 13px;
-    text-align: center;
-    max-width: 340px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #bbb;
 }

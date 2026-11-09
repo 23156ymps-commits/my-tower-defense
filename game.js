@@ -4,13 +4,57 @@ const CONFIG = {
     BASE_COST: 10,
     COST_STEP: 10,
     MAX_TIER: 3,
-    ATTACK_INTERVAL: 1000
+    ATTACK_INTERVAL: 1000,
+    BOARD_SIZE: 150 // 15 寬 x 10 高 = 150 格
 };
 
 const ELEMENT_CONFIG = {
     fire: { name: "火塔", icon: "🔥", baseAtk: 30 },
     ice: { name: "冰塔", icon: "❄️", baseAtk: 20 },
     thunder: { name: "雷塔", icon: "⚡", baseAtk: 15 }
+};
+
+// 15x10 地圖路徑點 (X: 0~14, Y: 0~9)
+const WAYPOINTS = [
+    { x: 0, y: 2 },
+    { x: 12, y: 2 },
+    { x: 12, y: 7 },
+    { x: 2, y: 7 },
+    { x: 2, y: 9 },
+    { x: 14, y: 9 }
+];
+
+// 將座標 (x, y) 換算為 0~149 的格子編號
+function coordsToIndex(x, y) {
+    return y * 15 + x;
+}
+
+// 產生所有路徑經過的格子編號集合
+const PATH_CELL_INDICES = new Set();
+(function initPathIndices() {
+    for (let i = 0; i < WAYPOINTS.length - 1; i++) {
+        const p1 = WAYPOINTS[i];
+        const p2 = WAYPOINTS[i + 1];
+
+        let curX = p1.x;
+        let curY = p1.y;
+        PATH_CELL_INDICES.add(coordsToIndex(curX, curY));
+
+        while (curX !== p2.x || curY !== p2.y) {
+            if (curX < p2.x) curX++;
+            else if (curX > p2.x) curX--;
+            else if (curY < p2.y) curY++;
+            else if (curY > p2.y) curY--;
+            PATH_CELL_INDICES.add(coordsToIndex(curX, curY));
+        }
+    }
+})();
+
+// ==================== 自訂階級傷害查表 ====================
+const TIER_DAMAGE_TABLE = {
+    fire: [0, 30, 66, 135],
+    ice: [0, 20, 44, 90],
+    thunder: [0, 15, 33, 70]
 };
 
 const DUMMY_DATABASE = {
@@ -42,6 +86,7 @@ const DUMMY_DATABASE = {
 
 // ==================== 2. 狀態管理 ====================
 let currentGold = CONFIG.INITIAL_GOLD;
+let baseHp = 20;
 
 let spawnCounts = {
     fire: 0,
@@ -49,7 +94,7 @@ let spawnCounts = {
     thunder: 0
 };
 
-let board = Array(9).fill(null);
+let board = Array(CONFIG.BOARD_SIZE).fill(null);
 let draggedIndex = null;
 let selectedIndex = null;
 
@@ -57,13 +102,19 @@ let currentDummyKey = "wood";
 let dummyCurrentHp = DUMMY_DATABASE.wood.maxHp;
 let isDummyRespawning = false;
 
+// 怪物實體列表
+let monsters = [];
+let monsterIdCounter = 1;
+
 // DOM 元素快取
 const boardElement = document.getElementById('grid-board');
+const monsterLayerEl = document.getElementById('monster-layer');
 const spawnerContainer = document.getElementById('element-spawner-container');
 const addGoldBtn = document.getElementById('add-gold-btn');
 const clearGoldBtn = document.getElementById('clear-gold-btn');
 const deleteTowerBtn = document.getElementById('delete-tower-btn');
 const goldDisplay = document.getElementById('gold-display');
+const baseHpDisplay = document.getElementById('base-hp-display');
 const msgText = document.getElementById('msg-text');
 
 const dummyIconEl = document.getElementById('dummy-icon');
@@ -82,6 +133,7 @@ function getCost(type) {
 
 function updateHUD() {
     goldDisplay.innerText = currentGold;
+    if (baseHpDisplay) baseHpDisplay.innerText = baseHp;
 
     Object.keys(ELEMENT_CONFIG).forEach(type => {
         const btn = document.getElementById(`spawn-btn-${type}`);
@@ -109,9 +161,9 @@ function renderSpawnerButtons() {
         btn.classList.add('spawn-card-btn', `btn-type-${type}`);
 
         btn.innerHTML = `
-      <span>${data.icon} 召喚${data.name}</span>
-      <span class="btn-cost-val">${getCost(type)} 💰</span>
-    `;
+          <span>${data.icon} 召喚${data.name}</span>
+          <span class="btn-cost-val">${getCost(type)} 💰</span>
+        `;
 
         btn.addEventListener('click', () => handleSpawn(type, btn));
         spawnerContainer.appendChild(btn);
@@ -131,11 +183,13 @@ function handleSpawn(type, btnElement) {
 
     const emptyIndices = [];
     board.forEach((val, idx) => {
-        if (val === null) emptyIndices.push(idx);
+        if (val === null && !PATH_CELL_INDICES.has(idx)) {
+            emptyIndices.push(idx);
+        }
     });
 
     if (emptyIndices.length === 0) {
-        msgText.innerText = '⚠️ 格子已經全滿，請先融合騰出空間！';
+        msgText.innerText = '⚠️ 可建造格子已經全滿，請先融合騰出空間！';
         return;
     }
 
@@ -152,30 +206,28 @@ function handleSpawn(type, btnElement) {
 }
 
 // ==================== 5. 戰鬥系統與數值公式 ====================
-function calculateDamage(towerObj) {
-    const cfg = ELEMENT_CONFIG[towerObj.type];
-    const dummyCfg = DUMMY_DATABASE[currentDummyKey];
-
-    const tierScale = Math.pow(2, towerObj.tier - 1);
-    const baseDmg = cfg.baseAtk * tierScale;
-
-    const isWeakness = (towerObj.type === dummyCfg.weakness);
+function calculateDamage(towerObj, monster) {
+    // 讀取你在 TIER_DAMAGE_TABLE 裡的數值
+    const baseDmg = (TIER_DAMAGE_TABLE[towerObj.type] && TIER_DAMAGE_TABLE[towerObj.type][towerObj.tier]) || 10;
+    // 比對走在路上的怪物弱點 (維持 2.0 倍相剋)
+    const isWeakness = (towerObj.type === monster.weakness);
     const multiplier = isWeakness ? 2.0 : 1.0;
 
     const finalDmg = Math.round(baseDmg * multiplier);
     return { damage: finalDmg, isWeakness: isWeakness };
 }
 
-function spawnDamageNumber(amount, isWeakness) {
+function spawnDamageNumber(amount, isWeakness, px, py) {
     const dmgEl = document.createElement('div');
     dmgEl.classList.add('floating-dmg', isWeakness ? 'weakness' : 'normal');
     dmgEl.innerText = isWeakness ? `WEAK! -${amount}` : `-${amount}`;
 
-    const randomOffsetX = (Math.random() - 0.5) * 60;
-    dmgEl.style.left = `calc(50% + ${randomOffsetX}px)`;
-    dmgEl.style.top = `15px`;
+    // 直接彈在怪物實體頭頂上方
+    const randomOffsetX = (Math.random() - 0.5) * 20;
+    dmgEl.style.left = `${px + randomOffsetX}px`;
+    dmgEl.style.top = `${py - 18}px`;
 
-    dmgContainerEl.appendChild(dmgEl);
+    boardElement.appendChild(dmgEl);
     setTimeout(() => dmgEl.remove(), 750);
 }
 
@@ -217,52 +269,164 @@ function updateDummyUI() {
     }
 }
 
+// ==================== 防禦塔戰鬥輪詢 (集火跑在最前面的怪物) ====================
 setInterval(() => {
-    if (isDummyRespawning) return;
+    // 如果場上完全沒有怪在走動，防禦塔待機不開火
+    if (monsters.length === 0) return;
 
-    let totalHits = 0;
+    // 索敵規則：鎖定「走在最前面」的怪物 (wpIndex 越大代表走得越前面)
+    let leadingMonster = monsters[0];
+    for (let i = 1; i < monsters.length; i++) {
+        if (monsters[i].wpIndex > leadingMonster.wpIndex) {
+            leadingMonster = monsters[i];
+        }
+    }
+
+    // 遍歷盤面上所有的塔進行開火攻擊
     board.forEach((towerObj) => {
-        if (towerObj !== null && dummyCurrentHp > 0) {
-            const result = calculateDamage(towerObj);
-            dummyCurrentHp = Math.max(0, dummyCurrentHp - result.damage);
-            spawnDamageNumber(result.damage, result.isWeakness);
-            totalHits++;
+        if (towerObj !== null && leadingMonster && leadingMonster.hp > 0) {
+            const result = calculateDamage(towerObj, leadingMonster);
+            leadingMonster.hp = Math.max(0, leadingMonster.hp - result.damage);
+
+            // 在怪物頭頂跳出傷害數字
+            spawnDamageNumber(result.damage, result.isWeakness, leadingMonster.pixelX, leadingMonster.pixelY);
+
+            // 怪物血量歸零：擊殺結算並掉落金幣
+            if (leadingMonster.hp <= 0) {
+                currentGold += leadingMonster.reward;
+                msgText.innerText = `💥 擊殺【${leadingMonster.name}】！獲得 +${leadingMonster.reward} 💰！`;
+                updateHUD();
+
+                // 從活體陣列中移除
+                const deadIdx = monsters.findIndex(m => m.id === leadingMonster.id);
+                if (deadIdx !== -1) {
+                    monsters.splice(deadIdx, 1);
+                }
+                leadingMonster = null; // 本輪目標已死，停止後續多餘射擊
+            }
         }
     });
 
-    if (totalHits > 0) {
-        triggerHitFlash();
-        updateDummyUI();
-        if (dummyCurrentHp <= 0) handleDummyDeath();
-    }
+    // 立即更新怪物的血條長度
+    renderMonsterLayer();
 }, CONFIG.ATTACK_INTERVAL);
+// ==================== 怪物實體移動邏輯 ====================
+function getCellCenter(gridX, gridY) {
+    const cellSize = 34;
+    const gap = 3;
+    const padding = 8;
+    const left = padding + gridX * (cellSize + gap) + cellSize / 2;
+    const top = padding + gridY * (cellSize + gap) + cellSize / 2;
+    return { left, top };
+}
 
-dummyButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const targetType = btn.dataset.type;
-        if (currentDummyKey === targetType) return;
+function spawnMonster(typeKey = 'wood') {
+    const dummyCfg = DUMMY_DATABASE[typeKey];
+    const startPos = getCellCenter(WAYPOINTS[0].x, WAYPOINTS[0].y);
 
-        dummyButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+    const monster = {
+        id: monsterIdCounter++,
+        typeKey: typeKey,
+        name: dummyCfg.name,
+        icon: dummyCfg.icon,
+        weakness: dummyCfg.weakness,
+        hp: dummyCfg.maxHp,
+        maxHp: dummyCfg.maxHp,
+        reward: dummyCfg.reward,
+        wpIndex: 0,
+        gridX: WAYPOINTS[0].x,
+        gridY: WAYPOINTS[0].y,
+        pixelX: startPos.left,
+        pixelY: startPos.top,
+        speed: 0.15
+    };
 
-        currentDummyKey = targetType;
-        dummyCurrentHp = DUMMY_DATABASE[currentDummyKey].maxHp;
-        isDummyRespawning = false;
-        updateDummyUI();
+    monsters.push(monster);
+}
 
-        const cfg = DUMMY_DATABASE[currentDummyKey];
-        msgText.innerText = `已切換目標為【${cfg.name}】！${cfg.weaknessText}`;
+function updateMonsters() {
+    for (let i = monsters.length - 1; i >= 0; i--) {
+        const m = monsters[i];
+        const targetWp = WAYPOINTS[m.wpIndex + 1];
+
+        if (!targetWp) {
+            baseHp = Math.max(0, baseHp - 1);
+            if (baseHpDisplay) baseHpDisplay.innerText = baseHp;
+            msgText.innerText = `🚨 怪物【${m.name}】突破防線！基地扣 1 點生命！`;
+            monsters.splice(i, 1);
+            continue;
+        }
+
+        const dx = targetWp.x - m.gridX;
+        const dy = targetWp.y - m.gridY;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist <= m.speed) {
+            m.gridX = targetWp.x;
+            m.gridY = targetWp.y;
+            m.wpIndex++;
+        } else {
+            m.gridX += (dx / dist) * m.speed;
+            m.gridY += (dy / dist) * m.speed;
+        }
+
+        const pos = getCellCenter(m.gridX, m.gridY);
+        m.pixelX = pos.left;
+        m.pixelY = pos.top;
+    }
+
+    renderMonsterLayer();
+}
+
+function renderMonsterLayer() {
+    const layer = document.getElementById('monster-layer');
+    if (!layer) return;
+    layer.innerHTML = '';
+
+    monsters.forEach(m => {
+        const el = document.createElement('div');
+        el.classList.add('monster-unit');
+        el.style.left = `${m.pixelX}px`;
+        el.style.top = `${m.pixelY}px`;
+
+        const hpPercent = Math.max(0, (m.hp / m.maxHp) * 100);
+
+        el.innerHTML = `
+          <span class="m-icon">${m.icon}</span>
+          <div class="m-hp-bar">
+            <div class="m-hp-fill" style="width: ${hpPercent}%;"></div>
+          </div>
+        `;
+
+        layer.appendChild(el);
     });
-});
+}
+
+// 啟動怪物走動計時器 (每 50 毫秒更新移動)
+setInterval(updateMonsters, 50);
+
+// 每 3.5 秒在跑道起點自動生成一隻怪
+setInterval(() => {
+    spawnMonster(currentDummyKey);
+}, 3500);
 
 // ==================== 6. 畫面渲染與棋盤交互 ====================
 function renderBoard() {
     boardElement.innerHTML = '';
 
+    // 重新塞回怪物層容器
+    const layer = document.createElement('div');
+    layer.id = 'monster-layer';
+    boardElement.appendChild(layer);
+
     board.forEach((towerObj, index) => {
         const cell = document.createElement('div');
         cell.classList.add('cell');
         cell.dataset.index = index;
+
+        if (PATH_CELL_INDICES.has(index)) {
+            cell.classList.add('path-cell');
+        }
 
         if (selectedIndex === index) {
             cell.classList.add('selected');
@@ -342,7 +506,14 @@ function handleCellClick(index) {
 }
 
 function handleAction(fromIndex, toIndex) {
-    if (fromIndex === null || fromIndex === toIndex) return;
+    if (fromIndex === null || toIndex === null || fromIndex === toIndex) return;
+    if (fromIndex < 0 || fromIndex >= CONFIG.BOARD_SIZE || toIndex < 0 || toIndex >= CONFIG.BOARD_SIZE) return;
+    if (!board[fromIndex]) return;
+
+    if (PATH_CELL_INDICES.has(toIndex)) {
+        msgText.innerText = '⚠️ 該位置是怪物跑道，不能建造防禦塔！';
+        return;
+    }
 
     const fromTower = board[fromIndex];
     const toTower = board[toIndex];
@@ -374,7 +545,6 @@ function handleAction(fromIndex, toIndex) {
 }
 
 // ==================== 7. 工具按鈕事件 ====================
-// 確定清除按鈕邏輯
 deleteTowerBtn.addEventListener('click', () => {
     if (selectedIndex === null || board[selectedIndex] === null) {
         msgText.innerText = '⚠️ 請先在棋盤上「點選」想要清除的塔！';
