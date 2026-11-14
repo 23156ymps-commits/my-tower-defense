@@ -4,65 +4,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>元素合成塔防 - 原型測試</title>
+    <title>元素合成塔防 - 15×10 策略塔防</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <h1>元素合成塔防</h1>
+    <header class="game-header">
+        <h1>元素合成塔防</h1>
+    </header>
 
     <!-- 頂部 HUD 面板 -->
     <div id="hud-container">
-        <div class="hud-item">❤️ 基地血量：<span id="base-hp-display">20</span></div>
-        <div class="hud-item">💰 金幣：<span id="gold-display">0</span></div>
+        <div class="hud-item hud-hp">❤️ 基地：<span id="base-hp-display">20</span></div>
+        <div class="hud-item hud-gold">💰 金幣：<span id="gold-display">40</span></div>
+        <div class="hud-item hud-wave">🌊 波數：<span id="wave-display">Wave 1</span> <span id="wave-phase-tag" class="wave-phase-tag">備戰中</span></div>
+        <div class="hud-item hud-best">🏆 最高：<span id="best-wave-display">Wave 1</span></div>
     </div>
 
-    <!-- 打靶木樁展示區（已功成身退，予以隱藏） -->
-    <div id="target-section" style="display: none;">
-        <div id="damage-floating-container"></div>
-        <div id="dummy-card">
-            <div id="dummy-icon">🌿</div>
-            <div id="dummy-info">
-                <div id="dummy-name">蔓藤巨魔</div>
-                <div id="dummy-weakness-tag">弱點：🔥 火 (200%)</div>
-                <div id="hp-bar-bg">
-                    <div id="hp-bar-fill"></div>
-                    <span id="hp-text">200 / 200</span>
-                </div>
-            </div>
+    <!-- 屬性相剋與機制提示條 -->
+    <div id="info-legend">
+        <span>相剋 (200%)：🌿蔓藤←🔥火</span>
+        <span>🌋熔岩←❄️冰</span>
+        <span>🛸機械←⚡雷</span>
+        <span>🛡️護甲怪：高單發破防</span>
+    </div>
+
+    <!-- 15x10 戰場舞台容器（棋盤、射程圈、特效、怪物、浮動傷害皆為同級獨立圖層） -->
+    <div id="board-stage">
+        <div id="grid-board"></div>
+        <div id="range-layer" aria-hidden="true">
+            <div id="range-circle"></div>
         </div>
-        <div id="dummy-switcher">
-            <button class="dummy-btn active" data-type="wood">🌿 蔓藤 (弱火)</button>
-            <button class="dummy-btn" data-type="lava">🌋 熔岩 (弱冰)</button>
-            <button class="dummy-btn" data-type="air">💧 機械 (弱雷)</button>
-        </div>
-    </div>
-
-    <!-- 木樁切換按鈕 -->
-    <div id="dummy-switcher">
-        <button class="dummy-btn active" data-type="wood">🌿 蔓藤 (弱火)</button>
-        <button class="dummy-btn" data-type="lava">🌋 熔岩 (弱冰)</button>
-        <button class="dummy-btn" data-type="air">💧 機械 (弱雷)</button>
-    </div>
-    </div>
-
-    <!-- 15x10 棋盤容器（包含怪物渲染層） -->
-    <div id="grid-board" style="position: relative;">
-        <div id="monster-layer"></div>
+        <svg id="fx-layer" aria-hidden="true"></svg>
+        <div id="monster-layer" aria-hidden="true"></div>
+        <div id="floating-layer" aria-hidden="true"></div>
     </div>
 
     <!-- 屬性獨立召喚控制區 -->
     <div id="element-spawner-container"></div>
 
-    <!-- 工具按鈕區 -->
+    <!-- 操作與測試工具列 -->
     <div class="debug-controls">
         <button id="delete-tower-btn" class="delete-tower-btn">🗑️ 確定清除</button>
+        <button id="next-wave-btn" class="wave-btn">⚡ 立即開波</button>
         <button id="add-gold-btn" class="debug-btn">+500 💰</button>
         <button id="clear-gold-btn" class="debug-btn-danger">清空 💰</button>
     </div>
 
     <!-- 狀態提示列 -->
-    <p id="msg-text">點選塔後按「確定清除」可拔除該塔；怪物會沿著深色跑道前進！</p>
+    <p id="msg-text">開局可召喚元素塔並拖曳或點擊合成；懸停或點選塔可預覽攻擊射程！</p>
+
+    <!-- Game Over 結算遮罩 -->
+    <div id="game-over-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+        <div class="modal-card">
+            <h2 id="game-over-title">💀 防線失守</h2>
+            <p class="modal-subtitle">基地血量歸零，本局結束</p>
+            <div class="modal-stats">
+                <div class="stat-row">
+                    <span>抵達波數</span>
+                    <strong id="final-wave-text">Wave 1</strong>
+                </div>
+                <div class="stat-row">
+                    <span>歷史最高紀錄</span>
+                    <strong id="final-best-text">Wave 1</strong>
+                </div>
+                <div class="stat-row">
+                    <span>擊殺怪物數</span>
+                    <strong id="final-kills-text">0</strong>
+                </div>
+            </div>
+            <div id="new-record-badge" class="new-record-badge hidden">🎉 刷新歷史最高波數紀錄！</div>
+            <button id="restart-btn" class="restart-btn">🔄 重新開始</button>
+        </div>
+    </div>
 
     <script src="game.js"></script>
 </body>
