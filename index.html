@@ -4,20 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>元素合成塔防 - 15×10 策略塔防</title>
+    <title>元素陣線：合成塔防 - Demo v1.0</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
     <header class="game-header">
-        <h1>元素合成塔防</h1>
+        <h1>元素陣線：合成塔防</h1>
     </header>
 
     <!-- 頂部 HUD 面板 -->
     <div id="hud-container">
         <div class="hud-item hud-hp">❤️ 基地：<span id="base-hp-display">20</span></div>
         <div class="hud-item hud-gold">💰 金幣：<span id="gold-display">40</span></div>
-        <div class="hud-item hud-wave">🌊 波數：<span id="wave-display">Wave 1</span> <span id="wave-phase-tag" class="wave-phase-tag">備戰中</span></div>
+        <div class="hud-item hud-wave">🌊 波數：<span id="wave-display">Wave 1 / 10</span> <span id="wave-phase-tag" class="wave-phase-tag">等待開始</span></div>
         <div class="hud-item hud-best">🏆 最高：<span id="best-wave-display">Wave 1</span></div>
     </div>
 
@@ -46,13 +46,74 @@
     <!-- 操作與測試工具列 -->
     <div class="debug-controls">
         <button id="delete-tower-btn" class="delete-tower-btn">🗑️ 確定清除</button>
-        <button id="next-wave-btn" class="wave-btn">⚡ 立即開波</button>
-        <button id="add-gold-btn" class="debug-btn">+500 💰</button>
-        <button id="clear-gold-btn" class="debug-btn-danger">清空 💰</button>
+        <button id="next-wave-btn" class="wave-btn" disabled>⚡ 立即開波</button>
+        <button id="add-gold-btn" class="debug-btn debug-only">+500 💰</button>
+        <button id="clear-gold-btn" class="debug-btn-danger debug-only">清空 💰</button>
     </div>
 
     <!-- 狀態提示列 -->
-    <p id="msg-text">開局可召喚元素塔並拖曳或點擊合成；懸停或點選塔可預覽攻擊射程！</p>
+    <p id="msg-text">點擊「開始防守」進入第 1 波備戰！</p>
+
+    <!-- 開局封面與 3 步規則引導遮罩 -->
+    <div id="start-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
+        <div class="modal-card start-card">
+            <div class="demo-badge">DEMO v1.0</div>
+            <h2 id="start-title" class="start-title">《元素陣線：合成塔防》</h2>
+            <p class="modal-subtitle">15×10 策略合成防線 · 撐過 10 波並擊敗終極魔王！</p>
+
+            <div class="rules-list">
+                <div class="rule-item">
+                    <span class="rule-num">1</span>
+                    <div class="rule-content">
+                        <strong>【佈陣】</strong>點擊下方按鈕召喚元素塔，放置於綠色高地（不可放於石磚路徑）。
+                    </div>
+                </div>
+                <div class="rule-item">
+                    <span class="rule-num">2</span>
+                    <div class="rule-content">
+                        <strong>【合成】</strong>「拖曳」或「依序點擊」兩座相同屬性與等級的塔，可合成升階（最高 Lv.3）。
+                    </div>
+                </div>
+                <div class="rule-item">
+                    <span class="rule-num">3</span>
+                    <div class="rule-content">
+                        <strong>【克制】</strong>🔥火剋🌿蔓藤、❄️冰剋🌋熔岩、⚡雷剋🛸機械（弱點命中 200% 暴擊；點擊或懸停塔可看射程）。
+                    </div>
+                </div>
+            </div>
+
+            <button id="start-game-btn" class="start-btn">▶ 開始防守</button>
+        </div>
+    </div>
+
+    <!-- 通關勝利結算遮罩 -->
+    <div id="victory-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="victory-title">
+        <div class="modal-card victory-card">
+            <h2 id="victory-title" class="victory-title">🏆 防守成功！通關勝利</h2>
+            <div id="victory-stars" class="victory-stars" aria-label="通關星級">⭐⭐⭐</div>
+            <p id="victory-rank-text" class="modal-subtitle">完美守護基地，成功擊退第 10 波終極魔王！</p>
+
+            <div class="modal-stats">
+                <div class="stat-row">
+                    <span>本局總擊殺數</span>
+                    <strong id="victory-kills-text">0 隻</strong>
+                </div>
+                <div class="stat-row">
+                    <span>剩餘基地血量</span>
+                    <strong id="victory-hp-text">20 / 20</strong>
+                </div>
+                <div class="stat-row">
+                    <span>剩餘金幣</span>
+                    <strong id="victory-gold-text">0 💰</strong>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button id="victory-restart-btn" class="restart-btn">🔄 重新挑戰</button>
+                <button id="endless-btn" class="endless-btn">🔥 繼續無盡挑戰</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Game Over 結算遮罩 -->
     <div id="game-over-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
@@ -70,7 +131,7 @@
                 </div>
                 <div class="stat-row">
                     <span>擊殺怪物數</span>
-                    <strong id="final-kills-text">0</strong>
+                    <strong id="final-kills-text">0 隻</strong>
                 </div>
             </div>
             <div id="new-record-badge" class="new-record-badge hidden">🎉 刷新歷史最高波數紀錄！</div>

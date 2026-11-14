@@ -1,5 +1,7 @@
 // ==================== 1. 遊戲規格與平衡參數 ====================
 const CONFIG = {
+    DEBUG_MODE: false,           // 試玩模式預設隱藏測試作弊按鈕；改為 true 可恢復開發測試工具
+    VICTORY_WAVE: 10,            // 正式試玩版總關卡波數（第 10 波為最終魔王戰）
     INITIAL_GOLD: 40,
     INITIAL_BASE_HP: 20,
     BASE_COST: 10,
@@ -78,7 +80,7 @@ const MONSTER_DATABASE = {
     }
 };
 
-// 波次強度與固定減傷護甲菁英參數
+// 波次強度、固定減傷護甲菁英與第 10 波終極魔王參數
 const WAVE_BALANCE = {
     BASE_COUNT: 6,
     COUNT_PER_WAVE: 2,
@@ -92,6 +94,13 @@ const WAVE_BALANCE = {
     ELITE_HP_MULT: 2.1,
     ELITE_REWARD_MULT: 2.2,
     ELITE_SPEED_MULT: 0.85,
+    FINAL_WAVE_ESCORT_COUNT: 14,
+    BOSS_HP_BASE: 2800,
+    BOSS_ARMOR_BASE: 10,
+    BOSS_SPEED_MULT: 0.55,
+    BOSS_REWARD: 120,
+    BOSS_BASE_DAMAGE: 20,
+    ENDLESS_BOSS_BASE_DAMAGE: 10,
     SPAWN_INTERVAL_BASE_MS: 1600,
     SPAWN_INTERVAL_DECAY_MS: 65,
     SPAWN_INTERVAL_MIN_MS: 750
@@ -177,6 +186,7 @@ let bestWave = loadBestWave();
 let currentWave = 1;
 let killsCount = 0;
 let isGameOver = false;
+let isEndlessMode = false;
 let isNewRecordThisRun = false;
 
 let spawnCounts = {
@@ -199,7 +209,7 @@ let touchDragState = null;
 let lastTouchDragEndTime = 0;
 
 // 波次與主迴圈狀態
-let waveState = 'PREP'; // 'PREP' | 'SPAWNING' | 'CLEARING' | 'INTERMISSION' | 'GAMEOVER'
+let waveState = 'WAITING_START'; // 'WAITING_START' | 'PREP' | 'SPAWNING' | 'CLEARING' | 'INTERMISSION' | 'VICTORY' | 'GAMEOVER'
 let waveTimerMs = CONFIG.INITIAL_PREP_MS;
 let waveSpawnQueue = [];
 let waveSpawnIntervalMs = WAVE_BALANCE.SPAWN_INTERVAL_BASE_MS;
@@ -239,12 +249,34 @@ const wavePhaseTagEl = document.getElementById('wave-phase-tag');
 const bestWaveDisplay = document.getElementById('best-wave-display');
 const msgText = document.getElementById('msg-text');
 
+const startOverlayEl = document.getElementById('start-overlay');
+const startGameBtn = document.getElementById('start-game-btn');
+
+const victoryOverlayEl = document.getElementById('victory-overlay');
+const victoryStarsEl = document.getElementById('victory-stars');
+const victoryRankTextEl = document.getElementById('victory-rank-text');
+const victoryKillsTextEl = document.getElementById('victory-kills-text');
+const victoryHpTextEl = document.getElementById('victory-hp-text');
+const victoryGoldTextEl = document.getElementById('victory-gold-text');
+const victoryRestartBtn = document.getElementById('victory-restart-btn');
+const endlessBtn = document.getElementById('endless-btn');
+
 const gameOverOverlayEl = document.getElementById('game-over-overlay');
 const finalWaveTextEl = document.getElementById('final-wave-text');
 const finalBestTextEl = document.getElementById('final-best-text');
 const finalKillsTextEl = document.getElementById('final-kills-text');
 const newRecordBadgeEl = document.getElementById('new-record-badge');
 const restartBtn = document.getElementById('restart-btn');
+
+function isGameplayActive() {
+    return !isGameOver && waveState !== 'WAITING_START' && waveState !== 'VICTORY';
+}
+
+function applyDebugModeVisibility() {
+    const displayMode = CONFIG.DEBUG_MODE ? 'inline-block' : 'none';
+    if (addGoldBtn) addGoldBtn.style.display = displayMode;
+    if (clearGoldBtn) clearGoldBtn.style.display = displayMode;
+}
 
 // ==================== 3. 座標量測與數值公式 ====================
 function measureBoardMetrics() {
@@ -285,31 +317,42 @@ function getCost(type) {
 function updateWavePhaseUI() {
     if (!wavePhaseTagEl) return;
 
-    if (waveState === 'PREP') {
+    const isBossWave = !isEndlessMode && currentWave === CONFIG.VICTORY_WAVE;
+    wavePhaseTagEl.classList.toggle('boss-wave', isBossWave && (waveState === 'SPAWNING' || waveState === 'CLEARING'));
+
+    if (waveState === 'WAITING_START') {
+        wavePhaseTagEl.innerText = '等待開始';
+    } else if (waveState === 'PREP') {
         const sec = Math.max(1, Math.ceil(waveTimerMs / 1000));
         wavePhaseTagEl.innerText = `備戰 ${sec}s`;
     } else if (waveState === 'INTERMISSION') {
         const sec = Math.max(1, Math.ceil(waveTimerMs / 1000));
         wavePhaseTagEl.innerText = `下波 ${sec}s`;
     } else if (waveState === 'SPAWNING') {
-        wavePhaseTagEl.innerText = `出怪中`;
+        wavePhaseTagEl.innerText = isBossWave ? '最終決戰' : '出怪中';
     } else if (waveState === 'CLEARING') {
-        wavePhaseTagEl.innerText = `清場中`;
+        wavePhaseTagEl.innerText = isBossWave ? '最終決戰' : '清場中';
+    } else if (waveState === 'VICTORY') {
+        wavePhaseTagEl.innerText = '通關勝利';
     } else {
-        wavePhaseTagEl.innerText = `已結束`;
+        wavePhaseTagEl.innerText = '已結束';
     }
 
     if (nextWaveBtn) {
-        const canSkip = !isGameOver && (waveState === 'PREP' || waveState === 'INTERMISSION');
+        const canSkip = isGameplayActive() && (waveState === 'PREP' || waveState === 'INTERMISSION');
         nextWaveBtn.disabled = !canSkip;
-        nextWaveBtn.innerText = waveState === 'PREP' ? '⚡ 立即開波' : '⚡ 提前下波';
+        nextWaveBtn.innerText = (waveState === 'PREP' || waveState === 'WAITING_START') ? '⚡ 立即開波' : '⚡ 提前下波';
     }
 }
 
 function updateHUD() {
     if (goldDisplay) goldDisplay.innerText = currentGold;
     if (baseHpDisplay) baseHpDisplay.innerText = baseHp;
-    if (waveDisplay) waveDisplay.innerText = `Wave ${currentWave}`;
+    if (waveDisplay) {
+        waveDisplay.innerText = isEndlessMode
+            ? `Wave ${currentWave} (無盡)`
+            : `Wave ${currentWave} / ${CONFIG.VICTORY_WAVE}`;
+    }
     if (bestWaveDisplay) bestWaveDisplay.innerText = `Wave ${bestWave}`;
 
     updateWavePhaseUI();
@@ -322,7 +365,7 @@ function updateHUD() {
         const costEl = btn.querySelector('.btn-cost-val');
         if (costEl) costEl.innerText = `${cost} 💰`;
 
-        if (isGameOver || currentGold < cost) {
+        if (!isGameplayActive() || currentGold < cost) {
             btn.classList.add('btn-disabled');
         } else {
             btn.classList.remove('btn-disabled');
@@ -334,7 +377,7 @@ function updateHUD() {
 function updateRangeIndicator() {
     if (!rangeCircleEl) return;
 
-    if (isGameOver || draggedIndex !== null || (touchDragState && touchDragState.isDragging)) {
+    if (!isGameplayActive() || draggedIndex !== null || (touchDragState && touchDragState.isDragging)) {
         rangeCircleEl.className = '';
         return;
     }
@@ -384,7 +427,7 @@ function renderSpawnerButtons() {
 }
 
 function handleSpawn(type, btnElement) {
-    if (isGameOver) return;
+    if (!isGameplayActive()) return;
 
     const cost = getCost(type);
 
@@ -424,10 +467,16 @@ function handleSpawn(type, btnElement) {
 // ==================== 6. 波次產生與怪物生成 ====================
 function buildWaveQueue(waveNum) {
     const typeKeys = Object.keys(MONSTER_DATABASE);
-    const totalCount = Math.min(
-        WAVE_BALANCE.MAX_COUNT_PER_WAVE,
-        WAVE_BALANCE.BASE_COUNT + waveNum * WAVE_BALANCE.COUNT_PER_WAVE
-    );
+    const isFinalStoryWave = !isEndlessMode && waveNum === CONFIG.VICTORY_WAVE;
+    const isEndlessBossWave = isEndlessMode && waveNum > CONFIG.VICTORY_WAVE && waveNum % 5 === 0;
+    const hasBoss = isFinalStoryWave || isEndlessBossWave;
+
+    const totalCount = isFinalStoryWave
+        ? WAVE_BALANCE.FINAL_WAVE_ESCORT_COUNT
+        : Math.min(
+            WAVE_BALANCE.MAX_COUNT_PER_WAVE,
+            WAVE_BALANCE.BASE_COUNT + waveNum * WAVE_BALANCE.COUNT_PER_WAVE
+        );
 
     const hpScale = 1
         + (waveNum - 1) * WAVE_BALANCE.HP_GROWTH_LINEAR
@@ -467,14 +516,46 @@ function buildWaveQueue(waveNum) {
             hpScale,
             rewardBonus,
             isElite,
+            isBoss: false,
             armor: isElite ? eliteArmor : 0
         });
+    }
+
+    let bossMeta = null;
+    if (hasBoss) {
+        const bossTypeKey = isFinalStoryWave
+            ? 'wood'
+            : typeKeys[Math.floor(waveNum / 5) % typeKeys.length];
+        const endlessSteps = Math.max(0, Math.floor((waveNum - CONFIG.VICTORY_WAVE) / 5));
+        const bossHp = Math.round(WAVE_BALANCE.BOSS_HP_BASE * (1 + endlessSteps * 0.65));
+        const bossArmor = WAVE_BALANCE.BOSS_ARMOR_BASE + endlessSteps * 2;
+        const bossBaseDamage = isFinalStoryWave
+            ? WAVE_BALANCE.BOSS_BASE_DAMAGE
+            : WAVE_BALANCE.ENDLESS_BOSS_BASE_DAMAGE;
+
+        queue.push({
+            typeKey: bossTypeKey,
+            hpScale: 1,
+            rewardBonus,
+            isElite: true,
+            isBoss: true,
+            armor: bossArmor,
+            bossHp,
+            bossBaseDamage
+        });
+
+        bossMeta = {
+            weakness: MONSTER_DATABASE[bossTypeKey].weakness,
+            armor: bossArmor,
+            hp: bossHp
+        };
     }
 
     return {
         queue,
         eliteCount,
         eliteArmor,
+        bossMeta,
         spawnIntervalMs: Math.max(
             WAVE_BALANCE.SPAWN_INTERVAL_MIN_MS,
             WAVE_BALANCE.SPAWN_INTERVAL_BASE_MS - (waveNum - 1) * WAVE_BALANCE.SPAWN_INTERVAL_DECAY_MS
@@ -483,7 +564,7 @@ function buildWaveQueue(waveNum) {
 }
 
 function startWave(waveNum) {
-    if (isGameOver) return;
+    if (!isGameplayActive()) return;
 
     currentWave = waveNum;
     if (currentWave > bestWave) {
@@ -498,7 +579,14 @@ function startWave(waveNum) {
     waveSpawnAccMs = waveSpawnIntervalMs; // 開波立即派出第一隻怪
     waveState = 'SPAWNING';
 
-    if (plan.eliteCount > 0) {
+    if (plan.bossMeta) {
+        const weakIcon = ELEMENT_CONFIG[plan.bossMeta.weakness].icon + ELEMENT_CONFIG[plan.bossMeta.weakness].name.charAt(0);
+        if (!isEndlessMode && waveNum === CONFIG.VICTORY_WAVE) {
+            msgText.innerText = `⚠️ 最終決戰 Wave ${waveNum}/${CONFIG.VICTORY_WAVE}！終極魔王（弱${weakIcon} · 🛡️${plan.bossMeta.armor}護甲 · ${plan.bossMeta.hp}HP）率軍來襲！`;
+        } else {
+            msgText.innerText = `⚠️ 無盡魔王波 Wave ${waveNum}！終極魔王（弱${weakIcon} · 🛡️${plan.bossMeta.armor}護甲）強勢來襲！`;
+        }
+    } else if (plan.eliteCount > 0) {
         msgText.innerText = `🌊 第 ${waveNum} 波來襲！含 ${plan.eliteCount} 隻固定減傷 🛡️${plan.eliteArmor} 護甲菁英怪，請善用火塔或弱點破防！`;
     } else {
         msgText.innerText = `🌊 第 ${waveNum} 波來襲！共 ${plan.queue.length} 隻混合屬性怪物進攻中！`;
@@ -510,6 +598,35 @@ function startWave(waveNum) {
 function spawnMonsterFromEntry(entry) {
     const cfg = MONSTER_DATABASE[entry.typeKey];
     const startPos = getCellCenter(WAYPOINTS[0].x, WAYPOINTS[0].y);
+
+    if (entry.isBoss) {
+        const bossHp = entry.bossHp || WAVE_BALANCE.BOSS_HP_BASE;
+        const monster = {
+            id: monsterIdCounter++,
+            typeKey: entry.typeKey,
+            name: '終極魔王',
+            icon: '👹',
+            weakness: cfg.weakness,
+            hp: bossHp,
+            maxHp: bossHp,
+            armor: entry.armor,
+            isElite: true,
+            isBoss: true,
+            baseDamage: entry.bossBaseDamage || WAVE_BALANCE.BOSS_BASE_DAMAGE,
+            reward: WAVE_BALANCE.BOSS_REWARD + entry.rewardBonus,
+            wpIndex: 0,
+            gridX: WAYPOINTS[0].x,
+            gridY: WAYPOINTS[0].y,
+            pixelX: startPos.left,
+            pixelY: startPos.top,
+            baseSpeed: CONFIG.MONSTER_BASE_SPEED * WAVE_BALANCE.BOSS_SPEED_MULT,
+            slowTimer: 0
+        };
+
+        monsters.push(monster);
+        renderMonsterLayer();
+        return;
+    }
 
     const hpMult = entry.isElite ? WAVE_BALANCE.ELITE_HP_MULT : 1.0;
     const rewardMult = entry.isElite ? WAVE_BALANCE.ELITE_REWARD_MULT : 1.0;
@@ -528,6 +645,8 @@ function spawnMonsterFromEntry(entry) {
         maxHp: maxHp,
         armor: entry.armor,
         isElite: entry.isElite,
+        isBoss: false,
+        baseDamage: 1,
         reward: reward,
         wpIndex: 0,
         gridX: WAYPOINTS[0].x,
@@ -735,9 +854,15 @@ function createMonsterDom(monster) {
     if (monster.isElite) {
         el.classList.add('elite');
     }
+    if (monster.isBoss) {
+        el.classList.add('boss');
+    }
 
     const armorHtml = monster.armor > 0
         ? `<span class="m-armor-badge">🛡️${monster.armor}</span>`
+        : '';
+    const bossHtml = monster.isBoss
+        ? `<span class="m-boss-badge">👑魔王</span>`
         : '';
 
     el.innerHTML = `
@@ -747,6 +872,7 @@ function createMonsterDom(monster) {
         <div class="m-hp-bar">
             <div class="m-hp-fill"></div>
         </div>
+        ${bossHtml}
     `;
 
     monsterLayerEl.appendChild(el);
@@ -840,8 +966,11 @@ function updateMonsters(dtMs) {
         }
 
         if (reachedEnd) {
-            baseHp = Math.max(0, baseHp - 1);
-            msgText.innerText = `🚨 怪物【${m.name}】突破防線！基地扣 1 點生命！`;
+            const leakDmg = m.baseDamage || 1;
+            baseHp = Math.max(0, baseHp - leakDmg);
+            msgText.innerText = m.isBoss
+                ? `💥 【${m.name}】突破防線！基地遭受重創 -${leakDmg} 生命！`
+                : `🚨 怪物【${m.name}】突破防線！基地扣 ${leakDmg} 點生命！`;
             monsters.splice(i, 1);
             removeMonsterDom(m.id);
             updateHUD();
@@ -861,7 +990,71 @@ function updateMonsters(dtMs) {
     renderMonsterLayer();
 }
 
-// ==================== 9. 主遊戲迴圈與 Game Over 結算 ====================
+// ==================== 9. 主遊戲迴圈與勝負結算（Victory / Game Over） ====================
+function triggerVictory() {
+    if (isGameOver || waveState === 'VICTORY') return;
+    waveState = 'VICTORY';
+
+    if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+    }
+
+    clearTouchDragVisuals();
+    draggedIndex = null;
+    hoveredIndex = null;
+    updateRangeIndicator();
+    updateHUD();
+
+    let stars = '⭐';
+    let rankText = '驚險死守！於危急時刻擊退終極魔王！';
+    if (baseHp >= CONFIG.INITIAL_BASE_HP) {
+        stars = '⭐⭐⭐';
+        rankText = '完美防守！基地滿血通關第 10 波！';
+    } else if (baseHp >= 10) {
+        stars = '⭐⭐';
+        rankText = '穩固防線！成功守護基地擊敗終極魔王！';
+    }
+
+    if (victoryStarsEl) victoryStarsEl.innerText = stars;
+    if (victoryRankTextEl) victoryRankTextEl.innerText = rankText;
+    if (victoryKillsTextEl) victoryKillsTextEl.innerText = `${killsCount} 隻`;
+    if (victoryHpTextEl) victoryHpTextEl.innerText = `${baseHp} / ${CONFIG.INITIAL_BASE_HP}`;
+    if (victoryGoldTextEl) victoryGoldTextEl.innerText = `${currentGold} 💰`;
+    if (victoryOverlayEl) {
+        victoryOverlayEl.classList.remove('hidden');
+    }
+}
+
+function continueEndlessMode() {
+    if (waveState !== 'VICTORY') return;
+    isEndlessMode = true;
+
+    if (victoryOverlayEl) {
+        victoryOverlayEl.classList.add('hidden');
+    }
+
+    waveState = 'INTERMISSION';
+    waveTimerMs = CONFIG.WAVE_INTERMISSION_MS;
+    msgText.innerText = '🔥 無盡模式開啟！已解除波數上限，繼續挑戰更高紀錄吧！';
+    updateHUD();
+    startMainLoop();
+}
+
+function startGame() {
+    if (waveState !== 'WAITING_START') return;
+
+    if (startOverlayEl) {
+        startOverlayEl.classList.add('hidden');
+    }
+
+    waveState = 'PREP';
+    waveTimerMs = CONFIG.INITIAL_PREP_MS;
+    msgText.innerText = '備戰開始！請召喚元素塔佈陣，3 秒後第 1 波進攻（亦可按「立即開波」）！';
+    updateHUD();
+    startMainLoop();
+}
+
 function triggerGameOver() {
     if (isGameOver) return;
     isGameOver = true;
@@ -878,7 +1071,11 @@ function triggerGameOver() {
     updateRangeIndicator();
     updateHUD();
 
-    if (finalWaveTextEl) finalWaveTextEl.innerText = `Wave ${currentWave}`;
+    if (finalWaveTextEl) {
+        finalWaveTextEl.innerText = isEndlessMode
+            ? `Wave ${currentWave} (無盡)`
+            : `Wave ${currentWave} / ${CONFIG.VICTORY_WAVE}`;
+    }
     if (finalBestTextEl) finalBestTextEl.innerText = `Wave ${bestWave}`;
     if (finalKillsTextEl) finalKillsTextEl.innerText = `${killsCount} 隻`;
     if (newRecordBadgeEl) {
@@ -900,6 +1097,7 @@ function restartGame() {
     currentWave = 1;
     killsCount = 0;
     isGameOver = false;
+    isEndlessMode = false;
     isNewRecordThisRun = false;
 
     spawnCounts = { fire: 0, ice: 0, thunder: 0 };
@@ -927,9 +1125,9 @@ function restartGame() {
     attackAccMs = 0;
     lastFrameTime = null;
 
-    if (gameOverOverlayEl) {
-        gameOverOverlayEl.classList.add('hidden');
-    }
+    if (startOverlayEl) startOverlayEl.classList.add('hidden');
+    if (victoryOverlayEl) victoryOverlayEl.classList.add('hidden');
+    if (gameOverOverlayEl) gameOverOverlayEl.classList.add('hidden');
 
     msgText.innerText = '開局可召喚元素塔並拖曳或點擊合成；懸停或點選塔可預覽攻擊射程！';
     renderBoard();
@@ -938,7 +1136,7 @@ function restartGame() {
 }
 
 function gameTick(timestamp) {
-    if (isGameOver) return;
+    if (!isGameplayActive()) return;
 
     if (lastFrameTime === null) {
         lastFrameTime = timestamp;
@@ -972,6 +1170,11 @@ function gameTick(timestamp) {
         }
     } else if (waveState === 'CLEARING') {
         if (monsters.length === 0) {
+            if (!isEndlessMode && currentWave === CONFIG.VICTORY_WAVE) {
+                triggerVictory();
+                return;
+            }
+
             waveState = 'INTERMISSION';
             waveTimerMs = CONFIG.WAVE_INTERMISSION_MS;
             msgText.innerText = `🎉 第 ${currentWave} 波防禦成功！下一波將於 ${Math.ceil(CONFIG.WAVE_INTERMISSION_MS / 1000)} 秒後出發！`;
@@ -1082,7 +1285,7 @@ function renderBoard() {
             tower.setAttribute('draggable', true);
 
             tower.addEventListener('dragstart', () => {
-                if (isGameOver) return;
+                if (!isGameplayActive()) return;
                 draggedIndex = index;
                 selectedIndex = null;
                 tower.classList.add('dragging');
@@ -1099,7 +1302,7 @@ function renderBoard() {
 
             // 觸控裝置拖曳支援
             tower.addEventListener('touchstart', (e) => {
-                if (isGameOver || e.touches.length !== 1) return;
+                if (!isGameplayActive() || e.touches.length !== 1) return;
                 const touch = e.touches[0];
                 touchDragState = {
                     sourceIndex: index,
@@ -1204,7 +1407,7 @@ document.addEventListener('touchcancel', () => {
 });
 
 function handleCellClick(index) {
-    if (isGameOver) return;
+    if (!isGameplayActive()) return;
 
     if (selectedIndex === null) {
         if (board[index] !== null) {
@@ -1228,7 +1431,7 @@ function handleCellClick(index) {
 }
 
 function handleAction(fromIndex, toIndex) {
-    if (isGameOver) return;
+    if (!isGameplayActive()) return;
     if (fromIndex === null || toIndex === null || fromIndex === toIndex) {
         renderBoard();
         return;
@@ -1271,7 +1474,7 @@ function handleAction(fromIndex, toIndex) {
 
 // ==================== 11. 按鈕事件與視窗自適應監聽 ====================
 deleteTowerBtn.addEventListener('click', () => {
-    if (isGameOver) return;
+    if (!isGameplayActive()) return;
 
     if (selectedIndex === null || board[selectedIndex] === null) {
         msgText.innerText = '⚠️ 請先在棋盤上「點選」想要清除的塔！';
@@ -1288,7 +1491,7 @@ deleteTowerBtn.addEventListener('click', () => {
 });
 
 nextWaveBtn.addEventListener('click', () => {
-    if (isGameOver) return;
+    if (!isGameplayActive()) return;
     if (waveState === 'PREP') {
         startWave(1);
     } else if (waveState === 'INTERMISSION') {
@@ -1297,19 +1500,22 @@ nextWaveBtn.addEventListener('click', () => {
 });
 
 addGoldBtn.addEventListener('click', () => {
-    if (isGameOver) return;
+    if (!CONFIG.DEBUG_MODE || !isGameplayActive()) return;
     currentGold += 500;
     msgText.innerText = '🛠️ 已增加 500 💰！按鈕已解鎖。';
     updateHUD();
 });
 
 clearGoldBtn.addEventListener('click', () => {
-    if (isGameOver) return;
+    if (!CONFIG.DEBUG_MODE || !isGameplayActive()) return;
     currentGold = 0;
     msgText.innerText = '🛠️ 金幣已歸零！按鈕變灰，請點擊測試抖動反饋。';
     updateHUD();
 });
 
+if (startGameBtn) startGameBtn.addEventListener('click', startGame);
+if (victoryRestartBtn) victoryRestartBtn.addEventListener('click', restartGame);
+if (endlessBtn) endlessBtn.addEventListener('click', continueEndlessMode);
 restartBtn.addEventListener('click', restartGame);
 
 function handleBoardLayoutChange() {
@@ -1324,8 +1530,8 @@ if (typeof ResizeObserver !== 'undefined') {
     ro.observe(boardElement);
 }
 
-// ==================== 12. 初始化啟動 ====================
+// ==================== 12. 初始化啟動（保持 WAITING_START，待玩家按「開始防守」） ====================
+applyDebugModeVisibility();
 renderSpawnerButtons();
 renderBoard();
 updateHUD();
-startMainLoop();
