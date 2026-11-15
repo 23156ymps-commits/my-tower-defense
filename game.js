@@ -188,6 +188,7 @@ let killsCount = 0;
 let isGameOver = false;
 let isEndlessMode = false;
 let isNewRecordThisRun = false;
+let gameSpeed = 1;
 
 let spawnCounts = {
     fire: 0,
@@ -241,6 +242,7 @@ const addGoldBtn = document.getElementById('add-gold-btn');
 const clearGoldBtn = document.getElementById('clear-gold-btn');
 const deleteTowerBtn = document.getElementById('delete-tower-btn');
 const nextWaveBtn = document.getElementById('next-wave-btn');
+const speedBtn = document.getElementById('speed-btn');
 
 const goldDisplay = document.getElementById('gold-display');
 const baseHpDisplay = document.getElementById('base-hp-display');
@@ -276,6 +278,25 @@ function applyDebugModeVisibility() {
     const displayMode = CONFIG.DEBUG_MODE ? 'inline-block' : 'none';
     if (addGoldBtn) addGoldBtn.style.display = displayMode;
     if (clearGoldBtn) clearGoldBtn.style.display = displayMode;
+}
+
+function updateSpeedButtonUI() {
+    if (!speedBtn) return;
+    speedBtn.classList.remove('speed-2x', 'speed-3x');
+    if (gameSpeed === 2) {
+        speedBtn.classList.add('speed-2x');
+        speedBtn.innerText = '⏩ 2x';
+    } else if (gameSpeed === 3) {
+        speedBtn.classList.add('speed-3x');
+        speedBtn.innerText = '🔥 3x';
+    } else {
+        speedBtn.innerText = '⏩ 1x';
+    }
+}
+
+function cycleGameSpeed() {
+    gameSpeed = (gameSpeed % 3) + 1;
+    updateSpeedButtonUI();
 }
 
 // ==================== 3. 座標量測與數值公式 ====================
@@ -721,8 +742,10 @@ function spawnDamageNumber(amount, isWeakness, px, py) {
     dmgEl.style.left = `${px + randomOffsetX}px`;
     dmgEl.style.top = `${py - 18 + randomOffsetY}px`;
 
+    const durationMs = Math.round(720 / Math.max(1, gameSpeed * 0.75));
+    dmgEl.style.animationDuration = `${durationMs}ms`;
     floatingLayerEl.appendChild(dmgEl);
-    setTimeout(() => dmgEl.remove(), 720);
+    setTimeout(() => dmgEl.remove(), durationMs);
 }
 
 function spawnAttackEffect(type, fromPos, toPos) {
@@ -731,6 +754,8 @@ function spawnAttackEffect(type, fromPos, toPos) {
     const svgNS = 'http://www.w3.org/2000/svg';
     const group = document.createElementNS(svgNS, 'g');
     group.classList.add('fx-fade');
+    const fxDurationMs = Math.round(200 / Math.max(1, gameSpeed * 0.8));
+    group.style.animationDuration = `${fxDurationMs}ms`;
 
     if (type === 'thunder') {
         const midX = (fromPos.left + toPos.left) / 2 + (Math.random() - 0.5) * 18;
@@ -765,7 +790,7 @@ function spawnAttackEffect(type, fromPos, toPos) {
     }
 
     fxLayerEl.appendChild(group);
-    setTimeout(() => group.remove(), 200);
+    setTimeout(() => group.remove(), fxDurationMs);
 }
 
 function applyHitToMonster(towerObj, monster) {
@@ -809,11 +834,12 @@ function performTowerAttack(towerIndex, towerObj) {
             if (bolt === 0) {
                 spawnAttackEffect('thunder', towerPos, targetPos);
             } else {
+                const boltDelayMs = Math.round(90 / gameSpeed);
                 setTimeout(() => {
-                    if (!isGameOver) {
+                    if (isGameplayActive()) {
                         spawnAttackEffect('thunder', towerPos, targetPos);
                     }
-                }, 90);
+                }, boltDelayMs);
             }
         }
         return;
@@ -1132,18 +1158,22 @@ function restartGame() {
     msgText.innerText = '開局可召喚元素塔並拖曳或點擊合成；懸停或點選塔可預覽攻擊射程！';
     renderBoard();
     updateHUD();
+    updateSpeedButtonUI();
     startMainLoop();
 }
 
 function gameTick(timestamp) {
-    if (!isGameplayActive()) return;
+    const isPaused = !isGameplayActive();
+    if (isPaused) return;
 
     if (lastFrameTime === null) {
         lastFrameTime = timestamp;
     }
-    // 限制單幀最大步長，避免切換分頁後怪物瞬間瞬移
-    const dtMs = Math.min(100, Math.max(0, timestamp - lastFrameTime));
+    // 限制單幀原始時間差上限為 0.1 秒，再乘上 gameSpeed 確保全戰場同步加速且不暴衝
+    const rawDt = Math.min(0.1, Math.max(0, (timestamp - lastFrameTime) / 1000));
     lastFrameTime = timestamp;
+    const dt = isPaused ? 0 : rawDt * gameSpeed;
+    const dtMs = dt * 1000;
 
     // 1. 波次狀態推進
     if (waveState === 'PREP' || waveState === 'INTERMISSION') {
@@ -1159,7 +1189,7 @@ function gameTick(timestamp) {
         }
     } else if (waveState === 'SPAWNING') {
         waveSpawnAccMs += dtMs;
-        if (waveSpawnAccMs >= waveSpawnIntervalMs && waveSpawnQueue.length > 0) {
+        while (waveSpawnAccMs >= waveSpawnIntervalMs && waveSpawnQueue.length > 0) {
             waveSpawnAccMs -= waveSpawnIntervalMs;
             const nextEntry = waveSpawnQueue.shift();
             spawnMonsterFromEntry(nextEntry);
@@ -1190,7 +1220,7 @@ function gameTick(timestamp) {
 
     // 3. 防禦塔攻擊排程
     attackAccMs += dtMs;
-    if (attackAccMs >= CONFIG.ATTACK_INTERVAL) {
+    while (attackAccMs >= CONFIG.ATTACK_INTERVAL && isGameplayActive()) {
         attackAccMs -= CONFIG.ATTACK_INTERVAL;
         runTowerAttacks();
     }
@@ -1513,6 +1543,7 @@ clearGoldBtn.addEventListener('click', () => {
     updateHUD();
 });
 
+if (speedBtn) speedBtn.addEventListener('click', cycleGameSpeed);
 if (startGameBtn) startGameBtn.addEventListener('click', startGame);
 if (victoryRestartBtn) victoryRestartBtn.addEventListener('click', restartGame);
 if (endlessBtn) endlessBtn.addEventListener('click', continueEndlessMode);
@@ -1535,3 +1566,4 @@ applyDebugModeVisibility();
 renderSpawnerButtons();
 renderBoard();
 updateHUD();
+updateSpeedButtonUI();
