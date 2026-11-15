@@ -23,9 +23,9 @@
 
     <!-- 屬性相剋與機制提示條 -->
     <div id="info-legend">
-        <span>相剋 (200%)：🌿蔓藤←🔥火</span>
-        <span>🌋熔岩←❄️冰</span>
-        <span>🛸機械←⚡雷</span>
+        <span>🔥火 ➔ 🌿蔓藤</span>
+        <span>❄️冰 ➔ 🌋熔岩</span>
+        <span>⚡雷 ➔ 🛸機械（200%暴擊）</span>
         <span>🛡️護甲怪：高單發破防</span>
     </div>
 
@@ -38,6 +38,7 @@
         <svg id="fx-layer" aria-hidden="true"></svg>
         <div id="monster-layer" aria-hidden="true"></div>
         <div id="floating-layer" aria-hidden="true"></div>
+        <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite"></div>
     </div>
 
     <!-- 屬性獨立召喚控制區 -->
@@ -45,7 +46,7 @@
 
     <!-- 操作與測試工具列 -->
     <div class="debug-controls">
-        <button id="delete-tower-btn" class="delete-tower-btn">🗑️ 確定清除</button>
+        <button id="delete-tower-btn" class="delete-tower-btn">💰 賣出防禦塔</button>
         <button id="next-wave-btn" class="wave-btn" disabled>⚡ 立即開波</button>
         <button id="speed-btn" class="speed-btn" type="button">⏩ 1x</button>
         <button id="add-gold-btn" class="debug-btn debug-only">+500 💰</button>
@@ -72,13 +73,13 @@
                 <div class="rule-item">
                     <span class="rule-num">2</span>
                     <div class="rule-content">
-                        <strong>【合成】</strong>「拖曳」或「依序點擊」兩座相同屬性與等級的塔，可合成升階（最高 Lv.3）。
+                        <strong>【合成】</strong>「拖曳」或「依序點擊」兩座相同屬性與星級的塔，可升階質變（最高 ★★★ 滿階）。
                     </div>
                 </div>
                 <div class="rule-item">
                     <span class="rule-num">3</span>
                     <div class="rule-content">
-                        <strong>【克制】</strong>🔥火剋🌿蔓藤、❄️冰剋🌋熔岩、⚡雷剋🛸機械（弱點命中 200% 暴擊；點擊或懸停塔可看射程）。
+                        <strong>【克制】</strong>🔥火 ➔ 🌿蔓藤、❄️冰 ➔ 🌋熔岩、⚡雷 ➔ 🛸機械（弱點 200% 暴擊；點選或懸停塔可看射程）。
                     </div>
                 </div>
             </div>

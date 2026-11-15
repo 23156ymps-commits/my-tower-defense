@@ -1,23 +1,34 @@
 // ==================== 1. 遊戲規格與平衡參數 ====================
 const CONFIG = {
-    DEBUG_MODE: false,           // 試玩模式預設隱藏測試作弊按鈕；改為 true 可恢復開發測試工具
-    VICTORY_WAVE: 10,            // 正式試玩版總關卡波數（第 10 波為最終魔王戰）
+    DEBUG_MODE: false,                  // 試玩模式預設隱藏測試作弊按鈕；改為 true 可恢復開發測試工具
+    VICTORY_WAVE: 10,                   // 正式試玩版總關卡波數（第 10 波為最終魔王戰）
     INITIAL_GOLD: 40,
     INITIAL_BASE_HP: 20,
     BASE_COST: 10,
     COST_STEP: 10,
     MAX_TIER: 3,
-    ATTACK_INTERVAL: 1000,       // 防禦塔基礎攻擊間隔 (ms)
+    ATTACK_INTERVAL: 1000,              // 預設攻速間隔 (ms)
     BOARD_COLS: 15,
     BOARD_ROWS: 10,
-    BOARD_SIZE: 150,             // 15 寬 x 10 高 = 150 格
-    MONSTER_BASE_SPEED: 2.6,     // 怪物基礎移動速度 (格/秒)
-    ICE_SLOW_DURATION_MS: 2000,  // 冰塔緩速持續時間 (ms)
-    ICE_SLOW_RATE: 0.45,         // 冰塔緩速幅度 (降速 45%)
-    THUNDER_BOLT_COUNT: 2,       // 雷塔單次攻擊連射閃電數
-    WEAKNESS_MULTIPLIER: 2.0,    // 弱點相剋暴擊倍率 (200%)
-    INITIAL_PREP_MS: 3000,       // 開局備戰倒數 (ms)
-    WAVE_INTERMISSION_MS: 4000,  // 波次間休息倒數 (ms)
+    BOARD_SIZE: 150,                    // 15 寬 x 10 高 = 150 格
+    MONSTER_BASE_SPEED: 2.6,            // 怪物基礎移動速度 (格/秒)
+    ICE_SLOW_DURATION_MS: 2000,         // 冰塔基礎緩速持續時間 (ms)
+    ICE_SLOW_RATE: 0.45,                // 冰塔基礎緩速幅度 (降速 45%)
+    ICE_LV3_SLOW_DURATION_MS: 2500,     // 冰塔 Lv.3 深度緩速持續時間 (ms)
+    ICE_LV3_SLOW_RATE: 0.60,            // 冰塔 Lv.3 深度緩速幅度 (降速 60%)
+    ICE_LV3_AOE_RADIUS_CELLS: 1.2,      // 冰塔 Lv.3 寒霜濺射半徑 (格)
+    ICE_LV3_AOE_SLOW_RATE: 0.30,        // 冰塔 Lv.3 寒霜濺射附加緩速 (降速 30%)
+    ICE_LV3_AOE_SLOW_DURATION_MS: 1500, // 冰塔 Lv.3 寒霜濺射緩速時間 (ms)
+    THUNDER_BOLT_COUNT: 2,              // 雷塔基礎連射閃電數
+    THUNDER_LV3_BOLT_COUNT: 3,          // 雷塔 Lv.3 質變三連閃電
+    THUNDER_BOLT_DELAY_MS: 90,          // 雷塔後續閃電延遲間隔 (ms，依倍速縮放)
+    FIRE_LV3_SPLASH_RATIO: 0.35,        // 火塔 Lv.3 炎爆濺射傷害比例 (35%)
+    FIRE_LV3_SPLASH_RADIUS_CELLS: 1.0,  // 火塔 Lv.3 炎爆濺射半徑 (格)
+    SELL_REFUND_RATE: 0.5,              // 賣塔退還投入金幣比例
+    SELL_MIN_REFUND: 5,                 // 賣塔最低退還金幣
+    WEAKNESS_MULTIPLIER: 2.0,           // 弱點相剋暴擊倍率 (200%)
+    INITIAL_PREP_MS: 3000,              // 開局備戰倒數 (ms)
+    WAVE_INTERMISSION_MS: 4000,         // 波次間休息倒數 (ms)
     STORAGE_BEST_WAVE_KEY: 'merge_defense_best_wave'
 };
 
@@ -26,21 +37,24 @@ const ELEMENT_CONFIG = {
         name: "火塔",
         icon: "🔥",
         range: 1.8,
-        roleTag: "重砲·短1.8",
+        attackIntervalMs: 1200,
+        roleTag: "短1.8·1.2s",
         color: "#e74c3c"
     },
     ice: {
         name: "冰塔",
         icon: "❄️",
         range: 2.8,
-        roleTag: "緩速·中2.8",
+        attackIntervalMs: 1000,
+        roleTag: "中2.8·1.0s",
         color: "#38bdf8"
     },
     thunder: {
         name: "雷塔",
         icon: "⚡",
         range: 4.2,
-        roleTag: "連射·長4.2",
+        attackIntervalMs: 750,
+        roleTag: "長4.2·0.75s",
         color: "#f59e0b"
     }
 };
@@ -201,21 +215,27 @@ let board = Array(CONFIG.BOARD_SIZE).fill(null);
 let monsters = [];
 let monsterIdCounter = 1;
 const monsterDomMap = new Map();
+const cellElements = [];
+let lastRenderedSelected = null;
 
 // 互動狀態
 let draggedIndex = null;
 let selectedIndex = null;
 let hoveredIndex = null;
+let isTouchMode = false;
 let touchDragState = null;
 let lastTouchDragEndTime = 0;
 
-// 波次與主迴圈狀態
+// 波次、局部局數隔離 (sessionId) 與主迴圈狀態
+let sessionId = 1;
+const activeTimers = new Set();
+let pendingBolts = [];
+let towerPhaseSeq = 0;
 let waveState = 'WAITING_START'; // 'WAITING_START' | 'PREP' | 'SPAWNING' | 'CLEARING' | 'INTERMISSION' | 'VICTORY' | 'GAMEOVER'
 let waveTimerMs = CONFIG.INITIAL_PREP_MS;
 let waveSpawnQueue = [];
 let waveSpawnIntervalMs = WAVE_BALANCE.SPAWN_INTERVAL_BASE_MS;
 let waveSpawnAccMs = 0;
-let attackAccMs = 0;
 let lastFrameTime = null;
 let rafId = null;
 
@@ -235,6 +255,7 @@ const boardElement = document.getElementById('grid-board');
 const monsterLayerEl = document.getElementById('monster-layer');
 const fxLayerEl = document.getElementById('fx-layer');
 const floatingLayerEl = document.getElementById('floating-layer');
+const bossStatusBarEl = document.getElementById('boss-status-bar');
 const rangeCircleEl = document.getElementById('range-circle');
 const spawnerContainer = document.getElementById('element-spawner-container');
 
@@ -272,6 +293,121 @@ const restartBtn = document.getElementById('restart-btn');
 
 function isGameplayActive() {
     return !isGameOver && waveState !== 'WAITING_START' && waveState !== 'VICTORY';
+}
+
+function scheduleGameTimeout(callback, delayMs) {
+    const capturedSessionId = sessionId;
+    const timerId = setTimeout(() => {
+        activeTimers.delete(timerId);
+        if (capturedSessionId !== sessionId) return;
+        callback();
+    }, Math.max(0, delayMs));
+    activeTimers.add(timerId);
+    return timerId;
+}
+
+function clearAllGameTimers() {
+    activeTimers.forEach(timerId => clearTimeout(timerId));
+    activeTimers.clear();
+    pendingBolts = [];
+}
+
+function activateTouchMode() {
+    isTouchMode = true;
+    if (hoveredIndex !== null) {
+        hoveredIndex = null;
+        updateRangeIndicator();
+    }
+}
+
+if (typeof document !== 'undefined') {
+    document.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'touch') {
+            activateTouchMode();
+        } else if (e.pointerType === 'mouse' && (!e.sourceCapabilities || !e.sourceCapabilities.firesTouchEvents)) {
+            isTouchMode = false;
+        }
+    }, true);
+
+    document.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'mouse' && (!e.sourceCapabilities || !e.sourceCapabilities.firesTouchEvents)) {
+            isTouchMode = false;
+        }
+    }, true);
+
+    document.addEventListener('touchstart', () => {
+        activateTouchMode();
+    }, { passive: true, capture: true });
+}
+
+function getTierStars(tier) {
+    return '★'.repeat(Math.max(1, Math.min(CONFIG.MAX_TIER, tier || 1)));
+}
+
+function getTowerAttackInterval(type) {
+    const cfg = ELEMENT_CONFIG[type];
+    return (cfg && cfg.attackIntervalMs) || CONFIG.ATTACK_INTERVAL;
+}
+
+function createTowerObj(type, tier, investedGold, initialAccMs = null) {
+    let accMs = initialAccMs;
+    if (accMs === null) {
+        // 若場上已有同屬性塔，施加小幅錯峰負延遲，錯開開火節拍；首座同屬性塔則從 0 開始
+        const hasSameType = board.some(t => t && t.type === type);
+        if (hasSameType) {
+            const staggerStep = ((towerPhaseSeq++) % 3) + 1;
+            accMs = -(staggerStep * 130);
+        } else {
+            accMs = 0;
+        }
+    }
+    return {
+        type,
+        tier,
+        accMs,
+        investedGold
+    };
+}
+
+function getTowerSellRefund(towerObj) {
+    if (!towerObj) return 0;
+    const invested = Number.isFinite(towerObj.investedGold)
+        ? towerObj.investedGold
+        : CONFIG.BASE_COST * Math.pow(2, Math.max(0, (towerObj.tier || 1) - 1));
+    return Math.max(CONFIG.SELL_MIN_REFUND, Math.floor(invested * CONFIG.SELL_REFUND_RATE));
+}
+
+function updateSellButtonUI() {
+    if (!deleteTowerBtn) return;
+    const canSell = isGameplayActive() && selectedIndex !== null && board[selectedIndex] !== null;
+    deleteTowerBtn.classList.remove('sell-idle', 'sell-ready');
+    if (canSell) {
+        const refund = getTowerSellRefund(board[selectedIndex]);
+        deleteTowerBtn.classList.add('sell-ready');
+        deleteTowerBtn.innerText = `💰 賣出防禦塔 (+${refund} 💰)`;
+    } else {
+        deleteTowerBtn.classList.add('sell-idle');
+        deleteTowerBtn.innerText = '💰 賣出防禦塔';
+    }
+}
+
+function updateBossStatusBar() {
+    if (!bossStatusBarEl) return;
+    const activeBoss = monsters.find(m => m.isBoss && m.hp > 0);
+    if (!activeBoss || !isGameplayActive()) {
+        bossStatusBarEl.classList.add('hidden');
+        bossStatusBarEl.classList.remove('weak-fire', 'weak-ice', 'weak-thunder');
+        bossStatusBarEl.innerText = '';
+        return;
+    }
+
+    const weakCfg = ELEMENT_CONFIG[activeBoss.weakness];
+    const weakLabel = weakCfg ? `${weakCfg.icon}${weakCfg.name}` : activeBoss.weakness;
+    bossStatusBarEl.classList.remove('hidden', 'weak-fire', 'weak-ice', 'weak-thunder');
+    if (weakCfg) {
+        bossStatusBarEl.classList.add(`weak-${activeBoss.weakness}`);
+    }
+    bossStatusBarEl.innerText = `⚠️ ${activeBoss.name}｜HP ${activeBoss.hp}/${activeBoss.maxHp}｜🛡️${activeBoss.armor}｜弱點 ${weakLabel}（200%）`;
 }
 
 function applyDebugModeVisibility() {
@@ -377,6 +513,8 @@ function updateHUD() {
     if (bestWaveDisplay) bestWaveDisplay.innerText = `Wave ${bestWave}`;
 
     updateWavePhaseUI();
+    updateSellButtonUI();
+    updateBossStatusBar();
 
     Object.keys(ELEMENT_CONFIG).forEach(type => {
         const btn = document.getElementById(`spawn-btn-${type}`);
@@ -404,7 +542,7 @@ function updateRangeIndicator() {
     }
 
     let targetIdx = null;
-    if (hoveredIndex !== null && board[hoveredIndex] !== null) {
+    if (!isTouchMode && hoveredIndex !== null && board[hoveredIndex] !== null) {
         targetIdx = hoveredIndex;
     } else if (selectedIndex !== null && board[selectedIndex] !== null) {
         targetIdx = selectedIndex;
@@ -476,12 +614,12 @@ function handleSpawn(type, btnElement) {
     spawnCounts[type] = (spawnCounts[type] || 0) + 1;
 
     const randomIdx = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
-    board[randomIdx] = { type: type, tier: 1 };
+    board[randomIdx] = createTowerObj(type, 1, cost);
 
     const cfg = ELEMENT_CONFIG[type];
-    msgText.innerText = `成功召喚【${cfg.name} Lv.1】（射程 ${cfg.range} 格）！花費 ${cost} 💰。`;
+    msgText.innerText = `成功召喚【${cfg.name} ${getTierStars(1)}】（射程 ${cfg.range} 格）！花費 ${cost} 💰。`;
 
-    renderBoard();
+    renderBoard([randomIdx]);
     updateHUD();
 }
 
@@ -546,7 +684,7 @@ function buildWaveQueue(waveNum) {
     if (hasBoss) {
         const bossTypeKey = isFinalStoryWave
             ? 'wood'
-            : typeKeys[Math.floor(waveNum / 5) % typeKeys.length];
+            : typeKeys[(Math.floor(waveNum / 5) + 1) % typeKeys.length];
         const endlessSteps = Math.max(0, Math.floor((waveNum - CONFIG.VICTORY_WAVE) / 5));
         const bossHp = Math.round(WAVE_BALANCE.BOSS_HP_BASE * (1 + endlessSteps * 0.65));
         const bossArmor = WAVE_BALANCE.BOSS_ARMOR_BASE + endlessSteps * 2;
@@ -641,7 +779,8 @@ function spawnMonsterFromEntry(entry) {
             pixelX: startPos.left,
             pixelY: startPos.top,
             baseSpeed: CONFIG.MONSTER_BASE_SPEED * WAVE_BALANCE.BOSS_SPEED_MULT,
-            slowTimer: 0
+            slowTimer: 0,
+            slowRate: 0
         };
 
         monsters.push(monster);
@@ -675,14 +814,15 @@ function spawnMonsterFromEntry(entry) {
         pixelX: startPos.left,
         pixelY: startPos.top,
         baseSpeed: CONFIG.MONSTER_BASE_SPEED * speedMult,
-        slowTimer: 0
+        slowTimer: 0,
+        slowRate: 0
     };
 
     monsters.push(monster);
     renderMonsterLayer();
 }
 
-// ==================== 7. 戰鬥系統：獨立射程、差異化機制、護甲計算 ====================
+// ==================== 7. 戰鬥系統：獨立冷卻、Lv.3 質變技能、護甲計算 ====================
 function getMonsterProgress(monster) {
     const wpIdx = Math.min(monster.wpIndex, WAYPOINTS.length - 1);
     const wp = WAYPOINTS[wpIdx];
@@ -716,9 +856,9 @@ function findBestTargetInRange(towerIndex, towerObj) {
     return bestTarget;
 }
 
-function calculateDamage(towerObj, monster) {
+function calculateDamage(towerObj, monster, damageScale = 1.0) {
     const dmgRow = TIER_DAMAGE_TABLE[towerObj.type];
-    const baseDmg = (dmgRow && dmgRow[towerObj.tier]) || 10;
+    const baseDmg = ((dmgRow && dmgRow[towerObj.tier]) || 10) * damageScale;
     const isWeakness = (towerObj.type === monster.weakness);
     const multiplier = isWeakness ? CONFIG.WEAKNESS_MULTIPLIER : 1.0;
 
@@ -728,6 +868,16 @@ function calculateDamage(towerObj, monster) {
     const finalDamage = Math.max(1, rawDamage - armor);
 
     return { damage: finalDamage, isWeakness };
+}
+
+function applySlowToMonster(monster, slowRate, durationMs) {
+    if (!monster || monster.hp <= 0) return;
+    const activeRate = monster.slowTimer > 0 ? (monster.slowRate || CONFIG.ICE_SLOW_RATE) : 0;
+    // 不讓較弱的群體濺射覆蓋強效單體深度緩速
+    if (slowRate >= activeRate) {
+        monster.slowRate = slowRate;
+        monster.slowTimer = Math.max(monster.slowTimer, durationMs);
+    }
 }
 
 function spawnDamageNumber(amount, isWeakness, px, py) {
@@ -745,10 +895,10 @@ function spawnDamageNumber(amount, isWeakness, px, py) {
     const durationMs = Math.round(720 / Math.max(1, gameSpeed * 0.75));
     dmgEl.style.animationDuration = `${durationMs}ms`;
     floatingLayerEl.appendChild(dmgEl);
-    setTimeout(() => dmgEl.remove(), durationMs);
+    scheduleGameTimeout(() => dmgEl.remove(), durationMs);
 }
 
-function spawnAttackEffect(type, fromPos, toPos) {
+function spawnAttackEffect(type, fromPos, toPos, options = {}) {
     if (!fxLayerEl) return;
 
     const svgNS = 'http://www.w3.org/2000/svg';
@@ -763,8 +913,8 @@ function spawnAttackEffect(type, fromPos, toPos) {
         const bolt = document.createElementNS(svgNS, 'polyline');
         bolt.setAttribute('points', `${fromPos.left},${fromPos.top} ${midX},${midY} ${toPos.left},${toPos.top}`);
         bolt.setAttribute('fill', 'none');
-        bolt.setAttribute('stroke', '#fde047');
-        bolt.setAttribute('stroke-width', '2.6');
+        bolt.setAttribute('stroke', options.isLv3 ? '#fef08a' : '#fde047');
+        bolt.setAttribute('stroke-width', options.isLv3 ? '3.0' : '2.6');
         bolt.setAttribute('stroke-linecap', 'round');
         bolt.setAttribute('stroke-linejoin', 'round');
         group.appendChild(bolt);
@@ -787,19 +937,47 @@ function spawnAttackEffect(type, fromPos, toPos) {
         hitRing.setAttribute('stroke', type === 'fire' ? '#fab1a0' : '#bae6fd');
         hitRing.setAttribute('stroke-width', '1.5');
         group.appendChild(hitRing);
+
+        if (type === 'fire' && options.splashRadiusPx > 0) {
+            const splashRing = document.createElementNS(svgNS, 'circle');
+            splashRing.setAttribute('cx', toPos.left);
+            splashRing.setAttribute('cy', toPos.top);
+            splashRing.setAttribute('r', options.splashRadiusPx.toFixed(1));
+            splashRing.setAttribute('fill', 'rgba(249, 115, 22, 0.22)');
+            splashRing.setAttribute('stroke', '#fdba74');
+            splashRing.setAttribute('stroke-width', '1.6');
+            splashRing.setAttribute('stroke-dasharray', '4 3');
+            group.appendChild(splashRing);
+        } else if (type === 'ice' && options.frostRadiusPx > 0) {
+            const frostRing = document.createElementNS(svgNS, 'circle');
+            frostRing.setAttribute('cx', toPos.left);
+            frostRing.setAttribute('cy', toPos.top);
+            frostRing.setAttribute('r', options.frostRadiusPx.toFixed(1));
+            frostRing.setAttribute('fill', 'rgba(56, 189, 248, 0.20)');
+            frostRing.setAttribute('stroke', '#7dd3fc');
+            frostRing.setAttribute('stroke-width', '1.5');
+            frostRing.setAttribute('stroke-dasharray', '4 3');
+            group.appendChild(frostRing);
+        }
     }
 
     fxLayerEl.appendChild(group);
-    setTimeout(() => group.remove(), fxDurationMs);
+    scheduleGameTimeout(() => group.remove(), fxDurationMs);
 }
 
-function applyHitToMonster(towerObj, monster) {
-    const result = calculateDamage(towerObj, monster);
+function applyHitToMonster(towerObj, monster, options = {}) {
+    if (!monster || monster.hp <= 0) return;
+
+    const damageScale = options.damageScale ?? 1.0;
+    const applySlow = options.applySlow !== false;
+    const result = calculateDamage(towerObj, monster, damageScale);
     monster.hp = Math.max(0, monster.hp - result.damage);
 
-    // 冰塔命中附加 2000ms 緩速控場
-    if (towerObj.type === 'ice') {
-        monster.slowTimer = CONFIG.ICE_SLOW_DURATION_MS;
+    if (towerObj.type === 'ice' && applySlow) {
+        const isLv3 = towerObj.tier >= CONFIG.MAX_TIER;
+        const slowRate = isLv3 ? CONFIG.ICE_LV3_SLOW_RATE : CONFIG.ICE_SLOW_RATE;
+        const slowDur = isLv3 ? CONFIG.ICE_LV3_SLOW_DURATION_MS : CONFIG.ICE_SLOW_DURATION_MS;
+        applySlowToMonster(monster, slowRate, slowDur);
     }
 
     spawnDamageNumber(result.damage, result.isWeakness, monster.pixelX, monster.pixelY);
@@ -818,51 +996,139 @@ function applyHitToMonster(towerObj, monster) {
     }
 }
 
+function fireThunderBolt(towerIndex, towerObj) {
+    if (!isGameplayActive() || monsters.length === 0) return false;
+    if (board[towerIndex] !== towerObj) return false;
+
+    const target = findBestTargetInRange(towerIndex, towerObj);
+    if (!target) return false;
+
+    const coords = indexToCoords(towerIndex);
+    const towerPos = getCellCenter(coords.x, coords.y);
+    const targetPos = { left: target.pixelX, top: target.pixelY };
+
+    applyHitToMonster(towerObj, target);
+    spawnAttackEffect('thunder', towerPos, targetPos, { isLv3: towerObj.tier >= CONFIG.MAX_TIER });
+    return true;
+}
+
 function performTowerAttack(towerIndex, towerObj) {
     const coords = indexToCoords(towerIndex);
     const towerPos = getCellCenter(coords.x, coords.y);
 
     if (towerObj.type === 'thunder') {
-        // 雷塔每次發射 2 道閃電，每道開火前皆動態索敵（第一道擊殺後第二道自動轉火）
-        for (let bolt = 0; bolt < CONFIG.THUNDER_BOLT_COUNT; bolt++) {
-            const target = findBestTargetInRange(towerIndex, towerObj);
-            if (!target) break;
+        const boltCount = towerObj.tier >= CONFIG.MAX_TIER
+            ? CONFIG.THUNDER_LV3_BOLT_COUNT
+            : CONFIG.THUNDER_BOLT_COUNT;
 
-            const targetPos = { left: target.pixelX, top: target.pixelY };
-            applyHitToMonster(towerObj, target);
+        // 第 1 道閃電立即動態索敵與結算；若範圍內無目標則直接略過，不排空閃電
+        if (!fireThunderBolt(towerIndex, towerObj)) return false;
 
-            if (bolt === 0) {
-                spawnAttackEffect('thunder', towerPos, targetPos);
-            } else {
-                const boltDelayMs = Math.round(90 / gameSpeed);
-                setTimeout(() => {
-                    if (isGameplayActive()) {
-                        spawnAttackEffect('thunder', towerPos, targetPos);
-                    }
-                }, boltDelayMs);
-            }
+        // 後續閃電在延遲後由主迴圈推進重新索敵，確保不劈向死亡目標的空地，並隨 gameSpeed 與 sessionId 同步
+        for (let bolt = 1; bolt < boltCount; bolt++) {
+            pendingBolts.push({
+                sessionId,
+                towerIndex,
+                towerObj,
+                remainingMs: CONFIG.THUNDER_BOLT_DELAY_MS * bolt
+            });
         }
-        return;
+        return true;
     }
 
     const target = findBestTargetInRange(towerIndex, towerObj);
-    if (!target) return;
+    if (!target) return false;
 
     const targetPos = { left: target.pixelX, top: target.pixelY };
+    const isLv3 = towerObj.tier >= CONFIG.MAX_TIER;
+
+    // 記錄主目標座標後結算主傷害，供 Lv.3 濺射與特效精準定位
     applyHitToMonster(towerObj, target);
-    spawnAttackEffect(towerObj.type, towerPos, targetPos);
-}
 
-function runTowerAttacks() {
-    if (isGameOver || monsters.length === 0) return;
-
-    for (let idx = 0; idx < board.length; idx++) {
-        const towerObj = board[idx];
-        if (towerObj === null) continue;
-        performTowerAttack(idx, towerObj);
+    if (towerObj.type === 'fire' && isLv3) {
+        const splashRadiusPx = CONFIG.FIRE_LV3_SPLASH_RADIUS_CELLS * boardMetrics.step;
+        const splashTargets = monsters.filter(m =>
+            m.id !== target.id
+            && m.hp > 0
+            && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= splashRadiusPx
+        );
+        for (let i = 0; i < splashTargets.length; i++) {
+            applyHitToMonster(towerObj, splashTargets[i], { damageScale: CONFIG.FIRE_LV3_SPLASH_RATIO });
+        }
+        spawnAttackEffect('fire', towerPos, targetPos, { splashRadiusPx });
+        return true;
     }
 
-    renderMonsterLayer();
+    if (towerObj.type === 'ice' && isLv3) {
+        const frostRadiusPx = CONFIG.ICE_LV3_AOE_RADIUS_CELLS * boardMetrics.step;
+        for (let i = 0; i < monsters.length; i++) {
+            const m = monsters[i];
+            if (m.id === target.id || m.hp <= 0) continue;
+            if (Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= frostRadiusPx) {
+                applySlowToMonster(m, CONFIG.ICE_LV3_AOE_SLOW_RATE, CONFIG.ICE_LV3_AOE_SLOW_DURATION_MS);
+            }
+        }
+        spawnAttackEffect('ice', towerPos, targetPos, { frostRadiusPx });
+        return true;
+    }
+
+    spawnAttackEffect(towerObj.type, towerPos, targetPos);
+    return true;
+}
+
+function updateTowersCombat(dtMs) {
+    if (!isGameplayActive()) return;
+
+    let didCombatAct = false;
+
+    // 先推進先前已排程的延遲閃電連擊，避免同一幀剛生成的閃電立即被本幀 dtMs 扣光延遲
+    if (pendingBolts.length > 0) {
+        const prevQueue = pendingBolts;
+        const remainingQueue = [];
+        pendingBolts = [];
+        for (let i = 0; i < prevQueue.length; i++) {
+            const boltTask = prevQueue[i];
+            if (boltTask.sessionId !== sessionId || !isGameplayActive()) continue;
+
+            boltTask.remainingMs -= dtMs;
+            if (boltTask.remainingMs <= 0) {
+                if (fireThunderBolt(boltTask.towerIndex, boltTask.towerObj)) {
+                    didCombatAct = true;
+                }
+            } else {
+                remainingQueue.push(boltTask);
+            }
+        }
+        pendingBolts = remainingQueue.concat(pendingBolts);
+    }
+
+    const isCombatPhase = monsters.length > 0 || waveState === 'SPAWNING';
+    if (isCombatPhase) {
+        for (let idx = 0; idx < board.length; idx++) {
+            const towerObj = board[idx];
+            if (towerObj === null) continue;
+
+            if (!Number.isFinite(towerObj.accMs)) {
+                towerObj.accMs = 0;
+            }
+
+            const intervalMs = getTowerAttackInterval(towerObj.type);
+            towerObj.accMs = Math.min(intervalMs, towerObj.accMs + dtMs);
+
+            if (towerObj.accMs >= intervalMs && monsters.length > 0) {
+                const fired = performTowerAttack(idx, towerObj);
+                if (fired) {
+                    towerObj.accMs -= intervalMs;
+                    didCombatAct = true;
+                }
+                // 若射程內暫無敵人，維持 accMs === intervalMs 就緒待命，怪物一踏入射程立刻開火
+            }
+        }
+    }
+
+    if (didCombatAct) {
+        renderMonsterLayer();
+    }
 }
 
 // ==================== 8. 怪物移動與無閃爍 DOM 更新 ====================
@@ -887,8 +1153,10 @@ function createMonsterDom(monster) {
     const armorHtml = monster.armor > 0
         ? `<span class="m-armor-badge">🛡️${monster.armor}</span>`
         : '';
+    const weakCfg = ELEMENT_CONFIG[monster.weakness];
+    const weakShort = weakCfg ? `${weakCfg.icon}${weakCfg.name.charAt(0)}` : '';
     const bossHtml = monster.isBoss
-        ? `<span class="m-boss-badge">👑魔王</span>`
+        ? `<span class="m-boss-badge weak-${monster.weakness}">👑弱${weakShort}</span>`
         : '';
 
     el.innerHTML = `
@@ -938,6 +1206,8 @@ function renderMonsterLayer() {
             }
         }
     }
+
+    updateBossStatusBar();
 }
 
 function repositionAllMonsters() {
@@ -958,9 +1228,13 @@ function updateMonsters(dtMs) {
 
         if (m.slowTimer > 0) {
             m.slowTimer = Math.max(0, m.slowTimer - dtMs);
+            if (m.slowTimer === 0) {
+                m.slowRate = 0;
+            }
         }
 
-        const slowMult = m.slowTimer > 0 ? (1 - CONFIG.ICE_SLOW_RATE) : 1.0;
+        const activeSlowRate = m.slowTimer > 0 ? (m.slowRate || CONFIG.ICE_SLOW_RATE) : 0;
+        const slowMult = 1 - activeSlowRate;
         let remainingStep = m.baseSpeed * slowMult * dtSec;
         let reachedEnd = false;
 
@@ -1026,6 +1300,7 @@ function triggerVictory() {
         rafId = null;
     }
 
+    pendingBolts = [];
     clearTouchDragVisuals();
     draggedIndex = null;
     hoveredIndex = null;
@@ -1091,6 +1366,7 @@ function triggerGameOver() {
         rafId = null;
     }
 
+    pendingBolts = [];
     clearTouchDragVisuals();
     draggedIndex = null;
     hoveredIndex = null;
@@ -1118,10 +1394,15 @@ function restartGame() {
         rafId = null;
     }
 
+    // 遞增局數識別並清空上一局所有未執行計時器與延遲閃電，防止跨局殘留
+    sessionId++;
+    clearAllGameTimers();
+
     currentGold = CONFIG.INITIAL_GOLD;
     baseHp = CONFIG.INITIAL_BASE_HP;
     currentWave = 1;
     killsCount = 0;
+    towerPhaseSeq = 0;
     isGameOver = false;
     isEndlessMode = false;
     isNewRecordThisRun = false;
@@ -1148,7 +1429,6 @@ function restartGame() {
     waveTimerMs = CONFIG.INITIAL_PREP_MS;
     waveSpawnQueue = [];
     waveSpawnAccMs = 0;
-    attackAccMs = 0;
     lastFrameTime = null;
 
     if (startOverlayEl) startOverlayEl.classList.add('hidden');
@@ -1218,12 +1498,8 @@ function gameTick(timestamp) {
         if (isGameOver) return;
     }
 
-    // 3. 防禦塔攻擊排程
-    attackAccMs += dtMs;
-    while (attackAccMs >= CONFIG.ATTACK_INTERVAL && isGameplayActive()) {
-        attackAccMs -= CONFIG.ATTACK_INTERVAL;
-        runTowerAttacks();
-    }
+    // 3. 每座塔獨立攻擊冷卻與延遲閃電連擊排程
+    updateTowersCombat(dtMs);
 
     rafId = requestAnimationFrame(gameTick);
 }
@@ -1234,11 +1510,38 @@ function startMainLoop() {
     rafId = requestAnimationFrame(gameTick);
 }
 
-// ==================== 10. 棋盤渲染與雙軌互動（滑鼠/觸控拖曳 + 點擊 A 再點擊 B） ====================
+// ==================== 10. 棋盤一次性初始化與局部增量渲染 ====================
+const towerElements = Array(CONFIG.BOARD_SIZE).fill(null);
+
+const PATH_FLOW_ARROWS = new Map();
+(function initPathFlowArrows() {
+    let step = 0;
+    for (let i = 0; i < WAYPOINTS.length - 1; i++) {
+        const p1 = WAYPOINTS[i];
+        const p2 = WAYPOINTS[i + 1];
+        const segDx = Math.sign(p2.x - p1.x);
+        const segDy = Math.sign(p2.y - p1.y);
+        const deg = segDx === 1 ? 0 : (segDy === 1 ? 90 : (segDx === -1 ? 180 : -90));
+
+        let curX = p1.x;
+        let curY = p1.y;
+        while (curX !== p2.x || curY !== p2.y) {
+            const idx = coordsToIndex(curX, curY);
+            const isCorner = curX === p1.x && curY === p1.y && i > 0;
+            if (idx !== START_CELL_INDEX && idx !== END_CELL_INDEX && (isCorner || step % 2 === 1)) {
+                PATH_FLOW_ARROWS.set(idx, deg);
+            }
+            curX += segDx;
+            curY += segDy;
+            step++;
+        }
+    }
+})();
+
 function clearCellDragHighlights() {
-    boardElement.querySelectorAll('.cell').forEach(c => {
-        c.classList.remove('drag-over', 'drag-invalid');
-    });
+    for (let i = 0; i < cellElements.length; i++) {
+        cellElements[i].classList.remove('drag-over', 'drag-invalid');
+    }
 }
 
 function clearTouchDragVisuals() {
@@ -1246,15 +1549,89 @@ function clearTouchDragVisuals() {
         touchDragState.ghostEl.remove();
     }
     clearCellDragHighlights();
-    boardElement.querySelectorAll('.tower.dragging').forEach(t => t.classList.remove('dragging'));
+    for (let i = 0; i < towerElements.length; i++) {
+        if (towerElements[i]) towerElements[i].classList.remove('dragging');
+    }
     touchDragState = null;
 }
 
-function renderBoard() {
-    // 只重建 #grid-board 內的 150 格，不觸碰同級的 #monster-layer，徹底根除怪物閃爍
-    boardElement.innerHTML = '';
+function createTowerElement(towerObj, index) {
+    const cfg = ELEMENT_CONFIG[towerObj.type];
+    const tower = document.createElement('div');
+    tower.classList.add('tower', `type-${towerObj.type}`, `lv-${towerObj.tier}`);
+    tower.setAttribute('draggable', true);
 
-    board.forEach((towerObj, index) => {
+    tower.addEventListener('dragstart', () => {
+        if (!isGameplayActive()) return;
+        draggedIndex = index;
+        selectedIndex = null;
+        tower.classList.add('dragging');
+        updateRangeIndicator();
+        updateSellButtonUI();
+        msgText.innerText = `抓起【${cfg.name} ${getTierStars(towerObj.tier)}】`;
+    });
+
+    tower.addEventListener('dragend', () => {
+        tower.classList.remove('dragging');
+        clearCellDragHighlights();
+        draggedIndex = null;
+        updateRangeIndicator();
+    });
+
+    tower.addEventListener('touchstart', (e) => {
+        activateTouchMode();
+        if (!isGameplayActive() || e.touches.length !== 1) return;
+        const touch = e.touches[0];
+        touchDragState = {
+            sourceIndex: index,
+            startX: touch.clientX,
+            startY: touch.clientY,
+            isDragging: false,
+            ghostEl: null,
+            towerEl: tower,
+            cfg: cfg,
+            tier: towerObj.tier
+        };
+    }, { passive: true });
+
+    const icon = document.createElement('div');
+    icon.classList.add('tower-icon');
+    icon.innerText = cfg.icon;
+
+    const name = document.createElement('div');
+    name.classList.add('tower-name');
+    name.innerText = getTierStars(towerObj.tier);
+
+    tower.appendChild(icon);
+    tower.appendChild(name);
+    return tower;
+}
+
+function renderCellTower(index) {
+    const cell = cellElements[index];
+    if (!cell) return;
+
+    const existingTowerEl = towerElements[index];
+    if (existingTowerEl) {
+        existingTowerEl.remove();
+        towerElements[index] = null;
+    }
+
+    const towerObj = board[index];
+    if (towerObj !== null) {
+        const newTowerEl = createTowerElement(towerObj, index);
+        towerElements[index] = newTowerEl;
+        cell.appendChild(newTowerEl);
+    }
+}
+
+function initBoard() {
+    boardElement.innerHTML = '';
+    cellElements.length = 0;
+    towerElements.fill(null);
+    lastRenderedSelected = null;
+
+    for (let index = 0; index < CONFIG.BOARD_SIZE; index++) {
         const cell = document.createElement('div');
         cell.classList.add('cell');
         cell.dataset.index = index;
@@ -1263,14 +1640,19 @@ function renderBoard() {
             cell.classList.add('path-cell');
             if (index === START_CELL_INDEX) cell.classList.add('path-start');
             if (index === END_CELL_INDEX) cell.classList.add('path-end');
+
+            if (PATH_FLOW_ARROWS.has(index)) {
+                const arrow = document.createElement('span');
+                arrow.classList.add('path-arrow');
+                arrow.style.transform = `rotate(${PATH_FLOW_ARROWS.get(index)}deg)`;
+                arrow.innerText = '▸';
+                cell.appendChild(arrow);
+            }
         }
 
-        if (selectedIndex === index) {
-            cell.classList.add('selected');
-        }
-
-        // 桌面滑鼠懸停顯示射程圈
+        // 桌面滑鼠懸停顯示射程圈；觸控模式下不啟用懸停預覽以免殘留
         cell.addEventListener('mouseenter', () => {
+            if (isTouchMode) return;
             if (hoveredIndex !== index) {
                 hoveredIndex = index;
                 updateRangeIndicator();
@@ -1278,13 +1660,13 @@ function renderBoard() {
         });
 
         cell.addEventListener('mouseleave', () => {
+            if (isTouchMode) return;
             if (hoveredIndex === index) {
                 hoveredIndex = null;
                 updateRangeIndicator();
             }
         });
 
-        // HTML5 拖放事件
         cell.addEventListener('dragover', (e) => {
             e.preventDefault();
             cell.classList.add(PATH_CELL_INDICES.has(index) ? 'drag-invalid' : 'drag-over');
@@ -1302,68 +1684,49 @@ function renderBoard() {
             handleAction(fromIdx, index);
         });
 
-        // 點擊 A 再點擊 B
         cell.addEventListener('click', () => {
             if (performance.now() - lastTouchDragEndTime < 250) return;
             handleCellClick(index);
         });
 
-        if (towerObj !== null) {
-            const cfg = ELEMENT_CONFIG[towerObj.type];
-            const tower = document.createElement('div');
-            tower.classList.add('tower', `type-${towerObj.type}`, `lv-${towerObj.tier}`);
-            tower.setAttribute('draggable', true);
-
-            tower.addEventListener('dragstart', () => {
-                if (!isGameplayActive()) return;
-                draggedIndex = index;
-                selectedIndex = null;
-                tower.classList.add('dragging');
-                updateRangeIndicator();
-                msgText.innerText = `抓起【${cfg.name} Lv.${towerObj.tier}】`;
-            });
-
-            tower.addEventListener('dragend', () => {
-                tower.classList.remove('dragging');
-                clearCellDragHighlights();
-                draggedIndex = null;
-                updateRangeIndicator();
-            });
-
-            // 觸控裝置拖曳支援
-            tower.addEventListener('touchstart', (e) => {
-                if (!isGameplayActive() || e.touches.length !== 1) return;
-                const touch = e.touches[0];
-                touchDragState = {
-                    sourceIndex: index,
-                    startX: touch.clientX,
-                    startY: touch.clientY,
-                    isDragging: false,
-                    ghostEl: null,
-                    towerEl: tower,
-                    cfg: cfg,
-                    tier: towerObj.tier
-                };
-            }, { passive: true });
-
-            const icon = document.createElement('div');
-            icon.classList.add('tower-icon');
-            icon.innerText = cfg.icon;
-
-            const name = document.createElement('div');
-            name.classList.add('tower-name');
-            name.innerText = `Lv.${towerObj.tier}`;
-
-            tower.appendChild(icon);
-            tower.appendChild(name);
-            cell.appendChild(tower);
-        }
-
+        cellElements.push(cell);
         boardElement.appendChild(cell);
-    });
+    }
 
     measureBoardMetrics();
+}
+
+function renderBoard(dirtyIndices = null) {
+    if (cellElements.length !== CONFIG.BOARD_SIZE || boardElement.children.length !== CONFIG.BOARD_SIZE) {
+        initBoard();
+    }
+
+    if (lastRenderedSelected !== null && lastRenderedSelected !== selectedIndex && cellElements[lastRenderedSelected]) {
+        cellElements[lastRenderedSelected].classList.remove('selected');
+    }
+    if (selectedIndex !== null && cellElements[selectedIndex]) {
+        cellElements[selectedIndex].classList.add('selected');
+    }
+    lastRenderedSelected = selectedIndex;
+
+    if (Array.isArray(dirtyIndices)) {
+        const visited = new Set();
+        for (let i = 0; i < dirtyIndices.length; i++) {
+            const idx = dirtyIndices[i];
+            if (idx >= 0 && idx < CONFIG.BOARD_SIZE && !visited.has(idx)) {
+                visited.add(idx);
+                renderCellTower(idx);
+            }
+        }
+    } else {
+        for (let idx = 0; idx < CONFIG.BOARD_SIZE; idx++) {
+            renderCellTower(idx);
+        }
+        measureBoardMetrics();
+    }
+
     updateRangeIndicator();
+    updateSellButtonUI();
 }
 
 // 全域觸控拖曳移動與放開處理
@@ -1375,6 +1738,7 @@ document.addEventListener('touchmove', (e) => {
     if (!touchDragState.isDragging && dist > 10) {
         touchDragState.isDragging = true;
         selectedIndex = null;
+        hoveredIndex = null;
         touchDragState.towerEl.classList.add('dragging');
 
         const ghost = touchDragState.towerEl.cloneNode(true);
@@ -1386,7 +1750,8 @@ document.addEventListener('touchmove', (e) => {
         touchDragState.ghostEl = ghost;
 
         updateRangeIndicator();
-        msgText.innerText = `拖曳【${touchDragState.cfg.name} Lv.${touchDragState.tier}】至目標格`;
+        updateSellButtonUI();
+        msgText.innerText = `拖曳【${touchDragState.cfg.name} ${getTierStars(touchDragState.tier)}】至目標格`;
     }
 
     if (touchDragState.isDragging) {
@@ -1445,25 +1810,35 @@ function handleCellClick(index) {
             const t = board[index];
             const cfg = ELEMENT_CONFIG[t.type];
             const dmg = TIER_DAMAGE_TABLE[t.type][t.tier];
-            msgText.innerText = `已選取【${cfg.name} Lv.${t.tier}】｜傷害 ${dmg}${t.type === 'thunder' ? '×2' : ''}｜射程 ${cfg.range} 格（可點目標格融合或按「確定清除」）`;
+            const refund = getTowerSellRefund(t);
+            const boltCount = t.type === 'thunder'
+                ? (t.tier >= CONFIG.MAX_TIER ? CONFIG.THUNDER_LV3_BOLT_COUNT : CONFIG.THUNDER_BOLT_COUNT)
+                : 1;
+            const dmgText = t.type === 'thunder' ? `${dmg}×${boltCount}` : `${dmg}`;
+            msgText.innerText = `已選取【${cfg.name} ${getTierStars(t.tier)}】｜傷害 ${dmgText}｜射程 ${cfg.range} 格（點目標格融合/移動，或點「賣出 +${refund}💰」）`;
+        } else {
+            selectedIndex = null;
+            hoveredIndex = null;
         }
     } else if (selectedIndex === index) {
         selectedIndex = null;
+        hoveredIndex = null;
         msgText.innerText = '已取消選取。';
     } else {
         const fromIdx = selectedIndex;
         selectedIndex = null;
+        hoveredIndex = null;
         handleAction(fromIdx, index);
         return;
     }
 
-    renderBoard();
+    renderBoard([]);
 }
 
 function handleAction(fromIndex, toIndex) {
     if (!isGameplayActive()) return;
     if (fromIndex === null || toIndex === null || fromIndex === toIndex) {
-        renderBoard();
+        renderBoard([]);
         return;
     }
     if (fromIndex < 0 || fromIndex >= CONFIG.BOARD_SIZE || toIndex < 0 || toIndex >= CONFIG.BOARD_SIZE) return;
@@ -1471,35 +1846,47 @@ function handleAction(fromIndex, toIndex) {
 
     if (PATH_CELL_INDICES.has(toIndex)) {
         msgText.innerText = '⚠️ 該位置是怪物跑道，不能建造防禦塔！';
-        renderBoard();
+        renderBoard([]);
         return;
     }
 
     const fromTower = board[fromIndex];
     const toTower = board[toIndex];
+    const dirtyCells = [];
 
     if (toTower === null) {
         board[toIndex] = fromTower;
         board[fromIndex] = null;
+        dirtyCells.push(fromIndex, toIndex);
         msgText.innerText = '已移動塔的位置。';
     } else if (fromTower.type === toTower.type && fromTower.tier === toTower.tier) {
         if (toTower.tier >= CONFIG.MAX_TIER) {
-            msgText.innerText = `⚠️ 該塔已達到上限 Lv.${CONFIG.MAX_TIER}，無法再融合！兩座塔維持原樣。`;
+            msgText.innerText = `⚠️ 該塔已達到上限 ${getTierStars(CONFIG.MAX_TIER)}，無法再融合！兩座塔維持原樣。`;
         } else {
-            board[toIndex] = {
-                type: toTower.type,
-                tier: toTower.tier + 1
-            };
+            const newTier = toTower.tier + 1;
+            const mergedInvested = (Number.isFinite(fromTower.investedGold) ? fromTower.investedGold : CONFIG.BASE_COST * Math.pow(2, fromTower.tier - 1))
+                + (Number.isFinite(toTower.investedGold) ? toTower.investedGold : CONFIG.BASE_COST * Math.pow(2, toTower.tier - 1));
+            const intervalMs = getTowerAttackInterval(toTower.type);
+            const carriedAcc = Math.max(0, Math.min(intervalMs - 150, Math.max(fromTower.accMs || 0, toTower.accMs || 0)));
+
+            board[toIndex] = createTowerObj(toTower.type, newTier, mergedInvested, carriedAcc);
             board[fromIndex] = null;
+            dirtyCells.push(fromIndex, toIndex);
 
             const cfg = ELEMENT_CONFIG[board[toIndex].type];
-            msgText.innerText = `✨ 融合成功！升級為【${cfg.name} Lv.${board[toIndex].tier}】！`;
+            let lv3BonusHint = '';
+            if (newTier === CONFIG.MAX_TIER) {
+                if (toTower.type === 'fire') lv3BonusHint = '【解鎖炎爆濺射 35%】';
+                else if (toTower.type === 'ice') lv3BonusHint = '【解鎖 60% 深度冰封＋群體寒霜】';
+                else if (toTower.type === 'thunder') lv3BonusHint = '【解鎖三連閃電】';
+            }
+            msgText.innerText = `✨ 融合成功！升級為【${cfg.name} ${getTierStars(newTier)}】${lv3BonusHint}！`;
         }
     } else {
         msgText.innerText = '⚠️ 屬性或等級不同，無法融合！';
     }
 
-    renderBoard();
+    renderBoard(dirtyCells);
 }
 
 // ==================== 11. 按鈕事件與視窗自適應監聽 ====================
@@ -1507,17 +1894,23 @@ deleteTowerBtn.addEventListener('click', () => {
     if (!isGameplayActive()) return;
 
     if (selectedIndex === null || board[selectedIndex] === null) {
-        msgText.innerText = '⚠️ 請先在棋盤上「點選」想要清除的塔！';
+        msgText.innerText = '⚠️ 請先在棋盤上「點選」想要賣出的防禦塔！';
         return;
     }
 
-    const t = board[selectedIndex];
+    const sellIdx = selectedIndex;
+    const t = board[sellIdx];
     const cfg = ELEMENT_CONFIG[t.type];
-    board[selectedIndex] = null;
-    msgText.innerText = `🗑️ 已成功清除【${cfg.name} Lv.${t.tier}】！騰出了一格空間。`;
-    selectedIndex = null;
+    const refund = getTowerSellRefund(t);
 
-    renderBoard();
+    currentGold += refund;
+    board[sellIdx] = null;
+    selectedIndex = null;
+    hoveredIndex = null;
+    msgText.innerText = `💰 已賣出【${cfg.name} ${getTierStars(t.tier)}】！退還 +${refund} 💰。`;
+
+    renderBoard([sellIdx]);
+    updateHUD();
 });
 
 nextWaveBtn.addEventListener('click', () => {
@@ -1564,6 +1957,7 @@ if (typeof ResizeObserver !== 'undefined') {
 // ==================== 12. 初始化啟動（保持 WAITING_START，待玩家按「開始防守」） ====================
 applyDebugModeVisibility();
 renderSpawnerButtons();
+initBoard();
 renderBoard();
 updateHUD();
 updateSpeedButtonUI();

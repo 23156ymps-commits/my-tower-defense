@@ -2,7 +2,7 @@
 :root {
     --grid-gap: clamp(2px, 0.35vw, 3px);
     --board-pad: clamp(4px, 0.75vw, 8px);
-    --cell-size: clamp(16px, min(calc((100vw - 76px) / 15), calc((100vh - 280px) / 10)), 38px);
+    --cell-size: clamp(16px, min(calc((100vw - 76px) / 15), calc((100vh - 315px) / 10)), 38px);
 }
 
 *,
@@ -175,31 +175,50 @@ body {
     cursor: default;
 }
 
+.cell.path-cell .path-arrow {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(9px, calc(var(--cell-size) * 0.38), 14px);
+    font-weight: bold;
+    color: rgba(148, 163, 184, 0.36);
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+}
+
 .cell.path-start::after,
 .cell.path-end::after {
     position: absolute;
-    font-size: clamp(8px, calc(var(--cell-size) * 0.34), 13px);
+    font-size: clamp(11px, calc(var(--cell-size) * 0.48), 18px);
     font-weight: bold;
-    opacity: 0.72;
+    opacity: 1;
     pointer-events: none;
+    z-index: 1;
 }
 
 .cell.path-start {
-    background-color: #242138;
-    border-color: rgba(162, 155, 254, 0.45);
+    background: linear-gradient(135deg, #32285a, #241d42);
+    border: 1.5px solid #a78bfa;
+    box-shadow: inset 0 0 8px rgba(167, 139, 250, 0.45), 0 0 8px rgba(139, 92, 246, 0.35);
 }
 
 .cell.path-start::after {
     content: "🚪";
+    filter: drop-shadow(0 0 4px rgba(196, 181, 253, 0.9));
 }
 
 .cell.path-end {
-    background-color: #331f28;
-    border-color: rgba(255, 118, 117, 0.5);
+    background: linear-gradient(135deg, #542230, #381822);
+    border: 1.5px solid #fb7185;
+    box-shadow: inset 0 0 8px rgba(251, 113, 133, 0.45), 0 0 8px rgba(244, 63, 94, 0.38);
 }
 
 .cell.path-end::after {
     content: "🏰";
+    filter: drop-shadow(0 0 4px rgba(254, 205, 211, 0.9));
 }
 
 /* ==================== 防禦塔本體 ==================== */
@@ -234,12 +253,19 @@ body {
 }
 
 .tower-name {
-    font-size: clamp(6px, calc(var(--cell-size) * 0.22), 8px);
+    font-size: clamp(7px, calc(var(--cell-size) * 0.23), 9px);
     font-weight: bold;
+    letter-spacing: -0.5px;
     margin-top: 1px;
     line-height: 1;
     white-space: nowrap;
+    color: #f8fafc;
     pointer-events: none;
+}
+
+.tower.lv-3 .tower-name {
+    color: #fde047;
+    text-shadow: 0 0 6px rgba(250, 204, 21, 0.9);
 }
 
 .type-fire {
@@ -392,10 +418,10 @@ body {
 
 .m-boss-badge {
     position: absolute;
-    bottom: -5px;
+    bottom: -6px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: clamp(6px, calc(var(--cell-size) * 0.21), 8px);
+    font-size: clamp(6px, calc(var(--cell-size) * 0.22), 8.5px);
     font-weight: bold;
     line-height: 1;
     padding: 1px 4px;
@@ -405,6 +431,62 @@ body {
     border: 1px solid #ffd32a;
     white-space: nowrap;
     pointer-events: none;
+}
+
+.m-boss-badge.weak-fire {
+    background-color: #b91c1c;
+    border-color: #fca5a5;
+}
+
+.m-boss-badge.weak-ice {
+    background-color: #0369a1;
+    border-color: #7dd3fc;
+}
+
+.m-boss-badge.weak-thunder {
+    background-color: #b45309;
+    border-color: #fde047;
+}
+
+/* 常駐魔王狀態橫幅（不佔版面高度，避免被殺怪訊息洗掉） */
+.boss-status-bar {
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 25;
+    pointer-events: none;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: bold;
+    line-height: 1.25;
+    white-space: nowrap;
+    max-width: calc(100% - 16px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #fff7ed;
+    background: rgba(69, 10, 10, 0.9);
+    border: 1px solid #f87171;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+}
+
+.boss-status-bar.weak-fire {
+    background: rgba(88, 18, 22, 0.92);
+    border-color: #fb7185;
+    box-shadow: 0 0 12px rgba(244, 63, 94, 0.45);
+}
+
+.boss-status-bar.weak-ice {
+    background: rgba(12, 46, 78, 0.92);
+    border-color: #38bdf8;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+}
+
+.boss-status-bar.weak-thunder {
+    background: rgba(74, 42, 8, 0.92);
+    border-color: #fbbf24;
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
 }
 
 .monster-unit .m-icon {
@@ -432,18 +514,19 @@ body {
 .m-slow-badge,
 .m-armor-badge {
     position: absolute;
-    font-size: clamp(7px, calc(var(--cell-size) * 0.24), 9px);
+    font-size: clamp(6.5px, calc(var(--cell-size) * 0.22), 8.5px);
     font-weight: bold;
     line-height: 1;
     padding: 1px 2px;
     border-radius: 3px;
+    white-space: nowrap;
     pointer-events: none;
 }
 
 .m-slow-badge {
-    top: -4px;
-    left: -4px;
-    background-color: rgba(14, 116, 144, 0.92);
+    top: -6px;
+    left: -6px;
+    background-color: rgba(14, 116, 144, 0.94);
     color: #e0f2fe;
     display: none;
 }
@@ -453,8 +536,8 @@ body {
 }
 
 .m-armor-badge {
-    top: -4px;
-    right: -4px;
+    top: -6px;
+    right: -6px;
     background-color: #3b3b52;
     border: 1px solid #f1c40f;
     color: #ffeaa7;
@@ -630,7 +713,22 @@ body {
 }
 
 .delete-tower-btn {
-    background-color: #e67e22;
+    background-color: #d97706;
+    border: 1px solid #f59e0b !important;
+    transition: background 0.16s ease, opacity 0.16s ease, box-shadow 0.16s ease;
+}
+
+.delete-tower-btn.sell-idle {
+    background-color: #4b4340;
+    border-color: #6b5e57 !important;
+    color: #cbd5e1;
+}
+
+.delete-tower-btn.sell-ready {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    border-color: #fbbf24 !important;
+    color: #fef3c7;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.45);
 }
 
 .wave-btn {
@@ -906,27 +1004,81 @@ body {
     transform: translateY(-1px);
 }
 
-/* ==================== 窄螢幕微調 ==================== */
-@media (max-width: 520px) {
+/* ==================== 窄螢幕 / 手機直式最佳化 ==================== */
+@media (max-width: 600px) {
     :root {
-        --grid-gap: 2px;
-        --board-pad: 4px;
-        --cell-size: clamp(16px, min(calc((100vw - 56px) / 15), calc((100vh - 280px) / 10)), 32px);
+        --grid-gap: 1.5px;
+        --board-pad: 3px;
+        --cell-size: clamp(18px, min(calc((100vw - 38px) / 15), calc((100vh - 255px) / 10)), 34px);
     }
 
     body {
         justify-content: flex-start;
-        padding: 6px;
+        padding: 4px 2px 8px;
+    }
+
+    h1 {
+        font-size: 15px;
+        margin-bottom: 4px;
     }
 
     #hud-container {
-        gap: 6px 10px;
-        padding: 4px 10px;
+        gap: 4px 8px;
+        padding: 4px 8px;
+        margin-bottom: 4px;
+        font-size: 11px;
+    }
+
+    #info-legend {
+        font-size: 10px;
+        padding: 3px 8px;
+        margin-bottom: 5px;
+        gap: 4px 8px;
+    }
+
+    .tower-name {
+        font-size: clamp(6.5px, calc(var(--cell-size) * 0.25), 8.5px);
+    }
+
+    .monster-unit .m-icon {
+        font-size: clamp(12px, calc(var(--cell-size) * 0.54), 17px);
+    }
+
+    .monster-unit .m-hp-bar {
+        width: calc(var(--cell-size) * 0.88);
+        height: 4.5px;
+        margin-top: 1px;
+    }
+
+    .m-slow-badge,
+    .m-armor-badge,
+    .m-boss-badge {
+        font-size: 7px;
+        padding: 1px 2.5px;
+    }
+
+    .boss-status-bar {
+        top: 3px;
+        padding: 2px 7px;
+        font-size: 9.5px;
+        max-width: calc(100% - 10px);
     }
 
     .spawn-card-btn {
-        min-width: 90px;
+        min-width: 88px;
+        flex: 1 1 0;
+        max-width: 120px;
+        padding: 5px 6px;
+        font-size: 11px;
+    }
+
+    .debug-controls button {
         padding: 5px 8px;
         font-size: 11px;
+    }
+
+    #msg-text {
+        font-size: 11.5px;
+        margin-top: 6px;
     }
 }
