@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>元素陣線：合成塔防 - Demo v2.0</title>
     <title>元素陣線：合成塔防 - v3.0</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -97,7 +97,6 @@
         <button id="clear-gold-btn" class="debug-btn-danger debug-only">清空 💰</button>
     </div>
 
-    <!-- 狀態提示列 -->
     <!-- 狀態提示列與 PC 熱鍵提示 -->
     <p id="msg-text">點擊「開始防守」守護 🌳 世界樹，進入第 1 波備戰！</p>
     <div id="hotkey-hint" class="hotkey-hint">⌨️ 熱鍵：<b>[1/2/3]</b>召喚 ｜ <b>[Q/W]</b>技能 ｜ <b>[Space]</b>開波/暫停 ｜
@@ -143,14 +142,11 @@
         </div>
     </div>
 
-    <!-- 開局封面與 3 步規則引導遮罩 -->
     <!-- 開局封面與雙地圖選擇／3 步規則引導遮罩 -->
     <div id="start-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
         <div class="modal-card start-card">
-            <div class="demo-badge">FANTASY v2.0</div>
             <div class="demo-badge">FANTASY v3.0</div>
             <h2 id="start-title" class="start-title">《元素陣線：合成塔防》</h2>
-            <p class="modal-subtitle">15×10 森林防線 · 守護 🌳 世界樹撐過 10 波魔王戰！</p>
             <p class="modal-subtitle">15×10 奇幻防線 · 守護 🌳 世界樹撐過 10 波魔王戰！</p>
 
             <!-- 雙地圖關卡選擇 -->
@@ -211,8 +207,6 @@
 
             <div class="modal-stats">
                 <div class="stat-row">
-                    <span>本局總擊殺數</span>
-                    <strong id="victory-kills-text">0 隻</strong>
                     <span>戰場地圖</span>
                     <strong id="victory-map-text">🌲 晨光森林</strong>
                 </div>
@@ -249,29 +243,25 @@
     <!-- Game Over 結算遮罩 -->
     <div id="game-over-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true"
         aria-labelledby="game-over-title">
-        <div class="modal-card">
-            <div class="modal-card gameover-card">
-                <h2 id="game-over-title">🍂 防線失守</h2>
-                <p class="modal-subtitle">🌳 世界樹生命枯竭，本局結束</p>
-                <div class="modal-stats">
-                    <div class="stat-row">
-                        <span>戰場地圖</span>
-                        <strong id="gameover-map-text">🌲 晨光森林</strong>
-                    </div>
-                    <div class="stat-row">
-                        <span>抵達波數</span>
-                        <strong id="final-wave-text">Wave 1</strong>
-                    </div>
-                    <div class="stat-row">
-                        <span>歷史最高紀錄</span>
-                        <strong id="final-best-text">Wave 1</strong>
-                    </div>
-                    <div class="stat-row">
-                        <span>擊殺怪物數</span>
-                        <strong id="final-kills-text">0 隻</strong>
-                    </div>
+        <div class="modal-card gameover-card">
+            <h2 id="game-over-title">🍂 防線失守</h2>
+            <p class="modal-subtitle">🌳 世界樹生命枯竭，本局結束</p>
+            <div class="modal-stats">
+                <div class="stat-row">
+                    <span>戰場地圖</span>
+                    <strong id="gameover-map-text">🌲 晨光森林</strong>
+                </div>
+                <div class="stat-row">
+                    <span>抵達波數</span>
+                    <strong id="final-wave-text">Wave 1</strong>
+                </div>
+                <div class="stat-row">
+                    <span>歷史最高紀錄</span>
+                    <strong id="final-best-text">Wave 1</strong>
+                </div>
+            </div>
 
-                    <div class="battle-recap">
+            <div class="battle-recap">
                         <div class="recap-title">📊 本局數據戰報</div>
                         <div class="recap-mvp-box">
                             <span class="recap-mvp-label">🏅 本局 MVP 砲塔</span>
