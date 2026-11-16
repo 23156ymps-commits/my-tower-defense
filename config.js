@@ -50,7 +50,7 @@
         SELL_REFUND_RATE: 0.7,              // 出售退還投入金幣 70%
         COMBAT_MOVE_COST: 5,                // 戰鬥出怪/清場期間移動塔位費用
         WEAKNESS_MULTIPLIER: 2.0,           // 弱點相剋暴擊倍率 (200%)
-        INITIAL_PREP_MS: 3000,              // 開局備戰倒數 (ms)
+        INITIAL_PREP_MS: 6000,              // 開局備戰倒數 (ms)
         WAVE_INTERMISSION_MS: 4000,         // 波次間休息倒數 (ms)
         STORAGE_BEST_WAVE_KEY: 'merge_defense_best_wave',
         STORAGE_MAP_RECORDS_KEY: 'merge_defense_map_records',
@@ -228,9 +228,9 @@
         fire: [0, 24, 54, 120],
         ice: [0, 14, 32, 72],
         thunder: [0, 10, 22, 50],
-        steam: [0, 0, 48, 108],
-        magnet: [0, 0, 32, 74],
-        plasma: [0, 0, 18, 42]
+        steam: [0, 0, 41, 108],
+        magnet: [0, 0, 27, 74],
+        plasma: [0, 0, 15, 42]
     };
 
     // 戰術地形格定義

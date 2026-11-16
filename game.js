@@ -22,7 +22,8 @@ const DOM_ID_PAIRS = [
     ['inspectorTargetBtn', 'inspector-target-btn'], ['inspectorSellBtn', 'inspector-sell-btn'],
     ['codexBtn', 'codex-btn'], ['codexOverlayEl', 'codex-overlay'], ['codexCloseBtn', 'codex-close-btn'],
     ['blessingOverlayEl', 'blessing-overlay'], ['blessingWaveSubtitleEl', 'blessing-wave-subtitle'], ['blessingChoicesEl', 'blessing-choices'],
-    ['skillEntangleBtn', 'skill-entangle-btn'], ['skillFrenzyBtn', 'skill-frenzy-btn'], ['soundBtn', 'sound-btn'],
+    ['skillEntangleBtn', 'skill-entangle-btn'], ['skillFrenzyBtn', 'skill-frenzy-btn'], ['pauseBtn', 'pause-btn'], ['soundBtn', 'sound-btn'],
+    ['pauseBannerEl', 'pause-banner'],
     ['addGoldBtn', 'add-gold-btn'], ['clearGoldBtn', 'clear-gold-btn'], ['nextWaveBtn', 'next-wave-btn'], ['speedBtn', 'speed-btn'],
     ['goldDisplay', 'gold-display'], ['baseHpDisplay', 'base-hp-display'], ['dewDisplay', 'dew-display'], ['dewBarFillEl', 'dew-bar-fill'],
     ['waveDisplay', 'wave-display'], ['wavePhaseTagEl', 'wave-phase-tag'], ['bestWaveDisplay', 'best-wave-display'], ['msgText', 'msg-text'],
@@ -31,12 +32,12 @@ const DOM_ID_PAIRS = [
     ['victoryOverlayEl', 'victory-overlay'], ['victoryStarsEl', 'victory-stars'], ['victoryRankTextEl', 'victory-rank-text'],
     ['victoryMapTextEl', 'victory-map-text'], ['victoryKillsTextEl', 'victory-kills-text'], ['victoryHpTextEl', 'victory-hp-text'],
     ['victoryGoldTextEl', 'victory-gold-text'], ['victoryMvpTextEl', 'victory-mvp-text'], ['victoryGoldEarnedTextEl', 'victory-gold-earned-text'],
-    ['victoryFusionTextEl', 'victory-fusion-text'], ['victoryRestartBtn', 'victory-restart-btn'], ['endlessBtn', 'endless-btn'],
+    ['victoryFusionTextEl', 'victory-fusion-text'], ['victoryRestartBtn', 'victory-restart-btn'], ['victoryMenuBtn', 'victory-menu-btn'], ['endlessBtn', 'endless-btn'],
     ['gameOverOverlayEl', 'game-over-overlay'], ['gameoverMapTextEl', 'gameover-map-text'], ['finalWaveTextEl', 'final-wave-text'],
     ['finalBestTextEl', 'final-best-text'], ['finalKillsTextEl', 'final-kills-text'], ['gameoverMvpTextEl', 'gameover-mvp-text'],
     ['gameoverGoldEarnedTextEl', 'gameover-gold-earned-text'], ['gameoverFusionTextEl', 'gameover-fusion-text'],
     ['gameoverBreakerRowEl', 'gameover-breaker-row'], ['gameoverBreakerTextEl', 'gameover-breaker-text'],
-    ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn']
+    ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn'], ['gameoverMenuBtn', 'gameover-menu-btn']
 ];
 
 function buildDomCache() {
@@ -68,7 +69,7 @@ function createInitialMatchState(mapId = 'forest', initialWaveState = 'WAITING_S
         bestWave: Backend.getMapBestWave(spec.id), currentWave: 1, killsCount: 0,
         towerUidCounter: 1, totalTeamDamage: 0, totalGoldEarned: 0, fusionCount: 0,
         peakTowerSnapshot: null, lastBreakerName: '',
-        isPaused: false, isGameOver: false, isEndlessMode: false, isNewRecordThisRun: false,
+        isPaused: false, pausedBeforeCodex: false, isGameOver: false, isEndlessMode: false, isNewRecordThisRun: false,
         gameSpeed: keepSpeed,
         spawnCounts: { fire: 0, ice: 0, thunder: 0 },
         board: Array(CONFIG.BOARD_SIZE).fill(null), monsters: [], monsterIdCounter: 1,
@@ -267,22 +268,31 @@ function updateBossStatusBar() {
     if (dom.bossBannerHpFillEl) dom.bossBannerHpFillEl.style.width = `${Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100))}%`;
 }
 
-function updateSkillBtnVisual(btn, maskEl, labelEl, cdMs, maxCdMs, activeMs, cost, readyText, cdPrefix, activePrefix) {
+function updateSkillBtnVisual(btn, maskEl, labelEl, cdMs, maxCdMs, activeMs, cost, readyText, cdPrefix, lowDewPrefix, activePrefix) {
     if (!btn) return;
     if (maskEl) maskEl.style.width = `${cdMs > 0 ? Math.min(100, (cdMs / maxCdMs) * 100) : 0}%`;
+    const missingDew = Math.max(0, cost - G.state.dewEnergy);
+    const isCooling = activeMs <= 0 && cdMs > 0;
+    const isLowDew = activeMs <= 0 && cdMs <= 0 && missingDew > 0;
     if (labelEl) {
-        labelEl.innerText = activeMs > 0 && activePrefix ? `${activePrefix} ${Math.ceil(activeMs / 1000)}s` : (cdMs > 0 ? `${cdPrefix} ${Math.ceil(cdMs / 1000)}s` : readyText);
+        if (activeMs > 0 && activePrefix) labelEl.innerText = `${activePrefix} ${Math.ceil(activeMs / 1000)}s`;
+        else if (isCooling) labelEl.innerText = `${cdPrefix} ${Math.ceil(cdMs / 1000)}s`;
+        else if (isLowDew) labelEl.innerText = `${lowDewPrefix} ${missingDew}💧`;
+        else labelEl.innerText = readyText;
     }
     if (activePrefix) btn.classList.toggle('skill-active', activeMs > 0);
-    btn.disabled = !isGameplayActive() || activeMs > 0 || cdMs > 0 || G.state.dewEnergy < cost;
+    btn.classList.toggle('skill-cooling', isCooling);
+    btn.classList.toggle('skill-low-dew', isLowDew);
+    btn.title = isCooling ? `冷卻中，剩餘 ${Math.ceil(cdMs / 1000)} 秒` : (isLowDew ? `靈露不足，需 ${cost}💧（還差 ${missingDew}💧）` : `消耗 ${cost}💧 立即施放`);
+    btn.disabled = !isGameplayActive() || activeMs > 0 || isCooling || isLowDew;
 }
 
 function updateSkillButtonsUI() {
     const dom = G.dom, st = G.state;
     setDomText(dom.dewDisplay, `${st.dewEnergy}/${CONFIG.DEW_MAX}`);
     if (dom.dewBarFillEl) dom.dewBarFillEl.style.width = `${Math.max(0, Math.min(100, (st.dewEnergy / CONFIG.DEW_MAX) * 100))}%`;
-    updateSkillBtnVisual(dom.skillEntangleBtn, dom.skillEntangleMask, dom.skillEntangleLabel, st.entangleCdMs, CONFIG.SKILL_ENTANGLE_CD_MS, 0, CONFIG.SKILL_ENTANGLE_COST, `🌿 根鬚纏繞 ${CONFIG.SKILL_ENTANGLE_COST}💧`, '🌿 纏繞', null);
-    updateSkillBtnVisual(dom.skillFrenzyBtn, dom.skillFrenzyMask, dom.skillFrenzyLabel, st.frenzyCdMs, CONFIG.SKILL_FRENZY_CD_MS, st.frenzyActiveMs, CONFIG.SKILL_FRENZY_COST, `✨ 自然狂熱 ${CONFIG.SKILL_FRENZY_COST}💧`, '✨ 狂熱', '✨ 狂熱中');
+    updateSkillBtnVisual(dom.skillEntangleBtn, dom.skillEntangleMask, dom.skillEntangleLabel, st.entangleCdMs, CONFIG.SKILL_ENTANGLE_CD_MS, 0, CONFIG.SKILL_ENTANGLE_COST, `🌿 根鬚纏繞 ${CONFIG.SKILL_ENTANGLE_COST}💧`, '🌿 冷卻', '🌿 缺', null);
+    updateSkillBtnVisual(dom.skillFrenzyBtn, dom.skillFrenzyMask, dom.skillFrenzyLabel, st.frenzyCdMs, CONFIG.SKILL_FRENZY_CD_MS, st.frenzyActiveMs, CONFIG.SKILL_FRENZY_COST, `✨ 自然狂熱 ${CONFIG.SKILL_FRENZY_COST}💧`, '✨ 冷卻', '✨ 缺', '✨ 狂熱中');
 }
 
 const WAVE_STATE_TEXT = {
@@ -297,9 +307,18 @@ function updateWavePhaseUI() {
     const dom = G.dom, st = G.state;
     if (!dom.wavePhaseTagEl) return;
     const isBoss = Combat.isBossWaveNumber(st.currentWave);
+    const canPause = isMatchPhaseActive();
     dom.wavePhaseTagEl.classList.toggle('boss-wave', !st.isPaused && isBoss && (st.waveState === 'SPAWNING' || st.waveState === 'CLEARING'));
     dom.wavePhaseTagEl.classList.toggle('paused', st.isPaused);
     dom.wavePhaseTagEl.innerText = st.isPaused ? '⏸️ 已暫停' : ((WAVE_STATE_TEXT[st.waveState] && WAVE_STATE_TEXT[st.waveState](st, isBoss)) || '已結束');
+    if (dom.pauseBtn) {
+        dom.pauseBtn.disabled = !canPause;
+        dom.pauseBtn.classList.toggle('is-paused', st.isPaused && canPause);
+        dom.pauseBtn.innerText = st.isPaused && canPause ? '▶️ 繼續' : '⏸️ 暫停';
+    }
+    if (dom.pauseBannerEl) {
+        dom.pauseBannerEl.classList.toggle('hidden', !(st.isPaused && canPause));
+    }
     if (dom.nextWaveBtn) {
         const canSkip = isGameplayActive() && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION');
         dom.nextWaveBtn.disabled = !canSkip;
@@ -461,7 +480,7 @@ function handleSpawn(type, btnElement) {
         if (btnElement) { btnElement.classList.remove('shake-anim'); void btnElement.offsetWidth; btnElement.classList.add('shake-anim'); }
         return;
     }
-    const pick = Combat.pickSmartSpawnIndex();
+    const pick = Combat.pickSmartSpawnIndex(type);
     if (!pick) { G.dom.msgText.innerText = '⚠️ 可建造格子已經全滿，請先融合或出售騰出空間！'; return; }
 
     st.currentGold -= cost; st.spawnCounts[type] = (st.spawnCounts[type] || 0) + 1;
@@ -480,7 +499,21 @@ function handleSpawn(type, btnElement) {
 
 function handleCellClick(index) {
     const st = G.state;
-    if (!isGameplayActive()) return;
+    if (!isGameplayActive()) {
+        if (st.isPaused && isMatchPhaseActive()) {
+            if (st.board[index] !== null && st.selectedIndex !== index) {
+                st.selectedIndex = index; st.buildTargetIndex = null;
+                const t = st.board[index], terrain = Combat.getTerrainAt(index);
+                G.dom.msgText.innerText = `⏸️ 暫停檢視：【${ELEMENT_CONFIG[t.type].name} ${Renderer.getTierStars(t.tier)}】${terrain ? `｜地形：${TERRAIN_CONFIG[terrain].shortTag}` : ''}（恢復後可移動、融合或切換索敵）`;
+            } else {
+                st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
+                G.dom.msgText.innerText = st.board[index] === null ? '⏸️ 暫停中僅供點擊防禦塔檢視資訊，按「▶️ 繼續」或 Space 後即可建造操作。' : '已取消選取。';
+            }
+            Renderer.renderBoard([]);
+            updateTowerInspector();
+        }
+        return;
+    }
     if (st.selectedIndex === null) {
         if (st.board[index] !== null) {
             st.selectedIndex = index; st.buildTargetIndex = null;
@@ -611,7 +644,7 @@ function triggerGameOver() {
     if (G.dom.gameOverOverlayEl) G.dom.gameOverOverlayEl.classList.remove('hidden');
 }
 
-function restartGame() {
+function resetMatchSession(initialWaveState, resetSpeed = 1) {
     const prev = G.state;
     if (prev.rafId !== null) cancelAnimationFrame(prev.rafId);
     const nextSession = prev.sessionId + 1;
@@ -623,13 +656,26 @@ function restartGame() {
     if (G.dom.floatingLayerEl) G.dom.floatingLayerEl.innerHTML = '';
     Renderer.clearTouchDragVisuals();
 
-    G.state = createInitialMatchState(prev.currentMapId, 'PREP', nextSession, prev.gameSpeed);
+    G.state = createInitialMatchState(prev.currentMapId, initialWaveState, nextSession, resetSpeed);
     G.state.isTouchMode = prev.isTouchMode;
     ['startOverlayEl', 'victoryOverlayEl', 'gameOverOverlayEl', 'codexOverlayEl', 'blessingOverlayEl'].forEach(k => {
         if (G.dom[k]) G.dom[k].classList.add('hidden');
     });
+}
+
+function restartGame() {
+    resetMatchSession('PREP', 1);
     G.dom.msgText.innerText = `【${Combat.getCurrentMapSpec().name}】開局可召喚元素塔並拖曳或點擊融合；點擊圖鑑按鈕或按 1/2/3/Q/W/Space 快速操作！`;
     Renderer.renderBoard(); updateHUD(); updateSpeedButtonUI(); startMainLoop();
+}
+
+function returnToMainMenu() {
+    resetMatchSession('WAITING_START', 1);
+    Combat.applyMapConfig(G.state.currentMapId);
+    renderMapSelectorUI();
+    if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.remove('hidden');
+    G.dom.msgText.innerText = '已回到主選單！請選擇戰場地圖，點擊「開始防守」隨時開戰！';
+    Renderer.initBoard(); Renderer.renderBoard(); updateHUD(); updateSpeedButtonUI();
 }
 
 function startGame() {
@@ -704,14 +750,14 @@ function startMainLoop() {
 // ==================== 8. 操作事件綁定、快捷鍵與啟動 ====================
 function toggleCombatPause() {
     const st = G.state;
-    if (!isMatchPhaseActive() || (st.waveState !== 'SPAWNING' && st.waveState !== 'CLEARING')) return;
+    if (!isMatchPhaseActive()) return;
     st.isPaused = !st.isPaused;
     if (st.isPaused) {
         if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
         Renderer.clearTouchDragVisuals(); st.draggedIndex = null; st.hoveredIndex = null; Renderer.updateRangeIndicator();
-        setDomText(G.dom.msgText, '⏸️ 戰鬥已暫停（再按空白鍵 Space 繼續）'); updateHUD();
+        setDomText(G.dom.msgText, '⏸️ 遊戲已暫停（可點防禦塔查看資訊，再按「▶️ 繼續」或 Space 恢復）'); updateHUD();
     } else {
-        setDomText(G.dom.msgText, '▶️ 戰鬥繼續！全力防禦！'); updateHUD(); startMainLoop();
+        setDomText(G.dom.msgText, '▶️ 遊戲繼續！全力守護世界樹！'); updateHUD(); startMainLoop();
     }
 }
 
@@ -743,14 +789,32 @@ function triggerEarlyNextWave() {
 }
 
 function cycleGameSpeed() { G.state.gameSpeed = (G.state.gameSpeed % 3) + 1; updateSpeedButtonUI(); }
-function openCodex() { if (G.dom.codexOverlayEl) { G.dom.codexOverlayEl.classList.remove('hidden'); if (G.state.rafId !== null) { cancelAnimationFrame(G.state.rafId); G.state.rafId = null; } } }
-function closeCodex() { if (G.dom.codexOverlayEl) { G.dom.codexOverlayEl.classList.add('hidden'); if (isGameplayActive()) startMainLoop(); } }
+function openCodex() {
+    if (!G.dom.codexOverlayEl || isCodexOpen()) return;
+    const st = G.state, activeMatch = isMatchPhaseActive();
+    st.pausedBeforeCodex = st.isPaused;
+    if (activeMatch) st.isPaused = true;
+    G.dom.codexOverlayEl.classList.remove('hidden');
+    if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
+    if (activeMatch) updateHUD();
+}
+
+function closeCodex() {
+    if (!G.dom.codexOverlayEl || !isCodexOpen()) return;
+    const st = G.state;
+    G.dom.codexOverlayEl.classList.add('hidden');
+    if (isMatchPhaseActive()) st.isPaused = Boolean(st.pausedBeforeCodex);
+    st.pausedBeforeCodex = false;
+    updateHUD();
+    if (isGameplayActive()) startMainLoop();
+}
 
 [
     ['inspectorTargetBtn', cycleSelectedTowerTargetMode], ['inspectorSellBtn', sellSelectedTower], ['nextWaveBtn', triggerEarlyNextWave],
-    ['skillEntangleBtn', castEntangleSkill], ['skillFrenzyBtn', castFrenzySkill], ['soundBtn', () => SoundEngine.toggleMute()],
+    ['skillEntangleBtn', castEntangleSkill], ['skillFrenzyBtn', castFrenzySkill], ['pauseBtn', toggleCombatPause], ['soundBtn', () => SoundEngine.toggleMute()],
     ['codexBtn', openCodex], ['codexCloseBtn', closeCodex], ['speedBtn', cycleGameSpeed], ['startGameBtn', startGame],
-    ['victoryRestartBtn', restartGame], ['endlessBtn', continueEndlessMode], ['restartBtn', restartGame],
+    ['victoryRestartBtn', restartGame], ['victoryMenuBtn', returnToMainMenu], ['endlessBtn', continueEndlessMode],
+    ['restartBtn', restartGame], ['gameoverMenuBtn', returnToMainMenu],
     ['addGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold += 500; G.dom.msgText.innerText = '🛠️ 已增加 500 💰！'; updateHUD(); } }],
     ['clearGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold = 0; G.dom.msgText.innerText = '🛠️ 金幣已歸零！'; updateHUD(); } }]
 ].forEach(([domKey, fn]) => { if (G.dom[domKey]) G.dom[domKey].addEventListener('click', fn); });
@@ -828,8 +892,7 @@ if (typeof document !== 'undefined') {
         if (key === 'Tab' || lowerKey === 's') { e.preventDefault(); SoundEngine.ensureContext(); cycleGameSpeed(); return; }
         if (key === ' ' || e.code === 'Space') {
             e.preventDefault(); SoundEngine.ensureContext();
-            if (st.waveState === 'PREP' || st.waveState === 'INTERMISSION') { if (!st.isPaused) triggerEarlyNextWave(); }
-            else if (st.waveState === 'SPAWNING' || st.waveState === 'CLEARING') toggleCombatPause();
+            toggleCombatPause();
             return;
         }
         if (!isGameplayActive()) return;

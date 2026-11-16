@@ -25,14 +25,15 @@
         <div class="hud-item hud-wave">🌊 波數：<span id="wave-display">Wave 1 / 10</span> <span id="wave-phase-tag"
                 class="wave-phase-tag">等待開始</span></div>
         <div class="hud-item hud-best">🏆 最高：<span id="best-wave-display">Wave 1</span></div>
+        <button id="pause-btn" class="hud-pause-btn" type="button" disabled>⏸️ 暫停</button>
         <button id="sound-btn" class="hud-sound-btn" type="button">🔊 音效開</button>
     </div>
 
     <!-- 屬性相剋與機制提示條 -->
     <div id="info-legend">
-        <span>🔥火 ➔ 🌿蔓藤</span>
-        <span>❄️冰 ➔ 🌋熔岩</span>
-        <span>⚡雷 ➔ 🛸機械（200%暴擊）</span>
+        <span>🔥火 克 🌿蔓藤</span>
+        <span>❄️冰 克 🌋熔岩</span>
+        <span>⚡雷 克 🛸機械（200%暴擊）</span>
         <span>🧬 同星不同元素可跨階融合 · 每 3 波賜福</span>
     </div>
 
@@ -45,6 +46,9 @@
         <canvas id="fx-canvas" aria-hidden="true"></canvas>
         <div id="monster-layer" aria-hidden="true"></div>
         <div id="floating-layer" aria-hidden="true"></div>
+        <div id="pause-banner" class="pause-banner hidden" aria-live="polite">
+            ⏸️ 遊戲暫停中｜可點擊防禦塔檢視資訊，按 [Space] 或點「▶️ 繼續」恢復
+        </div>
         <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite">
             <div class="boss-banner-top">
                 <span id="boss-banner-title">👑 終極魔王</span>
@@ -99,7 +103,7 @@
 
     <!-- 狀態提示列與 PC 熱鍵提示 -->
     <p id="msg-text">點擊「開始防守」守護 🌳 世界樹，進入第 1 波備戰！</p>
-    <div id="hotkey-hint" class="hotkey-hint">⌨️ 熱鍵：<b>[1/2/3]</b>召喚 ｜ <b>[Q/W]</b>技能 ｜ <b>[Space]</b>開波/暫停 ｜
+    <div id="hotkey-hint" class="hotkey-hint">⌨️ 熱鍵：<b>[1/2/3]</b>召喚 ｜ <b>[Q/W]</b>技能 ｜ <b>[Space]</b>暫停/繼續 ｜
         <b>[Tab/S]</b>倍速 ｜ <b>[Esc]</b>取消</div>
 
     <!-- 世界樹枝枒祝福（每 3 波 Roguelite 3 選 1） -->
@@ -118,7 +122,7 @@
         <div class="modal-card codex-card">
             <div class="codex-badge">FUSION CODEX</div>
             <h2 id="codex-title" class="codex-title">📖 跨元素融合圖鑑</h2>
-            <p class="modal-subtitle">兩座同星級（★+★ ➔ ★★、★★+★★ ➔ ★★★）不同基礎元素相融即可進階</p>
+            <p class="modal-subtitle">兩座同星級（★ + ★ = ★★、★★ + ★★ = ★★★）不同基礎元素相融即可進階</p>
 
             <div class="codex-list">
                 <div class="codex-item codex-steam">
@@ -234,8 +238,9 @@
             </div>
 
             <div class="modal-actions">
-                <button id="victory-restart-btn" class="restart-btn">🔄 重新挑戰</button>
+                <button id="victory-restart-btn" class="restart-btn">🔄 重新開始</button>
                 <button id="endless-btn" class="endless-btn">🔥 繼續無盡挑戰</button>
+                <button id="victory-menu-btn" class="menu-return-btn" type="button">🗺️ 切換地圖 / 主選單</button>
             </div>
         </div>
     </div>
@@ -280,10 +285,13 @@
                         </div>
                     </div>
 
-                    <div id="new-record-badge" class="new-record-badge hidden">🎉 刷新歷史最高波數紀錄！</div>
-                    <button id="restart-btn" class="restart-btn">🔄 重新開始</button>
-                </div>
+            <div id="new-record-badge" class="new-record-badge hidden">🎉 刷新歷史最高波數紀錄！</div>
+            <div class="modal-actions">
+                <button id="restart-btn" class="restart-btn">🔄 重新開始</button>
+                <button id="gameover-menu-btn" class="menu-return-btn" type="button">🗺️ 切換地圖 / 主選單</button>
             </div>
+        </div>
+    </div>
 
             <script src="config.js"></script>
             <script src="audio.js"></script>

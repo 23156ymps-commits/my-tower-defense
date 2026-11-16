@@ -185,21 +185,34 @@
         return { fusion, mergedTower };
     }
 
-    function pickSmartSpawnIndex() {
+    function pickSmartSpawnIndex(type = null) {
         const st = G.state, map = G.map;
         if (st.buildTargetIndex !== null && st.buildTargetIndex >= 0 && st.buildTargetIndex < CONFIG.BOARD_SIZE
             && st.board[st.buildTargetIndex] === null && !map.pathCellIndices.has(st.buildTargetIndex)) {
             return { index: st.buildTargetIndex, mode: 'targeted' };
         }
-        const nearPathEmpty = [], fallbackEmpty = [];
+        const pathCoords = Array.from(map.pathCellIndices).map(indexToCoords);
+        const towerProbe = { type: BASE_ELEMENT_TYPES.includes(type) ? type : 'fire' };
+        let bestCoverage = -1, bestPathDist = Infinity, bestPool = [];
         for (let idx = 0; idx < CONFIG.BOARD_SIZE; idx++) {
             if (st.board[idx] !== null || map.pathCellIndices.has(idx)) continue;
-            if (map.cellPathDist[idx] <= CONFIG.SUMMON_NEAR_PATH_RADIUS) nearPathEmpty.push(idx);
-            else fallbackEmpty.push(idx);
+            const c = indexToCoords(idx);
+            const rangeCells = getTowerEffectiveRangeCells(idx, towerProbe);
+            let coverage = 0;
+            for (let p = 0; p < pathCoords.length; p++) {
+                if (Math.hypot(c.x - pathCoords[p].x, c.y - pathCoords[p].y) <= rangeCells + 0.001) coverage++;
+            }
+            const dist = map.cellPathDist[idx];
+            if (coverage > bestCoverage || (coverage === bestCoverage && dist < bestPathDist - 1e-4)) {
+                bestCoverage = coverage;
+                bestPathDist = dist;
+                bestPool = [idx];
+            } else if (coverage === bestCoverage && Math.abs(dist - bestPathDist) <= 1e-4) {
+                bestPool.push(idx);
+            }
         }
-        const pool = nearPathEmpty.length > 0 ? nearPathEmpty : fallbackEmpty;
-        if (pool.length === 0) return null;
-        return { index: pool[Math.floor(Math.random() * pool.length)], mode: nearPathEmpty.length > 0 ? 'near-path' : 'fallback' };
+        if (bestPool.length === 0) return null;
+        return { index: bestPool[Math.floor(Math.random() * bestPool.length)], mode: bestCoverage > 0 ? 'near-path' : 'fallback' };
     }
 
     function getTowerSellRefund(towerObj) {
@@ -239,8 +252,9 @@
             ? WAVE_BALANCE.FINAL_WAVE_ESCORT_COUNT
             : (waveNum === 5 ? WAVE_BALANCE.WAVE5_ESCORT_COUNT : Math.min(WAVE_BALANCE.MAX_COUNT_PER_WAVE, WAVE_BALANCE.BASE_COUNT + waveNum * WAVE_BALANCE.COUNT_PER_WAVE));
 
-        const midLate = waveNum >= 4 ? (1.40 + Math.min(0.10, (waveNum - 4) * (0.10 / 6))) : 1.0;
-        const hpScale = (1 + (waveNum - 1) * WAVE_BALANCE.HP_GROWTH_LINEAR + Math.pow(waveNum - 1, 2) * WAVE_BALANCE.HP_GROWTH_QUAD) * midLate * (waveNum >= 5 ? CONFIG.WAVE5_PLUS_HP_MULT : 1.0);
+        const midLate = waveNum <= 2 ? 1.0 : (waveNum === 3 ? 1.08 : (waveNum === 4 ? 1.18 : (waveNum === 5 ? 1.28 : (1.40 + Math.min(0.10, (waveNum - 4) * (0.10 / 6))))));
+        const waveLateMult = waveNum === 5 ? 1.05 : (waveNum >= 6 ? CONFIG.WAVE5_PLUS_HP_MULT : 1.0);
+        const hpScale = (1 + (waveNum - 1) * WAVE_BALANCE.HP_GROWTH_LINEAR + Math.pow(waveNum - 1, 2) * WAVE_BALANCE.HP_GROWTH_QUAD) * midLate * waveLateMult;
         const rewardBonus = Math.floor((waveNum - 1) / WAVE_BALANCE.REWARD_WAVE_STEP);
         const hasElites = waveNum >= WAVE_BALANCE.ELITE_START_WAVE;
         const eliteCount = hasElites ? Math.min(Math.floor(totalCount * 0.35), 1 + Math.floor((waveNum - WAVE_BALANCE.ELITE_START_WAVE) / 1.5)) : 0;

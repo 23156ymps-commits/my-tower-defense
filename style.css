@@ -29,7 +29,7 @@ body {
     scroll-behavior: auto !important;
     user-select: none;
     -webkit-user-select: none;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", "Segoe UI Symbol", "Apple Color Emoji", "Segoe UI Emoji", Arial, sans-serif;
     background: radial-gradient(circle at 50% 18%, #2c3f26 0%, #1d2b1d 52%, #131c15 100%);
     color: var(--parchment-text);
     display: flex;
@@ -169,6 +169,41 @@ body.map-lava {
     color: #a89984;
 }
 
+.hud-pause-btn {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1.5px solid #f59e0b;
+    background: linear-gradient(135deg, #45301a, #2d1f11);
+    color: #fde68a;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease, filter 0.15s ease, opacity 0.15s ease;
+    white-space: nowrap;
+}
+
+.hud-pause-btn:hover:not(:disabled) {
+    filter: brightness(1.14);
+}
+
+.hud-pause-btn:active:not(:disabled) {
+    transform: scale(0.96);
+}
+
+.hud-pause-btn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+    filter: grayscale(0.4);
+}
+
+.hud-pause-btn.is-paused {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    border-color: #86efac;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+}
+
 /* ==================== 屬性提示條 ==================== */
 #info-legend {
     display: flex;
@@ -193,6 +228,41 @@ body.map-lava {
     overflow: hidden;
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.58), 0 0 0 2px rgba(45, 36, 28, 0.85);
     touch-action: manipulation;
+}
+
+.pause-banner {
+    position: absolute;
+    inset: 0;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(12, 18, 14, 0.52);
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+    text-align: center;
+    padding: 16px;
+}
+
+.pause-banner-title {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #fef08a;
+    text-shadow: 0 3px 12px rgba(0, 0, 0, 0.85);
+}
+
+.pause-banner-sub {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f5ebd6;
+    background: rgba(26, 20, 15, 0.78);
+    border: 1px solid rgba(251, 191, 36, 0.55);
+    border-radius: 999px;
+    padding: 5px 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
 }
 
 #board-stage.tree-hit-shake {
@@ -1217,6 +1287,18 @@ body.map-lava .cell.path-cell .path-arrow {
     border-color: #fef08a !important;
 }
 
+.skill-btn.skill-low-dew:disabled {
+    opacity: 0.78;
+    border-color: rgba(56, 189, 248, 0.55);
+    color: #bae6fd;
+}
+
+.skill-btn.skill-cooling:disabled {
+    opacity: 0.76;
+    border-color: rgba(251, 191, 36, 0.55);
+    color: #fde68a;
+}
+
 .codex-btn {
     background: linear-gradient(135deg, #5d4f8a, #423666);
     border: 1px solid #a78bfa !important;
@@ -1271,17 +1353,22 @@ body.map-lava .cell.path-cell .path-arrow {
 }
 
 .hotkey-hint {
-    margin-top: 2px;
-    font-size: 10.5px;
-    line-height: 1.2;
-    color: rgba(214, 197, 167, 0.78);
+    margin-top: 3px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(26, 20, 15, 0.72);
+    border: 1px solid rgba(201, 154, 78, 0.35);
+    font-size: 11px;
+    line-height: 1.25;
+    color: #f3e8d2;
     text-align: center;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.25px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
 }
 
 .hotkey-hint b {
-    color: #fde68a;
-    font-weight: 600;
+    color: #fef08a;
+    font-weight: 700;
 }
 
 /* ==================== 橡木羊皮紙奇幻彈窗（Start / Blessing / Codex / Victory / GameOver） ==================== */
@@ -1730,6 +1817,27 @@ body.map-lava .cell.path-cell .path-arrow {
     gap: 8px;
 }
 
+.menu-return-btn {
+    border: 1.5px solid rgba(201, 154, 78, 0.75);
+    background: linear-gradient(135deg, #3b2d1f, #261c13);
+    color: #f5ebd6;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 9px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    transition: transform 0.1s ease, filter 0.15s ease;
+}
+
+.menu-return-btn:hover {
+    filter: brightness(1.12);
+}
+
+.menu-return-btn:active {
+    transform: scale(0.97);
+}
+
 .endless-btn {
     width: 100%;
     padding: 10px 16px;
@@ -2023,6 +2131,13 @@ body.map-lava .cell.path-cell .path-arrow {
     .debug-controls button {
         padding: 3px 8px;
         font-size: 10.5px;
+    }
+
+    .hotkey-hint {
+        margin-top: 2px;
+        padding: 1px 8px;
+        font-size: 9.5px;
+        line-height: 1.15;
     }
 
     #msg-text {
