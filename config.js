@@ -192,7 +192,7 @@
             id: 'life_nectar',
             icon: '💧',
             name: '生命甘露',
-            desc: '🌳 世界樹立即回復 4 點生命（不超過 20），且今後擊殺獲得靈露能量 +25%。'
+            desc: `🌳 世界樹立即回復 ${CONFIG.BLESSING_LIFE_HEAL} 點生命（不超過 ${CONFIG.INITIAL_BASE_HP}），且今後擊殺獲得靈露能量 +${Math.round(CONFIG.BLESSING_DEW_GAIN_BONUS * 100)}%。`
         },
         {
             id: 'thunder_conduction',

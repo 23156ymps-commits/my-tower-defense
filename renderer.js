@@ -455,6 +455,12 @@
         }
     }
 
+    const TERRAIN_SVG_BY_TYPE = {
+        highground: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><defs><pattern id="hgHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(251,191,36,0.22)" stroke-width="1.6"/></pattern></defs><rect x="2" y="2" width="60" height="60" rx="6" fill="url(#hgHatch)"/><polygon points="10,50 24,18 35,32 45,14 54,50" fill="rgba(245,158,11,0.16)" stroke="rgba(253,224,71,0.58)" stroke-width="1.6" stroke-linejoin="round"/><polyline points="16,44 26,26 35,38 44,23 50,44" fill="none" stroke="rgba(254,240,138,0.42)" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 15 V8 H15 M49 8 H56 V15 M8 49 V56 H15 M49 56 H56 V49" fill="none" stroke="rgba(251,191,36,0.75)" stroke-width="1.8" stroke-linecap="round"/></svg>',
+        mana_vein: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="24" fill="rgba(14,165,233,0.12)" stroke="rgba(56,189,248,0.58)" stroke-width="1.5" stroke-dasharray="5 3"/><circle cx="32" cy="32" r="16" fill="none" stroke="rgba(125,211,252,0.72)" stroke-width="1.4"/><polygon points="32,12 48,32 32,52 16,32" fill="rgba(56,189,248,0.14)" stroke="rgba(186,230,253,0.62)" stroke-width="1.3"/><line x1="32" y1="6" x2="32" y2="14" stroke="#7dd3fc" stroke-width="1.6"/><line x1="32" y1="50" x2="32" y2="58" stroke="#7dd3fc" stroke-width="1.6"/><line x1="6" y1="32" x2="14" y2="32" stroke="#7dd3fc" stroke-width="1.6"/><line x1="50" y1="32" x2="58" y2="32" stroke="#7dd3fc" stroke-width="1.6"/><circle cx="32" cy="32" r="5" fill="#38bdf8" fill-opacity="0.72" stroke="#e0f2fe" stroke-width="1.3"/></svg>',
+        world_tree: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="24" fill="rgba(34,197,94,0.12)" stroke="rgba(74,222,128,0.55)" stroke-width="1.5"/><path d="M32 10 C45 18 50 32 32 54 C14 32 19 18 32 10 Z" fill="rgba(74,222,128,0.18)" stroke="rgba(134,239,172,0.75)" stroke-width="1.6"/><line x1="32" y1="14" x2="32" y2="52" stroke="rgba(187,247,208,0.75)" stroke-width="1.5"/><path d="M32 24 L41 19 M32 32 L43 26 M32 40 L40 35 M32 24 L23 19 M32 32 L21 26 M32 40 L24 35" stroke="rgba(187,247,208,0.65)" stroke-width="1.3" stroke-linecap="round"/></svg>'
+    };
+
     function initBoard() {
         const boardEl = G.dom.boardElement, st = G.state, map = G.map;
         boardEl.innerHTML = ''; G.cellElements.length = 0; G.towerElements.fill(null);
@@ -481,8 +487,11 @@
                     const tCfg = TERRAIN_CONFIG[terrain];
                     cell.classList.add(`terrain-${terrain}`);
                     cell.setAttribute('title', tCfg.tooltip);
-                    const tag = document.createElement('span'); tag.classList.add('terrain-tag'); tag.innerText = tCfg.icon;
-                    cell.appendChild(tag);
+                    const art = document.createElement('div');
+                    art.classList.add('terrain-art');
+                    art.setAttribute('aria-hidden', 'true');
+                    art.innerHTML = TERRAIN_SVG_BY_TYPE[terrain] || '';
+                    cell.appendChild(art);
                 }
             }
             cell.addEventListener('mouseenter', () => { if (!st.isTouchMode && st.hoveredIndex !== index) { st.hoveredIndex = index; updateRangeIndicator(); } });

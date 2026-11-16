@@ -625,6 +625,8 @@
 
     function updateMonsters(dtMs) {
         const dtSec = dtMs / 1000, st = G.state, wps = G.map.waypoints, Renderer = global.GameRenderer;
+        if (st.isGameOver) return;
+        if (st.baseHp <= 0) { G.callbacks.triggerGameOver(); return; }
         for (let i = st.monsters.length - 1; i >= 0; i--) {
             const m = st.monsters[i];
             if (m.slowTimer > 0 && (m.slowTimer = Math.max(0, m.slowTimer - dtMs)) === 0) m.slowRate = 0;
@@ -648,16 +650,21 @@
             }
 
             if (reachedEnd) {
-                const leakDmg = m.baseDamage || 1;
+                const leakDmg = Math.max(1, m.baseDamage || 1);
                 st.lastBreakerName = m.name || '';
                 st.baseHp = Math.max(0, st.baseHp - leakDmg);
-                G.dom.msgText.innerText = m.isBoss ? `💥 【${m.name}】突破防線！🌳 世界樹遭受重創 -${leakDmg} 生命！` : `🚨 怪物【${m.name}】突破防線！🌳 世界樹受損 -${leakDmg} 生命！`;
+                if (G.dom.msgText) {
+                    G.dom.msgText.innerText = m.isBoss ? `💥 【${m.name}】突破防線！🌳 世界樹遭受重創 -${leakDmg} 生命！` : `🚨 怪物【${m.name}】突破防線！🌳 世界樹受損 -${leakDmg} 生命！`;
+                }
                 st.monsters.splice(i, 1);
                 Renderer.removeMonsterDom(m.id);
+                if (st.baseHp <= 0) {
+                    G.callbacks.triggerGameOver();
+                    return;
+                }
                 Renderer.triggerWorldTreeShake();
                 SoundEngine.playOutcome('treeHit');
                 G.callbacks.updateHUD();
-                if (st.baseHp <= 0) { G.callbacks.triggerGameOver(); return; }
                 continue;
             }
             const pos = Renderer.getCellCenter(m.gridX, m.gridY);

@@ -2,7 +2,7 @@
 const {
     CONFIG, ELEMENT_CONFIG, BASE_ELEMENT_TYPES, BLESSINGS_CATALOG,
     TARGET_MODE_CYCLE, TARGET_MODE_LABELS, TERRAIN_CONFIG, WAVE_BALANCE,
-    MAPS_CONFIG, clampNumber, indexToCoords
+    MONSTER_DATABASE, MAPS_CONFIG, clampNumber, indexToCoords
 } = window.GameConfig;
 
 const SoundEngine = window.GameAudio;
@@ -37,7 +37,9 @@ const DOM_ID_PAIRS = [
     ['finalBestTextEl', 'final-best-text'], ['finalKillsTextEl', 'final-kills-text'], ['gameoverMvpTextEl', 'gameover-mvp-text'],
     ['gameoverGoldEarnedTextEl', 'gameover-gold-earned-text'], ['gameoverFusionTextEl', 'gameover-fusion-text'],
     ['gameoverBreakerRowEl', 'gameover-breaker-row'], ['gameoverBreakerTextEl', 'gameover-breaker-text'],
-    ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn'], ['gameoverMenuBtn', 'gameover-menu-btn']
+    ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn'], ['gameoverMenuBtn', 'gameover-menu-btn'],
+    ['forecastCurrentHeaderEl', 'forecast-current-header'], ['forecastCurrentListEl', 'forecast-current-list'],
+    ['forecastNextHeaderEl', 'forecast-next-header'], ['forecastNextListEl', 'forecast-next-list']
 ];
 
 function buildDomCache() {
@@ -48,9 +50,13 @@ function buildDomCache() {
     dom.fxCtx = dom.fxCanvasEl && typeof dom.fxCanvasEl.getContext === 'function' ? dom.fxCanvasEl.getContext('2d') : null;
     dom.hpHudEl = dom.baseHpDisplay ? dom.baseHpDisplay.closest('.hud-hp') : null;
     dom.skillEntangleMask = dom.skillEntangleBtn ? dom.skillEntangleBtn.querySelector('.skill-cd-mask') : null;
+    dom.skillEntangleDewBar = dom.skillEntangleBtn ? dom.skillEntangleBtn.querySelector('.skill-dew-bar') : null;
     dom.skillEntangleLabel = dom.skillEntangleBtn ? dom.skillEntangleBtn.querySelector('.skill-label') : null;
+    dom.skillEntangleSub = dom.skillEntangleBtn ? dom.skillEntangleBtn.querySelector('.skill-sub') : null;
     dom.skillFrenzyMask = dom.skillFrenzyBtn ? dom.skillFrenzyBtn.querySelector('.skill-cd-mask') : null;
+    dom.skillFrenzyDewBar = dom.skillFrenzyBtn ? dom.skillFrenzyBtn.querySelector('.skill-dew-bar') : null;
     dom.skillFrenzyLabel = dom.skillFrenzyBtn ? dom.skillFrenzyBtn.querySelector('.skill-label') : null;
+    dom.skillFrenzySub = dom.skillFrenzyBtn ? dom.skillFrenzyBtn.querySelector('.skill-sub') : null;
     dom.spawnerBtns = {};
     dom.seedPityBadgeEl = null;
     return dom;
@@ -100,7 +106,21 @@ const G = {
 };
 
 // ==================== 3. 生命週期與跨局計時器隔離 ====================
-function isCodexOpen() { return Boolean(G.dom.codexOverlayEl && !G.dom.codexOverlayEl.classList.contains('hidden')); }
+function isOverlayVisible(el) { return Boolean(el && !el.classList.contains('hidden')); }
+function isCodexOpen() { return isOverlayVisible(G.dom.codexOverlayEl); }
+function isAnyModalOpen() {
+    const dom = G.dom, st = G.state;
+    return isOverlayVisible(dom.startOverlayEl)
+        || isOverlayVisible(dom.codexOverlayEl)
+        || isOverlayVisible(dom.blessingOverlayEl)
+        || isOverlayVisible(dom.victoryOverlayEl)
+        || isOverlayVisible(dom.gameOverOverlayEl)
+        || st.waveState === 'WAITING_START'
+        || st.waveState === 'BLESSING_SELECT'
+        || st.waveState === 'VICTORY'
+        || st.waveState === 'GAMEOVER'
+        || st.isGameOver;
+}
 function isGameplayActive() {
     const st = G.state;
     return !st.isGameOver && !st.isPaused && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen();
@@ -146,7 +166,7 @@ function renderMapSelectorUI() {
             card.setAttribute('aria-pressed', isSel ? 'true' : 'false');
         });
     }
-    const fmt = rec => `🏆 最高 Wave ${rec.bestWave} ｜ ${rec.bestStars > 0 ? `通關 ${'⭐'.repeat(rec.bestStars)}` : '尚未通關'}`;
+    const fmt = rec => `最高 Wave ${rec.bestWave} · ${rec.bestStars > 0 ? `通關 ${'⭐'.repeat(rec.bestStars)}` : '尚未通關'}`;
     if (G.dom.mapRecordForestEl) G.dom.mapRecordForestEl.innerText = fmt(records.forest);
     if (G.dom.mapRecordLavaEl) G.dom.mapRecordLavaEl.innerText = fmt(records.lava);
 }
@@ -195,9 +215,9 @@ function populateBattleRecap(mode) {
         setDomText(dom.victoryMapTextEl, mapSpec.name);
         setDomText(dom.victoryKillsTextEl, `${st.killsCount} 隻`);
         setDomText(dom.victoryHpTextEl, `${st.baseHp} / ${CONFIG.INITIAL_BASE_HP}`);
-        setDomText(dom.victoryGoldTextEl, `${st.currentGold} 💰`);
+        setDomText(dom.victoryGoldTextEl, `${st.currentGold} 金`);
         setDomText(dom.victoryMvpTextEl, mvpText);
-        setDomText(dom.victoryGoldEarnedTextEl, `${st.totalGoldEarned.toLocaleString()} 💰`);
+        setDomText(dom.victoryGoldEarnedTextEl, `${st.totalGoldEarned.toLocaleString()} 金`);
         setDomText(dom.victoryFusionTextEl, `${st.fusionCount} 次`);
         return;
     }
@@ -206,7 +226,7 @@ function populateBattleRecap(mode) {
     setDomText(dom.finalBestTextEl, `Wave ${st.bestWave}`);
     setDomText(dom.finalKillsTextEl, `${st.killsCount} 隻`);
     setDomText(dom.gameoverMvpTextEl, mvpText);
-    setDomText(dom.gameoverGoldEarnedTextEl, `${st.totalGoldEarned.toLocaleString()} 💰`);
+    setDomText(dom.gameoverGoldEarnedTextEl, `${st.totalGoldEarned.toLocaleString()} 金`);
     setDomText(dom.gameoverFusionTextEl, `${st.fusionCount} 次`);
     if (dom.gameoverBreakerRowEl) {
         dom.gameoverBreakerRowEl.classList.toggle('hidden', !st.lastBreakerName);
@@ -227,9 +247,9 @@ function updateTowerInspector() {
         dom.inspectorEmptyEl.classList.remove('hidden');
         if (st.buildTargetIndex !== null && st.board[st.buildTargetIndex] === null && !G.map.pathCellIndices.has(st.buildTargetIndex)) {
             const c = indexToCoords(st.buildTargetIndex), terrain = Combat.getTerrainAt(st.buildTargetIndex);
-            dom.inspectorEmptyEl.innerText = `📍 已指定建造格 (${c.x + 1},${c.y + 1})${terrain ? `｜${TERRAIN_CONFIG[terrain].shortTag}` : ''} — 點擊下方元素按鈕直接召喚於此`;
+            dom.inspectorEmptyEl.innerText = `已指定建造格 (${c.x + 1},${c.y + 1})${terrain ? `｜${TERRAIN_CONFIG[terrain].shortTag}` : ''} — 點擊下方元素卡召喚`;
         } else {
-            dom.inspectorEmptyEl.innerText = '💡 點選防禦塔可檢視 DPS／切換索敵／出售；先點空白草地再召喚可指定落點';
+            dom.inspectorEmptyEl.innerText = '點選防禦塔可檢視 DPS、切換索敵或出售；先點空白草地再召喚可指定落點';
         }
         return;
     }
@@ -239,14 +259,14 @@ function updateTowerInspector() {
     dom.inspectorEmptyEl.classList.add('hidden');
     dom.inspectorActiveEl.classList.remove('hidden');
     setDomText(dom.inspectorNameEl, `${cfg.icon} ${cfg.name} ${Renderer.getTierStars(towerObj.tier)}`);
-    setDomText(dom.inspectorDpsEl, `DPS ${stats.dps}${towerObj.type === 'plasma' ? (towerObj.focusStacks > 0 ? ` (${towerObj.focusStacks}層)` : ' (蓄能)') : ''}`);
+    setDomText(dom.inspectorDpsEl, `DPS ${stats.dps}${towerObj.type === 'plasma' ? (towerObj.focusStacks > 0 ? ` (${towerObj.focusStacks} 層)` : ' (蓄能)') : ''}`);
     setDomText(dom.inspectorRangeEl, `射程 ${stats.rangeStr}`);
     if (dom.inspectorTerrainEl) {
         dom.inspectorTerrainEl.classList.toggle('hidden', !stats.terrainType);
         dom.inspectorTerrainEl.innerText = stats.terrainType ? TERRAIN_CONFIG[stats.terrainType].shortTag : '';
     }
-    setDomText(dom.inspectorTargetBtn, `🎯 索敵：${TARGET_MODE_LABELS[mode] || '最前'}`);
-    setDomText(dom.inspectorSellBtn, `💰 出售 (+${Combat.getTowerSellRefund(towerObj)})`);
+    setDomText(dom.inspectorTargetBtn, `索敵：${TARGET_MODE_LABELS[mode] || '最前'}`);
+    setDomText(dom.inspectorSellBtn, `出售 (+${Combat.getTowerSellRefund(towerObj)} 金)`);
 }
 
 function updateBossStatusBar() {
@@ -268,22 +288,26 @@ function updateBossStatusBar() {
     if (dom.bossBannerHpFillEl) dom.bossBannerHpFillEl.style.width = `${Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100))}%`;
 }
 
-function updateSkillBtnVisual(btn, maskEl, labelEl, cdMs, maxCdMs, activeMs, cost, readyText, cdPrefix, lowDewPrefix, activePrefix) {
+function updateSkillBtnVisual(btn, maskEl, dewBarEl, labelEl, subEl, cdMs, maxCdMs, activeMs, cost, skillName, hotkey, activePrefix) {
     if (!btn) return;
     if (maskEl) maskEl.style.width = `${cdMs > 0 ? Math.min(100, (cdMs / maxCdMs) * 100) : 0}%`;
+    if (dewBarEl) dewBarEl.style.width = `${Math.max(0, Math.min(100, (G.state.dewEnergy / Math.max(1, cost)) * 100))}%`;
     const missingDew = Math.max(0, cost - G.state.dewEnergy);
     const isCooling = activeMs <= 0 && cdMs > 0;
     const isLowDew = activeMs <= 0 && cdMs <= 0 && missingDew > 0;
     if (labelEl) {
-        if (activeMs > 0 && activePrefix) labelEl.innerText = `${activePrefix} ${Math.ceil(activeMs / 1000)}s`;
-        else if (isCooling) labelEl.innerText = `${cdPrefix} ${Math.ceil(cdMs / 1000)}s`;
-        else if (isLowDew) labelEl.innerText = `${lowDewPrefix} ${missingDew}💧`;
-        else labelEl.innerText = readyText;
+        labelEl.innerText = `${skillName} (${cost} 💧)`;
+    }
+    if (subEl) {
+        if (activeMs > 0 && activePrefix) subEl.innerText = `${activePrefix} ${(activeMs / 1000).toFixed(1)}s`;
+        else if (isCooling) subEl.innerText = `冷卻 ${(cdMs / 1000).toFixed(1)}s`;
+        else if (isLowDew) subEl.innerText = `還差 ${missingDew} 💧`;
+        else subEl.innerText = `就緒 · [${hotkey}]`;
     }
     if (activePrefix) btn.classList.toggle('skill-active', activeMs > 0);
     btn.classList.toggle('skill-cooling', isCooling);
     btn.classList.toggle('skill-low-dew', isLowDew);
-    btn.title = isCooling ? `冷卻中，剩餘 ${Math.ceil(cdMs / 1000)} 秒` : (isLowDew ? `靈露不足，需 ${cost}💧（還差 ${missingDew}💧）` : `消耗 ${cost}💧 立即施放`);
+    btn.title = isCooling ? `冷卻中，剩餘 ${(cdMs / 1000).toFixed(1)} 秒` : (isLowDew ? `靈露不足，需 ${cost} 💧（還差 ${missingDew} 💧）` : `消耗 ${cost} 💧 立即施放`);
     btn.disabled = !isGameplayActive() || activeMs > 0 || isCooling || isLowDew;
 }
 
@@ -291,8 +315,8 @@ function updateSkillButtonsUI() {
     const dom = G.dom, st = G.state;
     setDomText(dom.dewDisplay, `${st.dewEnergy}/${CONFIG.DEW_MAX}`);
     if (dom.dewBarFillEl) dom.dewBarFillEl.style.width = `${Math.max(0, Math.min(100, (st.dewEnergy / CONFIG.DEW_MAX) * 100))}%`;
-    updateSkillBtnVisual(dom.skillEntangleBtn, dom.skillEntangleMask, dom.skillEntangleLabel, st.entangleCdMs, CONFIG.SKILL_ENTANGLE_CD_MS, 0, CONFIG.SKILL_ENTANGLE_COST, `🌿 根鬚纏繞 ${CONFIG.SKILL_ENTANGLE_COST}💧`, '🌿 冷卻', '🌿 缺', null);
-    updateSkillBtnVisual(dom.skillFrenzyBtn, dom.skillFrenzyMask, dom.skillFrenzyLabel, st.frenzyCdMs, CONFIG.SKILL_FRENZY_CD_MS, st.frenzyActiveMs, CONFIG.SKILL_FRENZY_COST, `✨ 自然狂熱 ${CONFIG.SKILL_FRENZY_COST}💧`, '✨ 冷卻', '✨ 缺', '✨ 狂熱中');
+    updateSkillBtnVisual(dom.skillEntangleBtn, dom.skillEntangleMask, dom.skillEntangleDewBar, dom.skillEntangleLabel, dom.skillEntangleSub, st.entangleCdMs, CONFIG.SKILL_ENTANGLE_CD_MS, 0, CONFIG.SKILL_ENTANGLE_COST, '🌿 根鬚纏繞', 'Q', null);
+    updateSkillBtnVisual(dom.skillFrenzyBtn, dom.skillFrenzyMask, dom.skillFrenzyDewBar, dom.skillFrenzyLabel, dom.skillFrenzySub, st.frenzyCdMs, CONFIG.SKILL_FRENZY_CD_MS, st.frenzyActiveMs, CONFIG.SKILL_FRENZY_COST, '✨ 自然狂熱', 'W', '狂熱中');
 }
 
 const WAVE_STATE_TEXT = {
@@ -303,26 +327,32 @@ const WAVE_STATE_TEXT = {
     VICTORY: () => '通關勝利'
 };
 
+function syncPauseUI() {
+    const dom = G.dom, st = G.state;
+    const canPause = isMatchPhaseActive();
+    const showPaused = Boolean(st.isPaused && canPause);
+    if (dom.pauseBtn) {
+        dom.pauseBtn.disabled = !canPause;
+        dom.pauseBtn.classList.toggle('is-paused', showPaused);
+        dom.pauseBtn.innerText = showPaused ? '繼續' : '暫停';
+    }
+    if (dom.pauseBannerEl) {
+        dom.pauseBannerEl.classList.toggle('hidden', !showPaused);
+    }
+}
+
 function updateWavePhaseUI() {
     const dom = G.dom, st = G.state;
     if (!dom.wavePhaseTagEl) return;
     const isBoss = Combat.isBossWaveNumber(st.currentWave);
-    const canPause = isMatchPhaseActive();
     dom.wavePhaseTagEl.classList.toggle('boss-wave', !st.isPaused && isBoss && (st.waveState === 'SPAWNING' || st.waveState === 'CLEARING'));
     dom.wavePhaseTagEl.classList.toggle('paused', st.isPaused);
-    dom.wavePhaseTagEl.innerText = st.isPaused ? '⏸️ 已暫停' : ((WAVE_STATE_TEXT[st.waveState] && WAVE_STATE_TEXT[st.waveState](st, isBoss)) || '已結束');
-    if (dom.pauseBtn) {
-        dom.pauseBtn.disabled = !canPause;
-        dom.pauseBtn.classList.toggle('is-paused', st.isPaused && canPause);
-        dom.pauseBtn.innerText = st.isPaused && canPause ? '▶️ 繼續' : '⏸️ 暫停';
-    }
-    if (dom.pauseBannerEl) {
-        dom.pauseBannerEl.classList.toggle('hidden', !(st.isPaused && canPause));
-    }
+    dom.wavePhaseTagEl.innerText = st.isPaused ? '已暫停' : ((WAVE_STATE_TEXT[st.waveState] && WAVE_STATE_TEXT[st.waveState](st, isBoss)) || '已結束');
+    syncPauseUI();
     if (dom.nextWaveBtn) {
         const canSkip = isGameplayActive() && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION');
         dom.nextWaveBtn.disabled = !canSkip;
-        dom.nextWaveBtn.innerText = canSkip ? `${st.waveState === 'PREP' ? '⚡ 立即開波' : '⚡ 提前下波'} (+${getEarlyWaveBonus()}💰)` : '⚡ 立即開波';
+        dom.nextWaveBtn.innerText = canSkip ? `${st.waveState === 'PREP' ? '立即開波' : '提前下波'} (+${getEarlyWaveBonus()} 金)` : '立即開波';
     }
 }
 
@@ -332,22 +362,69 @@ function updateSeedPityUI() {
     if (!Combat.hasBlessing('abundant_seed')) { badge.classList.add('hidden'); badge.classList.remove('pity-ready'); return; }
     badge.classList.remove('hidden');
     badge.classList.toggle('pity-ready', G.state.seedPityCount === CONFIG.BLESSING_SEED_INTERVAL - 1);
-    badge.innerText = `🌱 保底進度：${G.state.seedPityCount}/${CONFIG.BLESSING_SEED_INTERVAL}`;
+    badge.innerText = `🌱 豐饒種子保底進度：${G.state.seedPityCount}/${CONFIG.BLESSING_SEED_INTERVAL}`;
 }
 
 function updateSpeedButtonUI() {
     const btn = G.dom.speedBtn;
     if (!btn) return;
     btn.classList.remove('speed-2x', 'speed-3x');
-    if (G.state.gameSpeed === 2) { btn.classList.add('speed-2x'); btn.innerText = '⏩ 2x'; }
-    else if (G.state.gameSpeed === 3) { btn.classList.add('speed-3x'); btn.innerText = '🔥 3x'; }
-    else btn.innerText = '⏩ 1x';
+    if (G.state.gameSpeed === 2) { btn.classList.add('speed-2x'); btn.innerText = '倍速 2x'; }
+    else if (G.state.gameSpeed === 3) { btn.classList.add('speed-3x'); btn.innerText = '倍速 3x'; }
+    else btn.innerText = '倍速 1x';
 }
 
 function updateSoundButtonUI() {
     if (!G.dom.soundBtn) return;
     G.dom.soundBtn.classList.toggle('muted', SoundEngine.isMuted);
-    G.dom.soundBtn.innerText = SoundEngine.isMuted ? '🔇 靜音' : '🔊 音效開';
+    G.dom.soundBtn.innerText = SoundEngine.isMuted ? '音效：靜音' : '音效：開';
+}
+
+function renderForecastListInto(headerEl, listEl, waveNum, prefixLabel, isFinalClear = false) {
+    if (!headerEl || !listEl) return;
+    if (isFinalClear) {
+        headerEl.innerText = `${prefixLabel} · 已達最終波`;
+        listEl.innerHTML = '<li class="forecast-item forecast-boss">守住第 10 波即可通關</li>';
+        return;
+    }
+    const plan = Combat.buildWaveQueue(waveNum);
+    headerEl.innerText = `${prefixLabel} · Wave ${waveNum}`;
+    const counts = new Map();
+    let normalTotal = 0;
+    for (let i = 0; i < plan.queue.length; i++) {
+        const q = plan.queue[i];
+        if (q.isBoss) continue;
+        normalTotal++;
+        counts.set(q.typeKey, (counts.get(q.typeKey) || 0) + 1);
+    }
+    const items = [];
+    counts.forEach((cnt, key) => {
+        const mCfg = MONSTER_DATABASE[key];
+        if (!mCfg) return;
+        const wCfg = ELEMENT_CONFIG[mCfg.weakness];
+        const weakTag = wCfg ? `弱${wCfg.name.charAt(0)}` : '';
+        items.push(`<li class="forecast-item"><span>${mCfg.icon} ${mCfg.name} ×${cnt}</span><span class="forecast-weak weak-${mCfg.weakness}">${weakTag}</span></li>`);
+    });
+    if (plan.eliteCount > 0) {
+        items.push(`<li class="forecast-meta">含 ${plan.eliteCount} 隻護甲菁英（🛡️${plan.eliteArmor}）</li>`);
+    }
+    if (plan.bossMeta) {
+        const bWeak = ELEMENT_CONFIG[plan.bossMeta.weakness];
+        const bWeakStr = bWeak ? `弱${bWeak.name.charAt(0)}` : '';
+        items.push(`<li class="forecast-item forecast-boss"><span>👑 ${plan.bossMeta.name}</span><span class="forecast-weak weak-${plan.bossMeta.weakness}">${bWeakStr} · 🛡️${plan.bossMeta.armor}</span></li>`);
+    } else if (normalTotal > 0 && plan.eliteCount === 0) {
+        items.push(`<li class="forecast-meta">共 ${normalTotal} 隻敵軍進攻</li>`);
+    }
+    listEl.innerHTML = items.join('');
+}
+
+function updateWaveForecastUI() {
+    const dom = G.dom, st = G.state;
+    const curWave = Math.max(1, st.currentWave || 1);
+    const nextWave = curWave + 1;
+    const isFinalClear = !st.isEndlessMode && curWave >= CONFIG.VICTORY_WAVE;
+    renderForecastListInto(dom.forecastCurrentHeaderEl, dom.forecastCurrentListEl, curWave, '本波情報');
+    renderForecastListInto(dom.forecastNextHeaderEl, dom.forecastNextListEl, nextWave, '下波預告', isFinalClear);
 }
 
 function updateHUD() {
@@ -358,13 +435,14 @@ function updateHUD() {
     setDomText(dom.bestWaveDisplay, `Wave ${st.bestWave}`);
     updateWavePhaseUI(); Renderer.updateWorldTreeVisualState(); updateSkillButtonsUI();
     updateSeedPityUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
+    updateWaveForecastUI();
 
     const activePlay = isGameplayActive();
     for (let i = 0; i < BASE_ELEMENT_TYPES.length; i++) {
         const type = BASE_ELEMENT_TYPES[i], ref = dom.spawnerBtns[type];
         if (!ref) continue;
         const cost = getCost(type);
-        if (ref.costEl) ref.costEl.innerText = `${cost} 💰`;
+        if (ref.costEl) ref.costEl.innerText = `${cost} 金`;
         ref.btn.classList.toggle('btn-disabled', !activePlay || st.currentGold < cost);
     }
 }
@@ -377,14 +455,14 @@ function renderSpawnerButtons() {
         const data = ELEMENT_CONFIG[type], btn = document.createElement('button');
         btn.id = `spawn-btn-${type}`;
         btn.classList.add('spawn-card-btn', `btn-type-${type}`);
-        btn.innerHTML = `<span>${data.icon} 召喚${data.name}</span><span class="btn-sub-info">${data.roleTag}</span><span class="btn-cost-val">${getCost(type)} 💰</span>`;
+        btn.innerHTML = `<span class="spawn-card-top"><span class="spawn-card-name">${data.icon} ${data.name}</span><span class="btn-cost-val">${getCost(type)} 金</span></span><span class="btn-sub-info">${data.roleTag}</span>`;
         btn.addEventListener('click', () => handleSpawn(type, btn));
         container.appendChild(btn);
         G.dom.spawnerBtns[type] = { btn, costEl: btn.querySelector('.btn-cost-val') };
     });
     const pityBadge = document.createElement('div');
     pityBadge.id = 'seed-pity-badge'; pityBadge.className = 'seed-pity-badge hidden';
-    pityBadge.innerText = `🌱 保底進度：0/${CONFIG.BLESSING_SEED_INTERVAL}`;
+    pityBadge.innerText = `🌱 豐饒種子保底進度：0/${CONFIG.BLESSING_SEED_INTERVAL}`;
     container.appendChild(pityBadge);
     G.dom.seedPityBadgeEl = pityBadge;
     updateSeedPityUI();
@@ -426,7 +504,9 @@ function selectBlessing(blessingId) {
     st.activeBlessings.add(blessingId); st.blessingChoices = [];
     if (G.dom.blessingOverlayEl) G.dom.blessingOverlayEl.classList.add('hidden');
     if (blessingId === 'abundant_seed') st.seedPityCount = 0;
-    else if (blessingId === 'life_nectar') st.baseHp = Math.min(CONFIG.INITIAL_BASE_HP, st.baseHp + CONFIG.BLESSING_LIFE_HEAL);
+    else if (blessingId === 'life_nectar') {
+        st.baseHp = Math.min(CONFIG.INITIAL_BASE_HP, st.baseHp + CONFIG.BLESSING_LIFE_HEAL);
+    }
     st.waveState = 'INTERMISSION'; st.waveTimerMs = CONFIG.WAVE_INTERMISSION_MS;
     G.dom.msgText.innerText = `🌳 已獲得祝福【${picked.icon} ${picked.name}】！下一波將於 ${Math.ceil(CONFIG.WAVE_INTERMISSION_MS / 1000)} 秒後到來！`;
     SoundEngine.playMagic('blessing'); updateHUD(); startMainLoop();
@@ -507,7 +587,7 @@ function handleCellClick(index) {
                 G.dom.msgText.innerText = `⏸️ 暫停檢視：【${ELEMENT_CONFIG[t.type].name} ${Renderer.getTierStars(t.tier)}】${terrain ? `｜地形：${TERRAIN_CONFIG[terrain].shortTag}` : ''}（恢復後可移動、融合或切換索敵）`;
             } else {
                 st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
-                G.dom.msgText.innerText = st.board[index] === null ? '⏸️ 暫停中僅供點擊防禦塔檢視資訊，按「▶️ 繼續」或 Space 後即可建造操作。' : '已取消選取。';
+                G.dom.msgText.innerText = st.board[index] === null ? '暫停中僅供點擊防禦塔檢視資訊，按「繼續」或 Space 即可恢復操作。' : '已取消選取。';
             }
             Renderer.renderBoard([]);
             updateTowerInspector();
@@ -634,8 +714,11 @@ function triggerVictory() {
 
 function triggerGameOver() {
     const st = G.state;
-    if (st.isGameOver) return;
+    if (st.isGameOver && st.waveState === 'GAMEOVER') return;
     st.isGameOver = true;
+    ['startOverlayEl', 'victoryOverlayEl', 'codexOverlayEl', 'blessingOverlayEl'].forEach(k => {
+        if (G.dom[k]) G.dom[k].classList.add('hidden');
+    });
     finalizeOutcomeScreen('GAMEOVER', 'gameover');
     GameAnalyticsTracker.trackProgression('Fail', st.currentWave, st.currentMapId, st.killsCount);
     GameAnalyticsTracker.trackDesign(`Run:Fail:${st.currentMapId}:Wave_${st.currentWave}`, st.killsCount);
@@ -661,6 +744,7 @@ function resetMatchSession(initialWaveState, resetSpeed = 1) {
     ['startOverlayEl', 'victoryOverlayEl', 'gameOverOverlayEl', 'codexOverlayEl', 'blessingOverlayEl'].forEach(k => {
         if (G.dom[k]) G.dom[k].classList.add('hidden');
     });
+    syncPauseUI();
 }
 
 function restartGame() {
@@ -682,23 +766,24 @@ function startGame() {
     const st = G.state;
     if (st.waveState !== 'WAITING_START') return;
     if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.add('hidden');
-    st.isPaused = false; st.waveState = 'PREP'; st.waveTimerMs = CONFIG.INITIAL_PREP_MS;
+    st.waveState = 'PREP'; st.waveTimerMs = CONFIG.INITIAL_PREP_MS;
     G.dom.msgText.innerText = `【${Combat.getCurrentMapSpec().name}】備戰開始！先點空草地可指定落點，點擊或拖曳同星元素可跨階融合！`;
-    updateHUD(); startMainLoop();
+    setPauseState(false, { silent: true });
 }
 
 function continueEndlessMode() {
     const st = G.state;
     if (st.waveState !== 'VICTORY') return;
-    st.isEndlessMode = true; st.isPaused = false;
+    st.isEndlessMode = true;
     if (G.dom.victoryOverlayEl) G.dom.victoryOverlayEl.classList.add('hidden');
     st.waveState = 'INTERMISSION'; st.waveTimerMs = CONFIG.WAVE_INTERMISSION_MS;
     G.dom.msgText.innerText = '🔥 無盡模式開啟！已解除波數上限，繼續挑戰更高紀錄吧！';
-    updateHUD(); startMainLoop();
+    setPauseState(false, { silent: true });
 }
 
 function gameTick(timestamp) {
     const st = G.state, tickSessionId = st.sessionId;
+    if (st.baseHp <= 0 && !st.isGameOver) { triggerGameOver(); return; }
     if (!isGameplayActive()) return;
     if (st.lastFrameTime === null) st.lastFrameTime = timestamp;
     const rawDt = Math.min(0.1, Math.max(0, (timestamp - st.lastFrameTime) / 1000));
@@ -748,17 +833,32 @@ function startMainLoop() {
 }
 
 // ==================== 8. 操作事件綁定、快捷鍵與啟動 ====================
-function toggleCombatPause() {
+function setPauseState(paused, options = {}) {
     const st = G.state;
-    if (!isMatchPhaseActive()) return;
-    st.isPaused = !st.isPaused;
+    const silent = Boolean(options && options.silent);
+    const nextPaused = Boolean(paused);
+    if (nextPaused && !isMatchPhaseActive()) {
+        st.isPaused = false;
+        syncPauseUI();
+        return false;
+    }
+    st.isPaused = nextPaused;
     if (st.isPaused) {
         if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
         Renderer.clearTouchDragVisuals(); st.draggedIndex = null; st.hoveredIndex = null; Renderer.updateRangeIndicator();
-        setDomText(G.dom.msgText, '⏸️ 遊戲已暫停（可點防禦塔查看資訊，再按「▶️ 繼續」或 Space 恢復）'); updateHUD();
+        if (!silent) setDomText(G.dom.msgText, '遊戲已暫停（可點防禦塔檢視資訊，按「繼續」或 Space 恢復）。');
+        updateHUD();
     } else {
-        setDomText(G.dom.msgText, '▶️ 遊戲繼續！全力守護世界樹！'); updateHUD(); startMainLoop();
+        if (!silent && isMatchPhaseActive()) setDomText(G.dom.msgText, '遊戲繼續，守護世界樹防線。');
+        updateHUD();
+        if (isGameplayActive()) startMainLoop();
     }
+    return true;
+}
+
+function toggleCombatPause() {
+    if (!isMatchPhaseActive()) return;
+    setPauseState(!G.state.isPaused);
 }
 
 function cycleSelectedTowerTargetMode() {
@@ -802,11 +902,14 @@ function openCodex() {
 function closeCodex() {
     if (!G.dom.codexOverlayEl || !isCodexOpen()) return;
     const st = G.state;
-    G.dom.codexOverlayEl.classList.add('hidden');
-    if (isMatchPhaseActive()) st.isPaused = Boolean(st.pausedBeforeCodex);
+    const restorePaused = Boolean(st.pausedBeforeCodex);
     st.pausedBeforeCodex = false;
-    updateHUD();
-    if (isGameplayActive()) startMainLoop();
+    G.dom.codexOverlayEl.classList.add('hidden');
+    if (isMatchPhaseActive()) {
+        setPauseState(restorePaused, { silent: true });
+    } else {
+        updateHUD();
+    }
 }
 
 [
@@ -874,7 +977,7 @@ if (typeof document !== 'undefined') {
     });
     document.addEventListener('touchcancel', () => { if (G.state.touchDragState) { Renderer.clearTouchDragVisuals(); Renderer.updateRangeIndicator(); } });
 
-    document.addEventListener('keydown', (e) => {
+    window.addEventListener('keydown', (e) => {
         if (e.ctrlKey || e.metaKey || e.altKey) return;
         const t = e.target, tag = t && t.tagName ? t.tagName.toUpperCase() : '';
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
@@ -888,13 +991,18 @@ if (typeof document !== 'undefined') {
             }
             return;
         }
-        if (!isMatchPhaseActive()) return;
-        if (key === 'Tab' || lowerKey === 's') { e.preventDefault(); SoundEngine.ensureContext(); cycleGameSpeed(); return; }
-        if (key === ' ' || e.code === 'Space') {
-            e.preventDefault(); SoundEngine.ensureContext();
-            toggleCombatPause();
+        if (e.code === 'Space' || key === ' ') {
+            if (!isAnyModalOpen() && isMatchPhaseActive()) {
+                e.preventDefault();
+                if (e.repeat) return;
+                if (t && typeof t.blur === 'function' && tag === 'BUTTON') t.blur();
+                SoundEngine.ensureContext();
+                setPauseState(!st.isPaused);
+            }
             return;
         }
+        if (isAnyModalOpen() || !isMatchPhaseActive()) return;
+        if (key === 'Tab' || lowerKey === 's') { e.preventDefault(); SoundEngine.ensureContext(); cycleGameSpeed(); return; }
         if (!isGameplayActive()) return;
         const spawnType = SPAWN_HOTKEY_MAP[key] || SPAWN_HOTKEY_MAP[e.code];
         if (spawnType) { e.preventDefault(); SoundEngine.ensureContext(); handleSpawn(spawnType, G.dom.spawnerBtns[spawnType] && G.dom.spawnerBtns[spawnType].btn); }
@@ -908,7 +1016,7 @@ window.addEventListener('resize', handleBoardLayoutChange);
 if (typeof ResizeObserver !== 'undefined' && G.dom.boardElement) new ResizeObserver(handleBoardLayoutChange).observe(G.dom.boardElement);
 
 G.callbacks = {
-    isGameplayActive, isMatchPhaseActive, scheduleTimeout: scheduleGameTimeout, updateHUD,
+    isGameplayActive, isMatchPhaseActive, setPauseState, scheduleTimeout: scheduleGameTimeout, updateHUD,
     updateTowerInspector, updateBossStatusBar, triggerGameOver, handleCellClick, handleAction,
     activateTouchMode, recordTowerDamage: Combat.recordTowerDamage
 };
