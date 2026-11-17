@@ -38,6 +38,11 @@ const DOM_ID_PAIRS = [
     ['gameoverGoldEarnedTextEl', 'gameover-gold-earned-text'], ['gameoverFusionTextEl', 'gameover-fusion-text'],
     ['gameoverBreakerRowEl', 'gameover-breaker-row'], ['gameoverBreakerTextEl', 'gameover-breaker-text'],
     ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn'], ['gameoverMenuBtn', 'gameover-menu-btn'],
+    ['helpBtn', 'help-btn'], ['guideOverlayEl', 'guide-overlay'], ['guideCloseBtn', 'guide-close-btn'],
+    ['terrainTooltipEl', 'terrain-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
+    ['forecastToggleBtn', 'forecast-toggle-btn'], ['forecastBarTitleEl', 'forecast-bar-title'],
+    ['forecastToggleIndicatorEl', 'forecast-toggle-indicator'], ['forecastInlineSummaryEl', 'forecast-inline-summary'],
+    ['forecastDetailDrawerEl', 'forecast-detail-drawer'],
     ['forecastCurrentHeaderEl', 'forecast-current-header'], ['forecastCurrentListEl', 'forecast-current-list'],
     ['forecastNextHeaderEl', 'forecast-next-header'], ['forecastNextListEl', 'forecast-next-list']
 ];
@@ -75,7 +80,8 @@ function createInitialMatchState(mapId = 'forest', initialWaveState = 'WAITING_S
         bestWave: Backend.getMapBestWave(spec.id), currentWave: 1, killsCount: 0,
         towerUidCounter: 1, totalTeamDamage: 0, totalGoldEarned: 0, fusionCount: 0,
         peakTowerSnapshot: null, lastBreakerName: '',
-        isPaused: false, pausedBeforeCodex: false, isGameOver: false, isEndlessMode: false, isNewRecordThisRun: false,
+        isPaused: false, pausedBeforeCodex: false, pausedBeforeGuide: false, forecastDrawerOpen: false,
+        isGameOver: false, isEndlessMode: false, isNewRecordThisRun: false,
         gameSpeed: keepSpeed,
         spawnCounts: { fire: 0, ice: 0, thunder: 0 },
         board: Array(CONFIG.BOARD_SIZE).fill(null), monsters: [], monsterIdCounter: 1,
@@ -108,10 +114,12 @@ const G = {
 // ==================== 3. 生命週期與跨局計時器隔離 ====================
 function isOverlayVisible(el) { return Boolean(el && !el.classList.contains('hidden')); }
 function isCodexOpen() { return isOverlayVisible(G.dom.codexOverlayEl); }
+function isGuideOpen() { return isOverlayVisible(G.dom.guideOverlayEl); }
 function isAnyModalOpen() {
     const dom = G.dom, st = G.state;
     return isOverlayVisible(dom.startOverlayEl)
         || isOverlayVisible(dom.codexOverlayEl)
+        || isOverlayVisible(dom.guideOverlayEl)
         || isOverlayVisible(dom.blessingOverlayEl)
         || isOverlayVisible(dom.victoryOverlayEl)
         || isOverlayVisible(dom.gameOverOverlayEl)
@@ -123,11 +131,11 @@ function isAnyModalOpen() {
 }
 function isGameplayActive() {
     const st = G.state;
-    return !st.isGameOver && !st.isPaused && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen();
+    return !st.isGameOver && !st.isPaused && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen() && !isGuideOpen();
 }
 function isMatchPhaseActive() {
     const st = G.state;
-    return !st.isGameOver && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen();
+    return !st.isGameOver && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen() && !isGuideOpen();
 }
 function isRelocationFree() { return G.state.waveState === 'PREP' || G.state.waveState === 'INTERMISSION'; }
 
@@ -369,15 +377,80 @@ function updateSpeedButtonUI() {
     const btn = G.dom.speedBtn;
     if (!btn) return;
     btn.classList.remove('speed-2x', 'speed-3x');
-    if (G.state.gameSpeed === 2) { btn.classList.add('speed-2x'); btn.innerText = '倍速 2x'; }
-    else if (G.state.gameSpeed === 3) { btn.classList.add('speed-3x'); btn.innerText = '倍速 3x'; }
-    else btn.innerText = '倍速 1x';
+    if (G.state.gameSpeed === 2) { btn.classList.add('speed-2x'); btn.innerText = '2x'; }
+    else if (G.state.gameSpeed === 3) { btn.classList.add('speed-3x'); btn.innerText = '3x'; }
+    else btn.innerText = '1x';
 }
 
 function updateSoundButtonUI() {
     if (!G.dom.soundBtn) return;
     G.dom.soundBtn.classList.toggle('muted', SoundEngine.isMuted);
-    G.dom.soundBtn.innerText = SoundEngine.isMuted ? '音效：靜音' : '音效：開';
+    G.dom.soundBtn.innerText = SoundEngine.isMuted ? '靜音' : '音效';
+}
+
+function summarizePlanInline(plan) {
+    const counts = new Map();
+    for (let i = 0; i < plan.queue.length; i++) {
+        const q = plan.queue[i];
+        if (!q.isBoss) counts.set(q.typeKey, (counts.get(q.typeKey) || 0) + 1);
+    }
+    const parts = [];
+    counts.forEach((cnt, key) => {
+        const mCfg = MONSTER_DATABASE[key];
+        if (!mCfg) return;
+        const wCfg = ELEMENT_CONFIG[mCfg.weakness];
+        parts.push(`${mCfg.name} ×${cnt}${wCfg ? `(弱${wCfg.name.charAt(0)})` : ''}`);
+    });
+    if (plan.bossMeta) {
+        const bWeak = ELEMENT_CONFIG[plan.bossMeta.weakness];
+        parts.push(`王·${plan.bossMeta.name}${bWeak ? `(弱${bWeak.name.charAt(0)})` : ''}`);
+    } else if (plan.eliteCount > 0) {
+        parts.push(`菁英 ×${plan.eliteCount}`);
+    }
+    return parts.join(' · ');
+}
+
+function updateWaveForecastUI() {
+    const dom = G.dom, st = G.state;
+    const curWave = Math.max(1, st.currentWave || 1);
+    const isPrepPhase = st.waveState === 'PREP' || st.waveState === 'INTERMISSION' || st.waveState === 'WAITING_START';
+    const targetWave = st.waveState === 'INTERMISSION' ? curWave + 1 : curWave;
+    const nextWave = curWave + 1;
+    const isFinalClear = !st.isEndlessMode && curWave >= CONFIG.VICTORY_WAVE;
+
+    renderForecastListInto(dom.forecastCurrentHeaderEl, dom.forecastCurrentListEl, curWave, '本波情報');
+    renderForecastListInto(dom.forecastNextHeaderEl, dom.forecastNextListEl, nextWave, '下波預告', isFinalClear);
+
+    if (dom.forecastBarTitleEl) {
+        dom.forecastBarTitleEl.innerText = isPrepPhase ? `下波預告 · Wave ${targetWave}` : `戰況預告 · Wave ${curWave}`;
+    }
+    if (dom.forecastInlineSummaryEl) {
+        if (isPrepPhase) {
+            const plan = Combat.buildWaveQueue(targetWave);
+            dom.forecastInlineSummaryEl.innerText = summarizePlanInline(plan);
+        } else {
+            const nextPlan = !isFinalClear ? Combat.buildWaveQueue(nextWave) : null;
+            dom.forecastInlineSummaryEl.innerText = nextPlan
+                ? `下波 W${nextWave}：${summarizePlanInline(nextPlan)}`
+                : '最終魔王決戰進行中';
+        }
+    }
+    if (dom.waveForecastBarEl) {
+        dom.waveForecastBarEl.classList.toggle('is-combat-collapsed', !isPrepPhase && !st.forecastDrawerOpen);
+        dom.waveForecastBarEl.classList.toggle('drawer-open', Boolean(st.forecastDrawerOpen));
+    }
+    if (dom.forecastToggleBtn) {
+        dom.forecastToggleBtn.setAttribute('aria-expanded', st.forecastDrawerOpen ? 'true' : 'false');
+    }
+    if (dom.forecastToggleIndicatorEl) {
+        dom.forecastToggleIndicatorEl.innerText = st.forecastDrawerOpen ? '▴' : '▾';
+    }
+}
+
+function toggleForecastDrawer() {
+    const st = G.state;
+    st.forecastDrawerOpen = !st.forecastDrawerOpen;
+    updateWaveForecastUI();
 }
 
 function renderForecastListInto(headerEl, listEl, waveNum, prefixLabel, isFinalClear = false) {
@@ -416,15 +489,6 @@ function renderForecastListInto(headerEl, listEl, waveNum, prefixLabel, isFinalC
         items.push(`<li class="forecast-meta num">共 ${normalTotal} 隻敵軍進攻</li>`);
     }
     listEl.innerHTML = items.join('');
-}
-
-function updateWaveForecastUI() {
-    const dom = G.dom, st = G.state;
-    const curWave = Math.max(1, st.currentWave || 1);
-    const nextWave = curWave + 1;
-    const isFinalClear = !st.isEndlessMode && curWave >= CONFIG.VICTORY_WAVE;
-    renderForecastListInto(dom.forecastCurrentHeaderEl, dom.forecastCurrentListEl, curWave, '本波情報');
-    renderForecastListInto(dom.forecastNextHeaderEl, dom.forecastNextListEl, nextWave, '下波預告', isFinalClear);
 }
 
 function updateHUD() {
@@ -669,6 +733,7 @@ function startWave(waveNum, earlyBonus = 0) {
     const plan = Combat.buildWaveQueue(waveNum);
     st.waveSpawnQueue = plan.queue; st.waveSpawnIntervalMs = plan.spawnIntervalMs;
     st.waveSpawnAccMs = plan.spawnIntervalMs; st.waveState = 'SPAWNING';
+    st.forecastDrawerOpen = false;
 
     const bonusMsg = earlyBonus > 0 ? `（⚡ 早鳥開波 +${earlyBonus} 💰）` : '';
     if (plan.bossMeta) {
@@ -716,7 +781,7 @@ function triggerGameOver() {
     const st = G.state;
     if (st.isGameOver && st.waveState === 'GAMEOVER') return;
     st.isGameOver = true;
-    ['startOverlayEl', 'victoryOverlayEl', 'codexOverlayEl', 'blessingOverlayEl'].forEach(k => {
+    ['startOverlayEl', 'victoryOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl'].forEach(k => {
         if (G.dom[k]) G.dom[k].classList.add('hidden');
     });
     finalizeOutcomeScreen('GAMEOVER', 'gameover');
@@ -741,7 +806,7 @@ function resetMatchSession(initialWaveState, resetSpeed = 1) {
 
     G.state = createInitialMatchState(prev.currentMapId, initialWaveState, nextSession, resetSpeed);
     G.state.isTouchMode = prev.isTouchMode;
-    ['startOverlayEl', 'victoryOverlayEl', 'gameOverOverlayEl', 'codexOverlayEl', 'blessingOverlayEl'].forEach(k => {
+    ['startOverlayEl', 'victoryOverlayEl', 'gameOverOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl'].forEach(k => {
         if (G.dom[k]) G.dom[k].classList.add('hidden');
     });
     syncPauseUI();
@@ -912,14 +977,40 @@ function closeCodex() {
     }
 }
 
+function openGuide() {
+    if (!G.dom.guideOverlayEl || isGuideOpen()) return;
+    const st = G.state, activeMatch = isMatchPhaseActive();
+    st.pausedBeforeGuide = st.isPaused;
+    if (activeMatch) st.isPaused = true;
+    G.dom.guideOverlayEl.classList.remove('hidden');
+    if (G.dom.helpBtn) G.dom.helpBtn.setAttribute('aria-expanded', 'true');
+    if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
+    if (activeMatch) updateHUD();
+}
+
+function closeGuide() {
+    if (!G.dom.guideOverlayEl || !isGuideOpen()) return;
+    const st = G.state;
+    const restorePaused = Boolean(st.pausedBeforeGuide);
+    st.pausedBeforeGuide = false;
+    G.dom.guideOverlayEl.classList.add('hidden');
+    if (G.dom.helpBtn) G.dom.helpBtn.setAttribute('aria-expanded', 'false');
+    if (isMatchPhaseActive()) {
+        setPauseState(restorePaused, { silent: true });
+    } else {
+        updateHUD();
+    }
+}
+
 [
     ['inspectorTargetBtn', cycleSelectedTowerTargetMode], ['inspectorSellBtn', sellSelectedTower], ['nextWaveBtn', triggerEarlyNextWave],
     ['skillEntangleBtn', castEntangleSkill], ['skillFrenzyBtn', castFrenzySkill], ['pauseBtn', toggleCombatPause], ['soundBtn', () => SoundEngine.toggleMute()],
-    ['codexBtn', openCodex], ['codexCloseBtn', closeCodex], ['speedBtn', cycleGameSpeed], ['startGameBtn', startGame],
+    ['codexBtn', openCodex], ['codexCloseBtn', closeCodex], ['helpBtn', openGuide], ['guideCloseBtn', closeGuide],
+    ['forecastToggleBtn', toggleForecastDrawer], ['speedBtn', cycleGameSpeed], ['startGameBtn', startGame],
     ['victoryRestartBtn', restartGame], ['victoryMenuBtn', returnToMainMenu], ['endlessBtn', continueEndlessMode],
     ['restartBtn', restartGame], ['gameoverMenuBtn', returnToMainMenu],
-    ['addGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold += 500; G.dom.msgText.innerText = '🛠️ 已增加 500 💰！'; updateHUD(); } }],
-    ['clearGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold = 0; G.dom.msgText.innerText = '🛠️ 金幣已歸零！'; updateHUD(); } }]
+    ['addGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold += 500; G.dom.msgText.innerText = '已增加 500 💰。'; updateHUD(); } }],
+    ['clearGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold = 0; G.dom.msgText.innerText = '金幣已歸零。'; updateHUD(); } }]
 ].forEach(([domKey, fn]) => { if (G.dom[domKey]) G.dom[domKey].addEventListener('click', fn); });
 
 if (G.dom.mapSelectorGridEl) {
@@ -985,6 +1076,8 @@ if (typeof document !== 'undefined') {
         const key = e.key || '', lowerKey = key.toLowerCase(), st = G.state;
         if (key === 'Escape') {
             if (isCodexOpen()) { e.preventDefault(); closeCodex(); }
+            else if (isGuideOpen()) { e.preventDefault(); closeGuide(); }
+            else if (st.forecastDrawerOpen) { e.preventDefault(); st.forecastDrawerOpen = false; updateWaveForecastUI(); }
             else if (isMatchPhaseActive() && (st.selectedIndex !== null || st.buildTargetIndex !== null)) {
                 e.preventDefault(); st.selectedIndex = null; st.buildTargetIndex = null; Renderer.renderBoard([]);
                 setDomText(G.dom.msgText, '已取消選取格位。');

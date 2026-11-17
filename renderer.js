@@ -592,8 +592,40 @@
         G.callbacks.updateTowerInspector();
     }
 
+    const TERRAIN_TOOLTIP_TEXT = {
+        highground: '制高點 · 射程 +30%',
+        mana_vein: '元素靈脈 · 攻速 +25%',
+        world_tree: '世界樹庇護所 · 傷害 +20%'
+    };
+
+    function updateTerrainTooltip() {
+        const tipEl = G.dom.terrainTooltipEl, st = G.state;
+        if (!tipEl) return;
+        if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'
+            || st.waveState === 'BLESSING_SELECT' || st.draggedIndex !== null || (st.touchDragState && st.touchDragState.isDragging)) {
+            tipEl.classList.add('hidden');
+            return;
+        }
+        const idx = (!st.isTouchMode && st.hoveredIndex !== null)
+            ? st.hoveredIndex
+            : (st.buildTargetIndex !== null ? st.buildTargetIndex : st.selectedIndex);
+        const terrain = idx !== null ? G.map.terrainMap.get(idx) : null;
+        if (!terrain || !TERRAIN_TOOLTIP_TEXT[terrain]) {
+            tipEl.classList.add('hidden');
+            return;
+        }
+        const coords = indexToCoords(idx), center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
+        const clampedX = Math.max(76, Math.min((m.stageW || 600) - 76, center.left));
+        const topPx = coords.y <= 1 ? (center.top + m.cellH * 0.65) : (center.top - m.cellH * 0.72);
+        tipEl.innerText = TERRAIN_TOOLTIP_TEXT[terrain];
+        tipEl.style.left = `${clampedX}px`;
+        tipEl.style.top = `${topPx}px`;
+        tipEl.classList.remove('hidden');
+    }
+
     function updateRangeIndicator() {
         const el = G.dom.rangeCircleEl, st = G.state;
+        updateTerrainTooltip();
         if (!el) return;
         if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'
             || st.waveState === 'BLESSING_SELECT' || st.draggedIndex !== null || (st.touchDragState && st.touchDragState.isDragging)) {

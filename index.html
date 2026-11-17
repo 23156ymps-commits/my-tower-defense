@@ -13,47 +13,155 @@
 </head>
 
 <body>
-    <div class="game-layout">
-        <!-- 桌面寬螢幕左側欄：元素相剋速查與地形說明 -->
-        <aside id="left-sidebar" class="side-panel" aria-label="元素相剋與戰術地形說明">
-            <section class="panel-block">
-                <h2 class="panel-title">元素相剋速查</h2>
+    <main class="center-arena">
+        <!-- 單排不折行頂部 HUD：整合生命、金幣、靈露、波數與倍速/暫停/音效/？說明鈕 -->
+        <div id="hud-container">
+            <div class="hud-stats">
+                <div class="hud-item hud-hp" title="世界樹生命">❤️ <span id="base-hp-display" class="num">20/20</span></div>
+                <div class="hud-item hud-gold" title="當前金幣">💰 <span id="gold-display" class="num">40</span></div>
+                <div class="hud-item hud-dew" title="擊殺敵人累積靈露，用於施放世界樹主動技能">
+                    靈露 <span class="dew-bar-track"><span id="dew-bar-fill" class="dew-bar-fill"></span></span><span
+                        id="dew-display" class="num">20/100</span>
+                </div>
+                <div class="hud-item hud-wave">
+                    <span id="wave-display" class="num">Wave 1 / 10</span>
+                    <span id="wave-phase-tag" class="wave-phase-tag num">等待開始</span>
+                </div>
+                <div class="hud-item hud-best" title="本圖最高紀錄">最高 <span id="best-wave-display" class="num">Wave 1</span></div>
+            </div>
+            <div class="hud-actions">
+                <button id="speed-btn" class="hud-ctrl-btn speed-btn num" type="button" title="切換遊戲倍速 [Tab/S]">1x</button>
+                <button id="pause-btn" class="hud-ctrl-btn hud-pause-btn" type="button" disabled title="暫停或繼續 [Space]">暫停</button>
+                <button id="sound-btn" class="hud-ctrl-btn hud-sound-btn" type="button" title="切換音效">音效</button>
+                <button id="help-btn" class="hud-ctrl-btn hud-help-btn" type="button" aria-expanded="false" title="開啟戰術手冊与屬性地形速查">？</button>
+            </div>
+        </div>
+
+        <!-- 備戰期自動展開、開波自動收折之精簡出怪預告條（含屬性相剋微提示） -->
+        <div id="wave-forecast-bar" class="wave-forecast-bar">
+            <div class="forecast-bar-main">
+                <button id="forecast-toggle-btn" class="forecast-toggle-btn" type="button" aria-expanded="true">
+                    <span id="forecast-bar-title" class="num">下波預告 · Wave 1</span>
+                    <span id="forecast-toggle-indicator" class="forecast-chevron">▾</span>
+                </button>
+                <div id="forecast-inline-summary" class="forecast-inline-summary"></div>
+                <div id="info-legend" class="info-legend-inline">
+                    <span>🔥火➔蔓藤</span>
+                    <span>❄️冰➔熔岩</span>
+                    <span>⚡雷➔機械</span>
+                </div>
+            </div>
+            <div id="forecast-detail-drawer" class="forecast-detail-drawer">
+                <div class="forecast-detail-col">
+                    <span id="forecast-current-header" class="forecast-col-title num">本波情報 · Wave 1</span>
+                    <ul id="forecast-current-list" class="forecast-list"></ul>
+                </div>
+                <div class="forecast-detail-col">
+                    <span id="forecast-next-header" class="forecast-col-title num">下波預告 · Wave 2</span>
+                    <ul id="forecast-next-list" class="forecast-list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 15x10 戰場舞台容器（80% 視覺重心） -->
+        <div id="board-stage">
+            <div id="grid-board"></div>
+            <div id="range-layer" aria-hidden="true">
+                <div id="range-circle"></div>
+            </div>
+            <canvas id="fx-canvas" aria-hidden="true"></canvas>
+            <div id="monster-layer" aria-hidden="true"></div>
+            <div id="floating-layer" aria-hidden="true"></div>
+            <!-- 特殊地形原位輕量浮動提示 -->
+            <div id="terrain-tooltip" class="terrain-tooltip hidden" role="status" aria-live="polite"></div>
+            <div id="pause-banner" class="pause-banner hidden" aria-live="polite">
+                <div class="pause-banner-title">遊戲暫停中</div>
+                <div class="pause-banner-sub">可點擊防禦塔檢視資訊，按 [Space] 或點「繼續」恢復</div>
+            </div>
+            <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite">
+                <div class="boss-banner-top">
+                    <span id="boss-banner-title">終極魔王</span>
+                    <span id="boss-banner-hp-text" class="num">0 / 0</span>
+                </div>
+                <div class="boss-banner-hp-track">
+                    <div id="boss-banner-hp-fill" class="boss-banner-hp-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 固定式防禦塔檢查列 -->
+        <div id="tower-inspector" aria-live="polite">
+            <div id="inspector-empty" class="inspector-empty">
+                點選防禦塔可檢視 DPS、切換索敵或出售；先點空白草地再召喚可指定落點
+            </div>
+            <div id="inspector-active" class="inspector-active hidden">
+                <div class="inspector-metrics">
+                    <span id="inspector-name" class="inspector-badge">🔥 火塔 ★</span>
+                    <span id="inspector-dps" class="inspector-stat num">DPS 18</span>
+                    <span id="inspector-range" class="inspector-stat num">射程 1.8</span>
+                    <span id="inspector-terrain" class="inspector-terrain hidden"></span>
+                </div>
+                <div class="inspector-actions">
+                    <button id="inspector-target-btn" class="inspector-btn target-btn" type="button">索敵：最前</button>
+                    <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7 💰)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 屬性等寬召喚控制區 -->
+        <div id="element-spawner-container"></div>
+
+        <!-- 主動技能、圖鑑與開波等寬工具列 -->
+        <div class="debug-controls">
+            <button id="skill-entangle-btn" class="skill-btn skill-entangle" type="button"
+                title="消耗 40 靈露：全場敵人定身 2.5 秒且易傷 +20%（冷卻 8 秒）">
+                <span class="skill-cd-mask"></span>
+                <span class="skill-dew-bar"></span>
+                <span class="skill-label">根鬚纏繞 (<span class="num">40</span> 靈露)</span>
+                <span class="skill-sub num">還差 20 靈露</span>
+            </button>
+            <button id="skill-frenzy-btn" class="skill-btn skill-frenzy" type="button"
+                title="消耗 60 靈露：全場防禦塔攻速 +35% 持續 5 秒（冷卻 12 秒）">
+                <span class="skill-cd-mask"></span>
+                <span class="skill-dew-bar"></span>
+                <span class="skill-label">自然狂熱 (<span class="num">60</span> 靈露)</span>
+                <span class="skill-sub num">還差 40 靈露</span>
+            </button>
+            <button id="codex-btn" class="codex-btn" type="button">融合圖鑑</button>
+            <button id="next-wave-btn" class="wave-btn" type="button" disabled>立即開波</button>
+            <button id="add-gold-btn" class="debug-btn debug-only" type="button">+500 💰</button>
+            <button id="clear-gold-btn" class="debug-btn-danger debug-only" type="button">清空金幣</button>
+        </div>
+
+        <p id="msg-text">點擊「開始防守」開啟戰局，守護世界樹進入第 1 波備戰。</p>
+    </main>
+
+    <!-- 右上角「？」按需開啟之戰術手冊抽屜彈窗（收納屬性相剋、戰術地形、防線紀要與熱鍵） -->
+    <div id="guide-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+        <div class="modal-card guide-card">
+            <h1 id="guide-title" class="codex-title">戰術手冊與地形速查</h1>
+            <p class="modal-subtitle">掌握屬性相剋與特殊地形加成，穩固世界樹防線。</p>
+
+            <div class="guide-section">
+                <h2 class="guide-section-title">元素相剋速查</h2>
                 <ul class="panel-list">
                     <li class="panel-row">
-                        <span class="panel-key">🔥 火塔 ➔ 蔓藤</span>
-                        <span class="panel-val num">破甲 30%</span>
+                        <span class="panel-key">🔥 火塔 ➔ 蔓藤巨魔 / 史萊姆</span>
+                        <span class="panel-val num">200% 暴擊 · 破甲 30%</span>
                     </li>
                     <li class="panel-row">
-                        <span class="panel-key">❄️ 冰塔 ➔ 熔岩</span>
-                        <span class="panel-val num">緩速 45%</span>
+                        <span class="panel-key">❄️ 冰塔 ➔ 熔岩傀儡 / 疾風獵犬</span>
+                        <span class="panel-val num">200% 暴擊 · 緩速 45%</span>
                     </li>
                     <li class="panel-row">
-                        <span class="panel-key">⚡ 雷塔 ➔ 機械</span>
-                        <span class="panel-val num">暴擊 200%</span>
+                        <span class="panel-key">⚡ 雷塔 ➔ 機械飛艇 / 重裝魔像</span>
+                        <span class="panel-val num">200% 暴擊 · 雙連閃電</span>
                     </li>
                 </ul>
-            </section>
+            </div>
 
-            <section class="panel-block">
-                <h2 class="panel-title">跨元素融合配方</h2>
-                <ul class="panel-list">
-                    <li class="panel-row">
-                        <span class="panel-key">🔥 + ❄️</span>
-                        <span class="panel-val">蒸氣爆裂塔</span>
-                    </li>
-                    <li class="panel-row">
-                        <span class="panel-key">❄️ + ⚡</span>
-                        <span class="panel-val">極地磁暴塔</span>
-                    </li>
-                    <li class="panel-row">
-                        <span class="panel-key">🔥 + ⚡</span>
-                        <span class="panel-val">電漿聚焦塔</span>
-                    </li>
-                </ul>
-            </section>
-
-            <section class="panel-block">
-                <h2 class="panel-title">戰術地形加成</h2>
+            <div class="guide-section">
+                <h2 class="guide-section-title">戰術地形加成（懸停棋盤特殊格可檢視）</h2>
                 <ul class="panel-list">
                     <li class="panel-row terrain-legend-row">
                         <span class="terrain-swatch swatch-highground" aria-hidden="true"></span>
@@ -68,135 +176,21 @@
                     <li class="panel-row terrain-legend-row">
                         <span class="terrain-swatch swatch-tree" aria-hidden="true"></span>
                         <span class="panel-key">世界樹庇護所</span>
-                        <span class="panel-val num">傷害 +20%</span>
+                        <span class="panel-val num">依血量最高 +20% 傷害</span>
                     </li>
                 </ul>
-            </section>
-        </aside>
+            </div>
 
-        <!-- 中央戰場主軸 -->
-        <main class="center-arena">
-            <header class="game-header">
-                <h1>元素陣線：合成塔防</h1>
-            </header>
-
-            <!-- 頂部 HUD 面板 -->
-            <div id="hud-container">
-                <div class="hud-item hud-hp">❤️ 生命 <span id="base-hp-display" class="num">20/20</span></div>
-                <div class="hud-item hud-gold">💰 金幣 <span id="gold-display" class="num">40</span></div>
-                <div class="hud-item hud-dew" title="擊殺敵人累積靈露，用於施放世界樹主動技能">
-                    靈露 <span class="dew-bar-track"><span id="dew-bar-fill" class="dew-bar-fill"></span></span><span
-                        id="dew-display" class="num">20/100</span>
-                </div>
-                <div class="hud-item hud-wave"><span id="wave-display" class="num">Wave 1 / 10</span> <span id="wave-phase-tag"
-                        class="wave-phase-tag">等待開始</span></div>
-                <div class="hud-item hud-best">最高 <span id="best-wave-display" class="num">Wave 1</span></div>
-                <div class="hud-actions">
-                    <button id="pause-btn" class="hud-pause-btn" type="button" disabled>暫停</button>
-                    <button id="sound-btn" class="hud-sound-btn" type="button">音效：開</button>
+            <div class="guide-section">
+                <h2 class="guide-section-title">防線紀要與快捷鍵</h2>
+                <div class="codex-note">
+                    每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波迎戰領主魔王。<br>
+                    熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W]</b> 技能 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消
                 </div>
             </div>
 
-            <!-- 屬性相剋與機制提示條 -->
-            <div id="info-legend">
-                <span>🔥 火 ➔ 蔓藤</span>
-                <span>❄️ 冰 ➔ 熔岩</span>
-                <span>⚡ 雷 ➔ 機械 (<span class="num">200%</span> 暴擊)</span>
-                <span>同星跨元素可融合 · 每 <span class="num">3</span> 波賜福</span>
-            </div>
-
-            <!-- 15x10 戰場舞台容器 -->
-            <div id="board-stage">
-                <div id="grid-board"></div>
-                <div id="range-layer" aria-hidden="true">
-                    <div id="range-circle"></div>
-                </div>
-                <canvas id="fx-canvas" aria-hidden="true"></canvas>
-                <div id="monster-layer" aria-hidden="true"></div>
-                <div id="floating-layer" aria-hidden="true"></div>
-                <div id="pause-banner" class="pause-banner hidden" aria-live="polite">
-                    <div class="pause-banner-title">遊戲暫停中</div>
-                    <div class="pause-banner-sub">可點擊防禦塔檢視資訊，按 [Space] 或點「繼續」恢復</div>
-                </div>
-                <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite">
-                    <div class="boss-banner-top">
-                        <span id="boss-banner-title">終極魔王</span>
-                        <span id="boss-banner-hp-text" class="num">0 / 0</span>
-                    </div>
-                    <div class="boss-banner-hp-track">
-                        <div id="boss-banner-hp-fill" class="boss-banner-hp-fill"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 固定式防禦塔檢查列 -->
-            <div id="tower-inspector" aria-live="polite">
-                <div id="inspector-empty" class="inspector-empty">
-                    點選防禦塔可檢視 DPS、切換索敵或出售；先點空白草地再召喚可指定落點
-                </div>
-                <div id="inspector-active" class="inspector-active hidden">
-                    <div class="inspector-metrics">
-                        <span id="inspector-name" class="inspector-badge">🔥 火塔 ★</span>
-                        <span id="inspector-dps" class="inspector-stat num">DPS 18</span>
-                        <span id="inspector-range" class="inspector-stat num">射程 1.8</span>
-                        <span id="inspector-terrain" class="inspector-terrain hidden"></span>
-                    </div>
-                    <div class="inspector-actions">
-                        <button id="inspector-target-btn" class="inspector-btn target-btn" type="button">索敵：最前</button>
-                        <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7 💰)</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 屬性等寬召喚控制區 -->
-            <div id="element-spawner-container"></div>
-
-            <!-- 主動技能、圖鑑、波次與倍速等寬工具列 -->
-            <div class="debug-controls">
-                <button id="skill-entangle-btn" class="skill-btn skill-entangle" type="button"
-                    title="消耗 40 靈露：全場敵人定身 2.5 秒且易傷 +20%（冷卻 8 秒）">
-                    <span class="skill-cd-mask"></span>
-                    <span class="skill-dew-bar"></span>
-                    <span class="skill-label">根鬚纏繞 (<span class="num">40</span> 靈露)</span>
-                    <span class="skill-sub num">還差 20 靈露</span>
-                </button>
-                <button id="skill-frenzy-btn" class="skill-btn skill-frenzy" type="button"
-                    title="消耗 60 靈露：全場防禦塔攻速 +35% 持續 5 秒（冷卻 12 秒）">
-                    <span class="skill-cd-mask"></span>
-                    <span class="skill-dew-bar"></span>
-                    <span class="skill-label">自然狂熱 (<span class="num">60</span> 靈露)</span>
-                    <span class="skill-sub num">還差 40 靈露</span>
-                </button>
-                <button id="codex-btn" class="codex-btn" type="button">融合圖鑑</button>
-                <button id="next-wave-btn" class="wave-btn" type="button" disabled>立即開波</button>
-                <button id="speed-btn" class="speed-btn num" type="button">倍速 1x</button>
-                <button id="add-gold-btn" class="debug-btn debug-only" type="button">+500 💰</button>
-                <button id="clear-gold-btn" class="debug-btn-danger debug-only" type="button">清空金幣</button>
-            </div>
-
-            <!-- 狀態提示列與熱鍵提示 -->
-            <p id="msg-text">點擊「開始防守」開啟戰局，守護世界樹進入第 1 波備戰。</p>
-            <div id="hotkey-hint" class="hotkey-hint">熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W]</b> 技能 ｜ <b>[Space]</b> 暫停/繼續 ｜
-                <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消</div>
-        </main>
-
-        <!-- 桌面寬螢幕右側欄：本波與下一波出怪預告 -->
-        <aside id="right-sidebar" class="side-panel" aria-label="波次出怪預告">
-            <section class="panel-block">
-                <h2 id="forecast-current-header" class="panel-title">本波情報 · Wave 1</h2>
-                <ul id="forecast-current-list" class="forecast-list"></ul>
-            </section>
-
-            <section class="panel-block">
-                <h2 id="forecast-next-header" class="panel-title">下波預告 · Wave 2</h2>
-                <ul id="forecast-next-list" class="forecast-list"></ul>
-            </section>
-
-            <section class="panel-block">
-                <h2 class="panel-title">防線紀要</h2>
-                <p class="panel-note">每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波將迎戰領主魔王。</p>
-            </section>
-        </aside>
+            <button id="guide-close-btn" class="primary-cta-btn" type="button">返回戰場</button>
+        </div>
     </div>
 
     <!-- 世界樹枝枒祝福（每 3 波 Roguelite 3 選 1） -->
