@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>元素陣線：合成塔防</title>
     <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -17,16 +20,16 @@
                 <h2 class="panel-title">元素相剋速查</h2>
                 <ul class="panel-list">
                     <li class="panel-row">
-                        <span class="panel-key">🔥 火塔 剋 🌿 蔓藤</span>
-                        <span class="panel-val">灼燒破甲 30%</span>
+                        <span class="panel-key">🔥 火塔 ➔ 蔓藤</span>
+                        <span class="panel-val num">破甲 30%</span>
                     </li>
                     <li class="panel-row">
-                        <span class="panel-key">❄️ 冰塔 剋 🌋 熔岩</span>
-                        <span class="panel-val">寒霜緩速 45%</span>
+                        <span class="panel-key">❄️ 冰塔 ➔ 熔岩</span>
+                        <span class="panel-val num">緩速 45%</span>
                     </li>
                     <li class="panel-row">
-                        <span class="panel-key">⚡ 雷塔 剋 🛸 機械</span>
-                        <span class="panel-val">相剋 200% 暴擊</span>
+                        <span class="panel-key">⚡ 雷塔 ➔ 機械</span>
+                        <span class="panel-val num">暴擊 200%</span>
                     </li>
                 </ul>
             </section>
@@ -35,16 +38,16 @@
                 <h2 class="panel-title">跨元素融合配方</h2>
                 <ul class="panel-list">
                     <li class="panel-row">
-                        <span class="panel-key">🔥 ＋ ❄️</span>
-                        <span class="panel-val">💨 蒸氣爆裂塔</span>
+                        <span class="panel-key">🔥 + ❄️</span>
+                        <span class="panel-val">蒸氣爆裂塔</span>
                     </li>
                     <li class="panel-row">
-                        <span class="panel-key">❄️ ＋ ⚡</span>
-                        <span class="panel-val">💠 極地磁暴塔</span>
+                        <span class="panel-key">❄️ + ⚡</span>
+                        <span class="panel-val">極地磁暴塔</span>
                     </li>
                     <li class="panel-row">
-                        <span class="panel-key">🔥 ＋ ⚡</span>
-                        <span class="panel-val">☄️ 電漿聚焦塔</span>
+                        <span class="panel-key">🔥 + ⚡</span>
+                        <span class="panel-val">電漿聚焦塔</span>
                     </li>
                 </ul>
             </section>
@@ -55,17 +58,17 @@
                     <li class="panel-row terrain-legend-row">
                         <span class="terrain-swatch swatch-highground" aria-hidden="true"></span>
                         <span class="panel-key">制高點</span>
-                        <span class="panel-val">射程 +30%</span>
+                        <span class="panel-val num">射程 +30%</span>
                     </li>
                     <li class="panel-row terrain-legend-row">
                         <span class="terrain-swatch swatch-mana" aria-hidden="true"></span>
                         <span class="panel-key">元素靈脈</span>
-                        <span class="panel-val">攻速 +25%</span>
+                        <span class="panel-val num">攻速 +25%</span>
                     </li>
                     <li class="panel-row terrain-legend-row">
                         <span class="terrain-swatch swatch-tree" aria-hidden="true"></span>
                         <span class="panel-key">世界樹庇護所</span>
-                        <span class="panel-val">依血量傷 +20%</span>
+                        <span class="panel-val num">傷害 +20%</span>
                     </li>
                 </ul>
             </section>
@@ -79,27 +82,27 @@
 
             <!-- 頂部 HUD 面板 -->
             <div id="hud-container">
-                <div class="hud-item hud-hp">🌳 世界樹 <span id="base-hp-display">20/20</span></div>
-                <div class="hud-item hud-gold">💰 金幣 <span id="gold-display">40</span></div>
+                <div class="hud-item hud-hp">❤️ 生命 <span id="base-hp-display" class="num">20/20</span></div>
+                <div class="hud-item hud-gold">💰 金幣 <span id="gold-display" class="num">40</span></div>
                 <div class="hud-item hud-dew" title="擊殺敵人累積靈露，用於施放世界樹主動技能">
-                    💧 靈露 <span class="dew-bar-track"><span id="dew-bar-fill" class="dew-bar-fill"></span></span><span
-                        id="dew-display">20/100</span>
+                    靈露 <span class="dew-bar-track"><span id="dew-bar-fill" class="dew-bar-fill"></span></span><span
+                        id="dew-display" class="num">20/100</span>
                 </div>
-                <div class="hud-item hud-wave">🌊 <span id="wave-display">Wave 1 / 10</span> <span id="wave-phase-tag"
+                <div class="hud-item hud-wave"><span id="wave-display" class="num">Wave 1 / 10</span> <span id="wave-phase-tag"
                         class="wave-phase-tag">等待開始</span></div>
-                <div class="hud-item hud-best">🏆 最高 <span id="best-wave-display">Wave 1</span></div>
+                <div class="hud-item hud-best">最高 <span id="best-wave-display" class="num">Wave 1</span></div>
                 <div class="hud-actions">
                     <button id="pause-btn" class="hud-pause-btn" type="button" disabled>暫停</button>
                     <button id="sound-btn" class="hud-sound-btn" type="button">音效：開</button>
                 </div>
             </div>
 
-            <!-- 屬性相剋與機制精簡提示條 -->
+            <!-- 屬性相剋與機制提示條 -->
             <div id="info-legend">
-                <span>🔥 火剋蔓藤</span>
-                <span>❄️ 冰剋熔岩</span>
-                <span>⚡ 雷剋機械 (200% 暴擊)</span>
-                <span>同星跨元素可融合 · 每 3 波賜福</span>
+                <span>🔥 火 ➔ 蔓藤</span>
+                <span>❄️ 冰 ➔ 熔岩</span>
+                <span>⚡ 雷 ➔ 機械 (<span class="num">200%</span> 暴擊)</span>
+                <span>同星跨元素可融合 · 每 <span class="num">3</span> 波賜福</span>
             </div>
 
             <!-- 15x10 戰場舞台容器 -->
@@ -117,8 +120,8 @@
                 </div>
                 <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite">
                     <div class="boss-banner-top">
-                        <span id="boss-banner-title">👑 終極魔王</span>
-                        <span id="boss-banner-hp-text">0 / 0</span>
+                        <span id="boss-banner-title">終極魔王</span>
+                        <span id="boss-banner-hp-text" class="num">0 / 0</span>
                     </div>
                     <div class="boss-banner-hp-track">
                         <div id="boss-banner-hp-fill" class="boss-banner-hp-fill"></div>
@@ -134,13 +137,13 @@
                 <div id="inspector-active" class="inspector-active hidden">
                     <div class="inspector-metrics">
                         <span id="inspector-name" class="inspector-badge">🔥 火塔 ★</span>
-                        <span id="inspector-dps" class="inspector-stat">DPS 18</span>
-                        <span id="inspector-range" class="inspector-stat">射程 1.8</span>
+                        <span id="inspector-dps" class="inspector-stat num">DPS 18</span>
+                        <span id="inspector-range" class="inspector-stat num">射程 1.8</span>
                         <span id="inspector-terrain" class="inspector-terrain hidden"></span>
                     </div>
                     <div class="inspector-actions">
                         <button id="inspector-target-btn" class="inspector-btn target-btn" type="button">索敵：最前</button>
-                        <button id="inspector-sell-btn" class="inspector-btn sell-btn" type="button">出售 (+7 金)</button>
+                        <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7 💰)</button>
                     </div>
                 </div>
             </div>
@@ -154,20 +157,20 @@
                     title="消耗 40 靈露：全場敵人定身 2.5 秒且易傷 +20%（冷卻 8 秒）">
                     <span class="skill-cd-mask"></span>
                     <span class="skill-dew-bar"></span>
-                    <span class="skill-label">🌿 根鬚纏繞 (40 💧)</span>
-                    <span class="skill-sub">還差 20 💧</span>
+                    <span class="skill-label">根鬚纏繞 (<span class="num">40</span> 靈露)</span>
+                    <span class="skill-sub num">還差 20 靈露</span>
                 </button>
                 <button id="skill-frenzy-btn" class="skill-btn skill-frenzy" type="button"
                     title="消耗 60 靈露：全場防禦塔攻速 +35% 持續 5 秒（冷卻 12 秒）">
                     <span class="skill-cd-mask"></span>
                     <span class="skill-dew-bar"></span>
-                    <span class="skill-label">✨ 自然狂熱 (60 💧)</span>
-                    <span class="skill-sub">還差 40 💧</span>
+                    <span class="skill-label">自然狂熱 (<span class="num">60</span> 靈露)</span>
+                    <span class="skill-sub num">還差 40 靈露</span>
                 </button>
                 <button id="codex-btn" class="codex-btn" type="button">融合圖鑑</button>
                 <button id="next-wave-btn" class="wave-btn" type="button" disabled>立即開波</button>
-                <button id="speed-btn" class="speed-btn" type="button">倍速 1x</button>
-                <button id="add-gold-btn" class="debug-btn debug-only" type="button">+500 金</button>
+                <button id="speed-btn" class="speed-btn num" type="button">倍速 1x</button>
+                <button id="add-gold-btn" class="debug-btn debug-only" type="button">+500 💰</button>
                 <button id="clear-gold-btn" class="debug-btn-danger debug-only" type="button">清空金幣</button>
             </div>
 
@@ -189,7 +192,7 @@
                 <ul id="forecast-next-list" class="forecast-list"></ul>
             </section>
 
-            <section class="panel-block panel-note-block">
+            <section class="panel-block">
                 <h2 class="panel-title">防線紀要</h2>
                 <p class="panel-note">每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波將迎戰領主魔王。</p>
             </section>
@@ -200,7 +203,7 @@
     <div id="blessing-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true"
         aria-labelledby="blessing-title">
         <div class="modal-card blessing-modal-card">
-            <h2 id="blessing-title" class="blessing-title">世界樹枝枒祝福</h2>
+            <h1 id="blessing-title" class="blessing-title">世界樹枝枒祝福</h1>
             <p id="blessing-wave-subtitle" class="modal-subtitle">防線捷報，請擇一項世界樹賜福（每局唯一，不重複出現）。</p>
             <div id="blessing-choices" class="blessing-choices"></div>
         </div>
@@ -209,20 +212,20 @@
     <!-- 跨元素融合圖鑑彈窗 -->
     <div id="codex-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="codex-title">
         <div class="modal-card codex-card">
-            <h2 id="codex-title" class="codex-title">跨元素融合圖鑑</h2>
+            <h1 id="codex-title" class="codex-title">跨元素融合圖鑑</h1>
             <p class="modal-subtitle">兩座同星級（★ + ★ = ★★、★★ + ★★ = ★★★）不同基礎元素相融即可進階。</p>
 
             <div class="codex-list">
                 <div class="codex-item codex-steam">
-                    <div class="codex-recipe">🔥 火 ＋ ❄️ 冰 ＝ <strong>💨 蒸氣爆裂塔</strong></div>
+                    <div class="codex-recipe">🔥 火 + ❄️ 冰 = <strong>蒸氣爆裂塔</strong></div>
                     <div class="codex-desc">射程 2.5 格｜攻速 1.15s｜命中產生 1.3 格爆裂濺射，並<strong>無視目標 50% 護甲</strong>。</div>
                 </div>
                 <div class="codex-item codex-magnet">
-                    <div class="codex-recipe">❄️ 冰 ＋ ⚡ 雷 ＝ <strong>💠 極地磁暴塔</strong></div>
+                    <div class="codex-recipe">❄️ 冰 + ⚡ 雷 = <strong>極地磁暴塔</strong></div>
                     <div class="codex-desc">射程 3.2 格｜攻速 0.95s｜釋放感電冰環<strong>群體緩速 50%</strong>，連鎖彈跳額外 2 名敵人。</div>
                 </div>
                 <div class="codex-item codex-plasma">
-                    <div class="codex-recipe">🔥 火 ＋ ⚡ 雷 ＝ <strong>☄️ 電漿聚焦塔</strong></div>
+                    <div class="codex-recipe">🔥 火 + ⚡ 雷 = <strong>電漿聚焦塔</strong></div>
                     <div class="codex-desc">射程 3.8 格｜攻速 0.45s｜高頻聚焦光束，連續鎖定同一目標<strong>遞增 15% 傷害</strong>（最高 5 層）。</div>
                 </div>
             </div>
@@ -230,61 +233,61 @@
             <div class="codex-note">
                 同種融合塔 ★★ + ★★ 可進階為 ★★★；Lv.3 基礎塔亦具備範圍與三連質變。
             </div>
-            <button id="codex-close-btn" class="start-btn" type="button">關閉圖鑑</button>
+            <button id="codex-close-btn" class="primary-cta-btn" type="button">關閉圖鑑</button>
         </div>
     </div>
 
     <!-- 開局封面與雙地圖選擇 -->
     <div id="start-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
         <div class="modal-card start-card">
-            <h2 id="start-title" class="start-title">元素陣線：合成塔防</h2>
+            <h1 id="start-title" class="start-title">元素陣線：合成塔防</h1>
             <p class="modal-subtitle">15×10 古林戰線 · 守護世界樹抵禦 10 波攻勢</p>
 
             <!-- 雙地圖關卡選擇 -->
             <div class="map-selector-section">
-                <div class="map-selector-header">選擇戰場地圖</div>
+                <h2 class="map-selector-header">選擇戰場地圖</h2>
                 <div id="map-selector-grid" class="map-selector-grid">
                     <button type="button" class="map-card selected" data-map-id="forest">
                         <div class="map-card-top">
-                            <span class="map-card-name">🌲 晨光森林</span>
+                            <span class="map-card-name">晨光森林</span>
                             <span class="map-diff-badge diff-std">標準難度</span>
                         </div>
                         <div class="map-card-desc">41 格蜿蜒長徑 · 經典穩定防線</div>
-                        <div id="map-record-forest" class="map-card-record">最高 Wave 1 · 尚未通關</div>
+                        <div id="map-record-forest" class="map-card-record num">最高 Wave 1 · 尚未通關</div>
                     </button>
                     <button type="button" class="map-card" data-map-id="lava">
                         <div class="map-card-top">
-                            <span class="map-card-name">🔥 熔岩峽谷</span>
+                            <span class="map-card-name">熔岩峽谷</span>
                             <span class="map-diff-badge diff-hard">進階挑戰</span>
                         </div>
-                        <div class="map-card-desc">31 格雙折短徑 · 初始 +10 金／擊殺 +15%</div>
-                        <div id="map-record-lava" class="map-card-record">最高 Wave 1 · 尚未通關</div>
+                        <div class="map-card-desc">31 格雙折短徑 · 初始 +10 💰</div>
+                        <div id="map-record-lava" class="map-card-record num">最高 Wave 1 · 尚未通關</div>
                     </button>
                 </div>
             </div>
 
             <div class="rules-list">
                 <div class="rule-item">
-                    <span class="rule-num">1</span>
+                    <span class="rule-num num">1</span>
                     <div class="rule-content">
-                        <strong>佈陣</strong>：先點空白草地可指定落點，善用制高點、元素靈脈與庇護所強化戰力。
+                        <strong>佈陣</strong>：先點空白草地可指定落點，善用制高點、靈脈與庇護所強化戰力。
                     </div>
                 </div>
                 <div class="rule-item">
-                    <span class="rule-num">2</span>
+                    <span class="rule-num num">2</span>
                     <div class="rule-content">
-                        <strong>融合</strong>：同屬性或同星級不同基礎元素皆可融合進階，每通過 3 波可獲世界樹祝福。
+                        <strong>融合</strong>：同屬性或同星級不同基礎元素皆可進階，每 3 波可獲世界樹祝福。
                     </div>
                 </div>
                 <div class="rule-item">
-                    <span class="rule-num">3</span>
+                    <span class="rule-num num">3</span>
                     <div class="rule-content">
-                        <strong>靈露</strong>：擊殺敵人累積能量，適時施放「根鬚纏繞」或「自然狂熱」牽制並加速防線。
+                        <strong>靈露</strong>：擊殺累積能量，適時施放「根鬚纏繞」或「自然狂熱」牽制防線。
                     </div>
                 </div>
             </div>
 
-            <button id="start-game-btn" class="start-btn" type="button">開始防守</button>
+            <button id="start-game-btn" class="primary-cta-btn" type="button">開始防守</button>
         </div>
     </div>
 
@@ -292,22 +295,22 @@
     <div id="victory-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true"
         aria-labelledby="victory-title">
         <div class="modal-card victory-card">
-            <h2 id="victory-title" class="victory-title">防守成功 · 世界樹安然無恙</h2>
-            <div id="victory-stars" class="victory-stars" aria-label="通關星級">⭐⭐⭐</div>
+            <h1 id="victory-title" class="victory-title">防守成功 · 世界樹安然無恙</h1>
+            <div id="victory-stars" class="victory-stars" aria-label="通關星級">★★★</div>
             <p id="victory-rank-text" class="modal-subtitle">成功守護世界樹，擊退第 10 波腐朽古樹王。</p>
 
             <div class="modal-stats">
                 <div class="stat-row">
                     <span>戰場地圖</span>
-                    <strong id="victory-map-text">🌲 晨光森林</strong>
+                    <strong id="victory-map-text">晨光森林</strong>
                 </div>
                 <div class="stat-row">
                     <span>剩餘世界樹生命</span>
-                    <strong id="victory-hp-text">20 / 20</strong>
+                    <strong id="victory-hp-text" class="num">20 / 20</strong>
                 </div>
                 <div class="stat-row">
                     <span>剩餘金幣</span>
-                    <strong id="victory-gold-text">0 金</strong>
+                    <strong id="victory-gold-text" class="num">0 💰</strong>
                 </div>
             </div>
 
@@ -318,15 +321,15 @@
                     <strong id="victory-mvp-text" class="recap-mvp-val">尚無輸出紀錄</strong>
                 </div>
                 <div class="recap-grid">
-                    <div class="recap-cell"><span>總擊殺數</span><strong id="victory-kills-text">0 隻</strong></div>
-                    <div class="recap-cell"><span>累計獲得金幣</span><strong id="victory-gold-earned-text">0 金</strong></div>
-                    <div class="recap-cell"><span>合成融合次數</span><strong id="victory-fusion-text">0 次</strong></div>
+                    <div class="recap-cell"><span>總擊殺數</span><strong id="victory-kills-text" class="num">0 隻</strong></div>
+                    <div class="recap-cell"><span>累計獲得金幣</span><strong id="victory-gold-earned-text" class="num">0 💰</strong></div>
+                    <div class="recap-cell"><span>合成融合次數</span><strong id="victory-fusion-text" class="num">0 次</strong></div>
                 </div>
             </div>
 
             <div class="modal-actions">
-                <button id="victory-restart-btn" class="restart-btn" type="button">重新開始</button>
-                <button id="endless-btn" class="endless-btn" type="button">繼續無盡挑戰</button>
+                <button id="victory-restart-btn" class="primary-cta-btn" type="button">重新開始</button>
+                <button id="endless-btn" class="secondary-cta-btn" type="button">繼續無盡挑戰</button>
                 <button id="victory-menu-btn" class="menu-return-btn" type="button">切換地圖 / 主選單</button>
             </div>
         </div>
@@ -336,20 +339,20 @@
     <div id="game-over-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true"
         aria-labelledby="game-over-title">
         <div class="modal-card gameover-card">
-            <h2 id="game-over-title">防線失守</h2>
+            <h1 id="game-over-title" class="gameover-title">防線失守</h1>
             <p class="modal-subtitle">世界樹生命枯竭，本局戰役結束。</p>
             <div class="modal-stats">
                 <div class="stat-row">
                     <span>戰場地圖</span>
-                    <strong id="gameover-map-text">🌲 晨光森林</strong>
+                    <strong id="gameover-map-text">晨光森林</strong>
                 </div>
                 <div class="stat-row">
                     <span>抵達波數</span>
-                    <strong id="final-wave-text">Wave 1 / 10</strong>
+                    <strong id="final-wave-text" class="num">Wave 1 / 10</strong>
                 </div>
                 <div class="stat-row">
                     <span>歷史最高紀錄</span>
-                    <strong id="final-best-text">Wave 1</strong>
+                    <strong id="final-best-text" class="num">Wave 1</strong>
                 </div>
             </div>
 
@@ -360,9 +363,9 @@
                     <strong id="gameover-mvp-text" class="recap-mvp-val">尚無輸出紀錄</strong>
                 </div>
                 <div class="recap-grid">
-                    <div class="recap-cell"><span>總擊殺數</span><strong id="final-kills-text">0 隻</strong></div>
-                    <div class="recap-cell"><span>累計獲得金幣</span><strong id="gameover-gold-earned-text">0 金</strong></div>
-                    <div class="recap-cell"><span>合成融合次數</span><strong id="gameover-fusion-text">0 次</strong></div>
+                    <div class="recap-cell"><span>總擊殺數</span><strong id="final-kills-text" class="num">0 隻</strong></div>
+                    <div class="recap-cell"><span>累計獲得金幣</span><strong id="gameover-gold-earned-text" class="num">0 💰</strong></div>
+                    <div class="recap-cell"><span>合成融合次數</span><strong id="gameover-fusion-text" class="num">0 次</strong></div>
                 </div>
                 <div id="gameover-breaker-row" class="recap-breaker hidden">
                     <span>致命突破敵人</span>
@@ -372,7 +375,7 @@
 
             <div id="new-record-badge" class="new-record-badge hidden">刷新歷史最高波數紀錄</div>
             <div class="modal-actions">
-                <button id="restart-btn" class="restart-btn" type="button">重新開始</button>
+                <button id="restart-btn" class="primary-cta-btn" type="button">重新開始</button>
                 <button id="gameover-menu-btn" class="menu-return-btn" type="button">切換地圖 / 主選單</button>
             </div>
         </div>

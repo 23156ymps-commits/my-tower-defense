@@ -7,71 +7,111 @@
     function bind(ctx) { G = ctx; }
     function getTierStars(tier) { return '★'.repeat(Math.max(1, Math.min(CONFIG.MAX_TIER, tier || 1))); }
 
-    // ==================== 2.5D 雙層砲塔與 3D 向量怪物 SVG 生成 ====================
-    const TOWER_PALETTE = {
-        fire: { rune: '#f97316', glow: '#fde047' },
-        ice: { rune: '#38bdf8', glow: '#e0f2fe' },
-        thunder: { rune: '#a855f7', glow: '#f0abfc' },
-        steam: { rune: '#fb923c', glow: '#7dd3fc' },
-        magnet: { rune: '#22d3ee', glow: '#c084fc' },
-        plasma: { rune: '#f472b6', glow: '#fef08a' }
+    const DEFAULT_TOKENS = {
+        bgCanvas: '#1B211E',
+        bgGridElevated: '#242C28',
+        bgSurface: '#2C3530',
+        borderSubtle: '#46544C',
+        textPrimary: '#F4F1EA',
+        textSecondary: '#B8C2BC',
+        accentCta: '#D97724',
+        elFire: '#C94A38',
+        elIce: '#4A9EBF',
+        elLightning: '#E0B43C'
     };
 
+    function getThemeTokens() {
+        if (typeof getComputedStyle === 'undefined' || typeof document === 'undefined' || !document.documentElement) {
+            return DEFAULT_TOKENS;
+        }
+        const cs = getComputedStyle(document.documentElement);
+        const pick = (varName, fallback) => {
+            const val = cs.getPropertyValue(varName);
+            return val && val.trim() ? val.trim() : fallback;
+        };
+        return {
+            bgCanvas: pick('--bg-canvas', DEFAULT_TOKENS.bgCanvas),
+            bgGridElevated: pick('--bg-grid-elevated', DEFAULT_TOKENS.bgGridElevated),
+            bgSurface: pick('--bg-surface', DEFAULT_TOKENS.bgSurface),
+            borderSubtle: pick('--border-subtle', DEFAULT_TOKENS.borderSubtle),
+            textPrimary: pick('--text-primary', DEFAULT_TOKENS.textPrimary),
+            textSecondary: pick('--text-secondary', DEFAULT_TOKENS.textSecondary),
+            accentCta: pick('--accent-cta', DEFAULT_TOKENS.accentCta),
+            elFire: pick('--el-fire', DEFAULT_TOKENS.elFire),
+            elIce: pick('--el-ice', DEFAULT_TOKENS.elIce),
+            elLightning: pick('--el-lightning', DEFAULT_TOKENS.elLightning)
+        };
+    }
+
+    // ==================== 2.5D 雙層砲塔與 3D 向量怪物 SVG 生成（統一線寬與 135deg 左上主光源） ====================
+    function getTowerPalette() {
+        const tk = getThemeTokens();
+        return {
+            fire: { rune: tk.elFire, glow: '#F4DFC8' },
+            ice: { rune: tk.elIce, glow: '#D6EEF7' },
+            thunder: { rune: tk.elLightning, glow: '#F7EAC0' },
+            steam: { rune: tk.accentCta, glow: tk.elIce },
+            magnet: { rune: tk.elIce, glow: tk.elLightning },
+            plasma: { rune: tk.elFire, glow: tk.elLightning }
+        };
+    }
+
     const TOWER_HEAD_TEMPLATES = {
-        fire: (tier) => {
-            const fins = tier >= 3 ? '<polygon points="14,40 22,25 24,42" fill="#b91c1c" stroke="#450a0a" stroke-width="1.2"/><polygon points="50,40 42,25 40,42" fill="#b91c1c" stroke="#450a0a" stroke-width="1.2"/>' : '';
-            const pods = tier >= 2 ? '<rect x="16.5" y="30" width="5" height="11" rx="2" fill="#f59e0b" stroke="#451a03" stroke-width="1.2"/><rect x="42.5" y="30" width="5" height="11" rx="2" fill="#f59e0b" stroke="#451a03" stroke-width="1.2"/>' : '';
-            return `<ellipse cx="33" cy="35" rx="13" ry="12" fill="rgba(0,0,0,0.32)"/>${fins}<polygon points="27,7 37,7 39,30 25,30" fill="#7c2d12" stroke="#270e05" stroke-width="1.6"/><rect x="29" y="9" width="3" height="19" rx="1" fill="#fb923c" fill-opacity="0.55"/><polygon points="24.5,6 39.5,6 37.5,12 26.5,12" fill="#f59e0b" stroke="#451a03" stroke-width="1.4"/><ellipse cx="32" cy="7" rx="4.5" ry="2.2" fill="#fef08a"/>${pods}<polygon points="22,26 42,26 45,38 38,46 26,46 19,38" fill="#dc2626" stroke="#450a0a" stroke-width="1.8"/><polygon points="24,27 40,27 42,35 32,33 22,35" fill="#f87171" fill-opacity="0.45"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.4 : 5}" fill="#f97316" stroke="#7c2d12" stroke-width="1.3"/><circle cx="31" cy="34.5" r="${tier >= 3 ? 3.2 : 2.3}" fill="#fef08a"/>`;
+        fire: (tier, tk) => {
+            const fins = tier >= 3 ? `<polygon points="14,40 22,25 24,42" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/><polygon points="50,40 42,25 40,42" fill="#8C2F23" stroke="#2B1410" stroke-width="1.5"/>` : '';
+            const pods = tier >= 2 ? `<rect x="16.5" y="30" width="5" height="11" rx="2" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><rect x="42.5" y="30" width="5" height="11" rx="2" fill="#9E5214" stroke="#2B1410" stroke-width="1.5"/>` : '';
+            return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/>${fins}<polygon points="27,7 37,7 39,30 25,30" fill="#6E281E" stroke="#2B1410" stroke-width="1.5"/><rect x="29" y="9" width="3" height="19" rx="1" fill="${tk.elFire}" fill-opacity="0.7"/><polygon points="24.5,6 39.5,6 37.5,12 26.5,12" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><ellipse cx="32" cy="7" rx="4.5" ry="2.2" fill="${tk.elLightning}"/><polygon points="22,26 42,26 45,38 38,46 26,46 19,38" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/>${pods}<polygon points="22,26 36,26 32,35 20,37" fill="rgba(244,241,234,0.22)"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5}" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><circle cx="31" cy="34.5" r="${tier >= 3 ? 2.8 : 2.1}" fill="${tk.textPrimary}"/>`;
         },
-        ice: (tier) => {
-            const shards = tier >= 2 ? '<polygon points="18,16 24,28 19,38 14,32" fill="#38bdf8" stroke="#0c4a6e" stroke-width="1.3"/><polygon points="46,16 40,28 45,38 50,32" fill="#0284c7" stroke="#0c4a6e" stroke-width="1.3"/>' : '';
-            const gold = tier >= 3 ? '<polygon points="16,40 21,36 22,44" fill="#fbbf24"/><polygon points="48,40 43,36 42,44" fill="#fbbf24"/>' : '';
-            return `<ellipse cx="33" cy="35" rx="12" ry="12" fill="rgba(0,0,0,0.30)"/>${shards}<polygon points="32,4 39,28 32,34 25,28" fill="#7dd3fc" stroke="#075985" stroke-width="1.6"/><polygon points="32,4 32,34 25,28" fill="#e0f2fe" fill-opacity="0.72"/>${gold}<polygon points="21,28 43,28 46,39 32,47 18,39" fill="#0369a1" stroke="#082f49" stroke-width="1.7"/><polygon points="24,30 40,30 32,41" fill="#38bdf8" fill-opacity="0.5"/><polygon points="32,29 38,36 32,43 26,36" fill="${tier >= 3 ? '#ffffff' : '#bae6fd'}" stroke="#0284c7" stroke-width="1.3"/>`;
+        ice: (tier, tk) => {
+            const shards = tier >= 2 ? `<polygon points="18,16 24,28 19,38 14,32" fill="${tk.elIce}" stroke="#143240" stroke-width="1.5"/><polygon points="46,16 40,28 45,38 50,32" fill="#2E6F8A" stroke="#143240" stroke-width="1.5"/>` : '';
+            const crest = tier >= 3 ? `<polygon points="16,40 21,36 22,44" fill="${tk.elLightning}"/><polygon points="48,40 43,36 42,44" fill="${tk.elLightning}"/>` : '';
+            return `<ellipse cx="33" cy="36" rx="12" ry="11" fill="rgba(0,0,0,0.30)"/>${shards}<polygon points="32,4 39,28 32,34 25,28" fill="${tk.elIce}" stroke="#143240" stroke-width="1.5"/><polygon points="32,4 32,34 25,28" fill="rgba(244,241,234,0.36)"/>${crest}<polygon points="21,28 43,28 46,39 32,47 18,39" fill="#2B6780" stroke="#143240" stroke-width="1.5"/><polygon points="21,28 34,28 31,41 19,38" fill="rgba(244,241,234,0.18)"/><polygon points="32,29 38,36 32,43 26,36" fill="${tier >= 3 ? tk.textPrimary : '#A6D7EA'}" stroke="#143240" stroke-width="1.5"/>`;
         },
-        thunder: (tier) => {
-            const orb = tier >= 3 ? '<circle cx="32" cy="40" r="4.5" fill="#f0abfc" stroke="#ffffff" stroke-width="1.2"/>' : '';
-            return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="20,9 25,9 26,30 20,30" fill="#7e22ce" stroke="#2e1065" stroke-width="1.4"/><polygon points="39,9 44,9 44,30 38,30" fill="#6b21a8" stroke="#2e1065" stroke-width="1.4"/><circle cx="22.5" cy="9" r="3.4" fill="#fde047" stroke="#713f12" stroke-width="1.1"/><circle cx="41.5" cy="9" r="3.4" fill="#fde047" stroke="#713f12" stroke-width="1.1"/><polyline points="23,9 29,6 33,12 41,9" fill="none" stroke="#fef08a" stroke-width="${tier >= 3 ? 2.4 : 1.7}" stroke-linecap="round" stroke-linejoin="round"/><polygon points="32,12 35,28 29,28" fill="#c084fc" stroke="#3b0764" stroke-width="1.2"/><polygon points="19,28 45,28 47,40 39,47 25,47 17,40" fill="#581c87" stroke="#2e1065" stroke-width="1.8"/><rect x="23" y="30" width="18" height="4" rx="2" fill="#f59e0b"/><rect x="25" y="36" width="14" height="3.5" rx="1.5" fill="${tier >= 2 ? '#fde047' : '#d97706'}"/>${orb}`;
+        thunder: (tier, tk) => {
+            const orb = tier >= 3 ? `<circle cx="32" cy="40" r="4.2" fill="${tk.elLightning}" stroke="#2B2410" stroke-width="1.5"/>` : '';
+            return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="20,9 25,9 26,30 20,30" fill="#5A4B22" stroke="#241F10" stroke-width="1.5"/><polygon points="39,9 44,9 44,30 38,30" fill="#463A1A" stroke="#241F10" stroke-width="1.5"/><circle cx="22.5" cy="9" r="3.4" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><circle cx="41.5" cy="9" r="3.4" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><polyline points="23,9 29,6 33,12 41,9" fill="none" stroke="${tk.elLightning}" stroke-width="${tier >= 3 ? 2.2 : 1.6}" stroke-linecap="round" stroke-linejoin="round"/><polygon points="32,12 35,28 29,28" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><polygon points="19,28 45,28 47,40 39,47 25,47 17,40" fill="#3D341E" stroke="#241F10" stroke-width="1.5"/><polygon points="19,28 34,28 30,43 18,39" fill="rgba(244,241,234,0.16)"/><rect x="23" y="30" width="18" height="4" rx="2" fill="${tk.accentCta}"/><rect x="25" y="36" width="14" height="3.5" rx="1.5" fill="${tier >= 2 ? tk.elLightning : tk.accentCta}"/>${orb}`;
         },
-        steam: (tier) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.34)"/><rect x="23" y="7" width="8" height="22" rx="2.5" fill="#9a3412" stroke="#270e05" stroke-width="1.4"/><rect x="33" y="7" width="8" height="22" rx="2.5" fill="#0369a1" stroke="#082f49" stroke-width="1.4"/><rect x="21" y="6" width="22" height="5" rx="2" fill="#cbd5e1" stroke="#334155" stroke-width="1.3"/><circle cx="27" cy="8.5" r="2.1" fill="#fed7aa"/><circle cx="37" cy="8.5" r="2.1" fill="#e0f2fe"/><polygon points="18,27 32,27 32,47 23,46 16,38" fill="#ea580c" stroke="#431407" stroke-width="1.6"/><polygon points="32,27 46,27 48,38 41,46 32,47" fill="#0284c7" stroke="#082f49" stroke-width="1.6"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.4 : 5.4}" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/><circle cx="32" cy="36" r="2.8" fill="${tier >= 3 ? '#fbbf24' : '#fb7185'}"/>`,
-        magnet: (tier) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="18,6 25,6 26,33 17,37" fill="#06b6d4" stroke="#164e63" stroke-width="1.5"/><polygon points="46,6 39,6 38,33 47,37" fill="#7c3aed" stroke="#2e1065" stroke-width="1.5"/><polygon points="20,8 23,8 23,28 20,28" fill="#a5f3fc" fill-opacity="0.72"/><polygon points="41,8 44,8 44,28 41,28" fill="#ddd6fe" fill-opacity="0.72"/><circle cx="32" cy="16" r="5" fill="#22d3ee" fill-opacity="0.85" stroke="#f0abfc" stroke-width="1.5"/><circle cx="32" cy="16" r="2.2" fill="#ffffff"/><polygon points="21,30 43,30 47,39 39,47 25,47 17,39" fill="#1e1b4b" stroke="#0ea5e9" stroke-width="1.6"/><circle cx="32" cy="38" r="${tier >= 3 ? 6 : 5}" fill="#a855f7" stroke="#67e8f9" stroke-width="1.5"/>`,
-        plasma: (tier) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.35)"/><polygon points="14,34 25,21 26,41 18,43" fill="#be185d" stroke="#500724" stroke-width="1.4"/><polygon points="50,34 39,21 38,41 46,43" fill="#be185d" stroke="#500724" stroke-width="1.4"/><polygon points="32,5 37,27 27,27" fill="#fde047" stroke="#9d174d" stroke-width="1.5"/><polygon points="32,8 34,26 30,26" fill="#ffffff" fill-opacity="0.82"/><ellipse cx="32" cy="20" rx="8" ry="3.2" fill="none" stroke="#f472b6" stroke-width="2"/><polygon points="22,27 42,27 44,39 32,48 20,39" fill="#831843" stroke="#fbbf24" stroke-width="1.6"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.4 : 5.2}" fill="#f43f5e" stroke="#fef08a" stroke-width="1.6"/><circle cx="31.5" cy="35" r="2.4" fill="#ffffff"/>`
+        steam: (tier, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><rect x="23" y="7" width="8" height="22" rx="2" fill="#8C3326" stroke="#1E1814" stroke-width="1.5"/><rect x="33" y="7" width="8" height="22" rx="2" fill="#2D6A82" stroke="#1E1814" stroke-width="1.5"/><rect x="21" y="6" width="22" height="5" rx="2" fill="${tk.textSecondary}" stroke="#1E1814" stroke-width="1.5"/><circle cx="27" cy="8.5" r="2.1" fill="${tk.elFire}"/><circle cx="37" cy="8.5" r="2.1" fill="${tk.elIce}"/><polygon points="18,27 32,27 32,47 23,46 16,38" fill="${tk.elFire}" stroke="#1E1814" stroke-width="1.5"/><polygon points="32,27 46,27 48,38 41,46 32,47" fill="${tk.elIce}" stroke="#1E1814" stroke-width="1.5"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5.2}" fill="${tk.textPrimary}" stroke="#1E1814" stroke-width="1.5"/><circle cx="32" cy="36" r="2.6" fill="${tier >= 3 ? tk.elLightning : tk.accentCta}"/>`,
+        magnet: (tier, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="18,6 25,6 26,33 17,37" fill="${tk.elIce}" stroke="#142C36" stroke-width="1.5"/><polygon points="46,6 39,6 38,33 47,37" fill="#9E7E26" stroke="#241F10" stroke-width="1.5"/><polygon points="20,8 23,8 23,28 20,28" fill="rgba(244,241,234,0.45)"/><polygon points="41,8 44,8 44,28 41,28" fill="rgba(244,241,234,0.35)"/><circle cx="32" cy="16" r="5" fill="${tk.elIce}" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="32" cy="16" r="2" fill="${tk.textPrimary}"/><polygon points="21,30 43,30 47,39 39,47 25,47 17,39" fill="${tk.bgSurface}" stroke="${tk.elIce}" stroke-width="1.5"/><circle cx="32" cy="38" r="${tier >= 3 ? 6 : 5}" fill="${tk.elLightning}" stroke="#142C36" stroke-width="1.5"/>`,
+        plasma: (tier, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="14,34 25,21 26,41 18,43" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/><polygon points="50,34 39,21 38,41 46,43" fill="#8C2F23" stroke="#2B1410" stroke-width="1.5"/><polygon points="32,5 37,27 27,27" fill="${tk.elLightning}" stroke="#2B1410" stroke-width="1.5"/><polygon points="32,8 34,26 30,26" fill="rgba(244,241,234,0.6)"/><ellipse cx="32" cy="20" rx="8" ry="3.2" fill="none" stroke="${tk.accentCta}" stroke-width="1.5"/><polygon points="22,27 42,27 44,39 32,48 20,39" fill="#7D2B1F" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5}" fill="${tk.accentCta}" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="31.5" cy="35" r="2.2" fill="${tk.textPrimary}"/>`
     };
 
     function createTowerSvgParts(type, tier) {
-        const pal = TOWER_PALETTE[type] || { rune: '#cbd5e1', glow: '#f8fafc' };
-        const crownTrim = tier >= 3 ? '<polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="none" stroke="#fbbf24" stroke-width="1.6"/>' : '';
+        const tk = getThemeTokens();
+        const pal = getTowerPalette()[type] || { rune: tk.textSecondary, glow: tk.textPrimary };
+        const crownTrim = tier >= 3 ? `<polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="none" stroke="${tk.elLightning}" stroke-width="1.5"/>` : '';
         const gemCoords = tier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
-        const cornerGems = gemCoords.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="${tier >= 2 ? 2.2 : 1.4}" fill="${tier >= 2 ? pal.glow : '#a89984'}"/>`).join('');
+        const cornerGems = gemCoords.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="${tier >= 2 ? 2.1 : 1.4}" fill="${tier >= 2 ? pal.glow : tk.textSecondary}"/>`).join('');
 
-        const baseSvgHtml = `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="23" ry="8" fill="rgba(0,0,0,0.45)"/><polygon points="15,22 49,22 55,33 55,44 47,53 17,53 9,44 9,33" fill="#2c241f" stroke="#120e0b" stroke-width="2"/><polygon points="9,44 17,53 17,43 11,35" fill="#1e1815"/><polygon points="55,44 47,53 47,43 53,35" fill="#3a3029"/><polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="#574a40" stroke="#756558" stroke-width="1.4"/><polyline points="14,24 19,15 45,15 50,24" fill="none" stroke="rgba(255,244,218,0.34)" stroke-width="1.5"/>${crownTrim}<circle cx="32" cy="30" r="14" fill="#211a16" stroke="#120d0b" stroke-width="1.5"/><circle cx="32" cy="30" r="11.5" fill="none" stroke="${pal.rune}" stroke-width="${tier >= 3 ? 2.4 : (tier === 2 ? 1.9 : 1.4)}" stroke-opacity="${tier === 1 ? 0.65 : 0.92}"/>${cornerGems}</svg>`;
+        const baseSvgHtml = `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="23" ry="8" fill="rgba(0,0,0,0.40)"/><polygon points="15,22 49,22 55,33 55,44 47,53 17,53 9,44 9,33" fill="${tk.bgGridElevated}" stroke="${tk.bgCanvas}" stroke-width="2"/><polygon points="9,44 17,53 17,43 11,35" fill="rgba(244,241,234,0.08)"/><polygon points="55,44 47,53 47,43 53,35" fill="rgba(0,0,0,0.25)"/><polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="#3B453F" stroke="${tk.borderSubtle}" stroke-width="1.5"/><polyline points="14,24 19,15 45,15 50,24" fill="none" stroke="rgba(244,241,234,0.28)" stroke-width="1.5"/>${crownTrim}<circle cx="32" cy="30" r="14" fill="${tk.bgCanvas}" stroke="${tk.bgCanvas}" stroke-width="1.5"/><circle cx="32" cy="30" r="11.5" fill="none" stroke="${pal.rune}" stroke-width="${tier >= 3 ? 2 : 1.5}" stroke-opacity="${tier === 1 ? 0.72 : 0.95}"/>${cornerGems}</svg>`;
         const headBuilder = TOWER_HEAD_TEMPLATES[type] || TOWER_HEAD_TEMPLATES.plasma;
-        return { baseSvgHtml, headSvgHtml: `<svg class="tower-head-svg" viewBox="0 0 64 64" aria-hidden="true">${headBuilder(tier)}</svg>` };
+        return { baseSvgHtml, headSvgHtml: `<svg class="tower-head-svg" viewBox="0 0 64 64" aria-hidden="true">${headBuilder(tier, tk)}</svg>` };
     }
 
     const BOSS_SVG_BY_TYPE = {
-        lava: '<polygon points="10,44 16,18 27,22 32,12 37,22 48,18 54,44 45,54 19,54" fill="#29120b" stroke="#0c0503" stroke-width="2"/><polygon points="16,18 9,8 22,15" fill="#7c2d12" stroke="#1c0803" stroke-width="1.5"/><polygon points="48,18 55,8 42,15" fill="#7c2d12" stroke="#1c0803" stroke-width="1.5"/><polygon points="21,26 32,20 43,26 45,42 32,50 19,42" fill="#451a03"/><polygon points="25,31 32,27 39,31 36,42 32,46 28,42" fill="#f97316"/><polygon points="28,33 32,30 36,33 32,40" fill="#fef08a"/><polygon points="23,23 29,25 24,27" fill="#fef08a"/><polygon points="41,23 35,25 40,27" fill="#fef08a"/>',
-        air: '<polygon points="11,34 22,16 42,16 53,34 45,49 19,49" fill="#1e293b" stroke="#0f172a" stroke-width="2"/><rect x="7" y="26" width="9" height="15" rx="3" fill="#475569" stroke="#0f172a" stroke-width="1.5"/><rect x="48" y="26" width="9" height="15" rx="3" fill="#475569" stroke="#0f172a" stroke-width="1.5"/><polygon points="20,17 44,17 48,29 16,29" fill="#334155"/><circle cx="32" cy="34" r="9.5" fill="#0284c7" stroke="#bae6fd" stroke-width="1.8"/><circle cx="32" cy="34" r="4.5" fill="#e0f2fe"/><polygon points="26,46 32,54 38,46" fill="#38bdf8"/>',
-        wood: '<polygon points="14,19 8,7 22,14 27,21" fill="#3f2b1d" stroke="#180f09" stroke-width="1.5"/><polygon points="50,19 56,7 42,14 37,21" fill="#3f2b1d" stroke="#180f09" stroke-width="1.5"/><polygon points="15,48 20,21 44,21 49,48 41,55 23,55" fill="#4b3423" stroke="#1a110b" stroke-width="2"/><polygon points="19,21 32,12 45,21 38,28 26,28" fill="#166534" stroke="#052e16" stroke-width="1.4"/><polygon points="27,34 32,29 37,34 34,43 30,43" fill="#a855f7" stroke="#f0abfc" stroke-width="1.2"/><circle cx="25" cy="27" r="2.6" fill="#fde047"/><circle cx="39" cy="27" r="2.6" fill="#fde047"/>'
+        lava: '<polygon points="10,44 16,18 27,22 32,12 37,22 48,18 54,44 45,54 19,54" fill="#3A1D18" stroke="#180D0B" stroke-width="2"/><polygon points="16,18 9,8 22,15" fill="#7D2B1F" stroke="#180D0B" stroke-width="1.5"/><polygon points="48,18 55,8 42,15" fill="#7D2B1F" stroke="#180D0B" stroke-width="1.5"/><polygon points="21,26 32,20 43,26 45,42 32,50 19,42" fill="#542119"/><polygon points="25,31 32,27 39,31 36,42 32,46 28,42" fill="#C94A38"/><polygon points="28,33 32,30 36,33 32,40" fill="#E0B43C"/><polygon points="23,23 29,25 24,27" fill="#F4F1EA"/><polygon points="41,23 35,25 40,27" fill="#F4F1EA"/>',
+        air: '<polygon points="11,34 22,16 42,16 53,34 45,49 19,49" fill="#233036" stroke="#12191C" stroke-width="2"/><rect x="7" y="26" width="9" height="15" rx="3" fill="#3E5059" stroke="#12191C" stroke-width="1.5"/><rect x="48" y="26" width="9" height="15" rx="3" fill="#3E5059" stroke="#12191C" stroke-width="1.5"/><polygon points="20,17 44,17 48,29 16,29" fill="#33424A"/><circle cx="32" cy="34" r="9.5" fill="#4A9EBF" stroke="#F4F1EA" stroke-width="1.5"/><circle cx="32" cy="34" r="4.5" fill="#F4F1EA"/><polygon points="26,46 32,54 38,46" fill="#E0B43C"/>',
+        wood: '<polygon points="14,19 8,7 22,14 27,21" fill="#3D3126" stroke="#18130E" stroke-width="1.5"/><polygon points="50,19 56,7 42,14 37,21" fill="#3D3126" stroke="#18130E" stroke-width="1.5"/><polygon points="15,48 20,21 44,21 49,48 41,55 23,55" fill="#4B3B2D" stroke="#18130E" stroke-width="2"/><polygon points="19,21 32,12 45,21 38,28 26,28" fill="#2D5A3D" stroke="#132A1B" stroke-width="1.5"/><polygon points="27,34 32,29 37,34 34,43 30,43" fill="#D97724" stroke="#E0B43C" stroke-width="1.5"/><circle cx="25" cy="27" r="2.6" fill="#E0B43C"/><circle cx="39" cy="27" r="2.6" fill="#E0B43C"/>'
     };
 
     const MONSTER_SVG_BY_KEY = {
-        mini: '<path d="M16 46 Q16 25 32 23 Q48 25 48 46 Q48 54 32 54 Q16 54 16 46 Z" fill="#22c55e" stroke="#14532d" stroke-width="1.8"/><path d="M21 33 Q24 27 31 27" fill="none" stroke="#bbf7d0" stroke-width="2.5" stroke-linecap="round"/><circle cx="27" cy="40" r="2.4" fill="#052e16"/><circle cx="37" cy="40" r="2.4" fill="#052e16"/><circle cx="27.8" cy="39" r="0.9" fill="#ffffff"/><circle cx="37.8" cy="39" r="0.9" fill="#ffffff"/>',
-        lava: '<polygon points="16,47 18,22 28,15 36,15 46,22 48,47 39,54 25,54" fill="#3b160c" stroke="#170804" stroke-width="1.8"/><polygon points="21,23 32,17 43,23 41,34 23,34" fill="#7c2d12"/><polygon points="27,32 32,27 37,32 35,44 29,44" fill="#f97316"/><polygon points="30,33 34,33 32,40" fill="#fef08a"/><rect x="23" y="25" width="5" height="3" rx="1" fill="#fde047"/><rect x="36" y="25" width="5" height="3" rx="1" fill="#fde047"/>',
-        air: '<polygon points="10,36 22,28 42,28 54,36 42,46 22,46" fill="#0369a1" stroke="#082f49" stroke-width="1.8"/><path d="M21 30 Q21 15 32 15 Q43 15 43 30 Z" fill="#7dd3fc" stroke="#0c4a6e" stroke-width="1.5"/><ellipse cx="29" cy="21" rx="4" ry="2" fill="#ffffff" fill-opacity="0.7"/><circle cx="23" cy="37" r="2.3" fill="#fde047"/><circle cx="32" cy="37" r="2.3" fill="#fde047"/><circle cx="41" cy="37" r="2.3" fill="#fde047"/><polygon points="26,46 38,46 32,53" fill="#f97316"/>',
-        hound: '<polygon points="12,41 24,25 22,12 31,21 40,12 39,24 52,32 45,42 42,53 33,44 24,53 20,43" fill="#0891b2" stroke="#083344" stroke-width="1.8"/><polygon points="24,27 39,24 47,32 35,36 21,36" fill="#67e8f9" fill-opacity="0.65"/><polygon points="8,36 17,32 15,40" fill="#a5f3fc"/><circle cx="40" cy="29" r="2.2" fill="#fef08a"/>',
-        slime: '<path d="M12 45 Q13 17 32 16 Q51 17 52 45 Q51 54 32 54 Q13 54 12 45 Z" fill="#16a34a" stroke="#052e16" stroke-width="1.8"/><path d="M14 45 Q32 51 50 45 Q47 52 32 53 Q17 52 14 45 Z" fill="#15803d"/><path d="M19 28 Q23 20 31 20" fill="none" stroke="#bbf7d0" stroke-width="3" stroke-linecap="round"/><circle cx="25" cy="39" r="3" fill="#4ade80" fill-opacity="0.75"/><circle cx="25" cy="34" r="3" fill="#052e16"/><circle cx="39" cy="34" r="3" fill="#052e16"/><circle cx="26" cy="33" r="1.1" fill="#ffffff"/><circle cx="40" cy="33" r="1.1" fill="#ffffff"/>',
-        golem: '<polygon points="11,45 14,19 24,14 40,14 50,19 53,45 45,54 19,54" fill="#475569" stroke="#0f172a" stroke-width="2"/><polygon points="17,19 47,19 44,33 20,33" fill="#94a3b8"/><polygon points="21,21 43,21 40,28 24,28" fill="#cbd5e1" fill-opacity="0.6"/><rect x="23" y="25" width="18" height="4.5" rx="2" fill="#0f172a"/><rect x="25" y="26.2" width="14" height="2.2" rx="1" fill="#fb923c"/><circle cx="17" cy="24" r="2" fill="#e2e8f0"/><circle cx="47" cy="24" r="2" fill="#e2e8f0"/>',
-        wood: '<polygon points="15,47 18,22 46,22 49,47 41,54 23,54" fill="#5c4028" stroke="#1e130b" stroke-width="1.8"/><polygon points="16,24 25,13 32,19 39,13 48,24 38,29 26,29" fill="#15803d" stroke="#052e16" stroke-width="1.4"/><polygon points="23,35 32,31 41,35 37,46 27,46" fill="#22c55e" fill-opacity="0.5"/><circle cx="25" cy="31" r="2.4" fill="#fde047"/><circle cx="39" cy="31" r="2.4" fill="#fde047"/>'
+        mini: '<path d="M16 46 Q16 25 32 23 Q48 25 48 46 Q48 54 32 54 Q16 54 16 46 Z" fill="#488B5A" stroke="#1B3823" stroke-width="1.5"/><path d="M21 33 Q24 27 31 27" fill="none" stroke="#B7E4C7" stroke-width="2" stroke-linecap="round"/><circle cx="27" cy="40" r="2.4" fill="#1B211E"/><circle cx="37" cy="40" r="2.4" fill="#1B211E"/><circle cx="27.8" cy="39" r="0.9" fill="#F4F1EA"/><circle cx="37.8" cy="39" r="0.9" fill="#F4F1EA"/>',
+        lava: '<polygon points="16,47 18,22 28,15 36,15 46,22 48,47 39,54 25,54" fill="#46201A" stroke="#1B0D0A" stroke-width="1.5"/><polygon points="21,23 32,17 43,23 41,34 23,34" fill="#7D2B1F"/><polygon points="27,32 32,27 37,32 35,44 29,44" fill="#C94A38"/><polygon points="30,33 34,33 32,40" fill="#E0B43C"/><rect x="23" y="25" width="5" height="3" rx="1" fill="#E0B43C"/><rect x="36" y="25" width="5" height="3" rx="1" fill="#E0B43C"/>',
+        air: '<polygon points="10,36 22,28 42,28 54,36 42,46 22,46" fill="#2F6A82" stroke="#142C36" stroke-width="1.5"/><path d="M21 30 Q21 15 32 15 Q43 15 43 30 Z" fill="#4A9EBF" stroke="#142C36" stroke-width="1.5"/><ellipse cx="29" cy="21" rx="4" ry="2" fill="rgba(244,241,234,0.55)"/><circle cx="23" cy="37" r="2.2" fill="#E0B43C"/><circle cx="32" cy="37" r="2.2" fill="#E0B43C"/><circle cx="41" cy="37" r="2.2" fill="#E0B43C"/><polygon points="26,46 38,46 32,53" fill="#D97724"/>',
+        hound: '<polygon points="12,41 24,25 22,12 31,21 40,12 39,24 52,32 45,42 42,53 33,44 24,53 20,43" fill="#357690" stroke="#142C36" stroke-width="1.5"/><polygon points="24,27 39,24 47,32 35,36 21,36" fill="rgba(244,241,234,0.28)"/><polygon points="8,36 17,32 15,40" fill="#82BDD4"/><circle cx="40" cy="29" r="2.2" fill="#E0B43C"/>',
+        slime: '<path d="M12 45 Q13 17 32 16 Q51 17 52 45 Q51 54 32 54 Q13 54 12 45 Z" fill="#3B7A4D" stroke="#16301D" stroke-width="1.5"/><path d="M14 45 Q32 51 50 45 Q47 52 32 53 Q17 52 14 45 Z" fill="#2A5B38"/><path d="M19 28 Q23 20 31 20" fill="none" stroke="#B7E4C7" stroke-width="2" stroke-linecap="round"/><circle cx="25" cy="34" r="3" fill="#1B211E"/><circle cx="39" cy="34" r="3" fill="#1B211E"/><circle cx="26" cy="33" r="1.1" fill="#F4F1EA"/><circle cx="40" cy="33" r="1.1" fill="#F4F1EA"/>',
+        golem: '<polygon points="11,45 14,19 24,14 40,14 50,19 53,45 45,54 19,54" fill="#46544C" stroke="#1B211E" stroke-width="2"/><polygon points="17,19 47,19 44,33 20,33" fill="#708077"/><polygon points="21,21 43,21 40,28 24,28" fill="rgba(244,241,234,0.28)"/><rect x="23" y="25" width="18" height="4.5" rx="2" fill="#1B211E"/><rect x="25" y="26.2" width="14" height="2.2" rx="1" fill="#D97724"/><circle cx="17" cy="24" r="1.8" fill="#B8C2BC"/><circle cx="47" cy="24" r="1.8" fill="#B8C2BC"/>',
+        wood: '<polygon points="15,47 18,22 46,22 49,47 41,54 23,54" fill="#523C2B" stroke="#1E1711" stroke-width="1.5"/><polygon points="16,24 25,13 32,19 39,13 48,24 38,29 26,29" fill="#326B46" stroke="#142C1D" stroke-width="1.5"/><polygon points="23,35 32,31 41,35 37,46 27,46" fill="rgba(74,222,128,0.28)"/><circle cx="25" cy="31" r="2.2" fill="#E0B43C"/><circle cx="39" cy="31" r="2.2" fill="#E0B43C"/>'
     };
 
     function createMonsterSvgHtml(monster) {
         const body = monster.isBoss
             ? (BOSS_SVG_BY_TYPE[monster.typeKey] || BOSS_SVG_BY_TYPE.wood)
             : (monster.isSplitChild ? MONSTER_SVG_BY_KEY.mini : (MONSTER_SVG_BY_KEY[monster.typeKey] || MONSTER_SVG_BY_KEY.wood));
-        return `<svg class="m-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="57" rx="19" ry="5.5" fill="rgba(0,0,0,0.42)"/>${body}</svg>`;
+        return `<svg class="m-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="57" rx="19" ry="5.5" fill="rgba(0,0,0,0.38)"/>${body}</svg>`;
     }
 
-    // ==================== 棋盤量測與 Canvas 2D 特效層 ====================
+    // ==================== 棋盤量測與 HiDPI Canvas 2D 特效層 ====================
     function resizeFxCanvas() {
         const { fxCanvasEl, fxCtx, boardStageEl } = G.dom;
         if (!fxCanvasEl || typeof fxCanvasEl.getContext !== 'function') return;
@@ -83,7 +123,10 @@
         const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? Math.min(2, window.devicePixelRatio) : 1;
         const tw = Math.round(cssW * dpr), th = Math.round(cssH * dpr);
         if (fxCanvasEl.width !== tw || fxCanvasEl.height !== th) { fxCanvasEl.width = tw; fxCanvasEl.height = th; }
-        if (fxCtx && typeof fxCtx.setTransform === 'function') fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (fxCtx && typeof fxCtx.setTransform === 'function') {
+            fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            fxCtx.font = '600 12px "Plus Jakarta Sans", "Noto Sans TC", sans-serif';
+        }
     }
 
     function measureBoardMetrics() {
@@ -147,6 +190,7 @@
     function emitCanvasAttackFX(fxType, fromPos, toPos, options = {}) {
         const sx = fromPos.left, sy = fromPos.top, ex = toPos.left, ey = toPos.top;
         const fx = G.fxEntities;
+        const tk = getThemeTokens();
 
         if (fxType === 'thunder' || fxType === 'magnet-arc') {
             const isMagnet = fxType === 'magnet-arc';
@@ -157,25 +201,25 @@
                 pts.push({ x: sx + (ex - sx) * t + (Math.random() - 0.5) * jitter * 2, y: sy + (ey - sy) * t + (Math.random() - 0.5) * jitter * 2 });
             }
             pts.push({ x: ex, y: ey });
-            fx.bolts.push({ points: pts, color: isMagnet ? '#38bdf8' : (options.isLv3 ? '#fef08a' : '#fde047'), coreColor: '#ffffff', width: isMagnet ? 2.4 : (options.isLv3 ? 3.0 : 2.4), ageMs: 0, durationMs: 210 });
-            emitParticleBurst(ex, ey, isMagnet ? '#67e8f9' : '#fde047', 6, 75);
-            emitHitFlash(ex, ey, isMagnet ? '#bae6fd' : '#fef9c3');
-            if (options.frostRadiusPx > 0) emitRingFX(ex, ey, options.frostRadiusPx, '#38bdf8', 0.22, 280);
+            fx.bolts.push({ points: pts, color: isMagnet ? tk.elIce : tk.elLightning, coreColor: tk.textPrimary, width: isMagnet ? 1.8 : (options.isLv3 ? 2.2 : 1.8), ageMs: 0, durationMs: 210 });
+            emitParticleBurst(ex, ey, isMagnet ? tk.elIce : tk.elLightning, 6, 75);
+            emitHitFlash(ex, ey, tk.textPrimary);
+            if (options.frostRadiusPx > 0) emitRingFX(ex, ey, options.frostRadiusPx, tk.elIce, 0.20, 280);
             return;
         }
         if (fxType === 'plasma') {
             const stacks = options.stacks || 0;
-            fx.beams.push({ x1: sx, y1: sy, x2: ex, y2: ey, width: 2.2 + stacks * 0.7, color: stacks >= 4 ? '#f97316' : '#facc15', coreColor: '#fffbeb', ageMs: 0, durationMs: 185 });
-            emitParticleBurst(ex, ey, stacks >= 4 ? '#fb923c' : '#fde047', 5 + stacks, 70);
-            emitHitFlash(ex, ey, '#fef08a');
+            fx.beams.push({ x1: sx, y1: sy, x2: ex, y2: ey, width: 1.8 + stacks * 0.5, color: stacks >= 4 ? tk.accentCta : tk.elLightning, coreColor: tk.textPrimary, ageMs: 0, durationMs: 185 });
+            emitParticleBurst(ex, ey, stacks >= 4 ? tk.elFire : tk.elLightning, 5 + stacks, 70);
+            emitHitFlash(ex, ey, tk.elLightning);
             return;
         }
-        const coreColor = ({ fire: '#ff6b6b', ice: '#38bdf8', steam: '#7dd3fc' })[fxType] || '#ffffff';
-        fx.projectiles.push({ fxType, x1: sx, y1: sy, x2: ex, y2: ey, color: coreColor, radius: fxType === 'fire' ? 4.4 : (fxType === 'steam' ? 4.8 : 3.6), ageMs: 0, durationMs: 135 });
+        const coreColor = ({ fire: tk.elFire, ice: tk.elIce, steam: tk.accentCta })[fxType] || tk.textPrimary;
+        fx.projectiles.push({ fxType, x1: sx, y1: sy, x2: ex, y2: ey, color: coreColor, radius: fxType === 'fire' ? 4.2 : (fxType === 'steam' ? 4.6 : 3.6), ageMs: 0, durationMs: 135 });
         const ringRadius = options.splashRadiusPx || options.frostRadiusPx || 0;
-        if (ringRadius > 0) emitRingFX(ex, ey, ringRadius, fxType === 'ice' ? '#38bdf8' : (fxType === 'steam' ? '#93c5fd' : '#fb923c'), 0.24, 280);
+        if (ringRadius > 0) emitRingFX(ex, ey, ringRadius, fxType === 'ice' ? tk.elIce : (fxType === 'steam' ? tk.elIce : tk.elFire), 0.22, 280);
         emitParticleBurst(ex, ey, coreColor, ringRadius > 0 ? 11 : 7, ringRadius > 0 ? 105 : 70);
-        emitHitFlash(ex, ey, '#ffffff');
+        emitHitFlash(ex, ey, tk.textPrimary);
     }
 
     function advanceFxPool(arr, dtMs, stepFn = null) {
@@ -206,7 +250,7 @@
     }
 
     function updateAndRenderCanvasFX(dtMs) {
-        const dtSec = dtMs / 1000, fx = G.fxEntities, st = G.state, m = G.boardMetrics;
+        const dtSec = dtMs / 1000, fx = G.fxEntities, st = G.state, m = G.boardMetrics, tk = getThemeTokens();
         if (G.callbacks.isGameplayActive() && st.baseHp >= CONFIG.WORLD_TREE_HEALTHY_MIN) {
             fx.leafEmitAccMs += dtMs;
             while (fx.leafEmitAccMs >= 420) {
@@ -216,7 +260,7 @@
                 fx.leaves.push({
                     x: tp.left + (Math.random() - 0.5) * m.cellW * 0.65, y: tp.top + (Math.random() - 0.5) * m.cellH * 0.45,
                     vx: -10 - Math.random() * 14, vy: -16 - Math.random() * 16, swayPhase: Math.random() * Math.PI * 2,
-                    size: 3.0 + Math.random() * 2.2, color: Math.random() < 0.5 ? '#4ade80' : '#86efac',
+                    size: 3.0 + Math.random() * 2.2, color: Math.random() < 0.5 ? '#4E9A68' : '#74B88A',
                     ageMs: 0, durationMs: 1400 + Math.random() * 700
                 });
             }
@@ -231,7 +275,7 @@
                     fx.particles.push({
                         x: pos.left + (Math.random() - 0.5) * m.cellW * 0.55, y: pos.top + (Math.random() - 0.2) * m.cellH * 0.4,
                         vx: (Math.random() - 0.5) * 14, vy: -24 - Math.random() * 18, radius: 1.7 + Math.random() * 1.4,
-                        color: Math.random() < 0.5 ? '#fde047' : '#f59e0b', ageMs: 0, durationMs: 420 + Math.random() * 180
+                        color: Math.random() < 0.5 ? tk.elLightning : tk.accentCta, ageMs: 0, durationMs: 420 + Math.random() * 180
                     });
                 }
             }
@@ -253,7 +297,7 @@
             const r = fx.rings[i], p = Math.min(1, r.ageMs / r.durationMs), rad = Math.max(4, r.maxRadius * (0.35 + 0.65 * p)), alpha = 1 - p;
             fxCtx.save();
             fillCircle2D(fxCtx, r.x, r.y, rad, r.color, alpha * r.fillAlpha);
-            fxCtx.globalAlpha = alpha * 0.85; fxCtx.strokeStyle = r.color; fxCtx.lineWidth = 2;
+            fxCtx.globalAlpha = alpha * 0.85; fxCtx.strokeStyle = r.color; fxCtx.lineWidth = 1.5;
             fxCtx.beginPath(); fxCtx.arc(r.x, r.y, rad, 0, Math.PI * 2); fxCtx.stroke();
             fxCtx.restore();
         }
@@ -261,15 +305,15 @@
             const pr = fx.projectiles[i], p = Math.min(1, pr.ageMs / pr.durationMs), tp = Math.max(0, p - 0.35);
             const cx = pr.x1 + (pr.x2 - pr.x1) * p, cy = pr.y1 + (pr.y2 - pr.y1) * p;
             fxCtx.save(); fxCtx.lineCap = 'round';
-            strokeLine2D(fxCtx, pr.x1 + (pr.x2 - pr.x1) * tp, pr.y1 + (pr.y2 - pr.y1) * tp, cx, cy, pr.color, pr.radius * 1.1, 1 - p * 0.25);
-            fillCircle2D(fxCtx, cx, cy, pr.radius * 0.72, '#ffffff', 1 - p * 0.25);
+            strokeLine2D(fxCtx, pr.x1 + (pr.x2 - pr.x1) * tp, pr.y1 + (pr.y2 - pr.y1) * tp, cx, cy, pr.color, pr.radius, 1 - p * 0.25);
+            fillCircle2D(fxCtx, cx, cy, pr.radius * 0.7, tk.textPrimary, 1 - p * 0.25);
             fxCtx.restore();
         }
         for (let i = 0; i < fx.beams.length; i++) {
             const b = fx.beams[i], a = 1 - Math.min(1, b.ageMs / b.durationMs);
             fxCtx.save(); fxCtx.lineCap = 'round';
-            strokeLine2D(fxCtx, b.x1, b.y1, b.x2, b.y2, b.color, b.width * 2.1, a * 0.65);
-            strokeLine2D(fxCtx, b.x1, b.y1, b.x2, b.y2, b.coreColor, Math.max(1.2, b.width * 0.75), a);
+            strokeLine2D(fxCtx, b.x1, b.y1, b.x2, b.y2, b.color, b.width * 2, a * 0.65);
+            strokeLine2D(fxCtx, b.x1, b.y1, b.x2, b.y2, b.coreColor, Math.max(1.5, b.width * 0.75), a);
             fxCtx.restore();
         }
         for (let i = 0; i < fx.bolts.length; i++) {
@@ -282,8 +326,8 @@
                 for (let k = 1; k < bl.points.length; k++) fxCtx.lineTo(bl.points[k].x, bl.points[k].y);
                 fxCtx.stroke();
             };
-            trace(bl.color, bl.width * 2.1, a * 0.6);
-            trace(bl.coreColor, Math.max(1.2, bl.width * 0.7), a);
+            trace(bl.color, Math.max(2, bl.width * 1.8), a * 0.65);
+            trace(bl.coreColor, 1.5, a);
             fxCtx.restore();
         }
         for (let i = 0; i < fx.particles.length; i++) {
@@ -291,20 +335,20 @@
             fxCtx.save(); fillCircle2D(fxCtx, pt.x, pt.y, pt.radius * a, pt.color, a); fxCtx.restore();
         }
         for (let i = 0; i < fx.flashes.length; i++) {
-            const fl = fx.flashes[i], a = (1 - Math.min(1, fl.ageMs / fl.durationMs)) * 0.65;
+            const fl = fx.flashes[i], a = (1 - Math.min(1, fl.ageMs / fl.durationMs)) * 0.6;
             fxCtx.save(); fillCircle2D(fxCtx, fl.x, fl.y, fl.radius, fl.color, a); fxCtx.restore();
         }
         for (let i = 0; i < fx.leaves.length; i++) {
-            const lf = fx.leaves[i], p = Math.min(1, lf.ageMs / lf.durationMs), alpha = Math.sin(p * Math.PI) * 0.88;
+            const lf = fx.leaves[i], p = Math.min(1, lf.ageMs / lf.durationMs), alpha = Math.sin(p * Math.PI) * 0.85;
             if (alpha <= 0.01) continue;
-            fxCtx.save(); fxCtx.globalAlpha = alpha; fxCtx.fillStyle = lf.color; fxCtx.shadowColor = '#22c55e'; fxCtx.shadowBlur = 6;
+            fxCtx.save(); fxCtx.globalAlpha = alpha; fxCtx.fillStyle = lf.color;
             fxCtx.translate(lf.x, lf.y); fxCtx.rotate(lf.swayPhase + p * 2.2);
             fxCtx.beginPath(); fxCtx.ellipse(0, 0, lf.size, lf.size * 0.52, 0, 0, Math.PI * 2); fxCtx.fill(); fxCtx.restore();
         }
         for (let i = 0; i < st.monsters.length; i++) {
             const mon = st.monsters[i];
             if ((mon.rootTimer || 0) <= 0) continue;
-            fxCtx.save(); fxCtx.strokeStyle = 'rgba(74, 222, 128, 0.85)'; fxCtx.lineWidth = 2.2; fxCtx.setLineDash([4, 3]);
+            fxCtx.save(); fxCtx.strokeStyle = 'rgba(78, 154, 104, 0.85)'; fxCtx.lineWidth = 2; fxCtx.setLineDash([4, 3]);
             fxCtx.beginPath(); fxCtx.arc(mon.pixelX, mon.pixelY + 4, Math.max(12, m.cellW * 0.42), 0, Math.PI * 2); fxCtx.stroke(); fxCtx.restore();
         }
     }
@@ -336,10 +380,10 @@
         if (monster.isBoss) el.classList.add('boss');
         if (monster.isSplitChild) el.classList.add('mini-slime');
 
-        const armorHtml = monster.armor > 0 ? `<span class="m-armor-badge">🛡️${monster.armor}</span>` : '';
+        const armorHtml = monster.armor > 0 ? `<span class="m-armor-badge num">甲 ${monster.armor}</span>` : '';
         const weakCfg = ELEMENT_CONFIG[monster.weakness];
         const weakShort = weakCfg ? `${weakCfg.icon}${weakCfg.name.charAt(0)}` : '';
-        const bossHtml = monster.isBoss ? `<span class="m-boss-badge weak-${monster.weakness}">👑弱${weakShort}</span>` : '';
+        const bossHtml = monster.isBoss ? `<span class="m-boss-badge weak-${monster.weakness}">王·弱${weakShort}</span>` : '';
         el.innerHTML = `<span class="m-slow-badge">❄️</span>${armorHtml}<span class="m-icon">${createMonsterSvgHtml(monster)}</span><div class="m-hp-bar"><div class="m-hp-fill"></div></div>${bossHtml}`;
         G.dom.monsterLayerEl.appendChild(el);
         const rec = { el, hpFillEl: el.querySelector('.m-hp-fill'), armorBadgeEl: el.querySelector('.m-armor-badge') };
@@ -372,12 +416,12 @@
             if (m.armor > 0 && rec.armorBadgeEl) {
                 const isShredded = m.armorShredTimer > 0;
                 rec.armorBadgeEl.classList.toggle('shredded', isShredded);
-                rec.armorBadgeEl.innerText = isShredded ? `🔥${Math.round(Combat ? Combat.getMonsterEffectiveArmor(m) : m.armor)}` : `🛡️${m.armor}`;
+                rec.armorBadgeEl.innerText = isShredded ? `🔥${Math.round(Combat ? Combat.getMonsterEffectiveArmor(m) : m.armor)}` : `甲 ${m.armor}`;
             }
             const hpPct = Math.max(0, (m.hp / m.maxHp) * 100);
             if (rec.hpFillEl) {
                 rec.hpFillEl.style.width = `${hpPct}%`;
-                rec.hpFillEl.style.backgroundColor = hpPct <= 25 ? '#e74c3c' : (hpPct <= 55 ? '#f39c12' : '#2ecc71');
+                rec.hpFillEl.style.backgroundColor = hpPct <= 25 ? '#C94A38' : (hpPct <= 55 ? '#D97724' : '#4E9A68');
             }
         }
         G.callbacks.updateBossStatusBar();
@@ -456,10 +500,14 @@
     }
 
     const TERRAIN_SVG_BY_TYPE = {
-        highground: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><defs><pattern id="hgHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(251,191,36,0.22)" stroke-width="1.6"/></pattern></defs><rect x="2" y="2" width="60" height="60" rx="6" fill="url(#hgHatch)"/><polygon points="10,50 24,18 35,32 45,14 54,50" fill="rgba(245,158,11,0.16)" stroke="rgba(253,224,71,0.58)" stroke-width="1.6" stroke-linejoin="round"/><polyline points="16,44 26,26 35,38 44,23 50,44" fill="none" stroke="rgba(254,240,138,0.42)" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 15 V8 H15 M49 8 H56 V15 M8 49 V56 H15 M49 56 H56 V49" fill="none" stroke="rgba(251,191,36,0.75)" stroke-width="1.8" stroke-linecap="round"/></svg>',
-        mana_vein: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="24" fill="rgba(14,165,233,0.12)" stroke="rgba(56,189,248,0.58)" stroke-width="1.5" stroke-dasharray="5 3"/><circle cx="32" cy="32" r="16" fill="none" stroke="rgba(125,211,252,0.72)" stroke-width="1.4"/><polygon points="32,12 48,32 32,52 16,32" fill="rgba(56,189,248,0.14)" stroke="rgba(186,230,253,0.62)" stroke-width="1.3"/><line x1="32" y1="6" x2="32" y2="14" stroke="#7dd3fc" stroke-width="1.6"/><line x1="32" y1="50" x2="32" y2="58" stroke="#7dd3fc" stroke-width="1.6"/><line x1="6" y1="32" x2="14" y2="32" stroke="#7dd3fc" stroke-width="1.6"/><line x1="50" y1="32" x2="58" y2="32" stroke="#7dd3fc" stroke-width="1.6"/><circle cx="32" cy="32" r="5" fill="#38bdf8" fill-opacity="0.72" stroke="#e0f2fe" stroke-width="1.3"/></svg>',
-        world_tree: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="24" fill="rgba(34,197,94,0.12)" stroke="rgba(74,222,128,0.55)" stroke-width="1.5"/><path d="M32 10 C45 18 50 32 32 54 C14 32 19 18 32 10 Z" fill="rgba(74,222,128,0.18)" stroke="rgba(134,239,172,0.75)" stroke-width="1.6"/><line x1="32" y1="14" x2="32" y2="52" stroke="rgba(187,247,208,0.75)" stroke-width="1.5"/><path d="M32 24 L41 19 M32 32 L43 26 M32 40 L40 35 M32 24 L23 19 M32 32 L21 26 M32 40 L24 35" stroke="rgba(187,247,208,0.65)" stroke-width="1.3" stroke-linecap="round"/></svg>'
+        highground: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><defs><pattern id="hgHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(224,180,60,0.16)" stroke-width="1.5"/></pattern></defs><rect x="2" y="2" width="60" height="60" rx="4" fill="url(#hgHatch)"/><polygon points="12,50 25,20 35,34 45,16 52,50" fill="rgba(224,180,60,0.10)" stroke="rgba(224,180,60,0.38)" stroke-width="1.5" stroke-linejoin="round"/><polyline points="18,44 27,28 35,38 43,25 48,44" fill="none" stroke="rgba(244,241,234,0.20)" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+        mana_vein: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="rgba(74,158,191,0.08)" stroke="rgba(74,158,191,0.38)" stroke-width="1.5" stroke-dasharray="5 3"/><circle cx="32" cy="32" r="14" fill="none" stroke="rgba(74,158,191,0.42)" stroke-width="1.5"/><polygon points="32,14 46,32 32,50 18,32" fill="rgba(74,158,191,0.10)" stroke="rgba(184,194,188,0.36)" stroke-width="1.5"/><circle cx="32" cy="32" r="4" fill="rgba(74,158,191,0.45)"/></svg>',
+        world_tree: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="rgba(78,154,104,0.08)" stroke="rgba(78,154,104,0.36)" stroke-width="1.5"/><path d="M32 12 C43 20 47 32 32 52 C17 32 21 20 32 12 Z" fill="rgba(78,154,104,0.12)" stroke="rgba(184,194,188,0.38)" stroke-width="1.5"/><line x1="32" y1="16" x2="32" y2="50" stroke="rgba(184,194,188,0.36)" stroke-width="1.5"/><path d="M32 25 L40 20 M32 33 L41 28 M32 25 L24 20 M32 33 L23 28" stroke="rgba(184,194,188,0.32)" stroke-width="1.5" stroke-linecap="round"/></svg>'
     };
+
+    const PATH_ARROW_SVG = '<svg class="path-arrow-svg" viewBox="0 0 16 16" aria-hidden="true"><polyline points="6,3 11,8 6,13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const START_CELL_SVG = '<svg class="cell-marker-svg" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 26 V12 A8 8 0 0 1 24 12 V26" fill="rgba(244,241,234,0.12)" stroke="#B8C2BC" stroke-width="1.8"/><line x1="6" y1="26" x2="26" y2="26" stroke="#B8C2BC" stroke-width="1.8" stroke-linecap="round"/><polyline points="13,13 18,17 13,21" fill="none" stroke="#F4F1EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const TREE_CELL_SVG = '<svg class="cell-marker-svg" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5 C23 11 25 18 16 24 C7 18 9 11 16 5 Z" fill="rgba(78,154,104,0.42)" stroke="#B8C2BC" stroke-width="1.6"/><rect x="14" y="22" width="4" height="6" rx="1" fill="#8C6A4A"/></svg>';
 
     function initBoard() {
         const boardEl = G.dom.boardElement, st = G.state, map = G.map;
@@ -472,13 +520,23 @@
             cell.dataset.index = index;
             if (map.pathCellIndices.has(index)) {
                 cell.classList.add('path-cell');
-                if (index === map.startCellIndex) cell.classList.add('path-start');
-                if (index === map.endCellIndex) cell.classList.add('path-end');
-                if (map.pathFlowArrows.has(index)) {
+                if (index === map.startCellIndex) {
+                    cell.classList.add('path-start');
+                    const marker = document.createElement('span');
+                    marker.classList.add('cell-marker');
+                    marker.innerHTML = START_CELL_SVG;
+                    cell.appendChild(marker);
+                } else if (index === map.endCellIndex) {
+                    cell.classList.add('path-end');
+                    const marker = document.createElement('span');
+                    marker.classList.add('cell-marker');
+                    marker.innerHTML = TREE_CELL_SVG;
+                    cell.appendChild(marker);
+                } else if (map.pathFlowArrows.has(index)) {
                     const arrow = document.createElement('span');
                     arrow.classList.add('path-arrow');
                     arrow.style.transform = `rotate(${map.pathFlowArrows.get(index)}deg)`;
-                    arrow.innerText = '▸';
+                    arrow.innerHTML = PATH_ARROW_SVG;
                     cell.appendChild(arrow);
                 }
             } else {
