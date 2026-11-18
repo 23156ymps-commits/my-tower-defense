@@ -1,0 +1,110 @@
+/**
+ * ============================================================================
+ * 【檔案名稱】：modules/economy/economy_system.js
+ * 【負責功能】：處理金幣扣款驗證、三元素獨立動態算價、賣塔退款計算、戰時移塔扣款與提前開波獎金。
+ * 【讀取資料】：讀取 modules/economy/economy_data.js 的經濟數值表。
+ * 【常見修改入口】：
+ *   1. 修改動態召喚算價規則：修改 getSummonCost()。
+ *   2. 修改賣塔退費或提前開波獎金算法：修改 getTowerSellRefund()、getEarlyWaveBonus()。
+ * ============================================================================
+ */
+(function (global) {
+    'use strict';
+
+    const GameApp = global.GameApp = global.GameApp || {};
+    let G = null;
+
+    function bind(ctx) { G = ctx; }
+
+    function getData() {
+        return (GameApp.data && GameApp.data.economy) || {};
+    }
+
+    function getInitialGold(mapSpec) {
+        const d = getData();
+        const base = Number.isFinite(d.INITIAL_GOLD) ? d.INITIAL_GOLD : 40;
+        const bonus = (mapSpec && Number.isFinite(mapSpec.startGoldBonus)) ? mapSpec.startGoldBonus : 0;
+        return base + bonus;
+    }
+
+    /**
+     * 計算指定元素下一次召喚所需金幣（若新增未知元素未設覆寫，自動套用全局保底預設價格）
+     */
+    function getSummonCost(type, spawnCountsOverride = null) {
+        const d = getData();
+        const overrides = (d.ELEMENT_PRICE_OVERRIDES && d.ELEMENT_PRICE_OVERRIDES[type]) || {};
+        const baseCost = Number.isFinite(overrides.baseCost) ? overrides.baseCost : (d.BASE_COST ?? 10);
+        const step = Number.isFinite(overrides.costStep) ? overrides.costStep : (d.COST_STEP ?? 10);
+        const maxCost = Number.isFinite(overrides.costMax) ? overrides.costMax : (d.COST_MAX ?? 60);
+
+        const counts = spawnCountsOverride || (G && G.state && G.state.spawnCounts) || {};
+        const count = Number(counts[type]) || 0;
+        return Math.min(maxCost, baseCost + count * step);
+    }
+
+    function canAffordSummon(type, currentGoldOverride = null, spawnCountsOverride = null) {
+        const gold = currentGoldOverride !== null ? currentGoldOverride : (G && G.state ? G.state.currentGold : 0);
+        const cost = getSummonCost(type, spawnCountsOverride);
+        return gold >= cost;
+    }
+
+    function deductSummonCost(type) {
+        if (!G || !G.state) return { ok: false, cost: 0 };
+        const st = G.state;
+        const cost = getSummonCost(type, st.spawnCounts);
+        if (st.currentGold < cost) return { ok: false, cost };
+        st.currentGold -= cost;
+        st.spawnCounts[type] = (st.spawnCounts[type] || 0) + 1;
+        return { ok: true, cost };
+    }
+
+    function getTowerSellRefund(towerObj) {
+        if (!towerObj) return 0;
+        const d = getData();
+        const baseCost = d.BASE_COST ?? 10;
+        const refundRate = d.SELL_REFUND_RATE ?? 0.70;
+        const fallback = baseCost * Math.pow(2, Math.max(0, (towerObj.tier || 1) - 1));
+        const invested = Number.isFinite(towerObj.investedGold) ? towerObj.investedGold : fallback;
+        return Math.floor(invested * refundRate);
+    }
+
+    function getCombatMoveCost() {
+        const d = getData();
+        return Number.isFinite(d.COMBAT_MOVE_COST) ? d.COMBAT_MOVE_COST : 5;
+    }
+
+    function canAffordCombatMove(isRelocationFree) {
+        if (isRelocationFree) return true;
+        const st = G && G.state;
+        return Boolean(st && st.currentGold >= getCombatMoveCost());
+    }
+
+    function getEarlyWaveBonus(remainingMs = null) {
+        const d = getData();
+        const cfg = d.EARLY_WAVE_BONUS || { BASE_BONUS: 2, PER_SECOND_RATE: 1.5, MAX_BONUS: 15 };
+        const ms = remainingMs !== null ? remainingMs : (G && G.state ? G.state.waveTimerMs : 0);
+        return Math.min(cfg.MAX_BONUS ?? 15, (cfg.BASE_BONUS ?? 2) + Math.floor((cfg.PER_SECOND_RATE ?? 1.5) * Math.max(0, ms / 1000)));
+    }
+
+    function computeKillGold(baseReward, mapSpec) {
+        if (!Number.isFinite(baseReward) || baseReward <= 0) return 0;
+        const mult = (mapSpec && Number.isFinite(mapSpec.killGoldMult)) ? mapSpec.killGoldMult : 1.0;
+        return Math.max(1, Math.round(baseReward * mult));
+    }
+
+    const EconomySystem = {
+        bind,
+        getInitialGold,
+        getSummonCost,
+        canAffordSummon,
+        deductSummonCost,
+        getTowerSellRefund,
+        getCombatMoveCost,
+        canAffordCombatMove,
+        getEarlyWaveBonus,
+        computeKillGold
+    };
+
+    GameApp.systems = GameApp.systems || {};
+    GameApp.systems.economy = EconomySystem;
+})(window);

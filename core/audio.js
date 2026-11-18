@@ -1,27 +1,35 @@
+/**
+ * ============================================================================
+ * 【檔案名稱】：core/audio.js
+ * 【負責功能】：純原生 Web Audio API 程式合成音效引擎（零外部音檔、離線可執行）與靜音切換控制。
+ * 【讀取資料】：讀取 config.js 的音量範圍設定，並動態讀取 modules/towers/tower_data.js 的攻擊樣式標籤。
+ * 【常見修改入口】：
+ *   1. 調整召喚、合成、擊殺音高與長度：修改 playSpawn()、playMerge()、playKill()。
+ *   2. 調整各攻擊樣式開火音效：修改 playTowerShot() 內的頻率與波形參數。
+ * ============================================================================
+ */
 (function (global) {
     'use strict';
 
-    const { CONFIG } = global.GameConfig;
+    const GameApp = global.GameApp = global.GameApp || {};
+    const CONFIG = GameApp.config || {};
 
     function loadMutedPref() {
         try {
-            return localStorage.getItem(CONFIG.STORAGE_MUTE_KEY) === 'true';
-        } catch (err) {
+            return localStorage.getItem(CONFIG.STORAGE_MUTE_KEY || 'merge_defense_muted') === 'true';
+        } catch (_) {
             return false;
         }
     }
 
     function saveMutedPref(muted) {
         try {
-            localStorage.setItem(CONFIG.STORAGE_MUTE_KEY, muted ? 'true' : 'false');
-        } catch (err) {
-            // 受限瀏覽環境或隱私模式忽略
+            localStorage.setItem(CONFIG.STORAGE_MUTE_KEY || 'merge_defense_muted', muted ? 'true' : 'false');
+        } catch (_) {
+            // 受限瀏覽環境或隱私模式無聲忽略
         }
     }
 
-    /**
-     * 純原生 Web Audio API 程式合成音效引擎（零外部音檔、離線可用）
-     */
     const SoundEngine = {
         ctx: null,
         isMuted: loadMutedPref(),
@@ -40,7 +48,7 @@
             if (!this.ctx) {
                 try {
                     this.ctx = new AudioCtx();
-                } catch (err) {
+                } catch (_) {
                     return null;
                 }
             }
@@ -64,7 +72,9 @@
             if (!ctx) return;
 
             const now = ctx.currentTime + delay;
-            const peakGain = Math.max(CONFIG.SFX_VOLUME_MIN, Math.min(CONFIG.SFX_VOLUME_MAX, gain));
+            const minVol = CONFIG.SFX_VOLUME_MIN || 0.08;
+            const maxVol = CONFIG.SFX_VOLUME_MAX || 0.18;
+            const peakGain = Math.max(minVol, Math.min(maxVol, gain));
             const osc = ctx.createOscillator();
             const env = ctx.createGain();
 
@@ -98,18 +108,26 @@
             });
         },
 
+        /**
+         * 標籤驅動砲塔射擊音效：自動讀取 tower_data.js 中的 attackStyle，新角色無須改此處即可發聲
+         */
         playTowerShot(towerType) {
             const ctx = this.ensureContext();
             if (!ctx) return;
-            if (towerType === 'fire' || towerType === 'steam') {
-                if (!this.canPlayGroup('fire', 0.07)) return;
-                this.tone({ freq: towerType === 'steam' ? 230 : 185, freqEnd: 62, type: 'triangle', duration: 0.13, gain: 0.14 });
-            } else if (towerType === 'ice' || towerType === 'magnet') {
-                if (!this.canPlayGroup('ice', 0.07)) return;
-                this.tone({ freq: towerType === 'magnet' ? 1050 : 1240, freqEnd: 1580, type: 'sine', duration: 0.10, gain: 0.09 });
+
+            const towersDict = GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS;
+            const towerCfg = towersDict && towersDict[towerType];
+            const style = (towerCfg && towerCfg.attackStyle) || '';
+
+            if (style === 'burst_armor_break' || style === 'aoe_mist' || towerType === 'fire' || towerType === 'steam') {
+                if (!this.canPlayGroup('burst', 0.07)) return;
+                this.tone({ freq: style === 'aoe_mist' ? 230 : 185, freqEnd: 62, type: 'triangle', duration: 0.13, gain: 0.14 });
+            } else if (style === 'slow_control' || style === 'stun_pulse' || towerType === 'ice' || towerType === 'magnet') {
+                if (!this.canPlayGroup('frost', 0.07)) return;
+                this.tone({ freq: style === 'stun_pulse' ? 1050 : 1240, freqEnd: 1580, type: 'sine', duration: 0.10, gain: 0.09 });
             } else {
-                if (!this.canPlayGroup('thunder', 0.065)) return;
-                this.tone({ freq: towerType === 'plasma' ? 1480 : 1280, freqEnd: 420, type: 'sawtooth', duration: 0.075, gain: 0.085 });
+                if (!this.canPlayGroup('beam_bolt', 0.065)) return;
+                this.tone({ freq: style === 'pierce_beam' ? 1480 : 1280, freqEnd: 420, type: 'sawtooth', duration: 0.075, gain: 0.085 });
             }
         },
 
@@ -156,5 +174,8 @@
         }
     };
 
+    GameApp.core = GameApp.core || {};
+    GameApp.core.audio = SoundEngine;
+    GameApp.audio = SoundEngine;
     global.GameAudio = SoundEngine;
 })(window);

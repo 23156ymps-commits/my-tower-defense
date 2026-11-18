@@ -33,7 +33,7 @@
                 <button id="speed-btn" class="hud-ctrl-btn speed-btn num" type="button" title="切換遊戲倍速 [Tab/S]">1x</button>
                 <button id="pause-btn" class="hud-ctrl-btn hud-pause-btn" type="button" disabled title="暫停或繼續 [Space]">暫停</button>
                 <button id="sound-btn" class="hud-ctrl-btn hud-sound-btn" type="button" title="切換音效">音效</button>
-                <button id="help-btn" class="hud-ctrl-btn hud-help-btn" type="button" aria-expanded="false" title="開啟戰術手冊与屬性地形速查">？</button>
+                <button id="help-btn" class="hud-ctrl-btn hud-help-btn" type="button" aria-expanded="false" title="開啟戰術手冊與屬性地形速查">？</button>
             </div>
         </div>
 
@@ -92,7 +92,7 @@
         <!-- 固定式防禦塔檢查列 -->
         <div id="tower-inspector" aria-live="polite">
             <div id="inspector-empty" class="inspector-empty">
-                點選防禦塔可檢視 DPS、切換索敵或出售；先點空白草地再召喚可指定落點
+                按住下方元素卡拖入棋盤空地可指定格召喚；點選場上防禦塔可檢視 DPS、切換索敵或出售
             </div>
             <div id="inspector-active" class="inspector-active hidden">
                 <div class="inspector-metrics">
@@ -108,7 +108,7 @@
             </div>
         </div>
 
-        <!-- 屬性等寬召喚控制區 -->
+        <!-- 屬性等寬拖拉式指定召喚控制區（由 Object.keys 動態掃描生成） -->
         <div id="element-spawner-container"></div>
 
         <!-- 主動技能、圖鑑與開波等寬工具列 -->
@@ -136,7 +136,7 @@
         <p id="msg-text">點擊「開始防守」開啟戰局，守護世界樹進入第 1 波備戰。</p>
     </main>
 
-    <!-- 右上角「？」按需開啟之戰術手冊抽屜彈窗（收納屬性相剋、戰術地形、防線紀要與熱鍵） -->
+    <!-- 右上角「？」按需開啟之戰術手冊抽屜彈窗 -->
     <div id="guide-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="guide-title">
         <div class="modal-card guide-card">
             <h1 id="guide-title" class="codex-title">戰術手冊與地形速查</h1>
@@ -203,27 +203,13 @@
         </div>
     </div>
 
-    <!-- 跨元素融合圖鑑彈窗 -->
+    <!-- 跨元素融合與戰場百科圖鑑彈窗（由 codex_system.js 動態渲染） -->
     <div id="codex-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="codex-title">
         <div class="modal-card codex-card">
-            <h1 id="codex-title" class="codex-title">跨元素融合圖鑑</h1>
+            <h1 id="codex-title" class="codex-title">元素戰場百科圖鑑</h1>
             <p class="modal-subtitle">兩座同星級（★ + ★ = ★★、★★ + ★★ = ★★★）不同基礎元素相融即可進階。</p>
-
-            <div class="codex-list">
-                <div class="codex-item codex-steam">
-                    <div class="codex-recipe">🔥 火 + ❄️ 冰 = <strong>蒸氣爆裂塔</strong></div>
-                    <div class="codex-desc">射程 2.5 格｜攻速 1.15s｜命中產生 1.3 格爆裂濺射，並<strong>無視目標 50% 護甲</strong>。</div>
-                </div>
-                <div class="codex-item codex-magnet">
-                    <div class="codex-recipe">❄️ 冰 + ⚡ 雷 = <strong>極地磁暴塔</strong></div>
-                    <div class="codex-desc">射程 3.2 格｜攻速 0.95s｜釋放感電冰環<strong>群體緩速 50%</strong>，連鎖彈跳額外 2 名敵人。</div>
-                </div>
-                <div class="codex-item codex-plasma">
-                    <div class="codex-recipe">🔥 火 + ⚡ 雷 = <strong>電漿聚焦塔</strong></div>
-                    <div class="codex-desc">射程 3.8 格｜攻速 0.45s｜高頻聚焦光束，連續鎖定同一目標<strong>遞增 15% 傷害</strong>（最高 5 層）。</div>
-                </div>
-            </div>
-
+            <div class="codex-tabs"></div>
+            <div class="codex-list"></div>
             <div class="codex-note">
                 同種融合塔 ★★ + ★★ 可進階為 ★★★；Lv.3 基礎塔亦具備範圍與三連質變。
             </div>
@@ -264,19 +250,19 @@
                 <div class="rule-item">
                     <span class="rule-num num">1</span>
                     <div class="rule-content">
-                        <strong>佈陣</strong>：先點空白草地可指定落點，善用制高點、靈脈與庇護所強化戰力。
+                        <strong>拖拉召喚</strong>：按住下方元素卡拖入棋盤綠色空地即可指定格召喚，善用制高點、靈脈與庇護所強化戰力。
                     </div>
                 </div>
                 <div class="rule-item">
                     <span class="rule-num num">2</span>
                     <div class="rule-content">
-                        <strong>融合</strong>：同屬性或同星級不同基礎元素皆可進階，每 3 波可獲世界樹祝福。
+                        <strong>融合進化</strong>：同屬性或同星級不同基礎元素皆可進階，每 3 波可獲世界樹祝福。
                     </div>
                 </div>
                 <div class="rule-item">
                     <span class="rule-num num">3</span>
                     <div class="rule-content">
-                        <strong>靈露</strong>：擊殺累積能量，適時施放「根鬚纏繞」或「自然狂熱」牽制防線。
+                        <strong>靈露救場</strong>：擊殺累積能量，適時施放「根鬚纏繞」或「自然狂熱」牽制防線。
                     </div>
                 </div>
             </div>
@@ -319,6 +305,19 @@
                     <div class="recap-cell"><span>累計獲得金幣</span><strong id="victory-gold-earned-text" class="num">0 💰</strong></div>
                     <div class="recap-cell"><span>合成融合次數</span><strong id="victory-fusion-text" class="num">0 次</strong></div>
                 </div>
+            </div>
+
+            <!-- 試玩 5 秒主觀體感快評列 ＋ 單局黑盒子戰報複製 -->
+            <div class="feel-feedback-box">
+                <div class="feel-rating-header">5 秒試玩體感快評</div>
+                <div class="feel-rating-bar">
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🔥 爽快好玩">🔥 爽快好玩</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="😴 中間有點無聊">😴 中間有點無聊</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🤯 難度太高卡關">🤯 難度太高卡關</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">🖐️ 拖拉操作卡手</button>
+                </div>
+                <div id="victory-rating-status" class="feel-rating-status">點擊上方標籤一鍵回饋本局體感</div>
+                <button id="victory-copy-report-btn" class="copy-report-btn" type="button">📋 複製本局數據戰報</button>
             </div>
 
             <div class="modal-actions">
@@ -368,6 +367,20 @@
             </div>
 
             <div id="new-record-badge" class="new-record-badge hidden">刷新歷史最高波數紀錄</div>
+
+            <!-- 試玩 5 秒主觀體感快評列 ＋ 單局黑盒子戰報複製 -->
+            <div class="feel-feedback-box">
+                <div class="feel-rating-header">5 秒試玩體感快評</div>
+                <div class="feel-rating-bar">
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🔥 爽快好玩">🔥 爽快好玩</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="😴 中間有點無聊">😴 中間有點無聊</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🤯 難度太高卡關">🤯 難度太高卡關</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">🖐️ 拖拉操作卡手</button>
+                </div>
+                <div id="gameover-rating-status" class="feel-rating-status">點擊上方標籤一鍵回饋本局體感</div>
+                <button id="gameover-copy-report-btn" class="copy-report-btn" type="button">📋 複製本局數據戰報</button>
+            </div>
+
             <div class="modal-actions">
                 <button id="restart-btn" class="primary-cta-btn" type="button">重新開始</button>
                 <button id="gameover-menu-btn" class="menu-return-btn" type="button">切換地圖 / 主選單</button>
@@ -375,12 +388,29 @@
         </div>
     </div>
 
+    <!-- 嚴格排位順序載入全專案 22 個腳本（禁止使用 ES Module，確保本機雙擊 index.html 可離線執行） -->
     <script src="config.js"></script>
-    <script src="audio.js"></script>
-    <script src="backend.js"></script>
-    <script src="renderer.js"></script>
-    <script src="combat.js"></script>
-    <script src="game.js"></script>
+    <script src="core/audio.js"></script>
+    <script src="core/backend.js"></script>
+    <script src="core/renderer.js"></script>
+    <script src="modules/economy/economy_data.js"></script>
+    <script src="modules/economy/economy_system.js"></script>
+    <script src="modules/terrain/terrain_data.js"></script>
+    <script src="modules/terrain/terrain_system.js"></script>
+    <script src="modules/routes/route_data.js"></script>
+    <script src="modules/routes/wave_system.js"></script>
+    <script src="modules/towers/tower_data.js"></script>
+    <script src="modules/towers/tower_attack_system.js"></script>
+    <script src="modules/evolutions/evolution_data.js"></script>
+    <script src="modules/evolutions/evolution_system.js"></script>
+    <script src="modules/monsters/monster_data.js"></script>
+    <script src="modules/monsters/monster_system.js"></script>
+    <script src="modules/tree/tree_data.js"></script>
+    <script src="modules/tree/tree_system.js"></script>
+    <script src="modules/codex/codex_data.js"></script>
+    <script src="modules/codex/codex_system.js"></script>
+    <script src="modules/drag/drag_system.js"></script>
+    <script src="core/game.js"></script>
 </body>
 
 </html>

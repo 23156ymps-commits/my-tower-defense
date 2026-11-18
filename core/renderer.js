@@ -1,11 +1,43 @@
+/**
+ * ============================================================================
+ * 【檔案名稱】：core/renderer.js
+ * 【負責功能】：參數化 2.5D 雙層砲塔與 3D 向量怪物外觀生成、棋盤 DOM 渲染、
+ *               射程預覽圈控制，以及 <canvas id="fx-canvas"> 彈道與粒子特效繪製。
+ * 【讀取資料】：動態讀取 tower_data.js、monster_data.js、terrain_data.js 的顏色與外觀參數。
+ * 【常見修改入口】：
+ *   1. 修改砲塔或怪物的參數化 2.5D 幾何外觀：修改 createTowerSvgParts()、createMonsterSvgHtml()。
+ *   2. 修改攻擊彈道、閃電鏈、雷射光束與爆炸粒子特效：修改 emitCanvasAttackFX()。
+ * ============================================================================
+ */
 (function (global) {
     'use strict';
 
-    const { CONFIG, ELEMENT_CONFIG, TERRAIN_CONFIG, clampNumber, indexToCoords } = global.GameConfig;
+    const GameApp = global.GameApp = global.GameApp || {};
+    const CONFIG = GameApp.config || {};
+    const { clampNumber, indexToCoords } = GameApp.helpers || {};
 
     let G = null;
     function bind(ctx) { G = ctx; }
-    function getTierStars(tier) { return '★'.repeat(Math.max(1, Math.min(CONFIG.MAX_TIER, tier || 1))); }
+
+    function getMaxTier() {
+        return (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || CONFIG.MAX_TIER || 3;
+    }
+
+    function getTierStars(tier) {
+        return '★'.repeat(Math.max(1, Math.min(getMaxTier(), tier || 1)));
+    }
+
+    function getTowersDict() {
+        return (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
+    }
+
+    function getTerrainsDict() {
+        return (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
+    }
+
+    function getMonstersDict() {
+        return (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
+    }
 
     const DEFAULT_TOKENS = {
         bgCanvas: '#1B211E',
@@ -43,10 +75,9 @@
         };
     }
 
-    // ==================== 2.5D 雙層砲塔與 3D 向量怪物 SVG 生成（統一線寬與 135deg 左上主光源） ====================
-    function getTowerPalette() {
-        const tk = getThemeTokens();
-        return {
+    // ==================== 2.5D 雙層砲塔與 3D 向量怪物參數化 SVG 生成 ====================
+    function getTowerPaletteForType(type, tk) {
+        const defaults = {
             fire: { rune: tk.elFire, glow: '#F4DFC8' },
             ice: { rune: tk.elIce, glow: '#D6EEF7' },
             thunder: { rune: tk.elLightning, glow: '#F7EAC0' },
@@ -54,6 +85,11 @@
             magnet: { rune: tk.elIce, glow: tk.elLightning },
             plasma: { rune: tk.elFire, glow: tk.elLightning }
         };
+        if (defaults[type]) return defaults[type];
+        const tCfg = getTowersDict()[type];
+        if (tCfg && tCfg.palette) return tCfg.palette;
+        const mainColor = (tCfg && tCfg.color) || tk.accentCta;
+        return { rune: mainColor, glow: tk.textPrimary };
     }
 
     const TOWER_HEAD_TEMPLATES = {
@@ -76,15 +112,31 @@
         plasma: (tier, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="14,34 25,21 26,41 18,43" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/><polygon points="50,34 39,21 38,41 46,43" fill="#8C2F23" stroke="#2B1410" stroke-width="1.5"/><polygon points="32,5 37,27 27,27" fill="${tk.elLightning}" stroke="#2B1410" stroke-width="1.5"/><polygon points="32,8 34,26 30,26" fill="rgba(244,241,234,0.6)"/><ellipse cx="32" cy="20" rx="8" ry="3.2" fill="none" stroke="${tk.accentCta}" stroke-width="1.5"/><polygon points="22,27 42,27 44,39 32,48 20,39" fill="#7D2B1F" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5}" fill="${tk.accentCta}" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="31.5" cy="35" r="2.2" fill="${tk.textPrimary}"/>`
     };
 
-    function createTowerSvgParts(type, tier) {
+    /**
+     * 參數化自動生成新角色砲塔頭（當後台或 tower_data.js 動態新增未知 ID 角色時自動渲染）
+     */
+    function buildParametricTowerHeadSvg(type, tier, tk) {
+        const tCfg = getTowersDict()[type] || {};
+        const primary = tCfg.color || tk.accentCta;
+        const accent = (tCfg.palette && tCfg.palette.glow) || tk.elLightning;
+        const wings = tier >= 2
+            ? `<polygon points="15,36 22,24 23,41" fill="${primary}" stroke="#1B211E" stroke-width="1.5"/><polygon points="49,36 42,24 41,41" fill="${primary}" stroke="#1B211E" stroke-width="1.5"/>`
+            : '';
+        const crown = tier >= 3
+            ? `<circle cx="32" cy="14" r="4" fill="${accent}" stroke="#1B211E" stroke-width="1.5"/>`
+            : '';
+        return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/>${wings}<polygon points="27,7 37,7 39,29 25,29" fill="${primary}" stroke="#1B211E" stroke-width="1.5"/>${crown}<polygon points="21,27 43,27 46,39 38,47 26,47 18,39" fill="${primary}" stroke="#1B211E" stroke-width="1.5"/><circle cx="32" cy="36" r="${tier >= 3 ? 6 : 4.8}" fill="${accent}" stroke="#1B211E" stroke-width="1.5"/>`;
+    }
+
+    function createTowerSvgParts(type, tier = 1) {
         const tk = getThemeTokens();
-        const pal = getTowerPalette()[type] || { rune: tk.textSecondary, glow: tk.textPrimary };
+        const pal = getTowerPaletteForType(type, tk);
         const crownTrim = tier >= 3 ? `<polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="none" stroke="${tk.elLightning}" stroke-width="1.5"/>` : '';
         const gemCoords = tier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
         const cornerGems = gemCoords.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="${tier >= 2 ? 2.1 : 1.4}" fill="${tier >= 2 ? pal.glow : tk.textSecondary}"/>`).join('');
 
         const baseSvgHtml = `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="23" ry="8" fill="rgba(0,0,0,0.40)"/><polygon points="15,22 49,22 55,33 55,44 47,53 17,53 9,44 9,33" fill="${tk.bgGridElevated}" stroke="${tk.bgCanvas}" stroke-width="2"/><polygon points="9,44 17,53 17,43 11,35" fill="rgba(244,241,234,0.08)"/><polygon points="55,44 47,53 47,43 53,35" fill="rgba(0,0,0,0.25)"/><polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="#3B453F" stroke="${tk.borderSubtle}" stroke-width="1.5"/><polyline points="14,24 19,15 45,15 50,24" fill="none" stroke="rgba(244,241,234,0.28)" stroke-width="1.5"/>${crownTrim}<circle cx="32" cy="30" r="14" fill="${tk.bgCanvas}" stroke="${tk.bgCanvas}" stroke-width="1.5"/><circle cx="32" cy="30" r="11.5" fill="none" stroke="${pal.rune}" stroke-width="${tier >= 3 ? 2 : 1.5}" stroke-opacity="${tier === 1 ? 0.72 : 0.95}"/>${cornerGems}</svg>`;
-        const headBuilder = TOWER_HEAD_TEMPLATES[type] || TOWER_HEAD_TEMPLATES.plasma;
+        const headBuilder = TOWER_HEAD_TEMPLATES[type] || ((t, tokens) => buildParametricTowerHeadSvg(type, t, tokens));
         return { baseSvgHtml, headSvgHtml: `<svg class="tower-head-svg" viewBox="0 0 64 64" aria-hidden="true">${headBuilder(tier, tk)}</svg>` };
     }
 
@@ -104,15 +156,32 @@
         wood: '<polygon points="15,47 18,22 46,22 49,47 41,54 23,54" fill="#523C2B" stroke="#1E1711" stroke-width="1.5"/><polygon points="16,24 25,13 32,19 39,13 48,24 38,29 26,29" fill="#326B46" stroke="#142C1D" stroke-width="1.5"/><polygon points="23,35 32,31 41,35 37,46 27,46" fill="rgba(74,222,128,0.28)"/><circle cx="25" cy="31" r="2.2" fill="#E0B43C"/><circle cx="39" cy="31" r="2.2" fill="#E0B43C"/>'
     };
 
+    /**
+     * 參數化自動生成新怪物外觀（當 monster_data.js 或雲端後台新增條目時自動繪製幾何立體外觀）
+     */
+    function buildParametricMonsterSvg(monster) {
+        const mCfg = getMonstersDict()[monster.typeKey] || {};
+        const vis = mCfg.visual || {};
+        const primary = vis.primaryColor || mCfg.color || '#6D4C41';
+        const accent = vis.accentColor || '#E0B43C';
+        return `<polygon points="14,46 18,20 32,13 46,20 50,46 41,54 23,54" fill="${primary}" stroke="#1B211E" stroke-width="1.6"/><polygon points="22,24 32,18 42,24 39,42 25,42" fill="rgba(244,241,234,0.18)"/><circle cx="25" cy="29" r="2.5" fill="${accent}"/><circle cx="39" cy="29" r="2.5" fill="${accent}"/><polygon points="28,37 36,37 32,45" fill="${accent}"/>`;
+    }
+
     function createMonsterSvgHtml(monster) {
-        const body = monster.isBoss
-            ? (BOSS_SVG_BY_TYPE[monster.typeKey] || BOSS_SVG_BY_TYPE.wood)
-            : (monster.isSplitChild ? MONSTER_SVG_BY_KEY.mini : (MONSTER_SVG_BY_KEY[monster.typeKey] || MONSTER_SVG_BY_KEY.wood));
+        let body = null;
+        if (monster.isBoss) {
+            body = BOSS_SVG_BY_TYPE[monster.typeKey] || buildParametricMonsterSvg(monster);
+        } else if (monster.isSplitChild) {
+            body = MONSTER_SVG_BY_KEY.mini;
+        } else {
+            body = MONSTER_SVG_BY_KEY[monster.typeKey] || buildParametricMonsterSvg(monster);
+        }
         return `<svg class="m-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="57" rx="19" ry="5.5" fill="rgba(0,0,0,0.38)"/>${body}</svg>`;
     }
 
     // ==================== 棋盤量測與 HiDPI Canvas 2D 特效層 ====================
     function resizeFxCanvas() {
+        if (!G || !G.dom) return;
         const { fxCanvasEl, fxCtx, boardStageEl } = G.dom;
         if (!fxCanvasEl || typeof fxCanvasEl.getContext !== 'function') return;
         const m = G.boardMetrics;
@@ -130,9 +199,11 @@
     }
 
     function measureBoardMetrics() {
+        if (!G || !G.dom) return;
         const cells = G.dom.boardElement ? G.dom.boardElement.children : null;
-        if (!cells || cells.length < CONFIG.BOARD_COLS + 1) return;
-        const c0 = cells[0], c1 = cells[1], cBelow = cells[CONFIG.BOARD_COLS], m = G.boardMetrics;
+        const cols = CONFIG.BOARD_COLS || 15;
+        if (!cells || cells.length < cols + 1) return;
+        const c0 = cells[0], c1 = cells[1], cBelow = cells[cols], m = G.boardMetrics;
         m.originX = c0.offsetLeft; m.originY = c0.offsetTop;
         m.cellW = c0.offsetWidth || 34; m.cellH = c0.offsetHeight || 34;
         m.stepX = (c1.offsetLeft - c0.offsetLeft) || (m.cellW + 3);
@@ -147,6 +218,7 @@
     }
 
     function clearCanvasFXState() {
+        if (!G) return;
         const fx = G.fxEntities;
         fx.projectiles.length = fx.bolts.length = fx.beams.length = fx.rings.length = fx.particles.length = fx.flashes.length = fx.leaves.length = 0;
         fx.leafEmitAccMs = 0; fx.frenzyFxAccMs = 0;
@@ -191,9 +263,11 @@
         const sx = fromPos.left, sy = fromPos.top, ex = toPos.left, ey = toPos.top;
         const fx = G.fxEntities;
         const tk = getThemeTokens();
+        const tCfg = getTowersDict()[fxType];
+        const style = (tCfg && tCfg.attackStyle) || fxType;
 
-        if (fxType === 'thunder' || fxType === 'magnet-arc') {
-            const isMagnet = fxType === 'magnet-arc';
+        if (fxType === 'thunder' || fxType === 'magnet-arc' || style === 'chain_lightning' || style === 'stun_pulse') {
+            const isMagnet = fxType === 'magnet-arc' || style === 'stun_pulse';
             const jitter = isMagnet ? 10 : 13;
             const pts = [{ x: sx, y: sy }];
             for (let s = 1; s < 4; s++) {
@@ -201,23 +275,25 @@
                 pts.push({ x: sx + (ex - sx) * t + (Math.random() - 0.5) * jitter * 2, y: sy + (ey - sy) * t + (Math.random() - 0.5) * jitter * 2 });
             }
             pts.push({ x: ex, y: ey });
-            fx.bolts.push({ points: pts, color: isMagnet ? tk.elIce : tk.elLightning, coreColor: tk.textPrimary, width: isMagnet ? 1.8 : (options.isLv3 ? 2.2 : 1.8), ageMs: 0, durationMs: 210 });
-            emitParticleBurst(ex, ey, isMagnet ? tk.elIce : tk.elLightning, 6, 75);
+            const boltColor = isMagnet ? tk.elIce : ((tCfg && tCfg.color) || tk.elLightning);
+            fx.bolts.push({ points: pts, color: boltColor, coreColor: tk.textPrimary, width: isMagnet ? 1.8 : (options.isLv3 ? 2.2 : 1.8), ageMs: 0, durationMs: 210 });
+            emitParticleBurst(ex, ey, boltColor, 6, 75);
             emitHitFlash(ex, ey, tk.textPrimary);
             if (options.frostRadiusPx > 0) emitRingFX(ex, ey, options.frostRadiusPx, tk.elIce, 0.20, 280);
             return;
         }
-        if (fxType === 'plasma') {
+        if (fxType === 'plasma' || style === 'pierce_beam') {
             const stacks = options.stacks || 0;
-            fx.beams.push({ x1: sx, y1: sy, x2: ex, y2: ey, width: 1.8 + stacks * 0.5, color: stacks >= 4 ? tk.accentCta : tk.elLightning, coreColor: tk.textPrimary, ageMs: 0, durationMs: 185 });
-            emitParticleBurst(ex, ey, stacks >= 4 ? tk.elFire : tk.elLightning, 5 + stacks, 70);
-            emitHitFlash(ex, ey, tk.elLightning);
+            const beamColor = stacks >= 4 ? tk.accentCta : ((tCfg && tCfg.color) || tk.elLightning);
+            fx.beams.push({ x1: sx, y1: sy, x2: ex, y2: ey, width: 1.8 + stacks * 0.5, color: beamColor, coreColor: tk.textPrimary, ageMs: 0, durationMs: 185 });
+            emitParticleBurst(ex, ey, stacks >= 4 ? tk.elFire : beamColor, 5 + stacks, 70);
+            emitHitFlash(ex, ey, beamColor);
             return;
         }
-        const coreColor = ({ fire: tk.elFire, ice: tk.elIce, steam: tk.accentCta })[fxType] || tk.textPrimary;
-        fx.projectiles.push({ fxType, x1: sx, y1: sy, x2: ex, y2: ey, color: coreColor, radius: fxType === 'fire' ? 4.2 : (fxType === 'steam' ? 4.6 : 3.6), ageMs: 0, durationMs: 135 });
+        const coreColor = ({ fire: tk.elFire, ice: tk.elIce, steam: tk.accentCta })[fxType] || (tCfg && tCfg.color) || tk.textPrimary;
+        fx.projectiles.push({ fxType, x1: sx, y1: sy, x2: ex, y2: ey, color: coreColor, radius: style === 'burst_armor_break' ? 4.2 : (style === 'aoe_mist' ? 4.6 : 3.6), ageMs: 0, durationMs: 135 });
         const ringRadius = options.splashRadiusPx || options.frostRadiusPx || 0;
-        if (ringRadius > 0) emitRingFX(ex, ey, ringRadius, fxType === 'ice' ? tk.elIce : (fxType === 'steam' ? tk.elIce : tk.elFire), 0.22, 280);
+        if (ringRadius > 0) emitRingFX(ex, ey, ringRadius, style === 'slow_control' || style === 'aoe_mist' ? tk.elIce : coreColor, 0.22, 280);
         emitParticleBurst(ex, ey, coreColor, ringRadius > 0 ? 11 : 7, ringRadius > 0 ? 105 : 70);
         emitHitFlash(ex, ey, tk.textPrimary);
     }
@@ -251,7 +327,10 @@
 
     function updateAndRenderCanvasFX(dtMs) {
         const dtSec = dtMs / 1000, fx = G.fxEntities, st = G.state, m = G.boardMetrics, tk = getThemeTokens();
-        if (G.callbacks.isGameplayActive() && st.baseHp >= CONFIG.WORLD_TREE_HEALTHY_MIN) {
+        const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
+        const healthyMin = treeCfg.WORLD_TREE_HEALTHY_MIN || 14;
+
+        if (G.callbacks.isGameplayActive() && st.baseHp >= healthyMin && G.map.waypoints.length > 0) {
             fx.leafEmitAccMs += dtMs;
             while (fx.leafEmitAccMs >= 420) {
                 fx.leafEmitAccMs -= 420;
@@ -381,8 +460,8 @@
         if (monster.isSplitChild) el.classList.add('mini-slime');
 
         const armorHtml = monster.armor > 0 ? `<span class="m-armor-badge num">甲 ${monster.armor}</span>` : '';
-        const weakCfg = ELEMENT_CONFIG[monster.weakness];
-        const weakShort = weakCfg ? `${weakCfg.icon}${weakCfg.name.charAt(0)}` : '';
+        const weakCfg = getTowersDict()[monster.weakness];
+        const weakShort = weakCfg ? `${weakCfg.icon}${weakCfg.name.charAt(0)}` : (monster.weakness || '');
         const bossHtml = monster.isBoss ? `<span class="m-boss-badge weak-${monster.weakness}">王·弱${weakShort}</span>` : '';
         el.innerHTML = `<span class="m-slow-badge">❄️</span>${armorHtml}<span class="m-icon">${createMonsterSvgHtml(monster)}</span><div class="m-hp-bar"><div class="m-hp-fill"></div></div>${bossHtml}`;
         G.dom.monsterLayerEl.appendChild(el);
@@ -397,7 +476,7 @@
     }
 
     function renderMonsterLayer() {
-        if (!G.dom.monsterLayerEl) return;
+        if (!G || !G.dom || !G.dom.monsterLayerEl) return;
         const monsters = G.state.monsters;
         const activeIds = new Set();
         for (let i = 0; i < monsters.length; i++) activeIds.add(monsters[i].id);
@@ -405,7 +484,7 @@
             if (!activeIds.has(id)) { rec.el.remove(); G.monsterDomMap.delete(id); }
         }
 
-        const Combat = global.GameCombat;
+        const MonsterSys = GameApp.systems && GameApp.systems.monster;
         for (let i = 0; i < monsters.length; i++) {
             const m = monsters[i];
             const rec = G.monsterDomMap.get(m.id) || createMonsterDom(m);
@@ -416,7 +495,8 @@
             if (m.armor > 0 && rec.armorBadgeEl) {
                 const isShredded = m.armorShredTimer > 0;
                 rec.armorBadgeEl.classList.toggle('shredded', isShredded);
-                rec.armorBadgeEl.innerText = isShredded ? `🔥${Math.round(Combat ? Combat.getMonsterEffectiveArmor(m) : m.armor)}` : `甲 ${m.armor}`;
+                const effArmor = MonsterSys ? MonsterSys.getMonsterEffectiveArmor(m) : m.armor;
+                rec.armorBadgeEl.innerText = isShredded ? `🔥${Math.round(effArmor)}` : `甲 ${m.armor}`;
             }
             const hpPct = Math.max(0, (m.hp / m.maxHp) * 100);
             if (rec.hpFillEl) {
@@ -428,6 +508,7 @@
     }
 
     function repositionAllMonsters() {
+        if (!G || !G.state) return;
         for (let i = 0; i < G.state.monsters.length; i++) {
             const m = G.state.monsters[i], pos = getCellCenter(m.gridX, m.gridY);
             m.pixelX = pos.left + (m.visualOffsetX || 0);
@@ -437,42 +518,30 @@
     }
 
     function clearCellDragHighlights() {
-        for (let i = 0; i < G.cellElements.length; i++) G.cellElements[i].classList.remove('drag-over', 'drag-invalid');
+        if (!G || !G.cellElements) return;
+        for (let i = 0; i < G.cellElements.length; i++) {
+            G.cellElements[i].classList.remove('drag-over', 'drag-valid-build', 'drag-invalid');
+        }
     }
 
     function clearTouchDragVisuals() {
-        const st = G.state;
-        if (st.touchDragState && st.touchDragState.ghostEl) st.touchDragState.ghostEl.remove();
-        clearCellDragHighlights();
-        for (let i = 0; i < G.towerElements.length; i++) {
-            if (G.towerElements[i]) G.towerElements[i].classList.remove('dragging');
+        if (GameApp.systems && GameApp.systems.drag && typeof GameApp.systems.drag.cancelActiveDrag === 'function') {
+            GameApp.systems.drag.cancelActiveDrag({ silent: true });
         }
-        st.touchDragState = null;
+        clearCellDragHighlights();
+        if (G && G.towerElements) {
+            for (let i = 0; i < G.towerElements.length; i++) {
+                if (G.towerElements[i]) G.towerElements[i].classList.remove('dragging');
+            }
+        }
     }
 
     function createTowerElement(towerObj, index) {
-        const cfg = ELEMENT_CONFIG[towerObj.type], st = G.state;
+        const st = G.state;
         const tower = document.createElement('div');
         tower.classList.add('tower', `type-${towerObj.type}`, `lv-${towerObj.tier}`);
+        tower.dataset.towerIndex = String(index);
         if (st.frenzyActiveMs > 0) tower.classList.add('frenzy-active');
-        tower.setAttribute('draggable', true);
-
-        tower.addEventListener('dragstart', () => {
-            if (!G.callbacks.isGameplayActive()) return;
-            st.draggedIndex = index; st.selectedIndex = null; st.buildTargetIndex = null;
-            tower.classList.add('dragging');
-            updateRangeIndicator(); G.callbacks.updateTowerInspector();
-            G.dom.msgText.innerText = `抓起【${cfg.name} ${getTierStars(towerObj.tier)}】`;
-        });
-        tower.addEventListener('dragend', () => {
-            tower.classList.remove('dragging'); clearCellDragHighlights(); st.draggedIndex = null; updateRangeIndicator();
-        });
-        tower.addEventListener('touchstart', (e) => {
-            G.callbacks.activateTouchMode();
-            if (!G.callbacks.isGameplayActive() || e.touches.length !== 1) return;
-            const touch = e.touches[0];
-            st.touchDragState = { sourceIndex: index, startX: touch.clientX, startY: touch.clientY, isDragging: false, ghostEl: null, towerEl: tower, cfg, tier: towerObj.tier };
-        }, { passive: true });
 
         const { baseSvgHtml, headSvgHtml } = createTowerSvgParts(towerObj.type, towerObj.tier);
         const baseLayer = document.createElement('div'); baseLayer.classList.add('tower-base-layer'); baseLayer.innerHTML = baseSvgHtml;
@@ -484,6 +553,10 @@
         tower._rotator = headRotator;
         tower._recoilEl = headRecoil;
         tower.appendChild(baseLayer); tower.appendChild(headRotator); tower.appendChild(name);
+
+        if (GameApp.systems && GameApp.systems.drag && typeof GameApp.systems.drag.bindBoardTowerElement === 'function') {
+            GameApp.systems.drag.bindBoardTowerElement(tower, index, towerObj);
+        }
         return tower;
     }
 
@@ -502,7 +575,8 @@
     const TERRAIN_SVG_BY_TYPE = {
         highground: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><defs><pattern id="hgHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(224,180,60,0.16)" stroke-width="1.5"/></pattern></defs><rect x="2" y="2" width="60" height="60" rx="4" fill="url(#hgHatch)"/><polygon points="12,50 25,20 35,34 45,16 52,50" fill="rgba(224,180,60,0.10)" stroke="rgba(224,180,60,0.38)" stroke-width="1.5" stroke-linejoin="round"/><polyline points="18,44 27,28 35,38 43,25 48,44" fill="none" stroke="rgba(244,241,234,0.20)" stroke-width="1.5" stroke-linejoin="round"/></svg>',
         mana_vein: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="rgba(74,158,191,0.08)" stroke="rgba(74,158,191,0.38)" stroke-width="1.5" stroke-dasharray="5 3"/><circle cx="32" cy="32" r="14" fill="none" stroke="rgba(74,158,191,0.42)" stroke-width="1.5"/><polygon points="32,14 46,32 32,50 18,32" fill="rgba(74,158,191,0.10)" stroke="rgba(184,194,188,0.36)" stroke-width="1.5"/><circle cx="32" cy="32" r="4" fill="rgba(74,158,191,0.45)"/></svg>',
-        world_tree: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="rgba(78,154,104,0.08)" stroke="rgba(78,154,104,0.36)" stroke-width="1.5"/><path d="M32 12 C43 20 47 32 32 52 C17 32 21 20 32 12 Z" fill="rgba(78,154,104,0.12)" stroke="rgba(184,194,188,0.38)" stroke-width="1.5"/><line x1="32" y1="16" x2="32" y2="50" stroke="rgba(184,194,188,0.36)" stroke-width="1.5"/><path d="M32 25 L40 20 M32 33 L41 28 M32 25 L24 20 M32 33 L23 28" stroke="rgba(184,194,188,0.32)" stroke-width="1.5" stroke-linecap="round"/></svg>'
+        world_tree: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="rgba(78,154,104,0.08)" stroke="rgba(78,154,104,0.36)" stroke-width="1.5"/><path d="M32 12 C43 20 47 32 32 52 C17 32 21 20 32 12 Z" fill="rgba(78,154,104,0.12)" stroke="rgba(184,194,188,0.38)" stroke-width="1.5"/><line x1="32" y1="16" x2="32" y2="50" stroke="rgba(184,194,188,0.36)" stroke-width="1.5"/><path d="M32 25 L40 20 M32 33 L41 28 M32 25 L24 20 M32 33 L23 28" stroke="rgba(184,194,188,0.32)" stroke-width="1.5" stroke-linecap="round"/></svg>',
+        obstacle: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><polygon points="10,48 18,22 33,16 48,24 54,48 40,54 20,54" fill="rgba(70,84,76,0.55)" stroke="rgba(184,194,188,0.45)" stroke-width="1.5"/><polyline points="18,22 31,34 48,24" fill="none" stroke="rgba(244,241,234,0.22)" stroke-width="1.5"/></svg>'
     };
 
     const PATH_ARROW_SVG = '<svg class="path-arrow-svg" viewBox="0 0 16 16" aria-hidden="true"><polyline points="6,3 11,8 6,13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -511,10 +585,12 @@
 
     function initBoard() {
         const boardEl = G.dom.boardElement, st = G.state, map = G.map;
+        const boardSize = CONFIG.BOARD_SIZE || 150;
+        const terrainsDict = getTerrainsDict();
         boardEl.innerHTML = ''; G.cellElements.length = 0; G.towerElements.fill(null);
         st.lastRenderedSelected = null; st.lastRenderedBuildTarget = null;
 
-        for (let index = 0; index < CONFIG.BOARD_SIZE; index++) {
+        for (let index = 0; index < boardSize; index++) {
             const cell = document.createElement('div');
             cell.classList.add('cell');
             cell.dataset.index = index;
@@ -541,10 +617,11 @@
                 }
             } else {
                 const terrain = map.terrainMap.get(index) || null;
-                if (terrain) {
-                    const tCfg = TERRAIN_CONFIG[terrain];
+                if (terrain && terrainsDict[terrain]) {
+                    const tCfg = terrainsDict[terrain];
                     cell.classList.add(`terrain-${terrain}`);
-                    cell.setAttribute('title', tCfg.tooltip);
+                    if (tCfg.buildable === false) cell.classList.add('obstacle-cell');
+                    if (tCfg.tooltip) cell.setAttribute('title', tCfg.tooltip);
                     const art = document.createElement('div');
                     art.classList.add('terrain-art');
                     art.setAttribute('aria-hidden', 'true');
@@ -552,15 +629,26 @@
                     cell.appendChild(art);
                 }
             }
-            cell.addEventListener('mouseenter', () => { if (!st.isTouchMode && st.hoveredIndex !== index) { st.hoveredIndex = index; updateRangeIndicator(); } });
-            cell.addEventListener('mouseleave', () => { if (!st.isTouchMode && st.hoveredIndex === index) { st.hoveredIndex = null; updateRangeIndicator(); } });
-            cell.addEventListener('dragover', (e) => { e.preventDefault(); cell.classList.add(map.pathCellIndices.has(index) ? 'drag-invalid' : 'drag-over'); });
-            cell.addEventListener('dragleave', () => cell.classList.remove('drag-over', 'drag-invalid'));
-            cell.addEventListener('drop', (e) => {
-                e.preventDefault(); cell.classList.remove('drag-over', 'drag-invalid');
-                const fromIdx = st.draggedIndex; st.draggedIndex = null; G.callbacks.handleAction(fromIdx, index);
+            cell.addEventListener('mouseenter', () => {
+                if (!st.isTouchMode && st.hoveredIndex !== index) {
+                    st.hoveredIndex = index;
+                    updateRangeIndicator();
+                }
             });
-            cell.addEventListener('click', () => { if (performance.now() - st.lastTouchDragEndTime >= 250) G.callbacks.handleCellClick(index); });
+            cell.addEventListener('mouseleave', () => {
+                if (!st.isTouchMode && st.hoveredIndex === index) {
+                    st.hoveredIndex = null;
+                    updateRangeIndicator();
+                }
+            });
+            if (GameApp.systems && GameApp.systems.drag && typeof GameApp.systems.drag.bindBoardCellElement === 'function') {
+                GameApp.systems.drag.bindBoardCellElement(cell, index);
+            }
+            cell.addEventListener('click', () => {
+                if (performance.now() - (st.lastTouchDragEndTime || 0) >= 220) {
+                    G.callbacks.handleCellClick(index);
+                }
+            });
             G.cellElements.push(cell);
             boardEl.appendChild(cell);
         }
@@ -569,7 +657,8 @@
 
     function renderBoard(dirtyIndices = null) {
         const boardEl = G.dom.boardElement, st = G.state, cells = G.cellElements;
-        if (cells.length !== CONFIG.BOARD_SIZE || boardEl.children.length !== CONFIG.BOARD_SIZE) initBoard();
+        const boardSize = CONFIG.BOARD_SIZE || 150;
+        if (cells.length !== boardSize || boardEl.children.length !== boardSize) initBoard();
 
         if (st.lastRenderedSelected !== null && st.lastRenderedSelected !== st.selectedIndex && cells[st.lastRenderedSelected]) cells[st.lastRenderedSelected].classList.remove('selected');
         if (st.selectedIndex !== null && cells[st.selectedIndex]) cells[st.selectedIndex].classList.add('selected');
@@ -582,61 +671,74 @@
             const visited = new Set();
             for (let i = 0; i < dirtyIndices.length; i++) {
                 const idx = dirtyIndices[i];
-                if (idx >= 0 && idx < CONFIG.BOARD_SIZE && !visited.has(idx)) { visited.add(idx); renderCellTower(idx); }
+                if (idx >= 0 && idx < boardSize && !visited.has(idx)) { visited.add(idx); renderCellTower(idx); }
             }
         } else {
-            for (let idx = 0; idx < CONFIG.BOARD_SIZE; idx++) renderCellTower(idx);
+            for (let idx = 0; idx < boardSize; idx++) renderCellTower(idx);
             measureBoardMetrics();
         }
         updateRangeIndicator();
         G.callbacks.updateTowerInspector();
     }
 
-    const TERRAIN_TOOLTIP_TEXT = {
-        highground: '制高點 · 射程 +30%',
-        mana_vein: '元素靈脈 · 攻速 +25%',
-        world_tree: '世界樹庇護所 · 傷害 +20%'
-    };
-
     function updateTerrainTooltip() {
         const tipEl = G.dom.terrainTooltipEl, st = G.state;
         if (!tipEl) return;
+        const isDraggingNow = GameApp.systems && GameApp.systems.drag && GameApp.systems.drag.isDragging();
         if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'
-            || st.waveState === 'BLESSING_SELECT' || st.draggedIndex !== null || (st.touchDragState && st.touchDragState.isDragging)) {
+            || st.waveState === 'BLESSING_SELECT' || isDraggingNow) {
             tipEl.classList.add('hidden');
             return;
         }
         const idx = (!st.isTouchMode && st.hoveredIndex !== null)
             ? st.hoveredIndex
             : (st.buildTargetIndex !== null ? st.buildTargetIndex : st.selectedIndex);
-        const terrain = idx !== null ? G.map.terrainMap.get(idx) : null;
-        if (!terrain || !TERRAIN_TOOLTIP_TEXT[terrain]) {
+        const terrainKey = idx !== null ? G.map.terrainMap.get(idx) : null;
+        const tCfg = terrainKey ? getTerrainsDict()[terrainKey] : null;
+        if (!tCfg || !tCfg.shortTag) {
             tipEl.classList.add('hidden');
             return;
         }
         const coords = indexToCoords(idx), center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
         const clampedX = Math.max(76, Math.min((m.stageW || 600) - 76, center.left));
         const topPx = coords.y <= 1 ? (center.top + m.cellH * 0.65) : (center.top - m.cellH * 0.72);
-        tipEl.innerText = TERRAIN_TOOLTIP_TEXT[terrain];
+        tipEl.innerText = `${tCfg.name} · ${tCfg.shortTag}`;
         tipEl.style.left = `${clampedX}px`;
         tipEl.style.top = `${topPx}px`;
         tipEl.classList.remove('hidden');
+    }
+
+    /**
+     * 顯示拖曳期間的即時射程預覽圈（支援商店拖拉指定召喚與棋盤拖拉移塔）
+     */
+    function showDragRangePreview(leftPx, topPx, radiusPx, towerType) {
+        const el = G && G.dom && G.dom.rangeCircleEl;
+        if (!el) return;
+        el.style.left = `${leftPx}px`;
+        el.style.top = `${topPx}px`;
+        el.style.width = `${radiusPx * 2}px`;
+        el.style.height = `${radiusPx * 2}px`;
+        el.className = `visible range-${towerType || 'fire'}`;
     }
 
     function updateRangeIndicator() {
         const el = G.dom.rangeCircleEl, st = G.state;
         updateTerrainTooltip();
         if (!el) return;
+        const isDraggingNow = GameApp.systems && GameApp.systems.drag && GameApp.systems.drag.isDragging();
+        if (isDraggingNow) return;
         if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'
-            || st.waveState === 'BLESSING_SELECT' || st.draggedIndex !== null || (st.touchDragState && st.touchDragState.isDragging)) {
-            el.className = ''; return;
+            || st.waveState === 'BLESSING_SELECT') {
+            el.className = '';
+            return;
         }
         const targetIdx = (!st.isTouchMode && st.hoveredIndex !== null && st.board[st.hoveredIndex] !== null)
             ? st.hoveredIndex : ((st.selectedIndex !== null && st.board[st.selectedIndex] !== null) ? st.selectedIndex : null);
         if (targetIdx === null) { el.className = ''; return; }
 
         const towerObj = st.board[targetIdx], coords = indexToCoords(targetIdx), center = getCellCenter(coords.x, coords.y);
-        const radiusPx = global.GameCombat.getTowerRangePx(towerObj, targetIdx);
+        const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
+        const radiusPx = AttackSys ? AttackSys.getTowerRangePx(towerObj, targetIdx) : (2.0 * G.boardMetrics.step);
         el.style.left = `${center.left}px`; el.style.top = `${center.top}px`;
         el.style.width = `${radiusPx * 2}px`; el.style.height = `${radiusPx * 2}px`;
         el.className = `visible range-${towerObj.type}`;
@@ -644,7 +746,10 @@
 
     function updateWorldTreeVisualState() {
         const st = G.state, treeCell = G.cellElements[G.map.endCellIndex], hpHudEl = G.dom.hpHudEl;
-        const isHealthy = st.baseHp >= CONFIG.WORLD_TREE_HEALTHY_MIN, isWarn = st.baseHp >= CONFIG.WORLD_TREE_WARNING_MIN;
+        const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
+        const healthyMin = treeCfg.WORLD_TREE_HEALTHY_MIN || 14;
+        const warningMin = treeCfg.WORLD_TREE_WARNING_MIN || 7;
+        const isHealthy = st.baseHp >= healthyMin, isWarn = st.baseHp >= warningMin;
         const stateClass = isHealthy ? 'tree-healthy' : (isWarn ? 'tree-warning' : 'tree-critical');
         const hudClass = isHealthy ? '' : (isWarn ? 'hp-warning' : 'hp-critical');
         if (treeCell) { treeCell.classList.remove('tree-healthy', 'tree-warning', 'tree-critical'); treeCell.classList.add(stateClass); }
@@ -664,12 +769,40 @@
         }, 300);
     }
 
-    global.GameRenderer = {
-        bind, getTierStars, createTowerSvgParts, createMonsterSvgHtml, resizeFxCanvas, measureBoardMetrics,
-        getCellCenter, clearCanvasFXState, emitParticleBurst, emitHitFlash, emitRingFX, spawnDamageNumber,
-        emitCanvasAttackFX, updateAndRenderCanvasFX, updateTowerAimVisual, createMonsterDom, removeMonsterDom,
-        renderMonsterLayer, repositionAllMonsters, clearCellDragHighlights, clearTouchDragVisuals,
-        createTowerElement, renderCellTower, initBoard, renderBoard, updateRangeIndicator,
-        updateWorldTreeVisualState, triggerWorldTreeShake
+    const RendererModule = {
+        bind,
+        getTierStars,
+        createTowerSvgParts,
+        createMonsterSvgHtml,
+        resizeFxCanvas,
+        measureBoardMetrics,
+        getCellCenter,
+        clearCanvasFXState,
+        emitParticleBurst,
+        emitHitFlash,
+        emitRingFX,
+        spawnDamageNumber,
+        emitCanvasAttackFX,
+        updateAndRenderCanvasFX,
+        updateTowerAimVisual,
+        createMonsterDom,
+        removeMonsterDom,
+        renderMonsterLayer,
+        repositionAllMonsters,
+        clearCellDragHighlights,
+        clearTouchDragVisuals,
+        createTowerElement,
+        renderCellTower,
+        initBoard,
+        renderBoard,
+        showDragRangePreview,
+        updateRangeIndicator,
+        updateWorldTreeVisualState,
+        triggerWorldTreeShake
     };
+
+    GameApp.core = GameApp.core || {};
+    GameApp.core.renderer = RendererModule;
+    GameApp.renderer = RendererModule;
+    global.GameRenderer = RendererModule;
 })(window);
