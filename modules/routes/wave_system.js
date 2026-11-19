@@ -44,25 +44,34 @@
         const boardSize = CONFIG.BOARD_SIZE || 150;
         G.state.currentMapId = spec.id;
         map.waypoints = spec.waypoints.map(pt => ({ x: pt.x, y: pt.y }));
+        map.altWaypoints = Array.isArray(spec.altWaypoints) ? spec.altWaypoints.map(pt => ({ x: pt.x, y: pt.y })) : null;
         map.startCellIndex = coordsToIndex(map.waypoints[0].x, map.waypoints[0].y);
+        map.altStartCellIndex = map.altWaypoints ? coordsToIndex(map.altWaypoints[0].x, map.altWaypoints[0].y) : null;
+        map.startCellIndices = new Set([map.startCellIndex]);
+        if (map.altStartCellIndex !== null) map.startCellIndices.add(map.altStartCellIndex);
         map.endCellIndex = coordsToIndex(map.waypoints[map.waypoints.length - 1].x, map.waypoints[map.waypoints.length - 1].y);
 
         map.pathCellIndices.clear();
         PATH_CELL_INDICES.clear();
 
-        for (let i = 0; i < map.waypoints.length - 1; i++) {
-            const p1 = map.waypoints[i], p2 = map.waypoints[i + 1];
-            let cx = p1.x, cy = p1.y;
-            const startIdx = coordsToIndex(cx, cy);
-            map.pathCellIndices.add(startIdx);
-            PATH_CELL_INDICES.add(startIdx);
-            while (cx !== p2.x || cy !== p2.y) {
-                if (cx < p2.x) cx++; else if (cx > p2.x) cx--; else if (cy < p2.y) cy++; else cy--;
-                const stepIdx = coordsToIndex(cx, cy);
-                map.pathCellIndices.add(stepIdx);
-                PATH_CELL_INDICES.add(stepIdx);
+        const traceWaypoints = (wps) => {
+            if (!Array.isArray(wps) || wps.length === 0) return;
+            for (let i = 0; i < wps.length - 1; i++) {
+                const p1 = wps[i], p2 = wps[i + 1];
+                let cx = p1.x, cy = p1.y;
+                const startIdx = coordsToIndex(cx, cy);
+                map.pathCellIndices.add(startIdx);
+                PATH_CELL_INDICES.add(startIdx);
+                while (cx !== p2.x || cy !== p2.y) {
+                    if (cx < p2.x) cx++; else if (cx > p2.x) cx--; else if (cy < p2.y) cy++; else cy--;
+                    const stepIdx = coordsToIndex(cx, cy);
+                    map.pathCellIndices.add(stepIdx);
+                    PATH_CELL_INDICES.add(stepIdx);
+                }
             }
-        }
+        };
+        traceWaypoints(map.waypoints);
+        if (map.altWaypoints) traceWaypoints(map.altWaypoints);
 
         const pathCoords = Array.from(map.pathCellIndices).map(indexToCoords);
         for (let idx = 0; idx < boardSize; idx++) {
@@ -87,31 +96,40 @@
             });
         }
 
-        map.waypointCumDist = [0];
-        for (let i = 0; i < map.waypoints.length - 1; i++) {
-            map.waypointCumDist.push(
-                map.waypointCumDist[i] + Math.hypot(map.waypoints[i + 1].x - map.waypoints[i].x, map.waypoints[i + 1].y - map.waypoints[i].y)
-            );
-        }
+        const buildCumDist = (wps) => {
+            const arr = [0];
+            for (let i = 0; i < wps.length - 1; i++) {
+                arr.push(arr[i] + Math.hypot(wps[i + 1].x - wps[i].x, wps[i + 1].y - wps[i].y));
+            }
+            return arr;
+        };
+        map.waypointCumDist = buildCumDist(map.waypoints);
+        map.altWaypointCumDist = map.altWaypoints ? buildCumDist(map.altWaypoints) : null;
 
         map.pathFlowArrows.clear();
-        let step = 0;
-        for (let i = 0; i < map.waypoints.length - 1; i++) {
-            const p1 = map.waypoints[i], p2 = map.waypoints[i + 1];
-            const sdx = Math.sign(p2.x - p1.x), sdy = Math.sign(p2.y - p1.y);
-            const deg = sdx === 1 ? 0 : (sdy === 1 ? 90 : (sdx === -1 ? 180 : -90));
-            let cx = p1.x, cy = p1.y;
-            while (cx !== p2.x || cy !== p2.y) {
-                const idx = coordsToIndex(cx, cy);
-                if (idx !== map.startCellIndex && idx !== map.endCellIndex && ((cx === p1.x && cy === p1.y && i > 0) || step % 2 === 1)) {
-                    map.pathFlowArrows.set(idx, deg);
+        const traceArrows = (wps) => {
+            let step = 0;
+            for (let i = 0; i < wps.length - 1; i++) {
+                const p1 = wps[i], p2 = wps[i + 1];
+                const sdx = Math.sign(p2.x - p1.x), sdy = Math.sign(p2.y - p1.y);
+                const deg = sdx === 1 ? 0 : (sdy === 1 ? 90 : (sdx === -1 ? 180 : -90));
+                let cx = p1.x, cy = p1.y;
+                while (cx !== p2.x || cy !== p2.y) {
+                    const idx = coordsToIndex(cx, cy);
+                    if (!map.startCellIndices.has(idx) && idx !== map.endCellIndex && !map.pathFlowArrows.has(idx)
+                        && ((cx === p1.x && cy === p1.y && i > 0) || step % 2 === 1)) {
+                        map.pathFlowArrows.set(idx, deg);
+                    }
+                    cx += sdx; cy += sdy; step++;
                 }
-                cx += sdx; cy += sdy; step++;
             }
-        }
+        };
+        traceArrows(map.waypoints);
+        if (map.altWaypoints) traceArrows(map.altWaypoints);
 
         if (typeof document !== 'undefined' && document.body) {
             document.body.classList.toggle('map-lava', G.state.currentMapId === 'lava');
+            document.body.classList.toggle('map-frost', G.state.currentMapId === 'frost');
         }
 
         // 若開啟 syncRender，立即刷新地面石磚與棋盤狀態
@@ -188,7 +206,18 @@
             armor: bossArmor,
             hp: bossHp,
             baseDamage: bossBaseDamage,
-            reward: waveNum === 5 ? (wb.MID_BOSS_REWARD || 75) : (wb.BOSS_REWARD || 120)
+            reward: waveNum === 5 ? (wb.MID_BOSS_REWARD || 75) : (wb.BOSS_REWARD || 120),
+            bossMechanic: template.bossMechanic || '',
+            shellHits: template.shellHits || 0,
+            shellReduction: template.shellReduction || 0,
+            summonIntervalMs: template.summonIntervalMs || 0,
+            summonCount: template.summonCount || 0,
+            healPct: template.healPct || 0,
+            shieldRatio: template.shieldRatio || 0,
+            empIntervalMs: template.empIntervalMs || 0,
+            empTargets: template.empTargets || 0,
+            empDisableMs: template.empDisableMs || 0,
+            traitDesc: template.traitDesc || ''
         };
     }
 
@@ -242,6 +271,8 @@
         for (let e = 0; e < eliteCount; e++) eliteSlots.add(Math.min(totalCount - 1, Math.floor(((e + 1) * totalCount) / (eliteCount + 0.5))));
         for (let idxC = totalCount - 1; eliteSlots.size < eliteCount && idxC >= 0; idxC--) eliteSlots.add(idxC);
 
+        const mapSpec = getCurrentMapSpec();
+        const hasAltRoute = Boolean(mapSpec && Array.isArray(mapSpec.altWaypoints) && mapSpec.altWaypoints.length >= 2);
         const queue = [];
         for (let i = 0; i < totalCount; i++) {
             const typeKey = pool[(i + waveNum - 1) % Math.max(1, pool.length)];
@@ -253,7 +284,7 @@
             } else if (armor === 0 && isElite) {
                 armor = eliteArmor;
             }
-            queue.push({ typeKey, hpScale, rewardBonus, isElite, isBoss: false, armor });
+            queue.push({ typeKey, hpScale, rewardBonus, isElite, isBoss: false, armor, useAltRoute: hasAltRoute && (i % 2 === 1) });
         }
 
         let bossMeta = null;
@@ -262,7 +293,8 @@
             const hpScaleGlobal = clampNumber(monsterRules.MONSTER_HP_SCALE ?? CONFIG.MONSTER_HP_SCALE ?? 1.0, 0.1, 20.0, 1.0);
             queue.push({
                 typeKey: bossSpec.typeKey, bossName: bossSpec.name, bossIcon: bossSpec.icon, hpScale: 1, rewardBonus,
-                isElite: true, isBoss: true, armor: bossSpec.armor, bossHp: bossSpec.hp, bossBaseDamage: bossSpec.baseDamage, bossReward: bossSpec.reward
+                isElite: true, isBoss: true, armor: bossSpec.armor, bossHp: bossSpec.hp, bossBaseDamage: bossSpec.baseDamage, bossReward: bossSpec.reward,
+                bossSpec, useAltRoute: false
             });
             bossMeta = { name: bossSpec.name, weakness: bossSpec.weakness, armor: bossSpec.armor, hp: Math.max(10, Math.round(bossSpec.hp * hpScaleGlobal)) };
         }

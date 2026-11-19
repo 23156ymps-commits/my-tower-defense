@@ -71,7 +71,13 @@
             },
             vuln: {},
             slow: {},
-            resonanceElements: {}
+            resonanceElements: {},
+            crownBurn: {
+                dps: 0,
+                durationMs: 0,
+                tickAccMs: 0,
+                sourceTower: null
+            }
         };
     }
 
@@ -119,7 +125,10 @@
             baseArmor: 0,
             splitsOnDeath: false
         };
-        const wp0 = G.map.waypoints[0];
+        const useAlt = Boolean(entry.useAltRoute && G.map.altWaypoints && G.map.altWaypoints.length >= 2);
+        const routeWps = useAlt ? G.map.altWaypoints : G.map.waypoints;
+        const routeCum = useAlt ? G.map.altWaypointCumDist : G.map.waypointCumDist;
+        const wp0 = routeWps[0];
         const startPos = Renderer.getCellCenter(wp0.x, wp0.y);
         const spdGlobal = clampNumber(rules.MONSTER_SPEED_SCALE ?? CONFIG.MONSTER_SPEED_SCALE ?? 1.0, 0.2, 5.0, 1.0);
         const hpGlobal = clampNumber(rules.MONSTER_HP_SCALE ?? CONFIG.MONSTER_HP_SCALE ?? 1.0, 0.1, 20.0, 1.0);
@@ -131,22 +140,35 @@
 
         if (entry.isBoss) {
             const bossHp = Math.max(10, Math.round((entry.bossHp || 2800) * hpGlobal));
+            const bSpec = entry.bossSpec || {};
+            const bossShield = bSpec.shieldRatio > 0 ? Math.round(bossHp * bSpec.shieldRatio) : 0;
             st.monsters.push(makeMonsterRecord({
                 id: st.monsterIdCounter++,
                 sessionId: st.sessionId,
                 typeKey: entry.typeKey,
                 name: entry.bossName || '腐朽古樹王',
                 icon: entry.bossIcon || '👹',
-                weakness: cfg.weakness || 'fire',
+                weakness: bSpec.weakness || cfg.weakness || 'fire',
                 hp: bossHp,
                 maxHp: bossHp,
+                shield: bossShield,
+                maxShield: bossShield,
                 armor: entry.armor || 0,
                 isElite: true,
                 isBoss: true,
+                bossMechanic: bSpec.bossMechanic || '',
+                shellHitsLeft: bSpec.shellHits || 0,
+                shellReduction: bSpec.shellReduction || 0,
+                bossTimerMs: bSpec.summonIntervalMs || bSpec.empIntervalMs || 0,
+                bossMechanicSpec: bSpec,
+                voidPhaseIndex: 0,
+                traitDesc: bSpec.traitDesc || '',
                 isSplitChild: false,
                 splitsOnDeath: false,
                 baseDamage: entry.bossBaseDamage || wb.BOSS_BASE_DAMAGE || 20,
                 reward: (entry.bossReward || wb.BOSS_REWARD || 120) + (entry.rewardBonus || 0),
+                waypoints: routeWps,
+                cumDist: routeCum,
                 wpIndex: 0,
                 gridX: wp0.x,
                 gridY: wp0.y,
@@ -163,6 +185,7 @@
         const hpMult = entry.isElite ? (wb.ELITE_HP_MULT || 2.1) : 1.0;
         const speedMult = (cfg.speedMult || 1.0) * (entry.isElite ? (wb.ELITE_SPEED_MULT || 0.85) : 1.0);
         const maxHp = Math.max(10, Math.round((cfg.baseHp || 68) * (entry.hpScale || 1) * hpMult * hpGlobal));
+        const maxShield = cfg.shieldRatio > 0 ? Math.round(maxHp * cfg.shieldRatio) : 0;
         const reward = Math.max(1, Math.round(((cfg.baseReward || 10) + (entry.rewardBonus || 0)) * (entry.isElite ? (wb.ELITE_REWARD_MULT || 2.2) : 1.0)));
 
         st.monsters.push(makeMonsterRecord({
@@ -174,6 +197,8 @@
             weakness: cfg.weakness || 'fire',
             hp: maxHp,
             maxHp,
+            shield: maxShield,
+            maxShield,
             armor: entry.armor || 0,
             isElite: Boolean(entry.isElite),
             isBoss: false,
@@ -183,8 +208,18 @@
             splitHpRatio: cfg.splitHpRatio,
             splitChildName: cfg.splitChildName,
             splitChildIcon: cfg.splitChildIcon,
+            healTimerMs: cfg.healIntervalMs || 0,
+            healSpec: cfg.healIntervalMs ? cfg : null,
+            pantherSpec: cfg.stealthThresholdPct ? cfg : null,
+            voidCloakUsed: false,
+            isStealthed: false,
+            stealthTimerMs: 0,
+            bomberSpec: cfg.empRadiusCells ? cfg : null,
+            traitDesc: cfg.traitDesc || '',
             baseDamage: 1,
             reward,
+            waypoints: routeWps,
+            cumDist: routeCum,
             wpIndex: 0,
             gridX: wp0.x,
             gridY: wp0.y,
@@ -200,7 +235,7 @@
     function spawnSplitMiniSlimes(parent) {
         const st = G.state;
         if (!parent || parent.sessionId !== st.sessionId || !G.callbacks.isGameplayActive()) return;
-        const Renderer = GameApp.renderer, wps = G.map.waypoints;
+        const Renderer = GameApp.renderer, wps = parent.waypoints || G.map.waypoints;
         const rules = getRules();
         const splitRatio = parent.splitHpRatio ?? rules.SLIME_SPLIT_HP_RATIO ?? 0.30;
         const splitCount = parent.splitCount ?? rules.SLIME_SPLIT_COUNT ?? 2;
@@ -236,6 +271,8 @@
                 splitsOnDeath: false,
                 baseDamage: 1,
                 reward: 0,
+                waypoints: wps,
+                cumDist: parent.cumDist || G.map.waypointCumDist,
                 wpIndex: parent.wpIndex,
                 gridX: gx,
                 gridY: gy,
@@ -249,16 +286,17 @@
     }
 
     function getMonsterProgress(monster) {
-        const wps = G && G.map && G.map.waypoints;
+        const wps = (monster && monster.waypoints) || (G && G.map && G.map.waypoints);
+        const cum = (monster && monster.cumDist) || (G && G.map && G.map.waypointCumDist);
         if (!wps || wps.length === 0 || !monster) return 0;
         const wpIdx = Math.max(0, Math.min(Number(monster.wpIndex) || 0, wps.length - 1));
         const wp = wps[wpIdx];
         if (!wp) return 0;
-        return (G.map.waypointCumDist[wpIdx] || 0) + Math.hypot((monster.gridX || 0) - wp.x, (monster.gridY || 0) - wp.y);
+        return ((cum && cum[wpIdx]) || 0) + Math.hypot((monster.gridX || 0) - wp.x, (monster.gridY || 0) - wp.y);
     }
 
     function getMonsterProgressRatio(monster) {
-        const cum = G && G.map && G.map.waypointCumDist;
+        const cum = (monster && monster.cumDist) || (G && G.map && G.map.waypointCumDist);
         const totalDist = (cum && cum.length > 0) ? cum[cum.length - 1] : 1;
         if (totalDist <= 0) return 0;
         return Math.max(0, Math.min(1, getMonsterProgress(monster) / totalDist));
@@ -269,8 +307,8 @@
      */
     function pullMonsterAlongPath(monster, distanceCells = 0.45) {
         if (!monster || monster.isBoss || monster.hp <= 0 || monster.isTargetable === false) return false;
-        const wps = G && G.map && G.map.waypoints;
-        const cum = G && G.map && G.map.waypointCumDist;
+        const wps = monster.waypoints || (G && G.map && G.map.waypoints);
+        const cum = monster.cumDist || (G && G.map && G.map.waypointCumDist);
         if (!wps || wps.length < 2 || !cum || cum.length < 2) return false;
 
         const curDist = getMonsterProgress(monster);
@@ -405,9 +443,80 @@
         const dur = monster.isBoss ? Math.max(100, Math.round(baseDur * bossMult)) : baseDur;
         fz.durationMs = dur;
         fz.pendingImmuneMs = Number(freezeParams.freezeImmuneMs) || 6000;
+        if (monster.isStealthed) {
+            revealStealthMonster(monster, '❄️ 凍結現形');
+        }
 
         if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
             GameApp.renderer.spawnFloatingNotice('❄️ 永凍凍結', monster.pixelX, monster.pixelY, 'pity-seed');
+        }
+        return true;
+    }
+
+    function revealStealthMonster(monster, label = '現形') {
+        if (!monster || !monster.isStealthed) return false;
+        monster.isStealthed = false;
+        monster.stealthTimerMs = 0;
+        monster.isTargetable = true;
+        if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
+            GameApp.renderer.spawnFloatingNotice(label, monster.pixelX, monster.pixelY, 'pity-seed');
+        }
+        return true;
+    }
+
+    function tryTriggerPantherStealth(monster) {
+        if (!monster || monster.hp <= 0 || monster.voidCloakUsed || !monster.pantherSpec) return false;
+        const threshold = monster.pantherSpec.stealthThresholdPct || 0.50;
+        if ((monster.hp / Math.max(1, monster.maxHp)) < threshold) {
+            monster.voidCloakUsed = true;
+            monster.isStealthed = true;
+            monster.stealthTimerMs = monster.pantherSpec.stealthDurationMs || 2200;
+            monster.isTargetable = false;
+            if (GameApp.renderer) {
+                GameApp.renderer.emitParticleBurst(monster.pixelX, monster.pixelY, '#4A9EBF', 8, 80);
+                if (typeof GameApp.renderer.spawnFloatingNotice === 'function') {
+                    GameApp.renderer.spawnFloatingNotice('💨 隱身疾行', monster.pixelX, monster.pixelY, 'pity-seed');
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    function applyCrownTrueBurn(monster, sourceTower = null, pctPerSec = 0.015, durationMs = 3000) {
+        if (!monster || monster.hp <= 0) return;
+        const st = ensureMonsterStatus(monster);
+        if (!st.crownBurn) st.crownBurn = { dps: 0, durationMs: 0, tickAccMs: 0, sourceTower: null };
+        st.crownBurn.dps = Math.max(st.crownBurn.dps || 0, Math.round((monster.maxHp || 100) * pctPerSec));
+        st.crownBurn.durationMs = Math.max(st.crownBurn.durationMs || 0, durationMs);
+        if (sourceTower) st.crownBurn.sourceTower = sourceTower;
+    }
+
+    function checkVoidBossPhaseShift(monster) {
+        if (!monster || !monster.isBoss || monster.bossMechanic !== 'void_shift' || monster.hp <= 0) return false;
+        const hpPct = monster.hp / Math.max(1, monster.maxHp);
+        const nextPhase = hpPct <= 0.25 ? 3 : (hpPct <= 0.50 ? 2 : (hpPct <= 0.75 ? 1 : 0));
+        if (nextPhase <= (monster.voidPhaseIndex || 0)) return false;
+        monster.voidPhaseIndex = nextPhase;
+        const cycle = ['fire', 'ice', 'thunder'];
+        const idx = cycle.indexOf(monster.weakness);
+        monster.weakness = cycle[(idx + 1) % cycle.length];
+
+        const st = ensureMonsterStatus(monster);
+        st.slow = {};
+        st.vuln = {};
+        monster.slowTimer = 0;
+        monster.slowRate = 0;
+        monster.armorShredTimer = 0;
+        monster.armorShredRate = 0;
+        if (st.burn && st.burn.stacks > 1) st.burn.stacks = Math.ceil(st.burn.stacks / 2);
+
+        if (GameApp.renderer) {
+            GameApp.renderer.emitRingFX(monster.pixelX, monster.pixelY, G.boardMetrics.step * 1.4, '#D97724', 0.30, 360);
+            if (typeof GameApp.renderer.spawnFloatingNotice === 'function') {
+                const wName = monster.weakness === 'fire' ? '🔥火' : (monster.weakness === 'ice' ? '❄️冰' : '⚡雷');
+                GameApp.renderer.spawnFloatingNotice(`🕳️ 弱點切換：${wName}`, monster.pixelX, monster.pixelY, 'pity-seed');
+            }
         }
         return true;
     }
@@ -612,9 +721,35 @@
         if (monster.splitsOnDeath) {
             spawnSplitMiniSlimes(monster);
             const splitCnt = monster.splitCount || getRules().SLIME_SPLIT_COUNT || 2;
-            G.dom.msgText.innerText = `🟢 【${monster.name}】分裂成 ${splitCnt} 隻${monster.splitChildName || '迷你史萊姆'}！`;
+            G.dom.msgText.innerText = `【${monster.name}】分裂為 ${splitCnt} 隻${monster.splitChildName || '迷你史萊姆'}。`;
         } else if (killGold > 0 && !options.isEmberSplash && !options.isDotKill) {
-            G.dom.msgText.innerText = `💥 擊殺【${monster.name}】！獲得 +${killGold} 💰${dewGain > 0 ? `、+${dewGain} 💧` : ''}！`;
+            G.dom.msgText.innerText = `擊殺【${monster.name}】，獲得 +${killGold} 💰${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
+        }
+
+        // 🔥 熔核自爆蟲：非減速且非凍結狀態死亡時癱瘓 1.4 格內防禦塔 1.5s
+        if (monster.bomberSpec) {
+            const suppressed = isMonsterSlowed(monster) || isMonsterFrozen(monster);
+            if (suppressed) {
+                if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
+                    GameApp.renderer.spawnFloatingNotice('❄️ 抑爆成功', monster.pixelX, monster.pixelY, 'pity-seed');
+                }
+            } else {
+                const radPx = (monster.bomberSpec.empRadiusCells || 1.4) * G.boardMetrics.step;
+                const stunMs = monster.bomberSpec.empDisableMs || 1500;
+                const { indexToCoords } = GameApp.helpers || {};
+                for (let tIdx = 0; tIdx < st.board.length; tIdx++) {
+                    if (!st.board[tIdx]) continue;
+                    const tc = indexToCoords(tIdx);
+                    const tPos = GameApp.renderer.getCellCenter(tc.x, tc.y);
+                    if (Math.hypot(tPos.left - monster.pixelX, tPos.top - monster.pixelY) <= radPx) {
+                        st.board[tIdx].stunnedMs = Math.max(st.board[tIdx].stunnedMs || 0, stunMs);
+                    }
+                }
+                GameApp.renderer.emitRingFX(monster.pixelX, monster.pixelY, radPx, '#C94A38', 0.30, 320);
+                if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
+                    GameApp.renderer.spawnFloatingNotice('🔥 熔核爆裂停火', monster.pixelX, monster.pixelY, 'pity-seed');
+                }
+            }
         }
 
         if (!options.isEmberSplash && TreeSys && typeof TreeSys.tryTriggerEmberExplosion === 'function') {
@@ -640,11 +775,12 @@
                 hz.dmgCarry = Math.max(0, rawTick - tickDmg);
                 const dmgIcon = hz.type === 'scorch_trail' ? '🔥' : '💨';
                 const victims = st.monsters.filter(m =>
-                    m.hp > 0 && m.isTargetable !== false && Math.hypot(m.pixelX - hz.x, m.pixelY - hz.y) <= hz.radiusPx
+                    m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - hz.x, m.pixelY - hz.y) <= hz.radiusPx
                 );
                 for (let v = 0; v < victims.length; v++) {
                     const m = victims[v];
                     if (m.hp <= 0) continue;
+                    if (m.isStealthed) revealStealthMonster(m, 'AoE 現形');
                     const before = m.hp;
                     m.hp = Math.max(0, before - tickDmg);
                     if (AttackSys && hz.sourceTower) {
@@ -783,11 +919,151 @@
                 b.spreadTimerMs = 0;
             }
         }
+
+        // 8. T4 火系聖冠百分比真傷灼燒 (1.5% MaxHP/s)
+        const cb = st.crownBurn;
+        if (cb && cb.dps > 0 && cb.durationMs > 0) {
+            cb.durationMs = Math.max(0, cb.durationMs - dtMs);
+            cb.tickAccMs += dtMs;
+            while (cb.tickAccMs >= 250 && m.hp > 0) {
+                cb.tickAccMs -= 250;
+                const tickDmg = Math.max(1, Math.round(cb.dps * 0.25));
+                const hpBefore = m.hp;
+                m.hp = Math.max(0, hpBefore - tickDmg);
+                if (AttackSys && cb.sourceTower) {
+                    AttackSys.recordTowerDamage(cb.sourceTower, Math.min(hpBefore, tickDmg));
+                }
+                if (GameApp.renderer) {
+                    GameApp.renderer.spawnDamageNumber(tickDmg, true, m.pixelX, m.pixelY, '👑');
+                }
+                if (m.hp <= 0) {
+                    handleMonsterKilled(m, cb.sourceTower, tickDmg, { isDotKill: true });
+                    return true;
+                }
+            }
+            if (cb.durationMs === 0) {
+                cb.dps = 0;
+                cb.tickAccMs = 0;
+            }
+        }
+
+        // 9. 虛空影豹隱身計時
+        if (m.isStealthed) {
+            m.stealthTimerMs = Math.max(0, (m.stealthTimerMs || 0) - dtMs);
+            if (m.stealthTimerMs <= 0) {
+                revealStealthMonster(m, '顯形');
+            }
+        }
+
+        // 10. 癒合花妖週期治療 (每 3.0s 治療 1.5 格內友軍 6% 最大生命)
+        if (m.healSpec && m.hp > 0) {
+            m.healTimerMs = Math.max(0, (m.healTimerMs || 0) - dtMs);
+            if (m.healTimerMs <= 0) {
+                m.healTimerMs = m.healSpec.healIntervalMs || 3000;
+                const healRadiusPx = (m.healSpec.healRadiusCells || 1.5) * G.boardMetrics.step;
+                const healRatio = m.healSpec.healMaxHpRatio || 0.06;
+                let healedAny = false;
+                for (let j = 0; j < G.state.monsters.length; j++) {
+                    const ally = G.state.monsters[j];
+                    if (!ally || ally.hp <= 0 || ally.hp >= ally.maxHp) continue;
+                    if (Math.hypot(ally.pixelX - m.pixelX, ally.pixelY - m.pixelY) <= healRadiusPx) {
+                        const gained = applyHealToMonster(ally, ally.maxHp * healRatio);
+                        if (gained > 0) {
+                            healedAny = true;
+                            if (GameApp.renderer) {
+                                GameApp.renderer.spawnDamageNumber(gained, false, ally.pixelX, ally.pixelY, '+💚');
+                            }
+                        }
+                    }
+                }
+                if (healedAny && GameApp.renderer) {
+                    GameApp.renderer.emitRingFX(m.pixelX, m.pixelY, healRadiusPx, '#4E9A68', 0.22, 340);
+                }
+            }
+        }
+
+        // 11. 4 階段機制 Boss 週期技能 (W10 召喚+回血 / W15 EMP癱瘓)
+        if (m.isBoss && m.bossMechanic && m.hp > 0) {
+            const bSpec = m.bossMechanicSpec || {};
+            if (m.bossMechanic === 'treant_summon') {
+                m.bossTimerMs = Math.max(0, (m.bossTimerMs || 0) - dtMs);
+                if (m.bossTimerMs <= 0) {
+                    m.bossTimerMs = bSpec.summonIntervalMs || 8000;
+                    const healed = applyHealToMonster(m, m.maxHp * (bSpec.healPct || 0.05));
+                    const cnt = bSpec.summonCount || 2;
+                    const db = getMonsterDb();
+                    const woodCfg = db.wood || { name: '蔓藤巨魔', icon: '🌿', weakness: 'fire', baseHp: 68, baseReward: 10, speedMult: 1.0 };
+                    const wps = m.waypoints || G.map.waypoints;
+                    const cum = m.cumDist || G.map.waypointCumDist;
+                    const escortHp = Math.max(40, Math.round(woodCfg.baseHp * 2.4));
+                    for (let s = 0; s < cnt; s++) {
+                        const off = s === 0 ? -6 : 6;
+                        G.state.monsters.push(makeMonsterRecord({
+                            id: G.state.monsterIdCounter++,
+                            sessionId: G.state.sessionId,
+                            typeKey: 'wood',
+                            name: '古樹幼苗',
+                            icon: '🌿',
+                            weakness: 'fire',
+                            hp: escortHp,
+                            maxHp: escortHp,
+                            armor: 0,
+                            isElite: false,
+                            isBoss: false,
+                            isSplitChild: true,
+                            splitsOnDeath: false,
+                            baseDamage: 1,
+                            reward: 4,
+                            waypoints: wps,
+                            cumDist: cum,
+                            wpIndex: m.wpIndex,
+                            gridX: m.gridX,
+                            gridY: m.gridY,
+                            pixelX: m.pixelX + off,
+                            pixelY: m.pixelY + off,
+                            visualOffsetX: off,
+                            visualOffsetY: off,
+                            baseSpeed: m.baseSpeed * 1.35
+                        }));
+                    }
+                    if (GameApp.renderer) {
+                        GameApp.renderer.emitRingFX(m.pixelX, m.pixelY, G.boardMetrics.step * 1.4, '#4E9A68', 0.28, 360);
+                        if (healed > 0) GameApp.renderer.spawnDamageNumber(healed, false, m.pixelX, m.pixelY, '+💚');
+                    }
+                }
+            } else if (m.bossMechanic === 'shield_emp') {
+                m.bossTimerMs = Math.max(0, (m.bossTimerMs || 0) - dtMs);
+                if (m.bossTimerMs <= 0) {
+                    m.bossTimerMs = bSpec.empIntervalMs || 10000;
+                    const { indexToCoords } = GameApp.helpers || {};
+                    const towerCands = [];
+                    for (let tIdx = 0; tIdx < G.state.board.length; tIdx++) {
+                        if (!G.state.board[tIdx]) continue;
+                        const tc = indexToCoords(tIdx);
+                        const tPos = GameApp.renderer.getCellCenter(tc.x, tc.y);
+                        towerCands.push({ idx: tIdx, dist: Math.hypot(tPos.left - m.pixelX, tPos.top - m.pixelY), pos: tPos });
+                    }
+                    towerCands.sort((a, b) => a.dist - b.dist);
+                    const empCount = Math.min(bSpec.empTargets || 2, towerCands.length);
+                    const stunDur = bSpec.empDisableMs || 1500;
+                    for (let e = 0; e < empCount; e++) {
+                        const tObj = G.state.board[towerCands[e].idx];
+                        if (tObj) tObj.stunnedMs = Math.max(tObj.stunnedMs || 0, stunDur);
+                        if (GameApp.renderer) {
+                            GameApp.renderer.emitCanvasAttackFX('thunder', { left: m.pixelX, top: m.pixelY }, towerCands[e].pos);
+                        }
+                    }
+                    if (empCount > 0 && GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
+                        GameApp.renderer.spawnFloatingNotice('⚡ EMP 干擾', m.pixelX, m.pixelY, 'pity-seed');
+                    }
+                }
+            }
+        }
         return false;
     }
 
     function updateMonsters(dtMs) {
-        const dtSec = dtMs / 1000, st = G.state, wps = G.map.waypoints, Renderer = GameApp.renderer;
+        const dtSec = dtMs / 1000, st = G.state, Renderer = GameApp.renderer;
         const rules = getRules();
         const cc = getCombatConstants();
         if (st.isGameOver) return;
@@ -806,21 +1082,23 @@
             const killedByDot = tickMonsterStatusEffects(m, dtMs);
             if (killedByDot || m.hp <= 0) continue;
 
+            const routeWps = m.waypoints || G.map.waypoints;
             const isRootedOrFrozen = (m.rootTimer || 0) > 0 || isMonsterFrozen(m);
             const effSlowRate = getMonsterEffectiveSlowRate(m);
+            const stealthSpeedMult = m.isStealthed ? (1 + ((m.pantherSpec && m.pantherSpec.stealthSpeedBonus) || 0.65)) : 1.0;
             const slowMult = isRootedOrFrozen
                 ? 0
-                : Math.max(minSpeedRatio, 1 - effSlowRate);
+                : Math.max(minSpeedRatio, 1 - effSlowRate) * stealthSpeedMult;
             const safeSpeed = clampNumber(m.baseSpeed, 0.2, baseSpd * 10, baseSpd);
             let step = safeSpeed * slowMult * dtSec, reachedEnd = false;
 
             while (step > 0) {
-                const targetWp = wps[m.wpIndex + 1];
+                const targetWp = routeWps[m.wpIndex + 1];
                 if (!targetWp) { reachedEnd = true; break; }
                 const dx = targetWp.x - m.gridX, dy = targetWp.y - m.gridY, dist = Math.hypot(dx, dy);
                 if (dist <= step) {
                     m.gridX = targetWp.x; m.gridY = targetWp.y; m.wpIndex++; step -= dist;
-                    if (m.wpIndex >= wps.length - 1) { reachedEnd = true; break; }
+                    if (m.wpIndex >= routeWps.length - 1) { reachedEnd = true; break; }
                 } else {
                     m.gridX += (dx / dist) * step; m.gridY += (dy / dist) * step; step = 0;
                 }
@@ -843,8 +1121,8 @@
 
                 if (G.dom.msgText) {
                     G.dom.msgText.innerText = m.isBoss
-                        ? `💥 【${m.name}】突破防線！🌳 世界樹遭受重創 -${leakDmg} 生命！`
-                        : `🚨 怪物【${m.name}】突破防線！🌳 世界樹受損 -${leakDmg} 生命！`;
+                        ? `【${m.name}】突破防線，世界樹受損 -${leakDmg} 生命。`
+                        : `【${m.name}】突破防線，世界樹受損 -${leakDmg} 生命。`;
                 }
                 st.monsters.splice(i, 1);
                 Renderer.removeMonsterDom(m.id);
@@ -881,6 +1159,10 @@
         isMonsterFrozen,
         isMonsterControlled,
         registerPermafrostHitAndTryFreeze,
+        revealStealthMonster,
+        tryTriggerPantherStealth,
+        applyCrownTrueBurn,
+        checkVoidBossPhaseShift,
         applyBurnToMonster,
         getMonsterBurnDps,
         applyGrievousWound,

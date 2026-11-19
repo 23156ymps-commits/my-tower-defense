@@ -20,7 +20,7 @@
         WORLD_TREE_HEALTHY_MIN: 14,
         WORLD_TREE_WARNING_MIN: 7,
         DEW_INITIAL: 20,
-        DEW_MAX: 100,
+        DEW_MAX: 120,
         DEW_GAIN_NORMAL: 4,
         DEW_GAIN_SPECIAL: 8,
         DEW_GAIN_BOSS: 30,

@@ -914,7 +914,8 @@
 
         const defaults = {
             forest: { bestWave: legacyBest, bestStars: 0 },
-            lava: { bestWave: 1, bestStars: 0 }
+            lava: { bestWave: 1, bestStars: 0 },
+            frost: { bestWave: 1, bestStars: 0 }
         };
         try {
             const raw = safeCloudStorageGet(CONFIG.STORAGE_MAP_RECORDS_KEY || 'merge_defense_map_records');
@@ -946,7 +947,8 @@
         safeCloudStorageSet(CONFIG.STORAGE_MAP_RECORDS_KEY || 'merge_defense_map_records', JSON.stringify(records));
         const maxOverall = Math.max(
             (records.forest && records.forest.bestWave) || 1,
-            (records.lava && records.lava.bestWave) || 1
+            (records.lava && records.lava.bestWave) || 1,
+            (records.frost && records.frost.bestWave) || 1
         );
         safeCloudStorageSet(CONFIG.STORAGE_BEST_WAVE_KEY || 'merge_defense_best_wave', String(maxOverall));
         return records;

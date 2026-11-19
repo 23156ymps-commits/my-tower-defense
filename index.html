@@ -18,7 +18,7 @@
                 <div class="hud-item hud-gold" title="當前金幣">💰 <span id="gold-display" class="num">40</span></div>
                 <div class="hud-item hud-dew" title="擊殺敵人累積靈露，用於施放世界樹主動技能">
                     靈露 <span class="dew-bar-track"><span id="dew-bar-fill" class="dew-bar-fill"></span></span><span
-                        id="dew-display" class="num">20/100</span>
+                        id="dew-display" class="num">20/120</span>
                 </div>
                 <div class="hud-item hud-wave">
                     <span id="wave-display" class="num">Wave 1 / 10</span>
@@ -129,6 +129,7 @@
                     <!-- 特殊地形與防禦塔原位輕量浮動名牌 -->
                     <div id="terrain-tooltip" class="terrain-tooltip hidden" role="status" aria-live="polite"></div>
                     <div id="tower-tooltip" class="tower-tooltip hidden" role="status" aria-live="polite"></div>
+                    <div id="mobile-monster-card" class="mobile-monster-card hidden" role="status" aria-live="polite"></div>
                     <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite">
                         <div class="boss-banner-top">
                             <span id="boss-banner-title">終極魔王</span>
@@ -155,7 +156,21 @@
                 </div>
 
                 <aside id="side-panel-right" class="side-panel side-panel-right" aria-label="本波與下波出怪詳情">
-                    <div class="side-panel-section">
+                    <div id="side-monster-card" class="side-panel-section side-monster-card hidden" aria-live="polite">
+                        <h2 class="side-panel-title">目標敵軍情報</h2>
+                        <div class="smc-header">
+                            <canvas id="side-monster-portrait" class="smc-portrait" width="44" height="44" data-size="44" aria-hidden="true"></canvas>
+                            <div class="smc-title-wrap">
+                                <div id="side-monster-name" class="smc-name"></div>
+                                <div id="side-monster-hp" class="smc-hp num"></div>
+                            </div>
+                        </div>
+                        <div id="side-monster-shield" class="smc-shield num hidden"></div>
+                        <div id="side-monster-stats" class="smc-stats num"></div>
+                        <div id="side-monster-debuffs" class="smc-debuffs num hidden"></div>
+                        <div id="side-monster-trait" class="smc-trait"></div>
+                    </div>
+                    <div id="side-wave-current-section" class="side-panel-section">
                         <h2 id="side-current-header" class="side-panel-title num">本波情報 · Wave 1</h2>
                         <ul id="side-current-list" class="forecast-list"></ul>
                     </div>
@@ -186,6 +201,8 @@
                             <span id="inspector-range" class="inspector-stat num">射程 2.3</span>
                         </div>
                         <div class="inspector-actions">
+                            <button id="inspector-awaken-btn" class="inspector-btn awaken-btn num hidden"
+                                type="button">👑 聖冠覺醒 (220 💰 · 60 💧)</button>
                             <button id="inspector-target-btn" class="inspector-btn target-btn"
                                 type="button">索敵：最前</button>
                             <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7
@@ -325,7 +342,7 @@
             <h1 id="start-title" class="start-title">元素陣線：合成塔防</h1>
             <p class="modal-subtitle">15×10 古林戰線 · 守護世界樹抵禦 10 波攻勢</p>
 
-            <!-- 雙地圖關卡選擇 -->
+            <!-- 三地圖關卡選擇 -->
             <div class="map-selector-section">
                 <h2 class="map-selector-header">選擇戰場地圖</h2>
                 <div id="map-selector-grid" class="map-selector-grid">
@@ -344,6 +361,14 @@
                         </div>
                         <div class="map-card-desc">31 格雙折短徑 · 初始 +10 💰</div>
                         <div id="map-record-lava" class="map-card-record num">最高 Wave 1 · 尚未通關</div>
+                    </button>
+                    <button type="button" class="map-card" data-map-id="frost">
+                        <div class="map-card-top">
+                            <span class="map-card-name">永凍裂谷</span>
+                            <span class="map-diff-badge diff-ice">雙路分線</span>
+                        </div>
+                        <div class="map-card-desc">36 格雙線匯流 · 冰脈傷害 +20%</div>
+                        <div id="map-record-frost" class="map-card-record num">最高 Wave 1 · 尚未通關</div>
                     </button>
                 </div>
             </div>

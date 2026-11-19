@@ -351,6 +351,34 @@
                 desc: '自帶厚重岩石護甲的巨型魔像，需依靠破甲火系、高穿甲蒸氣或聚變死光貫穿。',
                 unlockRule: '推進至第 4 波遭遇「重裝魔像」後自動解鎖',
                 defaultUnlocked: false
+            },
+            guardian: {
+                title: '🛡️ 護盾守衛',
+                subtitle: '弱點：⚡ 雷屬性｜特殊機制：45% 最大生命能量護盾',
+                desc: '進場附帶 45% 最大生命護盾的重衛單位，雷、極地磁環與電漿對護盾造成 1.4× 破盾效率。',
+                unlockRule: '推進至第 6 波遭遇「護盾守衛」後自動解鎖',
+                defaultUnlocked: false
+            },
+            healer: {
+                title: '🌿 癒合花妖',
+                subtitle: '弱點：🔥 火屬性｜特殊機制：3s 群體治療 6% 生命',
+                desc: '每 3.0 秒為周圍 1.5 格友軍恢復 6% 最大生命；極懼🔥B 焚世餘燼樹的 50% 重傷效果。',
+                unlockRule: '推進至第 7 波遭遇「癒合花妖」後自動解鎖',
+                defaultUnlocked: false
+            },
+            panther: {
+                title: '🐾 虛空影豹',
+                subtitle: '弱點：❄️ 冰屬性｜特殊機制：半血隱身疾行',
+                desc: '首次血量低於 50% 時進入 2.2 秒隱身 (+65% 移速) 並免疫單體鎖定；範圍 AoE 與冰凍可使其破隱現形。',
+                unlockRule: '推進至第 8 波遭遇「虛空影豹」後自動解鎖',
+                defaultUnlocked: false
+            },
+            bomber: {
+                title: '💣 自爆蟲王',
+                subtitle: '弱點：❄️ 冰屬性｜特殊機制：死亡震爆癱瘓塔基',
+                desc: '若未在減速或凍結狀態下擊殺，死亡時將震爆並癱瘓周圍 1.4 格防禦塔 1.5 秒。',
+                unlockRule: '推進至第 9 波遭遇「自爆蟲王」後自動解鎖',
+                defaultUnlocked: false
             }
         },
         terrain: {
@@ -373,9 +401,9 @@
                 defaultUnlocked: true
             },
             obstacle: {
-                title: '🪨 障礙地塊',
-                subtitle: '地形限制：不可建造防禦塔',
-                desc: '古老巨岩與崎嶇障礙，無法部署防禦塔，但不會阻擋遠程砲塔的彈道射線。',
+                title: '🪨 古代巨岩障礙',
+                subtitle: '地脈拓荒：花費 45 💰 爆破開採',
+                desc: '初期阻礙建塔的古代岩石，點擊可花費 45 金爆破移除，有機率挖掘出✨ 元素靈脈或⛰️ 制高點。',
                 defaultUnlocked: true
             }
         }

@@ -115,6 +115,34 @@
         };
     }
 
+    /**
+     * 地脈拓荒：花費 45 金幣爆破岩石障礙，高機率露出隱藏的元素靈脈或制高點
+     */
+    function clearObstacleAt(index) {
+        if (!G || !G.state || !G.map || getTerrainAt(index) !== 'obstacle') {
+            return { ok: false, reason: 'invalid_obstacle' };
+        }
+        const EconSys = GameApp.systems && GameApp.systems.economy;
+        const cost = EconSys && typeof EconSys.getObstacleClearCost === 'function' ? EconSys.getObstacleClearCost() : 45;
+        if (G.state.currentGold < cost) {
+            return { ok: false, reason: 'insufficient_gold', cost };
+        }
+        G.state.currentGold -= cost;
+        const roll = Math.random();
+        let revealedTerrain = null;
+        if (roll < 0.45) {
+            revealedTerrain = 'mana_vein';
+        } else if (roll < 0.85) {
+            revealedTerrain = 'highground';
+        }
+        if (revealedTerrain) {
+            G.map.terrainMap.set(index, revealedTerrain);
+        } else {
+            G.map.terrainMap.delete(index);
+        }
+        return { ok: true, cost, revealedTerrain };
+    }
+
     const TerrainSystem = {
         bind,
         getTerrainAt,
@@ -122,7 +150,8 @@
         canBuildAt,
         getTerrainBonusesAt,
         getTowerTerrainDamageMult,
-        classifyBoardZone
+        classifyBoardZone,
+        clearObstacleAt
     };
 
     GameApp.systems = GameApp.systems || {};

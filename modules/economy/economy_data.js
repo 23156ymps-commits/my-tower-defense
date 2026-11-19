@@ -18,8 +18,11 @@
         INITIAL_GOLD: 40,                   // 基礎開局金幣
         BASE_COST: 10,                      // 各基礎元素首次召喚價格
         COST_STEP: 8,                       // 無階梯陣列時之備用線性步長
-        COST_MAX: 65,                       // 單一元素召喚價格暫時封頂上限 (65 金幣)
-        SUMMON_COST_STEPS: [10, 18, 26, 35, 45, 55, 65], // 平滑友善階梯定價曲線
+        COST_MAX: 80,                       // 單一元素召喚價格封頂上限 (80 金幣)
+        SUMMON_COST_STEPS: [10, 18, 26, 35, 45, 55, 68, 80], // 平滑友善階梯定價曲線
+        OBSTACLE_CLEAR_COST: 45,            // 地脈拓荒（爆破岩石障礙）固定花費
+        CROWN_AWAKEN_GOLD_COST: 220,        // 無盡模式 T4 世界樹聖冠覺醒金幣消耗
+        CROWN_AWAKEN_DEW_COST: 60,          // 無盡模式 T4 世界樹聖冠覺醒靈露消耗
         SELL_REFUND_RATE: 0.70,             // 出售防禦塔退還累計投入金幣比例 (70%)
         COMBAT_MOVE_COST: 5,                // 戰鬥出怪/清場期間移塔戰術調度費 (5 金幣)
         EARLY_WAVE_BONUS: {                 // 備戰期／波次間提前開波獎金公式參數
@@ -36,6 +39,9 @@
         BASE_COST: ECONOMY_DATA.BASE_COST,
         COST_STEP: ECONOMY_DATA.COST_STEP,
         COST_MAX: ECONOMY_DATA.COST_MAX,
+        OBSTACLE_CLEAR_COST: ECONOMY_DATA.OBSTACLE_CLEAR_COST,
+        CROWN_AWAKEN_GOLD_COST: ECONOMY_DATA.CROWN_AWAKEN_GOLD_COST,
+        CROWN_AWAKEN_DEW_COST: ECONOMY_DATA.CROWN_AWAKEN_DEW_COST,
         SELL_REFUND_RATE: ECONOMY_DATA.SELL_REFUND_RATE,
         COMBAT_MOVE_COST: ECONOMY_DATA.COMBAT_MOVE_COST
     });

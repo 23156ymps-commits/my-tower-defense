@@ -48,6 +48,10 @@ body.map-lava {
     background-color: #211A18;
 }
 
+body.map-frost {
+    background-color: #172126;
+}
+
 .num {
     font-family: "Plus Jakarta Sans", "Noto Sans TC", "Segoe UI", sans-serif;
     font-variant-numeric: tabular-nums;
@@ -686,6 +690,8 @@ body.map-lava {
 .cell:nth-child(even) { background-color: #27302B; }
 body.map-lava .cell { background-color: #282220; border-color: rgba(94, 78, 72, 0.35); }
 body.map-lava .cell:nth-child(even) { background-color: #2C2523; }
+body.map-frost .cell { background-color: #1E2A30; border-color: rgba(74, 158, 191, 0.28); }
+body.map-frost .cell:nth-child(even) { background-color: #233138; }
 .cell:hover:not(.path-cell) { background-color: #303A35; }
 
 .cell.selected {
@@ -726,7 +732,11 @@ body.map-lava .cell:nth-child(even) { background-color: #2C2523; }
 .cell.terrain-obstacle, .cell.obstacle-cell {
     background-color: #202422;
     border: 1px solid #596960;
-    cursor: not-allowed;
+    cursor: pointer;
+}
+.cell.terrain-obstacle:hover, .cell.obstacle-cell:hover {
+    border-color: var(--accent-cta);
+    background-color: #2C302D;
 }
 
 .terrain-art {
@@ -761,6 +771,11 @@ body.map-lava .cell:nth-child(even) { background-color: #2C2523; }
 body.map-lava .cell.path-cell {
     background-color: #48332D;
     border-color: #825A4F;
+}
+
+body.map-frost .cell.path-cell {
+    background-color: #2C414B;
+    border-color: #4A9EBF;
 }
 
 .cell.path-cell .path-arrow, .cell-marker {
@@ -883,9 +898,33 @@ body.map-lava .cell.path-cell {
     justify-content: center;
     will-change: left, top;
 }
+#board-stage.monster-hovering {
+    cursor: pointer;
+}
 #board-stage.is-paused .monster-unit {
     pointer-events: auto;
     cursor: help;
+}
+.monster-unit.stealthed {
+    opacity: 0.36;
+    filter: saturate(0.45);
+}
+.tower.is-crowned .tower-crown-halo {
+    position: absolute;
+    inset: -3px;
+    pointer-events: none;
+    z-index: 4;
+}
+.tower.is-crowned .tower-crown-halo svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.tower.stunned {
+    opacity: 0.56;
+    filter: grayscale(0.72);
+    outline: 1.5px dashed var(--el-fire);
+    outline-offset: -2px;
 }
 .monster-unit.mini-slime { width: calc(var(--cell-size) * 0.72); height: calc(var(--cell-size) * 0.72); }
 .monster-unit.boss { width: calc(var(--cell-size) * 1.12); height: calc(var(--cell-size) * 1.12); z-index: 12; }
@@ -1279,6 +1318,9 @@ body.map-lava .cell.path-cell {
 .inspector-btn:active:not(:disabled) { transform: scale(0.95); }
 .inspector-btn:disabled { opacity: 0.48; filter: grayscale(0.6); cursor: not-allowed; }
 .inspector-btn.sell-btn { border-color: var(--accent-cta); color: var(--el-lightning); }
+.inspector-btn.awaken-btn { border-color: var(--el-lightning); background-color: #36301E; color: var(--el-lightning); }
+.inspector-btn.awaken-btn:hover:not(:disabled) { background-color: #453C24; }
+.inspector-btn.hidden { display: none; }
 
 /* 底部整合操作區：左側 3 欄召喚卡 ＋ 右側 2×2 技能與功能列 */
 .bottom-action-deck {
@@ -1675,12 +1717,12 @@ body.map-lava .cell.path-cell {
     color: var(--text-primary);
 }
 
-/* 雙地圖等高卡片網格 */
+/* 三地圖等高卡片網格 */
 .map-selector-section { margin-bottom: 16px; text-align: left; }
 .map-selector-header { font-size: 18px; font-weight: 600; line-height: 1.35; color: var(--text-primary); margin: 0 0 8px 0; }
 .map-selector-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     align-items: stretch;
     gap: 8px;
 }
@@ -1713,6 +1755,7 @@ body.map-lava .cell.path-cell {
 .map-diff-badge { font-size: 12px; font-weight: 600; padding: 0 8px; border-radius: 4px; white-space: nowrap; border: 1px solid var(--border-subtle); }
 .map-diff-badge.diff-std { border-color: #4E9A68; color: #A8D5B5; }
 .map-diff-badge.diff-hard { border-color: var(--el-fire); color: #EE9B8F; }
+.map-diff-badge.diff-ice { border-color: var(--el-ice); color: #A6D7E8; }
 .map-card-desc { font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
 .map-card-record { font-size: 12px; font-weight: 600; color: var(--el-lightning); margin-top: auto; padding-top: 4px; }
 
@@ -1795,15 +1838,78 @@ body.map-lava .cell.path-cell {
     background-color: var(--accent-cta);
 }
 
-.world-tree-stage {
+@keyframes wtGrowIn {
+    from { stroke-dashoffset: 100; }
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes wtNodePop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.84); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes sapFlow {
+    0% { stroke-dashoffset: 36; }
+    100% { stroke-dashoffset: 0; }
+}
+
+.tree-viewport {
     position: relative;
     width: 100%;
-    height: 320px;
+    height: 410px;
     background-color: var(--bg-canvas);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
     overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
 }
+.tree-viewport.is-panning {
+    cursor: grabbing;
+}
+
+.wt-viewport-controls {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 12;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.wt-zoom-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+}
+.wt-reset-view-btn {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+}
+.wt-reset-view-btn:hover {
+    border-color: var(--accent-cta);
+    background-color: var(--bg-surface);
+}
+
+.tree-world-canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
 .wt-edge-svg {
     position: absolute;
     inset: 0;
@@ -1811,21 +1917,26 @@ body.map-lava .cell.path-cell {
     height: 100%;
     pointer-events: none;
 }
-.wt-tier-guide {
-    stroke: #2B342F;
-    stroke-width: 1;
-    stroke-dasharray: 3 5;
+.wt-edge-group {
+    transition: opacity 0.16s ease;
 }
-.wt-tier-label {
-    position: absolute;
-    left: 6px;
-    transform: translateY(-50%);
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text-secondary);
-    opacity: 0.72;
-    pointer-events: none;
+.wt-edge-group.is-dimmed {
+    opacity: 0.32;
 }
+.wt-edge-group.is-bloodline .wt-edge-path {
+    stroke-width: 3.6;
+}
+.wt-edge-grow {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: wtGrowIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.wt-sap-flow {
+    stroke-dasharray: 6 12;
+    animation: sapFlow 1.8s linear infinite;
+    opacity: 0.82;
+}
+
 .wt-nodes-layer {
     position: absolute;
     inset: 0;
@@ -1845,29 +1956,41 @@ body.map-lava .cell.path-cell {
 .wt-node {
     position: absolute;
     transform: translate(-50%, -50%);
-    min-width: 56px;
-    padding: 3px 4px;
+    min-width: 84px;
+    min-height: 68px;
+    padding: 5px 6px;
     border-radius: 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    justify-content: center;
+    gap: 4px;
     cursor: pointer;
     background-color: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
-    transition: transform 0.1s ease, border-color 0.12s ease, background-color 0.12s ease;
+    transition: transform 0.12s ease, border-color 0.12s ease, background-color 0.12s ease, opacity 0.16s ease;
 }
-.wt-node.wt-tier-3 { min-width: 52px; padding: 2px 3px; }
+.wt-node-pop {
+    opacity: 0;
+    animation: wtNodePop 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.wt-node.is-dimmed {
+    opacity: 0.32 !important;
+}
+.wt-node.is-bloodline {
+    border-color: var(--el-lightning);
+    z-index: 6;
+}
 .wt-node:hover {
     transform: translate(-50%, -52%);
     border-color: var(--text-primary);
-    z-index: 4;
+    z-index: 7;
 }
 .wt-node.is-selected {
     border: 2px solid var(--text-primary);
     background-color: var(--bg-grid-elevated);
-    z-index: 5;
+    z-index: 8;
 }
 .wt-node.is-locked {
     background-color: var(--bg-canvas);
@@ -1884,34 +2007,35 @@ body.map-lava .cell.path-cell {
 .wt-node.wt-craftable {
     border-width: 2px;
     border-color: var(--accent-cta);
-    animation: wtAmberBreath 1.5s ease-in-out infinite;
-    z-index: 4;
+    animation: wtNodePop 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards, wtAmberBreath 1.5s ease-in-out 0.3s infinite;
+    z-index: 5;
 }
 .wt-node.wt-on-board {
     box-shadow: inset 0 0 0 1px var(--el-lightning);
 }
 
 .wt-node-core {
-    min-width: 96px;
-    padding: 3px 10px;
+    min-width: 112px;
+    min-height: 48px;
+    padding: 6px 12px;
     flex-direction: row;
-    gap: 5px;
+    gap: 6px;
     background-color: var(--bg-grid-elevated);
     border-color: #4E9A68;
 }
-.wt-core-icon { font-size: 13px; line-height: 1; }
+.wt-core-icon { font-size: 16px; line-height: 1; }
 
 .wt-node-icon-box {
     position: relative;
-    width: 30px;
-    height: 30px;
+    width: 38px;
+    height: 38px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 4px;
     background-color: var(--bg-canvas);
 }
-.wt-node.wt-tier-3 .wt-node-icon-box { width: 26px; height: 26px; }
+.wt-node.wt-tier-3 .wt-node-icon-box { width: 34px; height: 34px; }
 .wt-node-icon-box canvas { display: block; width: 100%; height: 100%; }
 .wt-locked-q {
     position: absolute;
@@ -1919,7 +2043,7 @@ body.map-lava .cell.path-cell {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 800;
     color: var(--text-secondary);
     pointer-events: none;
@@ -1930,15 +2054,15 @@ body.map-lava .cell.path-cell {
     right: -5px;
     padding: 0 4px;
     border-radius: 4px;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 800;
     background-color: var(--accent-cta);
     color: #1B211E;
 }
 .wt-node-caption {
-    font-size: 10px;
+    font-size: 11.5px;
     font-weight: 700;
-    line-height: 1.1;
+    line-height: 1.15;
     white-space: nowrap;
 }
 
@@ -2359,9 +2483,80 @@ body.map-lava .cell.path-cell {
     .debug-controls button { min-height: 44px; padding: 8px; }
 
     .blessing-choices, .map-selector-grid { grid-template-columns: 1fr; }
-    .codex-tree-shell { overflow-x: auto; }
-    .world-tree-stage { min-width: 720px; height: 270px; }
+    .tree-viewport { height: 320px; }
     .wt-detail-card { flex-direction: column; align-items: flex-start; }
+}
+
+/* ==================== 怪物即時情報卡 (#side-monster-card / #mobile-monster-card) ==================== */
+.side-monster-card {
+    border-color: var(--accent-cta);
+    background-color: var(--bg-grid-elevated);
+}
+.side-monster-card.hidden,
+.side-panel-section.hidden {
+    display: none;
+}
+.smc-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+.smc-portrait {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+}
+.smc-title-wrap { min-width: 0; flex: 1; }
+.smc-name { font-size: 13px; font-weight: 700; color: var(--text-primary); line-height: 1.25; }
+.smc-hp { font-size: 12px; font-weight: 700; color: #7CE3A2; margin-top: 2px; }
+.smc-shield { font-size: 11.5px; font-weight: 700; color: var(--el-ice); margin-top: 4px; }
+.smc-shield.hidden { display: none; }
+.smc-stats {
+    margin-top: 5px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.smc-debuffs {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--el-lightning);
+    white-space: normal;
+}
+.smc-debuffs.hidden { display: none; }
+.smc-trait {
+    margin-top: 5px;
+    font-size: 11.5px;
+    line-height: 1.38;
+    color: var(--text-secondary);
+}
+
+.mobile-monster-card {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 25;
+    max-width: min(260px, calc(100% - 16px));
+    padding: 6px 10px;
+    border-radius: 6px;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--accent-cta);
+    pointer-events: none;
+}
+.mobile-monster-card.hidden { display: none; }
+.mmc-top { font-size: 11.5px; font-weight: 700; color: var(--text-primary); }
+.mmc-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; line-height: 1.3; }
+@media (min-width: 1220px) {
+    .mobile-monster-card { display: none !important; }
 }
 
 @media (min-width: 768px) and (max-height: 660px) {
@@ -2394,6 +2589,6 @@ body.map-lava .cell.path-cell {
     .debug-controls button { padding: 2px 6px; font-size: 12px; }
     #msg-text { margin-top: 3px; min-height: 16px; line-height: 1.3; }
     .codex-card { padding: 12px 14px; }
-    .world-tree-stage { height: 286px; }
+    .tree-viewport { height: 300px; }
     .wt-detail-card { padding: 8px 10px; min-height: 76px; }
 }

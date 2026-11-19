@@ -43,10 +43,14 @@
         const tier = towerObj && Number.isFinite(towerObj.tier) ? towerObj.tier : 1;
         const cfg = towerObj ? getTowerCfg(towerObj.type, tier) : null;
         if (!cfg) return 2.0;
+        let baseRange = clampNumber(cfg.range, 0.5, 15.0, 2.0);
         if (Array.isArray(cfg.tierRange) && Number.isFinite(cfg.tierRange[tier]) && cfg.tierRange[tier] > 0) {
-            return clampNumber(cfg.tierRange[tier], 0.5, 15.0, 2.0);
+            baseRange = clampNumber(cfg.tierRange[tier], 0.5, 15.0, 2.0);
         }
-        return clampNumber(cfg.range, 0.5, 15.0, 2.0);
+        if (towerObj && towerObj.isCrowned) {
+            baseRange = Math.min(15.0, Number((baseRange + 0.5).toFixed(2)));
+        }
+        return baseRange;
     }
 
     function getTowerEffectiveRangeCells(index, towerObj) {
@@ -84,6 +88,10 @@
         const TreeSys = GameApp.systems && GameApp.systems.tree;
         if (TreeSys) {
             speedMult *= TreeSys.getTowerBlessingSpeedMult(type);
+        }
+
+        if (typeof towerOrType === 'object' && towerOrType && towerOrType.isCrowned) {
+            speedMult *= 1.25;
         }
 
         if (G && G.state && G.state.frenzyActiveMs > 0) {
@@ -124,7 +132,9 @@
             aimAngleDeg: Number.isFinite(options.aimAngleDeg) ? options.aimAngleDeg : 0,
             shotCounter: 0,
             focusTargetId: null,
-            focusStacks: 0
+            focusStacks: 0,
+            isCrowned: Boolean(options.isCrowned),
+            stunnedMs: Number.isFinite(options.stunnedMs) ? options.stunnedMs : 0
         };
     }
 
@@ -175,12 +185,15 @@
     }
 
     function getBaseDamageForTower(towerObj, cfg) {
+        let baseDmg = 15;
         if (cfg && Number.isFinite(cfg.damage) && !cfg.isAlias) {
-            return cfg.damage;
+            baseDmg = cfg.damage;
+        } else {
+            const towersData = getTowersData();
+            const dmgRow = (towersData.TIER_DAMAGE_TABLE && towersData.TIER_DAMAGE_TABLE[towerObj.type]) || (cfg && cfg.tierDamage);
+            baseDmg = (dmgRow && dmgRow[towerObj.tier]) || (cfg && cfg.damage) || 15;
         }
-        const towersData = getTowersData();
-        const dmgRow = (towersData.TIER_DAMAGE_TABLE && towersData.TIER_DAMAGE_TABLE[towerObj.type]) || (cfg && cfg.tierDamage);
-        return (dmgRow && dmgRow[towerObj.tier]) || (cfg && cfg.damage) || 15;
+        return (towerObj && towerObj.isCrowned) ? Math.round(baseDmg * 2.2) : baseDmg;
     }
 
     function getTowerInspectorStats(index, towerObj) {
@@ -270,11 +283,14 @@
             ? GameApp.renderer.getTierStars(towerObj.tier)
             : '★'.repeat(Math.max(1, Math.min(3, towerObj.tier || 1)));
         const desc = cfg.tooltipSummary || cfg.roleSummary || (Array.isArray(cfg.badges) ? cfg.badges.join(' · ') : '');
+        const titlePrefix = towerObj.isCrowned ? '👑 ' : '';
+        const tierLabel = towerObj.isCrowned ? 'T4 聖冠' : stars;
+        const crownDescTag = towerObj.isCrowned ? ' ｜ 聖冠覺醒被動啟動' : '';
 
         return {
-            nameLine: `${cfg.icon || '✨'} ${cfg.name || towerObj.type} · ${stars}`,
+            nameLine: `${titlePrefix}${cfg.icon || '✨'} ${cfg.name || towerObj.type} · ${tierLabel}`,
             statsLine: `單發 ${effDmg} ｜ 攻速 ${intervalSec}s ｜ 射程 ${effRange}`,
-            descLine: desc
+            descLine: `${desc}${crownDescTag}`
         };
     }
 
@@ -363,8 +379,21 @@
         const resonanceMult = TreeSys && typeof TreeSys.getElementalResonanceMult === 'function'
             ? TreeSys.getElementalResonanceMult(towerObj, monster)
             : 1.0;
-        const raw = baseDmg * thornMult * resonanceMult * (options.damageScale ?? 1.0) * (options.terrainMult ?? 1.0) * (options.extraMult ?? 1.0) * weakMult * vulnMult;
-        const effArmor = MonsterSys ? MonsterSys.getMonsterEffectiveArmor(monster, options.armorPierce || 0) : (monster.armor || 0);
+
+        // 永凍裂谷 (+20% 冰系血脈傷害)
+        const mapSpec = G && G.map && G.map.spec;
+        const family = cfg.family || towerObj.type;
+        const isIceLineage = family === 'ice' || family === 'steam' || family === 'magnet' || lineageTags.includes('ice');
+        const mapIceMult = (mapSpec && Number.isFinite(mapSpec.iceDamageBonus) && isIceLineage)
+            ? (1 + mapSpec.iceDamageBonus)
+            : 1.0;
+
+        const raw = baseDmg * thornMult * resonanceMult * mapIceMult * (options.damageScale ?? 1.0) * (options.terrainMult ?? 1.0) * (options.extraMult ?? 1.0) * weakMult * vulnMult;
+        let armorPierce = options.armorPierce || 0;
+        if (towerObj && towerObj.isCrowned && (family === 'steam' || towerObj.type === 'steam_bud')) {
+            armorPierce = Math.min(1.0, armorPierce + 0.25);
+        }
+        const effArmor = MonsterSys ? MonsterSys.getMonsterEffectiveArmor(monster, armorPierce) : (monster.armor || 0);
         const kVal = (constants && constants.ARMOR_HYPERBOLIC_K) || 35;
         return {
             damage: Math.max(1, Math.round(raw * (kVal / (kVal + effArmor)))),
@@ -373,13 +402,26 @@
         };
     }
 
+    function maybeRevealByAoE(monster) {
+        if (!monster || !monster.isStealthed) return;
+        const MonsterSys = GameApp.systems && GameApp.systems.monster;
+        if (MonsterSys && typeof MonsterSys.revealStealthMonster === 'function') {
+            MonsterSys.revealStealthMonster(monster, '破隱現形');
+        }
+    }
+
     function applyHitToMonster(towerIndex, towerObj, monster, options = {}) {
-        if (!monster || monster.hp <= 0 || monster.isTargetable === false) return null;
+        if (!monster || monster.hp <= 0 || (monster.isTargetable === false && !options.allowStealthed)) return null;
+        if (monster.isStealthed && options.allowStealthed) {
+            maybeRevealByAoE(monster);
+        }
         const TerrainSys = GameApp.systems && GameApp.systems.terrain;
         const MonsterSys = GameApp.systems && GameApp.systems.monster;
         const TreeSys = GameApp.systems && GameApp.systems.tree;
         const cfg = getTowerCfg(towerObj.type, towerObj.tier) || {};
         const fxParams = cfg.effectParams || {};
+        const family = cfg.family || towerObj.type;
+        const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
 
         const armorPierce = options.armorPierce ?? (fxParams.armorPierce || 0);
         if (TreeSys && typeof TreeSys.registerResonanceHit === 'function') {
@@ -393,9 +435,35 @@
             armorPierce
         });
 
+        let finalDamage = result.damage;
+        let shellReduced = false;
+        if ((monster.hardShellHitsLeft || 0) > 0) {
+            monster.hardShellHitsLeft -= 1;
+            finalDamage = Math.max(1, Math.round(finalDamage * (monster.hardShellDmgMult ?? 0.5)));
+            shellReduced = true;
+        }
+
+        const isShieldBreaker = family === 'thunder' || family === 'magnet' || family === 'plasma' || lineageTags.includes('thunder');
+        let hpDmg = finalDamage;
+        let shieldAbsorbed = 0;
+        if ((monster.shield || 0) > 0) {
+            const breakMult = isShieldBreaker ? (monster.shieldThunderMult || 1.40) : 1.0;
+            const effectivePool = monster.shield / breakMult;
+            if (finalDamage <= effectivePool) {
+                shieldAbsorbed = Math.min(monster.shield, Math.round(finalDamage * breakMult));
+                monster.shield = Math.max(0, monster.shield - shieldAbsorbed);
+                hpDmg = 0;
+            } else {
+                shieldAbsorbed = monster.shield;
+                monster.shield = 0;
+                hpDmg = Math.max(1, Math.round(finalDamage - effectivePool));
+            }
+        }
+
         const hpBefore = monster.hp;
-        monster.hp = Math.max(0, hpBefore - result.damage);
-        recordTowerDamage(towerObj, Math.min(hpBefore, result.damage));
+        monster.hp = Math.max(0, hpBefore - hpDmg);
+        const dealtTotal = shieldAbsorbed + Math.min(hpBefore, hpDmg);
+        recordTowerDamage(towerObj, dealtTotal);
 
         // 依選項或攻擊樣式套用破甲／減速
         const willApplyShred = (cfg.attackStyle === 'burst_armor_break' || options.forceShred) && options.applyShred !== false && MonsterSys;
@@ -413,13 +481,33 @@
             MonsterSys.applySlowToMonster(monster, slowSpec.rate, slowSpec.durationMs, options.slowSourceId || towerObj.type);
         }
 
+        // T4 聖冠覺醒被動效果（依六大血脈分流）
+        if (towerObj && towerObj.isCrowned && monster.hp > 0 && MonsterSys) {
+            if (family === 'fire' && typeof MonsterSys.applyCrownTrueBurn === 'function') {
+                MonsterSys.applyCrownTrueBurn(monster, towerObj, 0.015, 3000);
+            } else if (family === 'ice') {
+                MonsterSys.applyVulnerabilityToMonster(monster, 0.15, 2500, 'crown_ice');
+                MonsterSys.applySlowToMonster(monster, 0.55, 2000, 'crown_ice');
+            } else if (family === 'magnet') {
+                const nowMs = G.state.elapsedPlayMs || 0;
+                if (nowMs >= (monster._crownMagnetReadyAt || 0)) {
+                    monster._crownMagnetReadyAt = nowMs + 4000;
+                    const dur = monster.isBoss ? 600 : 1200;
+                    monster.rootTimer = Math.max(monster.rootTimer || 0, dur);
+                    if (GameApp.renderer) GameApp.renderer.spawnFloatingNotice('🧲 磁場定身', monster.pixelX, monster.pixelY, 'pity-seed');
+                }
+            }
+        }
+
         // 🔥 焦土烙印祝福：火系與蒸氣塔觸發破甲或暴擊時留下 2.5s 燃燒路徑
         if (TreeSys && typeof TreeSys.trySpawnScorchedBrand === 'function') {
             const didShredOrCrit = Boolean(willApplyShred || armorPierce > 0 || result.isWeakness || result.isAffinity);
             TreeSys.trySpawnScorchedBrand(towerObj, monster, didShredOrCrit);
         }
 
-        GameApp.renderer.spawnDamageNumber(result.damage, result.isWeakness, monster.pixelX, monster.pixelY, options.dmgTag || '', result.isAffinity);
+        const displayDmg = hpDmg > 0 ? hpDmg : shieldAbsorbed;
+        const dmgTag = options.dmgTag || (shellReduced ? '甲殼 ' : (shieldAbsorbed > 0 && hpDmg === 0 ? '破盾 ' : ''));
+        GameApp.renderer.spawnDamageNumber(displayDmg, result.isWeakness, monster.pixelX, monster.pixelY, dmgTag, result.isAffinity);
 
         // 感電協同觸發：任何防禦塔命中感電怪額外觸發 +12 雷傷（單怪 0.35s 內置冷卻）
         if (monster.hp > 0 && MonsterSys && typeof MonsterSys.tryTriggerShockBonusDamage === 'function') {
@@ -435,6 +523,17 @@
             GameApp.renderer.emitParticleBurst(monster.pixelX, monster.pixelY, '#4A9EBF', 8, 85);
         }
 
+        // T4 ⚡ 雷系聖冠被動：<10% 血量天雷斬殺（Boss 5%）
+        if (monster.hp > 0 && towerObj && towerObj.isCrowned && family === 'thunder') {
+            const crownExecPct = monster.isBoss ? 0.05 : 0.10;
+            if ((monster.hp / Math.max(1, monster.maxHp)) < crownExecPct) {
+                const execDmg = monster.hp;
+                monster.hp = 0;
+                recordTowerDamage(towerObj, execDmg);
+                GameApp.renderer.spawnDamageNumber(execDmg, true, monster.pixelX, monster.pixelY, '⚡天雷 ');
+            }
+        }
+
         // 焚世餘燼樹 (fire_B) <12% 血量處決
         if (monster.hp > 0 && options.executeThresholdPct > 0 && (monster.hp / Math.max(1, monster.maxHp)) < options.executeThresholdPct) {
             const execDmg = monster.hp;
@@ -443,8 +542,17 @@
             GameApp.renderer.spawnDamageNumber(execDmg, true, monster.pixelX, monster.pixelY, '斬殺');
         }
 
+        if (monster.hp > 0 && MonsterSys) {
+            if (typeof MonsterSys.tryTriggerPantherStealth === 'function') {
+                MonsterSys.tryTriggerPantherStealth(monster);
+            }
+            if (typeof MonsterSys.checkVoidBossPhaseShift === 'function') {
+                MonsterSys.checkVoidBossPhaseShift(monster);
+            }
+        }
+
         if (monster.hp <= 0 && MonsterSys) {
-            MonsterSys.handleMonsterKilled(monster, towerObj, result.damage);
+            MonsterSys.handleMonsterKilled(monster, towerObj, dealtTotal);
         }
         return result;
     }
@@ -452,10 +560,11 @@
     function applySplashDamage(towerIndex, towerObj, targetPos, radiusPx, excludeId, hitOptions, slowParams = null) {
         const MonsterSys = GameApp.systems && GameApp.systems.monster;
         const targets = G.state.monsters.filter(m =>
-            m.id !== excludeId && m.hp > 0 && m.isTargetable !== false && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= radiusPx
+            m.id !== excludeId && m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= radiusPx
         );
+        const aoeHitOptions = Object.assign({}, hitOptions, { allowStealthed: true });
         for (let i = 0; i < targets.length; i++) {
-            applyHitToMonster(towerIndex, towerObj, targets[i], hitOptions);
+            applyHitToMonster(towerIndex, towerObj, targets[i], aoeHitOptions);
             if (slowParams && slowParams.rate > 0 && targets[i].hp > 0 && MonsterSys) {
                 MonsterSys.applySlowToMonster(targets[i], slowParams.rate, slowParams.durationMs, slowParams.sourceId || towerObj.type);
             }
@@ -600,8 +709,9 @@
 
             for (let i = 0; i < G.state.monsters.length; i++) {
                 const m = G.state.monsters[i];
-                if (m.id === target.id || m.hp <= 0 || m.isTargetable === false) continue;
+                if (m.id === target.id || m.hp <= 0 || (m.isTargetable === false && !m.isStealthed)) continue;
                 if (Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= frostRadiusPx && MonsterSys) {
+                    maybeRevealByAoE(m);
                     const mWasSlowed = MonsterSys.isMonsterSlowed(m);
                     MonsterSys.applySlowToMonster(m, slowSpec.rate, slowSpec.durationMs, 'ice_A');
                     if (mWasSlowed) {
@@ -694,7 +804,8 @@
             const fxParams = cfg.effectParams || {};
             const TreeSys = GameApp.systems && GameApp.systems.tree;
             const MonsterSys = GameApp.systems && GameApp.systems.monster;
-            const splashRadiusPx = (fxParams.splashRadiusCells ?? 1.3) * G.boardMetrics.step;
+            const crownAoEBonus = towerObj && towerObj.isCrowned ? 0.4 : 0;
+            const splashRadiusPx = ((fxParams.splashRadiusCells ?? 1.3) + crownAoEBonus) * G.boardMetrics.step;
             const splashRatio = fxParams.splashRatio ?? 0.70;
             const armorPierce = fxParams.armorPierce ?? 0.45;
             const mistSlow = TreeSys ? TreeSys.getIceLineageSlowParams(towerObj.type, 0, 0) : { rate: 0, durationMs: 0 };
@@ -711,7 +822,8 @@
         steam_A_pressure(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
             const fxParams = cfg.effectParams || {};
             const MonsterSys = GameApp.systems && GameApp.systems.monster;
-            const splashRadiusPx = (fxParams.splashRadiusCells ?? 1.4) * G.boardMetrics.step;
+            const crownAoEBonus = towerObj && towerObj.isCrowned ? 0.4 : 0;
+            const splashRadiusPx = ((fxParams.splashRadiusCells ?? 1.4) + crownAoEBonus) * G.boardMetrics.step;
             const splashRatio = fxParams.splashRatio ?? 0.65;
             const armorPierce = fxParams.armorPierce ?? 0.65;
 
@@ -722,7 +834,7 @@
                     type: 'steam_pool',
                     x: targetPos.left,
                     y: targetPos.top,
-                    radiusPx: (fxParams.poolRadiusCells ?? 1.3) * G.boardMetrics.step,
+                    radiusPx: ((fxParams.poolRadiusCells ?? 1.3) + crownAoEBonus) * G.boardMetrics.step,
                     dps: fxParams.poolDps ?? 28,
                     durationMs: fxParams.poolDurationMs ?? 3000,
                     sourceTower: towerObj
@@ -736,7 +848,8 @@
             const fxParams = cfg.effectParams || {};
             const TreeSys = GameApp.systems && GameApp.systems.tree;
             const MonsterSys = GameApp.systems && GameApp.systems.monster;
-            const fogRadiusPx = (fxParams.aoeRadiusCells ?? 1.6) * G.boardMetrics.step;
+            const crownAoEBonus = towerObj && towerObj.isCrowned ? 0.4 : 0;
+            const fogRadiusPx = ((fxParams.aoeRadiusCells ?? 1.6) + crownAoEBonus) * G.boardMetrics.step;
             const slowSpec = TreeSys
                 ? TreeSys.getIceLineageSlowParams(towerObj.type, fxParams.slowRate ?? 0.35, fxParams.slowDurationMs ?? 3000)
                 : { rate: fxParams.slowRate ?? 0.35, durationMs: fxParams.slowDurationMs ?? 3000 };
@@ -744,18 +857,20 @@
             const vulnDur = fxParams.vulnDurationMs ?? 3000;
 
             const victims = G.state.monsters.filter(m =>
-                m.hp > 0 && m.isTargetable !== false && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= fogRadiusPx
+                m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= fogRadiusPx
             );
             if (!victims.some(m => m.id === target.id)) victims.unshift(target);
 
             for (let i = 0; i < victims.length; i++) {
                 const m = victims[i];
+                maybeRevealByAoE(m);
                 if (MonsterSys) {
                     MonsterSys.applySlowToMonster(m, slowSpec.rate, slowSpec.durationMs, 'steam_B_fog');
                     MonsterSys.applyVulnerabilityToMonster(m, vulnBonus, vulnDur, 'steam_B_fog');
                 }
                 applyHitToMonster(towerIndex, towerObj, m, {
-                    damageScale: m.id === target.id ? 1.0 : 0.75
+                    damageScale: m.id === target.id ? 1.0 : 0.75,
+                    allowStealthed: true
                 });
             }
             GameApp.renderer.emitCanvasAttackFX('steam', towerPos, targetPos, { frostRadiusPx: fogRadiusPx });
@@ -782,7 +897,8 @@
             if (target.hp > 0 && MonsterSys) MonsterSys.applySlowToMonster(target, pulseSlow.rate, pulseSlow.durationMs, 'magnet_pulse');
             for (let i = 0; i < G.state.monsters.length; i++) {
                 const m = G.state.monsters[i];
-                if (m.hp > 0 && m.isTargetable !== false && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= frostRadiusPx && MonsterSys) {
+                if (m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= frostRadiusPx && MonsterSys) {
+                    maybeRevealByAoE(m);
                     MonsterSys.applySlowToMonster(m, pulseSlow.rate, pulseSlow.durationMs, 'magnet_pulse');
                 }
             }
@@ -825,14 +941,16 @@
             const pullCells = fxParams.pullDistanceCells ?? 0.45;
 
             const victims = G.state.monsters.filter(m =>
-                m.hp > 0 && m.isTargetable !== false && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= radiusPx
+                m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= radiusPx
             );
             if (!victims.some(m => m.id === target.id)) victims.unshift(target);
 
             for (let i = 0; i < victims.length; i++) {
                 const m = victims[i];
+                maybeRevealByAoE(m);
                 applyHitToMonster(towerIndex, towerObj, m, {
-                    damageScale: m.id === target.id ? 1.0 : 0.80
+                    damageScale: m.id === target.id ? 1.0 : 0.80,
+                    allowStealthed: true
                 });
                 if (m.hp > 0 && MonsterSys) {
                     MonsterSys.applySlowToMonster(m, slowSpec.rate, slowSpec.durationMs, 'magnet_A');
@@ -889,7 +1007,7 @@
         // T2 電漿導管：無視 15% 護甲 ＋ 連續鎖定同一目標最高 4 層 (+12%/層)
         pierce_beam(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
             const fxParams = cfg.effectParams || {};
-            const maxStacks = fxParams.maxStacks ?? 4;
+            const maxStacks = (fxParams.maxStacks ?? 4) + (towerObj && towerObj.isCrowned ? 4 : 0);
             const stackBonus = fxParams.stackBonus ?? 0.12;
             const armorPierce = fxParams.armorPierce ?? 0.15;
             towerObj.focusStacks = towerObj.focusTargetId === target.id
@@ -907,7 +1025,7 @@
         // T3 ☄️A 聚變死光樹：最高疊 8 層鎖定 (+18%/層，最高 2.44x)，>=5 層附帶 45% 穿甲；切換目標僅掉 2 層不清零
         plasma_A_deathray(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
             const fxParams = cfg.effectParams || {};
-            const maxStacks = fxParams.maxStacks ?? 8;
+            const maxStacks = (fxParams.maxStacks ?? 8) + (towerObj && towerObj.isCrowned ? 4 : 0);
             const stackBonus = fxParams.stackBonus ?? 0.18;
             const dropStacks = fxParams.switchDropStacks ?? 2;
 
@@ -934,7 +1052,7 @@
         // T3 ☄️B 弧光折射樹：主光束最高 4 層 (+15%/層)，並向主目標 2.4 格內最多 2 名不同敵人折射 50% 副光束
         plasma_B_refract(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
             const fxParams = cfg.effectParams || {};
-            const maxStacks = fxParams.maxStacks ?? 4;
+            const maxStacks = (fxParams.maxStacks ?? 4) + (towerObj && towerObj.isCrowned ? 4 : 0);
             const stackBonus = fxParams.stackBonus ?? 0.15;
             const refractRadiusPx = (fxParams.refractRadiusCells ?? 2.4) * G.boardMetrics.step;
             const refractRatio = fxParams.refractRatio ?? 0.50;
@@ -1037,25 +1155,38 @@
         }
 
         const TreeSys = GameApp.systems && GameApp.systems.tree;
-        if (st.monsters.length > 0 || st.waveState === 'SPAWNING') {
-            for (let idx = 0; idx < st.board.length; idx++) {
-                const towerObj = st.board[idx];
-                if (towerObj === null) continue;
-                if (!Number.isFinite(towerObj.accMs)) towerObj.accMs = 0;
-                const intervalMs = getTowerAttackInterval(towerObj, idx);
-                towerObj.accMs = Math.min(intervalMs, towerObj.accMs + dtMs);
-                if (towerObj.accMs >= intervalMs && st.monsters.length > 0 && performTowerAttack(idx, towerObj)) {
-                    towerObj.accMs -= intervalMs;
-                    didCombatAct = true;
-                    if (TreeSys && typeof TreeSys.shouldTriggerDewOvercharge === 'function' && TreeSys.shouldTriggerDewOvercharge()) {
-                        if (!Array.isArray(st.pendingOverchargeShots)) st.pendingOverchargeShots = [];
-                        st.pendingOverchargeShots.push({
-                            towerIndex: idx,
-                            towerObj,
-                            remainingMs: 110,
-                            sessionId: st.sessionId
-                        });
+        for (let idx = 0; idx < st.board.length; idx++) {
+            const towerObj = st.board[idx];
+            if (towerObj === null) continue;
+
+            // 自爆或 Boss EMP 癱瘓倒數與外觀切換
+            if ((towerObj.stunnedMs || 0) > 0 || towerObj._hadStunClass) {
+                towerObj.stunnedMs = Math.max(0, (towerObj.stunnedMs || 0) - dtMs);
+                const nowStunned = towerObj.stunnedMs > 0;
+                if (towerObj._hadStunClass !== nowStunned) {
+                    towerObj._hadStunClass = nowStunned;
+                    if (GameApp.renderer && typeof GameApp.renderer.setTowerStunnedVisual === 'function') {
+                        GameApp.renderer.setTowerStunnedVisual(idx, nowStunned);
                     }
+                }
+                if (nowStunned) continue;
+            }
+
+            if (st.monsters.length === 0 && st.waveState !== 'SPAWNING') continue;
+            if (!Number.isFinite(towerObj.accMs)) towerObj.accMs = 0;
+            const intervalMs = getTowerAttackInterval(towerObj, idx);
+            towerObj.accMs = Math.min(intervalMs, towerObj.accMs + dtMs);
+            if (towerObj.accMs >= intervalMs && st.monsters.length > 0 && performTowerAttack(idx, towerObj)) {
+                towerObj.accMs -= intervalMs;
+                didCombatAct = true;
+                if (TreeSys && typeof TreeSys.shouldTriggerDewOvercharge === 'function' && TreeSys.shouldTriggerDewOvercharge()) {
+                    if (!Array.isArray(st.pendingOverchargeShots)) st.pendingOverchargeShots = [];
+                    st.pendingOverchargeShots.push({
+                        towerIndex: idx,
+                        towerObj,
+                        remainingMs: 110,
+                        sessionId: st.sessionId
+                    });
                 }
             }
         }

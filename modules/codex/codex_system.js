@@ -21,45 +21,45 @@
     let selectedTreeNodeId = 'fire_bud';
     const unlockedSet = loadUnlockedSet();
 
-    // SVG 世界樹演化圖譜畫布與節點座標拓撲（820 × 330，自底向上呈現：原核 → 3 基礎 1★ → 3 轉職 1★ → 6 二星 → 12 三星冠枝）
-    const TREE_VIEW_W = 820;
-    const TREE_VIEW_H = 330;
+    // SVG 世界樹演化圖譜畫布與扇形樹冠座標拓撲（1320 × 680，自底向上：原核 → 3 基礎 1★ → 3 轉職 1★ → 6 主幹 2★ → 12 冠枝 3★）
+    const TREE_VIEW_W = 1320;
+    const TREE_VIEW_H = 680;
 
     const WORLD_TREE_LAYOUT = {
         // Row 4 (Bottom): 世界樹原核
-        world_core: { x: 410, y: 298, tier: 0, family: 'core', label: '世界樹原核' },
+        world_core: { x: 660, y: 602, tier: 0, family: 'core', label: '世界樹原核' },
 
         // Row 3: 3 基礎根芽 (1★)
-        fire_bud: { x: 142, y: 244, tier: 1, family: 'fire', label: '火芽 1★' },
-        ice_bud: { x: 410, y: 244, tier: 1, family: 'ice', label: '冰芽 1★' },
-        thunder_bud: { x: 678, y: 244, tier: 1, family: 'thunder', label: '雷芽 1★' },
+        fire_bud: { x: 220, y: 472, tier: 1, family: 'fire', label: '火芽 1★' },
+        ice_bud: { x: 660, y: 472, tier: 1, family: 'ice', label: '冰芽 1★' },
+        thunder_bud: { x: 1100, y: 472, tier: 1, family: 'thunder', label: '雷芽 1★' },
 
         // Row 2: 3 異系轉職物種 (1★)
-        steam_bud: { x: 208, y: 178, tier: 1, family: 'steam', isTransfer: true, label: '蒸氣 1★' },
-        magnet_bud: { x: 478, y: 178, tier: 1, family: 'magnet', isTransfer: true, label: '磁環 1★' },
-        plasma_bud: { x: 746, y: 178, tier: 1, family: 'plasma', isTransfer: true, label: '電漿 1★' },
+        steam_bud: { x: 342, y: 340, tier: 1, family: 'steam', isTransfer: true, label: '蒸氣 1★' },
+        magnet_bud: { x: 768, y: 340, tier: 1, family: 'magnet', isTransfer: true, label: '磁環 1★' },
+        plasma_bud: { x: 1188, y: 340, tier: 1, family: 'plasma', isTransfer: true, label: '電漿 1★' },
 
         // Row 1: 6 進階主幹 (2★)
-        fire_trunk: { x: 74, y: 108, tier: 2, family: 'fire', label: '炎核 2★' },
-        steam_trunk: { x: 208, y: 108, tier: 2, family: 'steam', label: '高階蒸氣' },
-        ice_trunk: { x: 342, y: 108, tier: 2, family: 'ice', label: '霜晶 2★' },
-        magnet_trunk: { x: 478, y: 108, tier: 2, family: 'magnet', label: '高階磁環' },
-        thunder_trunk: { x: 612, y: 108, tier: 2, family: 'thunder', label: '雷紋 2★' },
-        plasma_trunk: { x: 746, y: 108, tier: 2, family: 'plasma', label: '高階電漿' },
+        fire_trunk: { x: 132, y: 210, tier: 2, family: 'fire', label: '炎核 2★' },
+        steam_trunk: { x: 342, y: 210, tier: 2, family: 'steam', label: '高階蒸氣' },
+        ice_trunk: { x: 552, y: 210, tier: 2, family: 'ice', label: '霜晶 2★' },
+        magnet_trunk: { x: 768, y: 210, tier: 2, family: 'magnet', label: '高階磁環' },
+        thunder_trunk: { x: 978, y: 210, tier: 2, family: 'thunder', label: '雷紋 2★' },
+        plasma_trunk: { x: 1188, y: 210, tier: 2, family: 'plasma', label: '高階電漿' },
 
-        // Row 0 (Top): 12 終極冠枝 (3★ A / B)
-        fire_A: { x: 40, y: 38, tier: 3, family: 'fire', branch: 'A', label: 'A 熔核' },
-        fire_B: { x: 108, y: 38, tier: 3, family: 'fire', branch: 'B', label: 'B 焚世' },
-        steam_A: { x: 174, y: 38, tier: 3, family: 'steam', branch: 'A', label: 'A 蒸壓' },
-        steam_B: { x: 242, y: 38, tier: 3, family: 'steam', branch: 'B', label: 'B 霜霧' },
-        ice_A: { x: 308, y: 38, tier: 3, family: 'ice', branch: 'A', label: 'A 永凍' },
-        ice_B: { x: 376, y: 38, tier: 3, family: 'ice', branch: 'B', label: 'B 冰錐' },
-        magnet_A: { x: 444, y: 38, tier: 3, family: 'magnet', branch: 'A', label: 'A 黑洞' },
-        magnet_B: { x: 512, y: 38, tier: 3, family: 'magnet', branch: 'B', label: 'B 電磁' },
-        thunder_A: { x: 578, y: 38, tier: 3, family: 'thunder', branch: 'A', label: 'A 連鎖' },
-        thunder_B: { x: 646, y: 38, tier: 3, family: 'thunder', branch: 'B', label: 'B 審判' },
-        plasma_A: { x: 712, y: 38, tier: 3, family: 'plasma', branch: 'A', label: 'A 死光' },
-        plasma_B: { x: 780, y: 38, tier: 3, family: 'plasma', branch: 'B', label: 'B 折射' }
+        // Row 0 (Top Canopy): 12 終極冠枝 (3★ A / B)
+        fire_A: { x: 80, y: 78, tier: 3, family: 'fire', branch: 'A', label: 'A 熔核' },
+        fire_B: { x: 185, y: 78, tier: 3, family: 'fire', branch: 'B', label: 'B 焚世' },
+        steam_A: { x: 290, y: 78, tier: 3, family: 'steam', branch: 'A', label: 'A 蒸壓' },
+        steam_B: { x: 395, y: 78, tier: 3, family: 'steam', branch: 'B', label: 'B 霜霧' },
+        ice_A: { x: 500, y: 78, tier: 3, family: 'ice', branch: 'A', label: 'A 永凍' },
+        ice_B: { x: 605, y: 78, tier: 3, family: 'ice', branch: 'B', label: 'B 冰錐' },
+        magnet_A: { x: 715, y: 78, tier: 3, family: 'magnet', branch: 'A', label: 'A 黑洞' },
+        magnet_B: { x: 820, y: 78, tier: 3, family: 'magnet', branch: 'B', label: 'B 電磁' },
+        thunder_A: { x: 925, y: 78, tier: 3, family: 'thunder', branch: 'A', label: 'A 連鎖' },
+        thunder_B: { x: 1030, y: 78, tier: 3, family: 'thunder', branch: 'B', label: 'B 審判' },
+        plasma_A: { x: 1135, y: 78, tier: 3, family: 'plasma', branch: 'A', label: 'A 死光' },
+        plasma_B: { x: 1240, y: 78, tier: 3, family: 'plasma', branch: 'B', label: 'B 折射' }
     };
 
     // 樹枝連線定義：core / sym (1★ 異系轉職) / primary (同物種升星與冠枝) / directed (基礎芽元素灌注轉職 1★ 升 2★)
@@ -74,7 +74,7 @@
         { from: 'ice_bud', to: 'steam_bud', family: 'steam', kind: 'sym' },
         { from: 'ice_bud', to: 'magnet_bud', family: 'magnet', kind: 'sym' },
         { from: 'thunder_bud', to: 'magnet_bud', family: 'magnet', kind: 'sym' },
-        { from: 'fire_bud', to: 'plasma_bud', family: 'plasma', kind: 'sym', arcOffsetY: 36 },
+        { from: 'fire_bud', to: 'plasma_bud', family: 'plasma', kind: 'sym', arcOffsetY: 115 },
         { from: 'thunder_bud', to: 'plasma_bud', family: 'plasma', kind: 'sym' },
 
         // 6 大物種 1★ -> 2★ 同物種升星
@@ -90,7 +90,7 @@
         { from: 'ice_bud', to: 'steam_trunk', family: 'ice', kind: 'directed' },
         { from: 'ice_bud', to: 'magnet_trunk', family: 'ice', kind: 'directed' },
         { from: 'thunder_bud', to: 'magnet_trunk', family: 'thunder', kind: 'directed' },
-        { from: 'fire_bud', to: 'plasma_trunk', family: 'fire', kind: 'directed', arcOffsetY: -20 },
+        { from: 'fire_bud', to: 'plasma_trunk', family: 'fire', kind: 'directed', arcOffsetY: -45 },
         { from: 'thunder_bud', to: 'plasma_trunk', family: 'thunder', kind: 'directed' },
 
         // 6 大物種 2★ -> 12 冠枝 3★ (A / B)
@@ -382,7 +382,41 @@
     }
 
     /**
-     * 渲染互動式 SVG 世界樹演化圖譜（底部原核 -> 3 根芽 -> 6 主幹 -> 12 冠枝）
+     * 預計算世界樹每個節點的完整祖先與後代血脈集合（供懸停／點擊聯動高亮）
+     */
+    function collectBloodlineSet(targetId) {
+        const set = new Set();
+        if (!targetId) return set;
+        set.add(targetId);
+
+        const upQueue = [targetId];
+        while (upQueue.length > 0) {
+            const cur = upQueue.shift();
+            for (let i = 0; i < WORLD_TREE_EDGES.length; i++) {
+                const e = WORLD_TREE_EDGES[i];
+                if (e.to === cur && !set.has(e.from)) {
+                    set.add(e.from);
+                    upQueue.push(e.from);
+                }
+            }
+        }
+
+        const downQueue = [targetId];
+        while (downQueue.length > 0) {
+            const cur = downQueue.shift();
+            for (let i = 0; i < WORLD_TREE_EDGES.length; i++) {
+                const e = WORLD_TREE_EDGES[i];
+                if (e.from === cur && !set.has(e.to)) {
+                    set.add(e.to);
+                    downQueue.push(e.to);
+                }
+            }
+        }
+        return set;
+    }
+
+    /**
+     * 渲染動態可拖曳／縮放「元素世界樹演化圖譜」(#tree-viewport 1320×680 扇形樹冠)
      */
     function renderWorldTreeCodex(treeShellEl) {
         if (!treeShellEl) return;
@@ -397,33 +431,41 @@
         if (scanState.craftableNodeSet.size > 0) {
             bannerEl.innerHTML = `<span class="wt-banner-dot"></span><span class="num">場上素材偵測：可朝 <strong>${craftableNames.join('、')}</strong> 方向融合（琥珀金框標示）</span>`;
         } else {
-            bannerEl.innerText = '點擊世界樹任一節點可檢視轉職／升星路徑與數值；場上持有素材時將自動高亮可融合目標。';
+            bannerEl.innerText = '拖曳平移、滾輪縮放視角；點擊或懸停節點高亮完整進化血脈與詳細數值。';
         }
         treeShellEl.appendChild(bannerEl);
 
-        const stageEl = document.createElement('div');
-        stageEl.className = 'world-tree-stage';
+        const viewportEl = document.createElement('div');
+        viewportEl.id = 'tree-viewport';
+        viewportEl.className = 'tree-viewport';
 
-        // 建立 SVG 樹枝層
+        const worldCanvasEl = document.createElement('div');
+        worldCanvasEl.className = 'tree-world-canvas';
+        worldCanvasEl.style.width = `${TREE_VIEW_W}px`;
+        worldCanvasEl.style.height = `${TREE_VIEW_H}px`;
+
+        const controlsEl = document.createElement('div');
+        controlsEl.className = 'wt-viewport-controls';
+        const zoomBadgeEl = document.createElement('span');
+        zoomBadgeEl.className = 'wt-zoom-badge num';
+        zoomBadgeEl.innerText = '100%';
+        const resetViewBtn = document.createElement('button');
+        resetViewBtn.type = 'button';
+        resetViewBtn.id = 'wt-reset-view-btn';
+        resetViewBtn.className = 'wt-reset-view-btn';
+        resetViewBtn.innerText = '重置視角';
+        controlsEl.appendChild(zoomBadgeEl);
+        controlsEl.appendChild(resetViewBtn);
+        viewportEl.appendChild(controlsEl);
+
+        // 建立 SVG 樹枝層（移除舊版格線，保留乾淨石板畫布與扇形有機枝脈）
         const svgNS = 'http://www.w3.org/2000/svg';
         const svgEl = document.createElementNS(svgNS, 'svg');
         svgEl.setAttribute('class', 'wt-edge-svg');
         svgEl.setAttribute('viewBox', `0 0 ${TREE_VIEW_W} ${TREE_VIEW_H}`);
-        svgEl.setAttribute('preserveAspectRatio', 'none');
+        svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         svgEl.setAttribute('aria-hidden', 'true');
 
-        // 繪製四層階級微弱橫向參考線（3★ 冠枝 / 2★ 主幹 / 1★ 轉職 / 1★ 基礎）
-        [38, 108, 178, 244].forEach((rowY) => {
-            const guide = document.createElementNS(svgNS, 'line');
-            guide.setAttribute('x1', '16');
-            guide.setAttribute('x2', String(TREE_VIEW_W - 16));
-            guide.setAttribute('y1', String(rowY));
-            guide.setAttribute('y2', String(rowY));
-            guide.setAttribute('class', 'wt-tier-guide');
-            svgEl.appendChild(guide);
-        });
-
-        // 先繪製暗色枝脈與灌注虛線，再繪製已點亮／場上可進化枝脈以確保層級清晰
         const orderedEdges = WORLD_TREE_EDGES.slice().sort((a, b) => {
             const score = (e) => {
                 if (scanState.craftableNodeSet.has(e.to)) return 3;
@@ -433,63 +475,68 @@
             return score(a) - score(b);
         });
 
-        orderedEdges.forEach((edge) => {
+        const edgeRecords = [];
+        orderedEdges.forEach((edge, idx) => {
             const toMeta = WORLD_TREE_LAYOUT[edge.to];
             const isBaseBud = ['fire_bud', 'ice_bud', 'thunder_bud'].includes(edge.to);
-            const toUnlocked = toMeta && (isBaseBud || isEntryUnlocked(`tower:${edge.to}`, false));
+            const toUnlocked = Boolean(toMeta && (isBaseBud || isEntryUnlocked(`tower:${edge.to}`, false)));
             const isCraftEdge = scanState.craftableNodeSet.has(edge.to)
                 && (scanState.presentNodeSet.has(edge.from) || edge.from === 'world_core');
-            const isSelectedEdge = edge.to === selectedTreeNodeId || edge.from === selectedTreeNodeId;
 
-            const pathEl = document.createElementNS(svgNS, 'path');
-            pathEl.setAttribute('d', buildTreeEdgePathD(edge));
+            const pathD = buildTreeEdgePathD(edge);
             let strokeColor = '#46544C';
-            let strokeWidth = edge.kind === 'directed' ? 1.3 : 1.8;
-            let opacity = edge.kind === 'directed' ? '0.45' : '0.88';
+            let strokeWidth = edge.kind === 'directed' ? 1.8 : 2.6;
+            let opacity = edge.kind === 'directed' ? '0.45' : '0.86';
 
             if (isCraftEdge) {
                 strokeColor = '#D97724';
-                strokeWidth = 2.6;
+                strokeWidth = 3.6;
                 opacity = '1';
             } else if (toUnlocked && edge.kind !== 'directed') {
                 strokeColor = FAMILY_STROKE_COLORS[edge.family] || '#B8C2BC';
-                strokeWidth = 2.2;
-                opacity = '0.95';
-            } else if (isSelectedEdge && edge.kind === 'directed') {
-                strokeColor = '#D97724';
-                strokeWidth = 1.9;
-                opacity = '0.9';
+                strokeWidth = 3.0;
+                opacity = '0.94';
             }
 
+            const edgeGroup = document.createElementNS(svgNS, 'g');
+            edgeGroup.setAttribute('class', `wt-edge-group${toUnlocked ? ' is-unlocked' : ''}${isCraftEdge ? ' is-craftable' : ''}`);
+            edgeGroup.dataset.edgeFrom = edge.from;
+            edgeGroup.dataset.edgeTo = edge.to;
+
+            const pathEl = document.createElementNS(svgNS, 'path');
+            pathEl.setAttribute('d', pathD);
             pathEl.setAttribute('fill', 'none');
             pathEl.setAttribute('stroke', strokeColor);
             pathEl.setAttribute('stroke-width', String(strokeWidth));
             pathEl.setAttribute('stroke-opacity', opacity);
             pathEl.setAttribute('stroke-linecap', 'round');
             if (edge.kind === 'directed') {
-                pathEl.setAttribute('stroke-dasharray', '4 4');
+                pathEl.setAttribute('stroke-dasharray', '6 6');
+                pathEl.setAttribute('class', 'wt-edge-path wt-edge-directed');
+            } else {
+                pathEl.setAttribute('pathLength', '100');
+                pathEl.setAttribute('class', 'wt-edge-path wt-edge-grow');
+                pathEl.style.animationDelay = `${Math.min(280, idx * 14)}ms`;
             }
-            svgEl.appendChild(pathEl);
-        });
-        stageEl.appendChild(svgEl);
+            edgeGroup.appendChild(pathEl);
 
-        // 建立左側階級標籤
-        const tierMarks = [
-            { y: 38, text: '3★ 冠枝' },
-            { y: 108, text: '2★ 主幹' },
-            { y: 178, text: '1★ 轉職' },
-            { y: 244, text: '1★ 基礎' },
-            { y: 298, text: '原核' }
-        ];
-        tierMarks.forEach((tm) => {
-            const badge = document.createElement('span');
-            badge.className = 'wt-tier-label';
-            badge.style.top = `${(tm.y / TREE_VIEW_H) * 100}%`;
-            badge.innerText = tm.text;
-            stageEl.appendChild(badge);
-        });
+            // 已點亮或可進化主幹上疊加向上流動靈液虛線光流
+            if (edge.kind !== 'directed' && (toUnlocked || isCraftEdge)) {
+                const sapEl = document.createElementNS(svgNS, 'path');
+                sapEl.setAttribute('d', pathD);
+                sapEl.setAttribute('fill', 'none');
+                sapEl.setAttribute('stroke', isCraftEdge ? '#F4F1EA' : strokeColor);
+                sapEl.setAttribute('stroke-width', isCraftEdge ? '2.2' : '1.8');
+                sapEl.setAttribute('stroke-linecap', 'round');
+                sapEl.setAttribute('class', 'wt-sap-flow');
+                edgeGroup.appendChild(sapEl);
+            }
 
-        // 建立 22 個可點擊節點（1 原核 + 21 世界樹節點）
+            svgEl.appendChild(edgeGroup);
+            edgeRecords.push({ edge, edgeGroup });
+        });
+        worldCanvasEl.appendChild(svgEl);
+
         const nodesLayer = document.createElement('div');
         nodesLayer.className = 'wt-nodes-layer';
 
@@ -497,6 +544,29 @@
         detailEl.className = 'wt-detail-card';
 
         const codexEntries = (getCodexData().CODEX_ENTRIES && getCodexData().CODEX_ENTRIES.towers) || {};
+        const nodeButtons = [];
+
+        let bloodlineFocusId = null;
+        const applyBloodlineHighlight = (activeId) => {
+            if (!activeId) {
+                nodeButtons.forEach((btn) => btn.classList.remove('is-bloodline', 'is-dimmed'));
+                edgeRecords.forEach(({ edgeGroup }) => edgeGroup.classList.remove('is-bloodline', 'is-dimmed'));
+                return;
+            }
+            const lineageSet = collectBloodlineSet(activeId);
+            nodeButtons.forEach((btn) => {
+                const inLineage = lineageSet.has(btn.dataset.nodeId);
+                btn.classList.toggle('is-bloodline', inLineage);
+                btn.classList.toggle('is-dimmed', !inLineage);
+            });
+            edgeRecords.forEach(({ edge, edgeGroup }) => {
+                const inLineage = lineageSet.has(edge.from) && lineageSet.has(edge.to);
+                edgeGroup.classList.toggle('is-bloodline', inLineage);
+                edgeGroup.classList.toggle('is-dimmed', !inLineage);
+            });
+        };
+
+        let suppressNodeClick = false;
 
         Object.keys(WORLD_TREE_LAYOUT).forEach((nodeId) => {
             const meta = WORLD_TREE_LAYOUT[nodeId];
@@ -505,97 +575,230 @@
             btn.dataset.nodeId = nodeId;
             btn.style.left = `${(meta.x / TREE_VIEW_W) * 100}%`;
             btn.style.top = `${(meta.y / TREE_VIEW_H) * 100}%`;
+            btn.style.animationDelay = `${(meta.tier || 0) * 55}ms`;
 
             if (nodeId === 'world_core') {
-                btn.className = `wt-node wt-node-core${selectedTreeNodeId === 'world_core' ? ' is-selected' : ''}`;
+                btn.className = `wt-node wt-node-core wt-node-pop${selectedTreeNodeId === 'world_core' ? ' is-selected' : ''}`;
                 btn.innerHTML = `<span class="wt-core-icon">🌳</span><span class="wt-node-caption">世界樹原核</span>`;
-                btn.addEventListener('click', () => {
-                    selectedTreeNodeId = 'world_core';
-                    nodesLayer.querySelectorAll('.wt-node').forEach(el => el.classList.toggle('is-selected', el.dataset.nodeId === selectedTreeNodeId));
-                    renderWorldTreeDetail(detailEl, selectedTreeNodeId, scanState);
-                });
-                nodesLayer.appendChild(btn);
-                return;
+            } else {
+                const entryInfo = codexEntries[nodeId] || {};
+                const isBaseBud = ['fire_bud', 'ice_bud', 'thunder_bud'].includes(nodeId);
+                const unlocked = isEntryUnlocked(`tower:${nodeId}`, Boolean(entryInfo.defaultUnlocked) || isBaseBud);
+                const isCraftable = scanState.craftableNodeSet.has(nodeId);
+                const isReadyNow = scanState.readyNowNodeSet.has(nodeId);
+                const isPresentOnBoard = scanState.presentNodeSet.has(nodeId);
+
+                btn.className = [
+                    'wt-node',
+                    'wt-node-pop',
+                    `wt-tier-${meta.tier}`,
+                    meta.isTransfer ? 'wt-transfer-bud' : '',
+                    `wt-family-${meta.family}`,
+                    unlocked ? 'is-unlocked' : 'is-locked',
+                    isCraftable ? 'wt-craftable' : '',
+                    isReadyNow ? 'wt-ready-now' : '',
+                    isPresentOnBoard ? 'wt-on-board' : '',
+                    selectedTreeNodeId === nodeId ? 'is-selected' : ''
+                ].filter(Boolean).join(' ');
+
+                const canvasWrap = document.createElement('span');
+                canvasWrap.className = 'wt-node-icon-box';
+                const cSize = meta.tier === 3 ? 34 : 38;
+                const canvasEl = document.createElement('canvas');
+                canvasEl.width = cSize;
+                canvasEl.height = cSize;
+                canvasEl.dataset.size = String(cSize);
+                canvasEl.setAttribute('aria-hidden', 'true');
+                canvasWrap.appendChild(canvasEl);
+
+                if (!unlocked) {
+                    const qSpan = document.createElement('span');
+                    qSpan.className = 'wt-locked-q';
+                    qSpan.innerText = '?';
+                    canvasWrap.appendChild(qSpan);
+                }
+                if (isPresentOnBoard && !isBaseBud) {
+                    const bTag = document.createElement('span');
+                    bTag.className = 'wt-board-pip num';
+                    bTag.innerText = String(scanState.boardNodeCounts[nodeId] || 1);
+                    bTag.title = '當前棋盤持有數量';
+                    canvasWrap.appendChild(bTag);
+                }
+
+                const cap = document.createElement('span');
+                cap.className = 'wt-node-caption num';
+                cap.innerText = unlocked ? meta.label : (meta.branch ? `${meta.branch} ???` : '???');
+
+                btn.appendChild(canvasWrap);
+                btn.appendChild(cap);
+
+                if (GameApp.renderer && typeof GameApp.renderer.drawPortrait === 'function') {
+                    GameApp.renderer.drawPortrait(canvasEl, 'tower', nodeId, {
+                        size: cSize,
+                        tier: meta.tier,
+                        silhouette: !unlocked
+                    });
+                }
             }
 
-            const entryInfo = codexEntries[nodeId] || {};
-            const isBaseBud = ['fire_bud', 'ice_bud', 'thunder_bud'].includes(nodeId);
-            const unlocked = isEntryUnlocked(`tower:${nodeId}`, Boolean(entryInfo.defaultUnlocked) || isBaseBud);
-            const isCraftable = scanState.craftableNodeSet.has(nodeId);
-            const isReadyNow = scanState.readyNowNodeSet.has(nodeId);
-            const isPresentOnBoard = scanState.presentNodeSet.has(nodeId);
-
-            btn.className = [
-                'wt-node',
-                `wt-tier-${meta.tier}`,
-                meta.isTransfer ? 'wt-transfer-bud' : '',
-                `wt-family-${meta.family}`,
-                unlocked ? 'is-unlocked' : 'is-locked',
-                isCraftable ? 'wt-craftable' : '',
-                isReadyNow ? 'wt-ready-now' : '',
-                isPresentOnBoard ? 'wt-on-board' : '',
-                selectedTreeNodeId === nodeId ? 'is-selected' : ''
-            ].filter(Boolean).join(' ');
-
-            const canvasWrap = document.createElement('span');
-            canvasWrap.className = 'wt-node-icon-box';
-            const cSize = meta.tier === 3 ? 26 : 30;
-            const canvasEl = document.createElement('canvas');
-            canvasEl.width = cSize;
-            canvasEl.height = cSize;
-            canvasEl.dataset.size = String(cSize);
-            canvasEl.setAttribute('aria-hidden', 'true');
-            canvasWrap.appendChild(canvasEl);
-
-            if (!unlocked) {
-                const qSpan = document.createElement('span');
-                qSpan.className = 'wt-locked-q';
-                qSpan.innerText = '?';
-                canvasWrap.appendChild(qSpan);
-            }
-            if (isPresentOnBoard && !isBaseBud) {
-                const bTag = document.createElement('span');
-                bTag.className = 'wt-board-pip num';
-                bTag.innerText = String(scanState.boardNodeCounts[nodeId] || 1);
-                bTag.title = '當前棋盤持有數量';
-                canvasWrap.appendChild(bTag);
-            }
-
-            const cap = document.createElement('span');
-            cap.className = 'wt-node-caption num';
-            cap.innerText = unlocked ? meta.label : (meta.branch ? `${meta.branch} ???` : '???');
-
-            btn.appendChild(canvasWrap);
-            btn.appendChild(cap);
-
-            if (GameApp.renderer && typeof GameApp.renderer.drawPortrait === 'function') {
-                GameApp.renderer.drawPortrait(canvasEl, 'tower', nodeId, {
-                    size: cSize,
-                    tier: meta.tier,
-                    silhouette: !unlocked
-                });
-            }
-
-            btn.addEventListener('click', () => {
+            btn.addEventListener('mouseenter', () => applyBloodlineHighlight(nodeId));
+            btn.addEventListener('mouseleave', () => applyBloodlineHighlight(bloodlineFocusId));
+            btn.addEventListener('click', (e) => {
+                if (suppressNodeClick) {
+                    e.preventDefault();
+                    return;
+                }
+                e.stopPropagation();
                 selectedTreeNodeId = nodeId;
-                nodesLayer.querySelectorAll('.wt-node').forEach(el => el.classList.toggle('is-selected', el.dataset.nodeId === selectedTreeNodeId));
+                bloodlineFocusId = bloodlineFocusId === nodeId ? null : nodeId;
+                nodeButtons.forEach(el => el.classList.toggle('is-selected', el.dataset.nodeId === selectedTreeNodeId));
+                applyBloodlineHighlight(bloodlineFocusId);
                 renderWorldTreeDetail(detailEl, selectedTreeNodeId, scanState);
             });
+
             nodesLayer.appendChild(btn);
+            nodeButtons.push(btn);
         });
 
-        stageEl.appendChild(nodesLayer);
-        treeShellEl.appendChild(stageEl);
+        worldCanvasEl.appendChild(nodesLayer);
+        viewportEl.appendChild(worldCanvasEl);
+        treeShellEl.appendChild(viewportEl);
+
+        // 平移與縮放視窗狀態（支援滑鼠拖曳、觸控拖曳與滾輪 0.75x ~ 1.45x）
+        const viewState = { scale: 0.75, panX: 0, panY: 0, dragging: false, startX: 0, startY: 0, origPanX: 0, origPanY: 0 };
+
+        const clampView = () => {
+            const vpW = viewportEl.clientWidth || 860;
+            const vpH = viewportEl.clientHeight || 420;
+            const contentW = TREE_VIEW_W * viewState.scale;
+            const contentH = TREE_VIEW_H * viewState.scale;
+            const pad = 48;
+
+            if (contentW <= vpW) {
+                viewState.panX = (vpW - contentW) * 0.5;
+            } else {
+                viewState.panX = Math.max(vpW - contentW - pad, Math.min(pad, viewState.panX));
+            }
+            if (contentH <= vpH) {
+                viewState.panY = (vpH - contentH) * 0.5;
+            } else {
+                viewState.panY = Math.max(vpH - contentH - pad, Math.min(pad, viewState.panY));
+            }
+        };
+
+        const applyViewTransform = () => {
+            clampView();
+            worldCanvasEl.style.transform = `translate3d(${Math.round(viewState.panX)}px, ${Math.round(viewState.panY)}px, 0) scale(${viewState.scale.toFixed(3)})`;
+            zoomBadgeEl.innerText = `${Math.round(viewState.scale * 100)}%`;
+        };
+
+        const resetView = () => {
+            const vpW = viewportEl.clientWidth || 860;
+            const vpH = viewportEl.clientHeight || 420;
+            const fitScale = Math.min(vpW / TREE_VIEW_W, vpH / TREE_VIEW_H);
+            viewState.scale = Math.max(0.75, Math.min(1.45, fitScale));
+            viewState.panX = (vpW - TREE_VIEW_W * viewState.scale) * 0.5;
+            viewState.panY = (vpH - TREE_VIEW_H * viewState.scale) * 0.5;
+            applyViewTransform();
+        };
+
+        resetViewBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetView();
+        });
+
+        const handlePanMove = (clientX, clientY) => {
+            if (!viewState.dragging) return;
+            const dx = clientX - viewState.startX;
+            const dy = clientY - viewState.startY;
+            if (Math.hypot(dx, dy) > 5) suppressNodeClick = true;
+            viewState.panX = viewState.origPanX + dx;
+            viewState.panY = viewState.origPanY + dy;
+            applyViewTransform();
+        };
+
+        const onWindowMouseMove = (e) => handlePanMove(e.clientX, e.clientY);
+        const endPan = () => {
+            if (!viewState.dragging) return;
+            viewState.dragging = false;
+            viewportEl.classList.remove('is-panning');
+            window.removeEventListener('mousemove', onWindowMouseMove);
+            window.removeEventListener('mouseup', endPan);
+            setTimeout(() => { suppressNodeClick = false; }, 30);
+        };
+
+        viewportEl.addEventListener('mousedown', (e) => {
+            if (e.button !== 0 || e.target === resetViewBtn) return;
+            viewState.dragging = true;
+            viewState.startX = e.clientX;
+            viewState.startY = e.clientY;
+            viewState.origPanX = viewState.panX;
+            viewState.origPanY = viewState.panY;
+            suppressNodeClick = false;
+            viewportEl.classList.add('is-panning');
+            window.addEventListener('mousemove', onWindowMouseMove);
+            window.addEventListener('mouseup', endPan);
+        });
+
+        viewportEl.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1 || e.target === resetViewBtn) return;
+            const t = e.touches[0];
+            viewState.dragging = true;
+            viewState.startX = t.clientX;
+            viewState.startY = t.clientY;
+            viewState.origPanX = viewState.panX;
+            viewState.origPanY = viewState.panY;
+            suppressNodeClick = false;
+        }, { passive: true });
+
+        viewportEl.addEventListener('touchmove', (e) => {
+            if (!viewState.dragging || e.touches.length !== 1) return;
+            const t = e.touches[0];
+            handlePanMove(t.clientX, t.clientY);
+        }, { passive: true });
+
+        viewportEl.addEventListener('touchend', endPan);
+
+        viewportEl.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = viewportEl.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const prevScale = viewState.scale;
+            const factor = e.deltaY < 0 ? 1.1 : 0.9;
+            const nextScale = Math.max(0.75, Math.min(1.45, prevScale * factor));
+            if (Math.abs(nextScale - prevScale) < 1e-4) return;
+            const worldX = (mouseX - viewState.panX) / prevScale;
+            const worldY = (mouseY - viewState.panY) / prevScale;
+            viewState.scale = nextScale;
+            viewState.panX = mouseX - worldX * nextScale;
+            viewState.panY = mouseY - worldY * nextScale;
+            applyViewTransform();
+        }, { passive: false });
+
+        viewportEl.addEventListener('click', (e) => {
+            if (suppressNodeClick) return;
+            if (!e.target.closest('.wt-node') && !e.target.closest('.wt-viewport-controls')) {
+                bloodlineFocusId = null;
+                applyBloodlineHighlight(null);
+            }
+        });
 
         // 預設預選場上素材已就緒或可進化的目標節點，讓玩家一打開即可看到戰術建議
         const autoPickSet = scanState.readyNowNodeSet.size > 0 ? scanState.readyNowNodeSet : scanState.craftableNodeSet;
         if (autoPickSet.size > 0 && !autoPickSet.has(selectedTreeNodeId)) {
             selectedTreeNodeId = Array.from(autoPickSet)[0];
-            nodesLayer.querySelectorAll('.wt-node').forEach(el => el.classList.toggle('is-selected', el.dataset.nodeId === selectedTreeNodeId));
+            nodeButtons.forEach(el => el.classList.toggle('is-selected', el.dataset.nodeId === selectedTreeNodeId));
         }
 
         renderWorldTreeDetail(detailEl, selectedTreeNodeId, scanState);
         treeShellEl.appendChild(detailEl);
+
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(resetView);
+        } else {
+            resetView();
+        }
     }
 
     /**

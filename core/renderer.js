@@ -205,7 +205,8 @@
     const BOSS_SVG_BY_TYPE = {
         lava: '<polygon points="10,44 16,18 27,22 32,12 37,22 48,18 54,44 45,54 19,54" fill="#3A1D18" stroke="#180D0B" stroke-width="2"/><polygon points="16,18 9,8 22,15" fill="#7D2B1F" stroke="#180D0B" stroke-width="1.5"/><polygon points="48,18 55,8 42,15" fill="#7D2B1F" stroke="#180D0B" stroke-width="1.5"/><polygon points="21,26 32,20 43,26 45,42 32,50 19,42" fill="#542119"/><polygon points="25,31 32,27 39,31 36,42 32,46 28,42" fill="#C94A38"/><polygon points="28,33 32,30 36,33 32,40" fill="#E0B43C"/><polygon points="23,23 29,25 24,27" fill="#F4F1EA"/><polygon points="41,23 35,25 40,27" fill="#F4F1EA"/>',
         air: '<polygon points="11,34 22,16 42,16 53,34 45,49 19,49" fill="#233036" stroke="#12191C" stroke-width="2"/><rect x="7" y="26" width="9" height="15" rx="3" fill="#3E5059" stroke="#12191C" stroke-width="1.5"/><rect x="48" y="26" width="9" height="15" rx="3" fill="#3E5059" stroke="#12191C" stroke-width="1.5"/><polygon points="20,17 44,17 48,29 16,29" fill="#33424A"/><circle cx="32" cy="34" r="9.5" fill="#4A9EBF" stroke="#F4F1EA" stroke-width="1.5"/><circle cx="32" cy="34" r="4.5" fill="#F4F1EA"/><polygon points="26,46 32,54 38,46" fill="#E0B43C"/>',
-        wood: '<polygon points="14,19 8,7 22,14 27,21" fill="#3D3126" stroke="#18130E" stroke-width="1.5"/><polygon points="50,19 56,7 42,14 37,21" fill="#3D3126" stroke="#18130E" stroke-width="1.5"/><polygon points="15,48 20,21 44,21 49,48 41,55 23,55" fill="#4B3B2D" stroke="#18130E" stroke-width="2"/><polygon points="19,21 32,12 45,21 38,28 26,28" fill="#2D5A3D" stroke="#132A1B" stroke-width="1.5"/><polygon points="27,34 32,29 37,34 34,43 30,43" fill="#D97724" stroke="#E0B43C" stroke-width="1.5"/><circle cx="25" cy="27" r="2.6" fill="#E0B43C"/><circle cx="39" cy="27" r="2.6" fill="#E0B43C"/>'
+        wood: '<polygon points="14,19 8,7 22,14 27,21" fill="#3D3126" stroke="#18130E" stroke-width="1.5"/><polygon points="50,19 56,7 42,14 37,21" fill="#3D3126" stroke="#18130E" stroke-width="1.5"/><polygon points="15,48 20,21 44,21 49,48 41,55 23,55" fill="#4B3B2D" stroke="#18130E" stroke-width="2"/><polygon points="19,21 32,12 45,21 38,28 26,28" fill="#2D5A3D" stroke="#132A1B" stroke-width="1.5"/><polygon points="27,34 32,29 37,34 34,43 30,43" fill="#D97724" stroke="#E0B43C" stroke-width="1.5"/><circle cx="25" cy="27" r="2.6" fill="#E0B43C"/><circle cx="39" cy="27" r="2.6" fill="#E0B43C"/>',
+        void_boss: '<polygon points="11,45 15,17 26,12 32,6 38,12 49,17 53,45 43,55 21,55" fill="#1E2723" stroke="#E0B43C" stroke-width="2"/><polygon points="19,22 32,15 45,22 43,43 32,50 21,43" fill="#2C3530" stroke="#46544C" stroke-width="1.4"/><polygon points="32,19 40,32 32,45 24,32" fill="#D97724" stroke="#E0B43C" stroke-width="1.6"/><circle cx="23" cy="28" r="2.6" fill="#E0B43C"/><circle cx="41" cy="28" r="2.6" fill="#E0B43C"/><circle cx="32" cy="32" r="3.4" fill="#F4F1EA"/>'
     };
 
     const MONSTER_SVG_BY_KEY = {
@@ -215,7 +216,11 @@
         hound: '<polygon points="12,41 24,25 22,12 31,21 40,12 39,24 52,32 45,42 42,53 33,44 24,53 20,43" fill="#357690" stroke="#142C36" stroke-width="1.5"/><polygon points="24,27 39,24 47,32 35,36 21,36" fill="rgba(244,241,234,0.28)"/><polygon points="8,36 17,32 15,40" fill="#82BDD4"/><circle cx="40" cy="29" r="2.2" fill="#E0B43C"/>',
         slime: '<path d="M12 45 Q13 17 32 16 Q51 17 52 45 Q51 54 32 54 Q13 54 12 45 Z" fill="#3B7A4D" stroke="#16301D" stroke-width="1.5"/><path d="M14 45 Q32 51 50 45 Q47 52 32 53 Q17 52 14 45 Z" fill="#2A5B38"/><path d="M19 28 Q23 20 31 20" fill="none" stroke="#B7E4C7" stroke-width="2" stroke-linecap="round"/><circle cx="25" cy="34" r="3" fill="#1B211E"/><circle cx="39" cy="34" r="3" fill="#1B211E"/><circle cx="26" cy="33" r="1.1" fill="#F4F1EA"/><circle cx="40" cy="33" r="1.1" fill="#F4F1EA"/>',
         golem: '<polygon points="11,45 14,19 24,14 40,14 50,19 53,45 45,54 19,54" fill="#46544C" stroke="#1B211E" stroke-width="2"/><polygon points="17,19 47,19 44,33 20,33" fill="#708077"/><polygon points="21,21 43,21 40,28 24,28" fill="rgba(244,241,234,0.28)"/><rect x="23" y="25" width="18" height="4.5" rx="2" fill="#1B211E"/><rect x="25" y="26.2" width="14" height="2.2" rx="1" fill="#D97724"/><circle cx="17" cy="24" r="1.8" fill="#B8C2BC"/><circle cx="47" cy="24" r="1.8" fill="#B8C2BC"/>',
-        wood: '<polygon points="15,47 18,22 46,22 49,47 41,54 23,54" fill="#523C2B" stroke="#1E1711" stroke-width="1.5"/><polygon points="16,24 25,13 32,19 39,13 48,24 38,29 26,29" fill="#326B46" stroke="#142C1D" stroke-width="1.5"/><polygon points="23,35 32,31 41,35 37,46 27,46" fill="rgba(74,222,128,0.28)"/><circle cx="25" cy="31" r="2.2" fill="#E0B43C"/><circle cx="39" cy="31" r="2.2" fill="#E0B43C"/>'
+        wood: '<polygon points="15,47 18,22 46,22 49,47 41,54 23,54" fill="#523C2B" stroke="#1E1711" stroke-width="1.5"/><polygon points="16,24 25,13 32,19 39,13 48,24 38,29 26,29" fill="#326B46" stroke="#142C1D" stroke-width="1.5"/><polygon points="23,35 32,31 41,35 37,46 27,46" fill="rgba(74,222,128,0.28)"/><circle cx="25" cy="31" r="2.2" fill="#E0B43C"/><circle cx="39" cy="31" r="2.2" fill="#E0B43C"/>',
+        guardian: '<polygon points="14,16 50,16 46,44 32,55 18,44" fill="#234656" stroke="#4A9EBF" stroke-width="2"/><polygon points="21,22 43,22 40,40 32,48 24,40" fill="#172B36" stroke="#82BDD4" stroke-width="1.4"/><line x1="32" y1="20" x2="32" y2="48" stroke="#4A9EBF" stroke-width="1.6"/><circle cx="26" cy="30" r="2.2" fill="#F4F1EA"/><circle cx="38" cy="30" r="2.2" fill="#F4F1EA"/>',
+        healer: '<circle cx="32" cy="34" r="15" fill="#2D5A3D" stroke="#16301D" stroke-width="1.6"/><path d="M32 10 L38 22 L50 20 L40 30 L45 42 L32 36 L19 42 L24 30 L14 20 L26 22 Z" fill="#4E9A68" stroke="#16301D" stroke-width="1.4"/><rect x="29.5" y="27" width="5" height="14" rx="1.2" fill="#F4F1EA"/><rect x="25" y="31.5" width="14" height="5" rx="1.2" fill="#F4F1EA"/>',
+        panther: '<polygon points="12,38 23,22 25,11 32,20 40,11 42,23 53,33 44,44 36,52 24,49" fill="#273238" stroke="#46544C" stroke-width="1.6"/><polygon points="25,25 39,24 46,32 34,37 22,34" fill="#35444C"/><circle cx="38" cy="28" r="2.3" fill="#4A9EBF"/><circle cx="29" cy="28" r="2.1" fill="#4A9EBF"/><polygon points="9,34 19,32 16,40" fill="#4A9EBF"/>',
+        bomber: '<circle cx="32" cy="36" r="16" fill="#4A211B" stroke="#1B0D0A" stroke-width="1.8"/><rect x="28" y="13" width="8" height="7" rx="2" fill="#6E281E" stroke="#1B0D0A" stroke-width="1.4"/><polygon points="32,5 36,12 28,12" fill="#E0B43C"/><circle cx="32" cy="37" r="7.5" fill="#C94A38" stroke="#E0B43C" stroke-width="1.6"/><circle cx="32" cy="37" r="3" fill="#E0B43C"/>'
     };
 
     /**
@@ -472,6 +477,32 @@
             poly2D(ctx, [[17, 19], [47, 19], [44, 33], [20, 33]], '#708077');
             rect2D(ctx, 23, 25, 18, 4.5, '#1B211E');
             rect2D(ctx, 25, 26.2, 14, 2.2, '#D97724');
+        } else if (id === 'guardian') {
+            poly2D(ctx, [[14, 16], [50, 16], [46, 44], [32, 55], [18, 44]], '#234656', tk.elIce, 2);
+            poly2D(ctx, [[21, 22], [43, 22], [40, 40], [32, 48], [24, 40]], '#172B36', '#82BDD4', 1.4);
+            circle2D(ctx, 26, 30, 2.3, '#F4F1EA');
+            circle2D(ctx, 38, 30, 2.3, '#F4F1EA');
+        } else if (id === 'healer') {
+            circle2D(ctx, 32, 34, 15, '#2D5A3D', '#16301D', 1.6);
+            poly2D(ctx, [[32, 10], [38, 22], [50, 20], [40, 30], [45, 42], [32, 36], [19, 42], [24, 30], [14, 20], [26, 22]], '#4E9A68', '#16301D', 1.4);
+            rect2D(ctx, 29.5, 27, 5, 14, '#F4F1EA');
+            rect2D(ctx, 25, 31.5, 14, 5, '#F4F1EA');
+        } else if (id === 'panther') {
+            poly2D(ctx, [[12, 38], [23, 22], [25, 11], [32, 20], [40, 11], [42, 23], [53, 33], [44, 44], [36, 52], [24, 49]], '#273238', '#46544C', 1.6);
+            poly2D(ctx, [[25, 25], [39, 24], [46, 32], [34, 37], [22, 34]], '#35444C');
+            circle2D(ctx, 38, 28, 2.3, tk.elIce);
+            circle2D(ctx, 29, 28, 2.1, tk.elIce);
+        } else if (id === 'bomber') {
+            circle2D(ctx, 32, 36, 16, '#4A211B', '#1B0D0A', 1.8);
+            rect2D(ctx, 28, 13, 8, 7, '#6E281E', '#1B0D0A', 1.4);
+            poly2D(ctx, [[32, 5], [36, 12], [28, 12]], tk.elLightning);
+            circle2D(ctx, 32, 37, 7.5, tk.elFire, tk.elLightning, 1.6);
+            circle2D(ctx, 32, 37, 3, tk.elLightning);
+        } else if (id === 'void_boss') {
+            poly2D(ctx, [[11, 45], [15, 17], [26, 12], [32, 6], [38, 12], [49, 17], [53, 45], [43, 55], [21, 55]], '#1E2723', tk.elLightning, 2);
+            poly2D(ctx, [[32, 19], [40, 32], [32, 45], [24, 32]], tk.accentCta, tk.elLightning, 1.6);
+            circle2D(ctx, 23, 28, 2.5, tk.elLightning);
+            circle2D(ctx, 41, 28, 2.5, tk.elLightning);
         } else {
             const mCfg = getMonstersDict()[id] || {};
             const vis = mCfg.visual || {};
@@ -953,8 +984,10 @@
             shieldBarEl: el.querySelector('.m-shield-bar'),
             shieldFillEl: el.querySelector('.m-shield-fill'),
             armorBadgeEl: el.querySelector('.m-armor-badge'),
+            bossBadgeEl: el.querySelector('.m-boss-badge'),
             debuffStripEl: el.querySelector('.m-debuff-strip'),
-            lastDebuffHtml: ''
+            lastDebuffHtml: '',
+            lastWeakness: monster.weakness
         };
         G.monsterDomMap.set(monster.id, rec);
         return rec;
@@ -1009,6 +1042,14 @@
             rec.el.classList.toggle('slowed', isSlowed || isFrozen);
             rec.el.classList.toggle('frozen', isFrozen);
             rec.el.classList.toggle('rooted', (m.rootTimer || 0) > 0);
+            rec.el.classList.toggle('stealthed', Boolean(m.isStealthed));
+            if (m.isBoss && rec.bossBadgeEl && rec.lastWeakness !== m.weakness) {
+                rec.lastWeakness = m.weakness;
+                const weakCfg = getTowersDict()[m.weakness];
+                const weakShort = weakCfg ? `${weakCfg.icon}${weakCfg.name.charAt(0)}` : (m.weakness || '');
+                rec.bossBadgeEl.className = `m-boss-badge weak-${m.weakness || ''}`;
+                rec.bossBadgeEl.innerText = `王·弱${weakShort}`;
+            }
             if (rec.debuffStripEl) {
                 const debuffHtml = buildMonsterDebuffMicroHtml(m, MonsterSys);
                 if (rec.lastDebuffHtml !== debuffHtml) {
@@ -1074,14 +1115,24 @@
         tower.classList.add('tower', `type-${family}`, `node-${towerObj.type}`, `lv-${towerObj.tier}`);
         tower.dataset.towerIndex = String(index);
         if (st.frenzyActiveMs > 0) tower.classList.add('frenzy-active');
+        if (towerObj.isCrowned) tower.classList.add('is-crowned');
+        if ((towerObj.stunnedMs || 0) > 0) tower.classList.add('stunned');
 
         const { baseSvgHtml, headSvgHtml } = createTowerSvgParts(towerObj.type, towerObj.tier);
         const baseLayer = document.createElement('div'); baseLayer.classList.add('tower-base-layer'); baseLayer.innerHTML = baseSvgHtml;
+        if (towerObj.isCrowned) {
+            const haloEl = document.createElement('div');
+            haloEl.className = 'tower-crown-halo';
+            haloEl.setAttribute('aria-hidden', 'true');
+            haloEl.innerHTML = '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="none" stroke="#E0B43C" stroke-width="2" stroke-dasharray="6 3"/><polygon points="24,9 28,15 32,6 36,15 40,9 38,18 26,18" fill="#E0B43C" stroke="#1B211E" stroke-width="1.2"/></svg>';
+            tower.appendChild(haloEl);
+        }
         const headRotator = document.createElement('div'); headRotator.classList.add('tower-head-rotator'); headRotator.style.transform = `rotate(${towerObj.aimAngleDeg || 0}deg)`;
         const headRecoil = document.createElement('div'); headRecoil.classList.add('tower-head-recoil'); headRecoil.innerHTML = headSvgHtml;
         headRotator.appendChild(headRecoil);
         const name = document.createElement('div'); name.classList.add('tower-name');
-        name.innerText = branchCode ? `${branchCode}${getTierStars(towerObj.tier)}` : getTierStars(towerObj.tier);
+        const starLabel = towerObj.isCrowned ? '👑' : getTierStars(towerObj.tier);
+        name.innerText = branchCode ? `${branchCode}${starLabel}` : starLabel;
 
         tower._rotator = headRotator;
         tower._recoilEl = headRecoil;
@@ -1091,6 +1142,11 @@
             GameApp.systems.drag.bindBoardTowerElement(tower, index, towerObj);
         }
         return tower;
+    }
+
+    function setTowerStunnedVisual(index, isStunned) {
+        const el = G && G.towerElements ? G.towerElements[index] : null;
+        if (el) el.classList.toggle('stunned', Boolean(isStunned));
     }
 
     function renderCellTower(index) {
@@ -1123,13 +1179,17 @@
         boardEl.innerHTML = ''; G.cellElements.length = 0; G.towerElements.fill(null);
         st.lastRenderedSelected = null; st.lastRenderedBuildTarget = null; st.lastRenderedPendingSpawn = null;
 
+        const startSet = (map.startCellIndices instanceof Set && map.startCellIndices.size > 0)
+            ? map.startCellIndices
+            : new Set([map.startCellIndex]);
+
         for (let index = 0; index < boardSize; index++) {
             const cell = document.createElement('div');
             cell.classList.add('cell');
             cell.dataset.index = index;
             if (map.pathCellIndices.has(index)) {
                 cell.classList.add('path-cell');
-                if (index === map.startCellIndex) {
+                if (startSet.has(index)) {
                     cell.classList.add('path-start');
                     const marker = document.createElement('span');
                     marker.classList.add('cell-marker');
@@ -1191,6 +1251,31 @@
             boardEl.appendChild(cell);
         }
         measureBoardMetrics();
+    }
+
+    function refreshCellTerrain(index) {
+        const cell = G && G.cellElements ? G.cellElements[index] : null;
+        if (!cell) return;
+        const terrainsDict = getTerrainsDict();
+        cell.classList.remove('terrain-highground', 'terrain-mana_vein', 'terrain-world_tree', 'terrain-obstacle', 'obstacle-cell');
+        cell.removeAttribute('title');
+        const oldArt = cell.querySelector('.terrain-art');
+        if (oldArt) oldArt.remove();
+
+        const terrain = G.map && G.map.terrainMap ? G.map.terrainMap.get(index) : null;
+        if (terrain && terrainsDict[terrain]) {
+            const tCfg = terrainsDict[terrain];
+            cell.classList.add(`terrain-${terrain}`);
+            if (tCfg.buildable === false) cell.classList.add('obstacle-cell');
+            if (tCfg.tooltip) cell.setAttribute('title', tCfg.tooltip);
+            if (TERRAIN_SVG_BY_TYPE[terrain]) {
+                const art = document.createElement('div');
+                art.classList.add('terrain-art');
+                art.setAttribute('aria-hidden', 'true');
+                art.innerHTML = TERRAIN_SVG_BY_TYPE[terrain];
+                cell.appendChild(art);
+            }
+        }
     }
 
     function renderBoard(dirtyIndices = null) {
@@ -1447,8 +1532,10 @@
         clearCellDragHighlights,
         clearTouchDragVisuals,
         createTowerElement,
+        setTowerStunnedVisual,
         renderCellTower,
         initBoard,
+        refreshCellTerrain,
         renderBoard,
         showDragRangePreview,
         updateRangeIndicator,

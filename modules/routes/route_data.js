@@ -54,7 +54,7 @@
         SPAWN_INTERVAL_MIN_MS: 750
     };
 
-    // 雙地圖關卡與路徑點（WAYPOINTS）設定（🌲 晨光森林 / 🔥 熔岩峽谷）
+    // 三地圖關卡與路徑點（WAYPOINTS）設定（🌲 晨光森林 / 🔥 熔岩峽谷 / ❄️ 永凍裂谷）
     const MAPS_CONFIG = {
         forest: {
             id: 'forest',
@@ -81,6 +81,9 @@
                 ],
                 world_tree: [
                     [14, 7], [12, 8], [13, 8], [14, 8]
+                ],
+                obstacle: [
+                    [5, 3], [9, 4], [7, 6], [11, 5]
                 ]
             }
         },
@@ -110,6 +113,53 @@
                 ],
                 world_tree: [
                     [14, 7], [13, 7], [12, 9], [13, 9]
+                ],
+                obstacle: [
+                    [2, 3], [6, 2], [9, 3], [9, 6]
+                ]
+            }
+        },
+        frost: {
+            id: 'frost',
+            name: '❄️ 永凍裂谷',
+            diffLabel: '專家挑戰',
+            diffClass: 'diff-hard',
+            desc: '36 格雙岔匯流 · 寒霜靈脈冰傷 +20%',
+            startGoldBonus: 15,
+            killGoldMult: 1.20,
+            iceDamageBonus: 0.20,
+            waypoints: [
+                { x: 0, y: 1 },
+                { x: 5, y: 1 },
+                { x: 5, y: 5 },
+                { x: 9, y: 5 },
+                { x: 9, y: 2 },
+                { x: 13, y: 2 },
+                { x: 13, y: 8 },
+                { x: 14, y: 8 }
+            ],
+            altWaypoints: [
+                { x: 0, y: 8 },
+                { x: 5, y: 8 },
+                { x: 5, y: 5 },
+                { x: 9, y: 5 },
+                { x: 9, y: 2 },
+                { x: 13, y: 2 },
+                { x: 13, y: 8 },
+                { x: 14, y: 8 }
+            ],
+            terrainLayout: {
+                highground: [
+                    [4, 3], [6, 4], [8, 3], [11, 3], [12, 5]
+                ],
+                mana_vein: [
+                    [6, 6], [7, 4], [8, 4], [10, 4], [11, 5], [12, 6]
+                ],
+                world_tree: [
+                    [14, 6], [14, 7], [12, 8], [14, 9]
+                ],
+                obstacle: [
+                    [3, 4], [4, 6], [7, 2], [11, 7]
                 ]
             }
         }
@@ -121,7 +171,11 @@
             { maxWave: 1, monsters: ['wood', 'lava', 'air'] },
             { maxWave: 2, monsters: ['wood', 'lava', 'air', 'hound'] },
             { maxWave: 3, monsters: ['wood', 'lava', 'air', 'hound', 'slime'] },
-            { maxWave: Infinity, monsters: ['wood', 'lava', 'air', 'hound', 'slime', 'golem'] }
+            { maxWave: 5, monsters: ['wood', 'lava', 'air', 'hound', 'slime', 'golem'] },
+            { maxWave: 6, monsters: ['wood', 'lava', 'air', 'hound', 'slime', 'golem', 'guardian'] },
+            { maxWave: 7, monsters: ['wood', 'lava', 'air', 'hound', 'slime', 'golem', 'guardian', 'healer'] },
+            { maxWave: 8, monsters: ['wood', 'lava', 'air', 'hound', 'slime', 'golem', 'guardian', 'healer', 'panther'] },
+            { maxWave: Infinity, monsters: ['wood', 'lava', 'air', 'hound', 'slime', 'golem', 'guardian', 'healer', 'panther', 'bomber'] }
         ]
     };
 

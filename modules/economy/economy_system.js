@@ -106,6 +106,31 @@
         return Boolean(st && st.currentGold >= getCombatMoveCost());
     }
 
+    function getObstacleClearCost() {
+        const d = getData();
+        return Number.isFinite(d.OBSTACLE_CLEAR_COST) ? d.OBSTACLE_CLEAR_COST : 45;
+    }
+
+    function canAffordObstacleClear() {
+        const st = G && G.state;
+        return Boolean(st && st.currentGold >= getObstacleClearCost());
+    }
+
+    function getCrownAwakenCost() {
+        const d = getData();
+        return {
+            gold: Number.isFinite(d.CROWN_AWAKEN_GOLD_COST) ? d.CROWN_AWAKEN_GOLD_COST : 220,
+            dew: Number.isFinite(d.CROWN_AWAKEN_DEW_COST) ? d.CROWN_AWAKEN_DEW_COST : 60
+        };
+    }
+
+    function canAffordCrownAwaken() {
+        const st = G && G.state;
+        if (!st) return false;
+        const cost = getCrownAwakenCost();
+        return st.currentGold >= cost.gold && st.dewEnergy >= cost.dew;
+    }
+
     function getEarlyWaveBonus(remainingMs = null) {
         const d = getData();
         const cfg = d.EARLY_WAVE_BONUS || { BASE_BONUS: 2, PER_SECOND_RATE: 1.5, MAX_BONUS: 15 };
@@ -128,6 +153,10 @@
         getTowerSellRefund,
         getCombatMoveCost,
         canAffordCombatMove,
+        getObstacleClearCost,
+        canAffordObstacleClear,
+        getCrownAwakenCost,
+        canAffordCrownAwaken,
         getEarlyWaveBonus,
         computeKillGold
     };
