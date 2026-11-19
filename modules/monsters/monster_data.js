@@ -26,12 +26,13 @@
         SLIME_SPLIT_HP_RATIO: 0.30          // 分裂子體繼承母體最大血量比例 (30%)
     };
 
-    // 各類怪物基礎數值、行為標籤與參數化幾何外觀定義
+    // 各類怪物基礎數值、行為標籤與參數化幾何外觀定義（image 欄位可填自訂圖片路徑，未填時自動繪製 2.5D 肖像）
     const MONSTER_DATABASE = {
         wood: {
             id: 'wood',
             name: '蔓藤巨魔',
             icon: '🌿',
+            image: '',
             weakness: 'fire',
             baseHp: 68,
             baseReward: 10,
@@ -51,6 +52,7 @@
             id: 'lava',
             name: '熔岩傀儡',
             icon: '🌋',
+            image: '',
             weakness: 'ice',
             baseHp: 78,
             baseReward: 11,
@@ -70,6 +72,7 @@
             id: 'air',
             name: '機械飛艇',
             icon: '🛸',
+            image: '',
             weakness: 'thunder',
             baseHp: 60,
             baseReward: 10,
@@ -89,6 +92,7 @@
             id: 'hound',
             name: '疾風獵犬',
             icon: '🐺',
+            image: '',
             weakness: 'ice',
             baseHp: 44,
             baseReward: 9,
@@ -108,6 +112,7 @@
             id: 'slime',
             name: '分裂史萊姆',
             icon: '🟢',
+            image: '',
             weakness: 'fire',
             baseHp: 90,
             baseReward: 13,
@@ -131,6 +136,7 @@
             id: 'golem',
             name: '重裝魔像',
             icon: '🗿',
+            image: '',
             weakness: 'thunder',
             baseHp: 112,
             baseReward: 16,

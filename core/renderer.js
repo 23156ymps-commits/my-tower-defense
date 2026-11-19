@@ -179,6 +179,273 @@
         return `<svg class="m-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="57" rx="19" ry="5.5" fill="rgba(0,0,0,0.38)"/>${body}</svg>`;
     }
 
+    // ==================== 共用角色／怪物／地形 2.5D 高解析度 Canvas 肖像繪製器 ====================
+    const imageCache = new Map();
+
+    function poly2D(ctx, pts, fill, stroke = null, lineWidth = 1.5) {
+        if (!pts || pts.length < 2) return;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.closePath();
+        if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.lineJoin = 'round'; ctx.stroke(); }
+    }
+
+    function circle2D(ctx, cx, cy, r, fill, stroke = null, lineWidth = 1.5) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
+    }
+
+    function ellipse2D(ctx, cx, cy, rx, ry, fill, stroke = null, lineWidth = 1.5) {
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
+    }
+
+    function rect2D(ctx, x, y, w, h, fill, stroke = null, lineWidth = 1.5) {
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
+    }
+
+    function drawTowerPortrait2D(ctx, type, tier, tk) {
+        const pal = getTowerPaletteForType(type, tk);
+        // 2.5D 八角石座底盤
+        ellipse2D(ctx, 32, 53, 23, 8, 'rgba(0,0,0,0.42)');
+        poly2D(ctx, [[15, 22], [49, 22], [55, 33], [55, 44], [47, 53], [17, 53], [9, 44], [9, 33]], tk.bgGridElevated, tk.bgCanvas, 2);
+        poly2D(ctx, [[18, 14], [46, 14], [52, 24], [52, 36], [45, 45], [19, 45], [12, 36], [12, 24]], '#3B453F', tier >= 3 ? tk.elLightning : tk.borderSubtle, 1.5);
+        circle2D(ctx, 32, 30, 14, tk.bgCanvas, tk.bgCanvas, 1.5);
+        circle2D(ctx, 32, 30, 11.5, null, pal.rune, tier >= 3 ? 2 : 1.5);
+
+        const gemCoords = tier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
+        gemCoords.forEach(([gx, gy]) => circle2D(ctx, gx, gy, tier >= 2 ? 2.1 : 1.5, tier >= 2 ? pal.glow : tk.textSecondary));
+
+        // 砲塔上層結構（與戰場 SVG 100% 視覺一致）
+        if (type === 'fire') {
+            if (tier >= 3) {
+                poly2D(ctx, [[14, 40], [22, 25], [24, 42]], tk.elFire, '#2B1410', 1.5);
+                poly2D(ctx, [[50, 40], [42, 25], [40, 42]], '#8C2F23', '#2B1410', 1.5);
+            }
+            poly2D(ctx, [[27, 7], [37, 7], [39, 30], [25, 30]], '#6E281E', '#2B1410', 1.5);
+            poly2D(ctx, [[24.5, 6], [39.5, 6], [37.5, 12], [26.5, 12]], tk.accentCta, '#2B1410', 1.5);
+            ellipse2D(ctx, 32, 7, 4.5, 2.2, tk.elLightning);
+            poly2D(ctx, [[22, 26], [42, 26], [45, 38], [38, 46], [26, 46], [19, 38]], tk.elFire, '#2B1410', 1.5);
+            circle2D(ctx, 32, 36, tier >= 3 ? 6.2 : 5, tk.accentCta, '#2B1410', 1.5);
+            circle2D(ctx, 31, 34.5, 2.2, tk.textPrimary);
+        } else if (type === 'ice') {
+            poly2D(ctx, [[18, 16], [24, 28], [19, 38], [14, 32]], tk.elIce, '#143240', 1.5);
+            poly2D(ctx, [[46, 16], [40, 28], [45, 38], [50, 32]], '#2E6F8A', '#143240', 1.5);
+            poly2D(ctx, [[32, 4], [39, 28], [32, 34], [25, 28]], tk.elIce, '#143240', 1.5);
+            poly2D(ctx, [[21, 28], [43, 28], [46, 39], [32, 47], [18, 39]], '#2B6780', '#143240', 1.5);
+            poly2D(ctx, [[32, 29], [38, 36], [32, 43], [26, 36]], '#A6D7EA', '#143240', 1.5);
+        } else if (type === 'thunder') {
+            poly2D(ctx, [[20, 9], [25, 9], [26, 30], [20, 30]], '#5A4B22', '#241F10', 1.5);
+            poly2D(ctx, [[39, 9], [44, 9], [44, 30], [38, 30]], '#463A1A', '#241F10', 1.5);
+            circle2D(ctx, 22.5, 9, 3.4, tk.elLightning, '#241F10', 1.5);
+            circle2D(ctx, 41.5, 9, 3.4, tk.elLightning, '#241F10', 1.5);
+            poly2D(ctx, [[32, 12], [35, 28], [29, 28]], tk.elLightning, '#241F10', 1.5);
+            poly2D(ctx, [[19, 28], [45, 28], [47, 40], [39, 47], [25, 47], [17, 40]], '#3D341E', '#241F10', 1.5);
+            rect2D(ctx, 23, 30, 18, 4, tk.accentCta);
+            rect2D(ctx, 25, 36, 14, 3.5, tk.elLightning);
+        } else if (type === 'steam') {
+            rect2D(ctx, 23, 7, 8, 22, '#8C3326', '#1E1814', 1.5);
+            rect2D(ctx, 33, 7, 8, 22, '#2D6A82', '#1E1814', 1.5);
+            rect2D(ctx, 21, 6, 22, 5, tk.textSecondary, '#1E1814', 1.5);
+            poly2D(ctx, [[18, 27], [32, 27], [32, 47], [23, 46], [16, 38]], tk.elFire, '#1E1814', 1.5);
+            poly2D(ctx, [[32, 27], [46, 27], [48, 38], [41, 46], [32, 47]], tk.elIce, '#1E1814', 1.5);
+            circle2D(ctx, 32, 36, 5.5, tk.textPrimary, '#1E1814', 1.5);
+            circle2D(ctx, 32, 36, 2.6, tk.accentCta);
+        } else if (type === 'magnet') {
+            poly2D(ctx, [[18, 6], [25, 6], [26, 33], [17, 37]], tk.elIce, '#142C36', 1.5);
+            poly2D(ctx, [[46, 6], [39, 6], [38, 33], [47, 37]], '#9E7E26', '#241F10', 1.5);
+            circle2D(ctx, 32, 16, 5, tk.elIce, tk.elLightning, 1.5);
+            poly2D(ctx, [[21, 30], [43, 30], [47, 39], [39, 47], [25, 47], [17, 39]], tk.bgSurface, tk.elIce, 1.5);
+            circle2D(ctx, 32, 38, 5.2, tk.elLightning, '#142C36', 1.5);
+        } else if (type === 'plasma') {
+            poly2D(ctx, [[14, 34], [25, 21], [26, 41], [18, 43]], tk.elFire, '#2B1410', 1.5);
+            poly2D(ctx, [[50, 34], [39, 21], [38, 41], [46, 43]], '#8C2F23', '#2B1410', 1.5);
+            poly2D(ctx, [[32, 5], [37, 27], [27, 27]], tk.elLightning, '#2B1410', 1.5);
+            ellipse2D(ctx, 32, 20, 8, 3.2, null, tk.accentCta, 1.5);
+            poly2D(ctx, [[22, 27], [42, 27], [44, 39], [32, 48], [20, 39]], '#7D2B1F', tk.elLightning, 1.5);
+            circle2D(ctx, 32, 36, 5.2, tk.accentCta, tk.elLightning, 1.5);
+        } else {
+            const tCfg = getTowersDict()[type] || {};
+            const primary = tCfg.color || tk.accentCta;
+            const accent = (tCfg.palette && tCfg.palette.glow) || tk.elLightning;
+            poly2D(ctx, [[15, 36], [22, 24], [23, 41]], primary, '#1B211E', 1.5);
+            poly2D(ctx, [[49, 36], [42, 24], [41, 41]], primary, '#1B211E', 1.5);
+            poly2D(ctx, [[27, 7], [37, 7], [39, 29], [25, 29]], primary, '#1B211E', 1.5);
+            poly2D(ctx, [[21, 27], [43, 27], [46, 39], [38, 47], [26, 47], [18, 39]], primary, '#1B211E', 1.5);
+            circle2D(ctx, 32, 36, 5.2, accent, '#1B211E', 1.5);
+        }
+    }
+
+    function drawMonsterPortrait2D(ctx, id, tk) {
+        ellipse2D(ctx, 32, 57, 19, 5.5, 'rgba(0,0,0,0.40)');
+        if (id === 'wood') {
+            poly2D(ctx, [[15, 47], [18, 22], [46, 22], [49, 47], [41, 54], [23, 54]], '#523C2B', '#1E1711', 1.5);
+            poly2D(ctx, [[16, 24], [25, 13], [32, 19], [39, 13], [48, 24], [38, 29], [26, 29]], '#326B46', '#142C1D', 1.5);
+            poly2D(ctx, [[23, 35], [32, 31], [41, 35], [37, 46], [27, 46]], 'rgba(74,222,128,0.28)');
+            circle2D(ctx, 25, 31, 2.3, tk.elLightning);
+            circle2D(ctx, 39, 31, 2.3, tk.elLightning);
+        } else if (id === 'lava') {
+            poly2D(ctx, [[16, 47], [18, 22], [28, 15], [36, 15], [46, 22], [48, 47], [39, 54], [25, 54]], '#46201A', '#1B0D0A', 1.5);
+            poly2D(ctx, [[21, 23], [32, 17], [43, 23], [41, 34], [23, 34]], '#7D2B1F');
+            poly2D(ctx, [[27, 32], [32, 27], [37, 32], [35, 44], [29, 44]], '#C94A38');
+            poly2D(ctx, [[30, 33], [34, 33], [32, 40]], tk.elLightning);
+            rect2D(ctx, 23, 25, 5, 3, tk.elLightning);
+            rect2D(ctx, 36, 25, 5, 3, tk.elLightning);
+        } else if (id === 'air') {
+            poly2D(ctx, [[10, 36], [22, 28], [42, 28], [54, 36], [42, 46], [22, 46]], '#2F6A82', '#142C36', 1.5);
+            circle2D(ctx, 32, 28, 11, '#4A9EBF', '#142C36', 1.5);
+            circle2D(ctx, 23, 37, 2.2, tk.elLightning);
+            circle2D(ctx, 32, 37, 2.2, tk.elLightning);
+            circle2D(ctx, 41, 37, 2.2, tk.elLightning);
+            poly2D(ctx, [[26, 46], [38, 46], [32, 53]], '#D97724');
+        } else if (id === 'hound') {
+            poly2D(ctx, [[12, 41], [24, 25], [22, 12], [31, 21], [40, 12], [39, 24], [52, 32], [45, 42], [42, 53], [33, 44], [24, 53], [20, 43]], '#357690', '#142C36', 1.5);
+            poly2D(ctx, [[24, 27], [39, 24], [47, 32], [35, 36], [21, 36]], 'rgba(244,241,234,0.28)');
+            poly2D(ctx, [[8, 36], [17, 32], [15, 40]], '#82BDD4');
+            circle2D(ctx, 40, 29, 2.3, tk.elLightning);
+        } else if (id === 'slime') {
+            ellipse2D(ctx, 32, 37, 20, 17, '#3B7A4D', '#16301D', 1.5);
+            ellipse2D(ctx, 26, 26, 6, 3, 'rgba(183,228,199,0.55)');
+            circle2D(ctx, 25, 35, 3.2, '#1B211E');
+            circle2D(ctx, 39, 35, 3.2, '#1B211E');
+            circle2D(ctx, 26, 34, 1.2, '#F4F1EA');
+            circle2D(ctx, 40, 34, 1.2, '#F4F1EA');
+        } else if (id === 'golem') {
+            poly2D(ctx, [[11, 45], [14, 19], [24, 14], [40, 14], [50, 19], [53, 45], [45, 54], [19, 54]], '#46544C', '#1B211E', 2);
+            poly2D(ctx, [[17, 19], [47, 19], [44, 33], [20, 33]], '#708077');
+            rect2D(ctx, 23, 25, 18, 4.5, '#1B211E');
+            rect2D(ctx, 25, 26.2, 14, 2.2, '#D97724');
+        } else {
+            const mCfg = getMonstersDict()[id] || {};
+            const vis = mCfg.visual || {};
+            const primary = vis.primaryColor || mCfg.color || '#6D4C41';
+            const accent = vis.accentColor || tk.elLightning;
+            poly2D(ctx, [[14, 46], [18, 20], [32, 13], [46, 20], [50, 46], [41, 54], [23, 54]], primary, '#1B211E', 1.6);
+            poly2D(ctx, [[22, 24], [32, 18], [42, 24], [39, 42], [25, 42]], 'rgba(244,241,234,0.18)');
+            circle2D(ctx, 25, 29, 2.6, accent);
+            circle2D(ctx, 39, 29, 2.6, accent);
+            poly2D(ctx, [[28, 37], [36, 37], [32, 45]], accent);
+        }
+    }
+
+    function drawTerrainPortrait2D(ctx, id, tk) {
+        if (id === 'highground') {
+            poly2D(ctx, [[8, 52], [24, 16], [35, 32], [46, 12], [56, 52]], '#3B3524', tk.elLightning, 2);
+            poly2D(ctx, [[16, 46], [26, 25], [35, 36], [44, 22], [50, 46]], 'rgba(224,180,60,0.28)');
+        } else if (id === 'mana_vein') {
+            circle2D(ctx, 32, 32, 22, 'rgba(74,158,191,0.18)', tk.elIce, 1.8);
+            poly2D(ctx, [[32, 10], [48, 32], [32, 54], [16, 32]], '#233840', tk.elIce, 2);
+            circle2D(ctx, 32, 32, 5.5, tk.elIce);
+        } else if (id === 'world_tree') {
+            circle2D(ctx, 32, 32, 22, 'rgba(78,154,104,0.18)', '#4E9A68', 1.8);
+            poly2D(ctx, [[32, 10], [48, 26], [42, 46], [32, 54], [22, 46], [16, 26]], '#233C2E', '#4E9A68', 2);
+            rect2D(ctx, 30.5, 18, 3, 30, '#A8D5B5');
+        } else {
+            poly2D(ctx, [[10, 48], [18, 22], [33, 16], [48, 24], [54, 48], [40, 54], [20, 54]], '#46544C', '#B8C2BC', 1.8);
+        }
+    }
+
+    function applySilhouettePass(canvasEl, ctx) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalCompositeOperation = 'source-in';
+        ctx.fillStyle = '#0B0E0D';
+        ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
+        ctx.restore();
+    }
+
+    /**
+     * 統一角色／怪物／地形肖像繪製器
+     * @param {HTMLCanvasElement} canvasEl 目標 Canvas 元素
+     * @param {'tower'|'monster'|'terrain'} category 類別
+     * @param {string} id 條目 ID
+     * @param {Object} options { tier, size, silhouette, image }
+     */
+    function drawPortrait(canvasEl, category, id, options = {}) {
+        if (!canvasEl || typeof canvasEl.getContext !== 'function') return false;
+        const cssSize = Number(options.size) || Number(canvasEl.dataset && canvasEl.dataset.size) || canvasEl.clientWidth || canvasEl.width || 64;
+        const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? Math.min(2, window.devicePixelRatio) : 1;
+        const pxSize = Math.max(16, Math.round(cssSize * dpr));
+
+        if (canvasEl.width !== pxSize || canvasEl.height !== pxSize) {
+            canvasEl.width = pxSize;
+            canvasEl.height = pxSize;
+        }
+        const ctx = canvasEl.getContext('2d');
+        if (!ctx) return false;
+
+        const isSilhouette = Boolean(options.silhouette);
+        canvasEl.dataset.portraitCategory = String(category || 'tower');
+        canvasEl.dataset.portraitId = String(id || '');
+        canvasEl.dataset.silhouette = isSilhouette ? 'true' : 'false';
+
+        // 查找對應資料物件，檢查是否配置了自訂圖片路徑 image
+        let dataObj = null;
+        if (category === 'tower') dataObj = getTowersDict()[id];
+        else if (category === 'monster') dataObj = getMonstersDict()[id];
+        else if (category === 'terrain') dataObj = getTerrainsDict()[id];
+
+        const customImageSrc = options.image || (dataObj && dataObj.image) || '';
+        const tk = getThemeTokens();
+        const scale = pxSize / 64;
+
+        // 先同步繪製 2.5D 幾何肖像（確保離線、未填圖片或圖片載入中皆立即呈現完整畫面）
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, pxSize, pxSize);
+        ctx.scale(scale, scale);
+
+        if (category === 'tower') {
+            const defaultTier = (dataObj && dataObj.isHybrid) ? 2 : 1;
+            drawTowerPortrait2D(ctx, id, options.tier || defaultTier, tk);
+        } else if (category === 'monster') {
+            drawMonsterPortrait2D(ctx, id, tk);
+        } else if (category === 'terrain') {
+            drawTerrainPortrait2D(ctx, id, tk);
+        }
+        ctx.restore();
+
+        if (isSilhouette) {
+            applySilhouettePass(canvasEl, ctx);
+        }
+
+        // 若資料表有填寫自訂圖片路徑（如 'assets/fire.png'），優先載入並覆蓋繪製
+        if (customImageSrc && typeof Image !== 'undefined') {
+            const renderLoadedImg = (img) => {
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, pxSize, pxSize);
+                ctx.drawImage(img, 0, 0, pxSize, pxSize);
+                ctx.restore();
+                if (isSilhouette) applySilhouettePass(canvasEl, ctx);
+            };
+            const cached = imageCache.get(customImageSrc);
+            if (cached && cached.complete && cached.naturalWidth > 0) {
+                renderLoadedImg(cached);
+            } else if (!cached) {
+                const img = new Image();
+                imageCache.set(customImageSrc, img);
+                img.onload = () => {
+                    if (img.naturalWidth > 0) renderLoadedImg(img);
+                };
+                img.onerror = () => {
+                    imageCache.delete(customImageSrc);
+                };
+                img.src = customImageSrc;
+            }
+        }
+        return true;
+    }
+
     // ==================== 棋盤量測與 HiDPI Canvas 2D 特效層 ====================
     function resizeFxCanvas() {
         if (!G || !G.dom) return;
@@ -629,12 +896,14 @@
                     cell.appendChild(art);
                 }
             }
-            cell.addEventListener('mouseenter', () => {
+            const onHoverEnterOrMove = () => {
                 if (!st.isTouchMode && st.hoveredIndex !== index) {
                     st.hoveredIndex = index;
                     updateRangeIndicator();
                 }
-            });
+            };
+            cell.addEventListener('mouseenter', onHoverEnterOrMove);
+            cell.addEventListener('mousemove', onHoverEnterOrMove);
             cell.addEventListener('mouseleave', () => {
                 if (!st.isTouchMode && st.hoveredIndex === index) {
                     st.hoveredIndex = null;
@@ -681,12 +950,49 @@
         G.callbacks.updateTowerInspector();
     }
 
+    function updateTowerHoverTooltip() {
+        if (!G || !G.dom) return;
+        const towerTipEl = G.dom.towerTooltipEl || (typeof document !== 'undefined' ? document.getElementById('tower-tooltip') : null);
+        if (!towerTipEl) return;
+        G.dom.towerTooltipEl = towerTipEl;
+
+        const st = G.state;
+        const isDraggingNow = GameApp.systems && GameApp.systems.drag && GameApp.systems.drag.isDragging();
+        if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'
+            || st.waveState === 'BLESSING_SELECT' || isDraggingNow || st.isTouchMode
+            || st.hoveredIndex === null || !st.board[st.hoveredIndex]) {
+            towerTipEl.classList.add('hidden');
+            return;
+        }
+
+        const idx = st.hoveredIndex;
+        const towerObj = st.board[idx];
+        const tCfg = getTowersDict()[towerObj.type] || { icon: '✨', name: towerObj.type };
+        const stars = getTierStars(towerObj.tier);
+        towerTipEl.innerText = `${tCfg.icon} ${tCfg.name} · Lv.${towerObj.tier} ${stars}`;
+
+        const coords = indexToCoords(idx), center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
+        const clampedX = Math.max(76, Math.min((m.stageW || 600) - 76, center.left));
+        const isTopRow = coords.y === 0;
+        const topPx = isTopRow ? (center.top + m.cellH * 0.72) : (center.top - m.cellH * 0.72);
+        towerTipEl.style.left = `${clampedX}px`;
+        towerTipEl.style.top = `${topPx}px`;
+        towerTipEl.classList.toggle('tooltip-below', isTopRow);
+        towerTipEl.classList.remove('hidden');
+    }
+
     function updateTerrainTooltip() {
         const tipEl = G.dom.terrainTooltipEl, st = G.state;
+        updateTowerHoverTooltip();
         if (!tipEl) return;
         const isDraggingNow = GameApp.systems && GameApp.systems.drag && GameApp.systems.drag.isDragging();
         if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'
             || st.waveState === 'BLESSING_SELECT' || isDraggingNow) {
+            tipEl.classList.add('hidden');
+            return;
+        }
+        // 若滑鼠懸停在已有防禦塔的格子上，優先顯示乾淨的角色名牌，避免雙重提示重疊
+        if (!st.isTouchMode && st.hoveredIndex !== null && st.board[st.hoveredIndex] !== null) {
             tipEl.classList.add('hidden');
             return;
         }
@@ -712,6 +1018,7 @@
      * 顯示拖曳期間的即時射程預覽圈（支援商店拖拉指定召喚與棋盤拖拉移塔）
      */
     function showDragRangePreview(leftPx, topPx, radiusPx, towerType) {
+        updateTowerHoverTooltip();
         const el = G && G.dom && G.dom.rangeCircleEl;
         if (!el) return;
         el.style.left = `${leftPx}px`;
@@ -774,6 +1081,8 @@
         getTierStars,
         createTowerSvgParts,
         createMonsterSvgHtml,
+        drawPortrait,
+        updateTowerHoverTooltip,
         resizeFxCanvas,
         measureBoardMetrics,
         getCellCenter,

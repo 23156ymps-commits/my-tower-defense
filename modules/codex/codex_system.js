@@ -2,11 +2,11 @@
  * ============================================================================
  * 【檔案名稱】：modules/codex/codex_system.js
  * 【負責功能】：圖鑑解鎖紀錄持久化（localStorage）、透過 Object.keys() 動態掃描角色／怪物／地形資料表，
- *               並支援圖鑑彈窗分類頁籤切換與自動預設卡片渲染。
+ *               並為每張圖鑑卡渲染左側 64×64 專屬肖像（已解鎖彩色 2.5D 圖案 vs. 未解鎖純黑神秘剪影）。
  * 【讀取資料】：讀取 codex_data.js、tower_data.js、evolution_data.js、monster_data.js、terrain_data.js。
  * 【常見修改入口】：
- *   1. 修改圖鑑彈窗 HTML 渲染結構或預設分頁：修改 renderCodexModal()。
- *   2. 修改圖鑑解鎖存檔邏輯：修改 unlockEntry()、loadUnlockedSet()。
+ *   1. 修改圖鑑卡片 64×64 圖片框或鎖定剪影顯示邏輯：修改 renderCodexModal()、createCodexCardElement()。
+ *   2. 修改圖鑑解鎖存檔邏輯：修改 unlockEntry()、isEntryUnlocked()。
  * ============================================================================
  */
 (function (global) {
@@ -21,11 +21,12 @@
 
     function bind(ctx) {
         G = ctx;
+        syncDefaultUnlockedEntries();
         initCodexModalDom();
     }
 
     function loadUnlockedSet() {
-        const set = new Set(['tower:fire', 'tower:ice', 'tower:thunder', 'tower:steam', 'tower:magnet', 'tower:plasma']);
+        const set = new Set();
         try {
             const raw = typeof localStorage !== 'undefined'
                 ? localStorage.getItem(CONFIG.STORAGE_CODEX_KEY || 'merge_defense_codex_unlocked')
@@ -36,6 +37,25 @@
             }
         } catch (_) {}
         return set;
+    }
+
+    function syncDefaultUnlockedEntries() {
+        const entries = getCodexData().CODEX_ENTRIES || {};
+        if (entries.towers) {
+            Object.keys(entries.towers).forEach(k => {
+                if (entries.towers[k] && entries.towers[k].defaultUnlocked) unlockedSet.add(`tower:${k}`);
+            });
+        }
+        if (entries.monsters) {
+            Object.keys(entries.monsters).forEach(k => {
+                if (entries.monsters[k] && entries.monsters[k].defaultUnlocked) unlockedSet.add(`monster:${k}`);
+            });
+        }
+        if (entries.terrain) {
+            Object.keys(entries.terrain).forEach(k => {
+                if (entries.terrain[k] && entries.terrain[k].defaultUnlocked !== false) unlockedSet.add(`terrain:${k}`);
+            });
+        }
     }
 
     function saveUnlockedSet() {
@@ -49,17 +69,76 @@
         } catch (_) {}
     }
 
+    function isEntryUnlocked(entryId, defaultUnlocked = false) {
+        if (unlockedSet.has(entryId)) return true;
+        if (defaultUnlocked) {
+            unlockedSet.add(entryId);
+            return true;
+        }
+        return false;
+    }
+
     function unlockEntry(entryId) {
-        if (!entryId || unlockedSet.has(entryId)) return;
+        if (!entryId) return;
+        const wasLocked = !unlockedSet.has(entryId);
         unlockedSet.add(entryId);
-        saveUnlockedSet();
+        if (wasLocked) {
+            saveUnlockedSet();
+            if (isCodexOpen()) renderCodexModal(currentCategory);
+        }
     }
 
     function getCodexData() {
         return (GameApp.data && GameApp.data.codex) || {};
     }
 
-    function buildCategoryItemsHtml(category) {
+    /**
+     * 建立單張圖鑑卡片 DOM（左側 64x64 Canvas 肖像框 ＋ 右側標題／說明／解鎖狀態）
+     */
+    function createCodexCardElement({ portraitCat, itemKey, tier = 1, unlocked, cardClass, headerHtml, descHtml }) {
+        const itemEl = document.createElement('div');
+        itemEl.className = `codex-item ${cardClass || 'codex-steam'}${unlocked ? ' is-unlocked' : ' is-locked'}`;
+        itemEl.dataset.entryId = `${portraitCat}:${itemKey}`;
+        itemEl.dataset.unlocked = unlocked ? 'true' : 'false';
+
+        const frameEl = document.createElement('div');
+        frameEl.className = 'codex-portrait-frame';
+        const canvasEl = document.createElement('canvas');
+        canvasEl.className = 'codex-portrait-canvas';
+        canvasEl.width = 64;
+        canvasEl.height = 64;
+        canvasEl.dataset.size = '64';
+        canvasEl.setAttribute('aria-hidden', 'true');
+        frameEl.appendChild(canvasEl);
+
+        if (!unlocked) {
+            const qBadge = document.createElement('span');
+            qBadge.className = 'codex-silhouette-mark';
+            qBadge.innerText = '?';
+            frameEl.appendChild(qBadge);
+        }
+
+        const infoCol = document.createElement('div');
+        infoCol.className = 'codex-info-col';
+        infoCol.innerHTML = `<div class="codex-recipe">${headerHtml}</div><div class="codex-desc">${descHtml}</div>`;
+
+        itemEl.appendChild(frameEl);
+        itemEl.appendChild(infoCol);
+
+        if (GameApp.renderer && typeof GameApp.renderer.drawPortrait === 'function') {
+            GameApp.renderer.drawPortrait(canvasEl, portraitCat, itemKey, {
+                size: 64,
+                tier,
+                silhouette: !unlocked
+            });
+        }
+        return itemEl;
+    }
+
+    function renderCategoryItemsInto(listEl, category) {
+        if (!listEl) return;
+        listEl.innerHTML = '';
+
         const codexData = getCodexData();
         const entries = codexData.CODEX_ENTRIES || { towers: {}, monsters: {}, terrain: {} };
         const towersDict = (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
@@ -69,9 +148,11 @@
 
         if (category === 'fusion') {
             const hybridKeys = Object.keys(towersDict).filter(k => Boolean(towersDict[k] && towersDict[k].isHybrid));
-            return hybridKeys.map((key) => {
+            hybridKeys.forEach((key) => {
                 const tCfg = towersDict[key];
                 const custom = (entries.towers && entries.towers[key]) || codexData.buildFallbackTowerCard(key, tCfg);
+                const unlocked = isEntryUnlocked(`tower:${key}`, Boolean(custom.defaultUnlocked));
+
                 let recipeHtml = custom.recipeText;
                 if (!entries.towers || !entries.towers[key]) {
                     const recipes = evoData.FUSION_RECIPES || {};
@@ -84,54 +165,109 @@
                         }
                     }
                 }
-                return `<div class="codex-item ${custom.cardClass || 'codex-steam'}">
-                    <div class="codex-recipe">${recipeHtml}</div>
-                    <div class="codex-desc">${custom.desc}</div>
-                </div>`;
-            }).join('');
+                const statusBadge = unlocked
+                    ? '<span class="codex-status-badge unlocked">✅ 已解鎖</span>'
+                    : '<span class="codex-status-badge locked">🔒 未解鎖</span>';
+                const headerHtml = unlocked
+                    ? `${recipeHtml} ${statusBadge}`
+                    : `${custom.lockedRecipeText || recipeHtml} ${statusBadge}`;
+                const descHtml = unlocked
+                    ? custom.desc
+                    : `🔒 解鎖條件：${custom.unlockRule || '於戰場中成功合成此融合塔即可解鎖完整圖鑑與彩圖。'}`;
+
+                listEl.appendChild(createCodexCardElement({
+                    portraitCat: 'tower',
+                    itemKey: key,
+                    tier: 2,
+                    unlocked,
+                    cardClass: custom.cardClass || 'codex-steam',
+                    headerHtml,
+                    descHtml
+                }));
+            });
+            return;
         }
 
         if (category === 'towers') {
             const baseKeys = Object.keys(towersDict).filter(k => Boolean(towersDict[k] && !towersDict[k].isHybrid));
-            return baseKeys.map((key) => {
+            baseKeys.forEach((key) => {
                 const tCfg = towersDict[key];
                 const card = (entries.towers && entries.towers[key]) || codexData.buildFallbackTowerCard(key, tCfg);
-                return `<div class="codex-item ${card.cardClass || 'codex-steam'}">
-                    <div class="codex-recipe">${card.recipeText || `<strong>${card.title}</strong>`}</div>
-                    <div class="codex-desc">${card.desc}</div>
-                </div>`;
-            }).join('');
+                const unlocked = isEntryUnlocked(`tower:${key}`, card.defaultUnlocked !== false);
+                const statusBadge = unlocked
+                    ? '<span class="codex-status-badge unlocked">✅ 已解鎖</span>'
+                    : '<span class="codex-status-badge locked">🔒 未解鎖</span>';
+                const headerHtml = unlocked
+                    ? `${card.recipeText || `<strong>${card.title}</strong>`} ${statusBadge}`
+                    : `<strong>？？？ · 未知防禦塔</strong> ${statusBadge}`;
+                const descHtml = unlocked ? card.desc : `🔒 解鎖條件：${card.unlockRule || '召喚此防禦塔即可解鎖'}`;
+
+                listEl.appendChild(createCodexCardElement({
+                    portraitCat: 'tower',
+                    itemKey: key,
+                    tier: 1,
+                    unlocked,
+                    cardClass: card.cardClass || 'codex-steam',
+                    headerHtml,
+                    descHtml
+                }));
+            });
+            return;
         }
 
         if (category === 'monsters') {
             const monsterKeys = Object.keys(monstersDict);
-            return monsterKeys.map((key) => {
+            monsterKeys.forEach((key) => {
                 const mCfg = monstersDict[key];
                 const card = (entries.monsters && entries.monsters[key]) || codexData.buildFallbackMonsterCard(key, mCfg);
-                return `<div class="codex-item codex-steam">
-                    <div class="codex-recipe"><strong>${card.title}</strong> <span class="num" style="font-size:12px;color:#E0B43C;">｜${card.subtitle || ''}</span></div>
-                    <div class="codex-desc">${card.desc}</div>
-                </div>`;
-            }).join('');
+                const unlocked = isEntryUnlocked(`monster:${key}`, Boolean(card.defaultUnlocked));
+                const statusBadge = unlocked
+                    ? '<span class="codex-status-badge unlocked">✅ 已解鎖</span>'
+                    : '<span class="codex-status-badge locked">🔒 未解鎖</span>';
+                const headerHtml = unlocked
+                    ? `<strong>${card.title}</strong> <span class="num" style="font-size:12px;color:#E0B43C;">｜${card.subtitle || ''}</span> ${statusBadge}`
+                    : `<strong>？？？ · 未知魔物</strong> ${statusBadge}`;
+                const descHtml = unlocked
+                    ? card.desc
+                    : `🔒 解鎖條件：${card.unlockRule || '於戰場遭遇此魔物後自動解鎖彩圖與弱點情報。'}`;
+
+                listEl.appendChild(createCodexCardElement({
+                    portraitCat: 'monster',
+                    itemKey: key,
+                    tier: 1,
+                    unlocked,
+                    cardClass: 'codex-steam',
+                    headerHtml,
+                    descHtml
+                }));
+            });
+            return;
         }
 
         if (category === 'terrain') {
             const terrainKeys = Object.keys(terrainsDict).filter(k => k !== 'grass' && k !== 'path');
-            return terrainKeys.map((key) => {
+            terrainKeys.forEach((key) => {
                 const tCfg = terrainsDict[key];
                 const card = (entries.terrain && entries.terrain[key]) || {
                     title: `${tCfg.icon || '🗺️'} ${tCfg.name || key}`,
                     subtitle: tCfg.shortTag || '',
-                    desc: tCfg.tooltip || ''
+                    desc: tCfg.tooltip || '',
+                    defaultUnlocked: true
                 };
-                return `<div class="codex-item codex-magnet">
-                    <div class="codex-recipe"><strong>${card.title}</strong> <span class="num" style="font-size:12px;color:#9BD3E8;">｜${card.subtitle || ''}</span></div>
-                    <div class="codex-desc">${card.desc}</div>
-                </div>`;
-            }).join('');
-        }
+                const unlocked = isEntryUnlocked(`terrain:${key}`, card.defaultUnlocked !== false);
+                const headerHtml = `<strong>${card.title}</strong> <span class="num" style="font-size:12px;color:#9BD3E8;">｜${card.subtitle || ''}</span>`;
 
-        return '';
+                listEl.appendChild(createCodexCardElement({
+                    portraitCat: 'terrain',
+                    itemKey: key,
+                    tier: 1,
+                    unlocked,
+                    cardClass: 'codex-magnet',
+                    headerHtml,
+                    descHtml: card.desc
+                }));
+            });
+        }
     }
 
     function initCodexModalDom() {
@@ -153,6 +289,7 @@
 
     function renderCodexModal(category = 'fusion') {
         currentCategory = category;
+        syncDefaultUnlockedEntries();
         if (!G || !G.dom || !G.dom.codexOverlayEl) return;
         const cardEl = G.dom.codexOverlayEl.querySelector('.codex-card');
         if (!cardEl) return;
@@ -180,7 +317,7 @@
 
         const listEl = cardEl.querySelector('.codex-list');
         if (listEl) {
-            listEl.innerHTML = buildCategoryItemsHtml(currentCategory);
+            renderCategoryItemsInto(listEl, currentCategory);
         }
     }
 
@@ -218,6 +355,7 @@
 
     const CodexSystem = {
         bind,
+        isEntryUnlocked,
         unlockEntry,
         isCodexOpen,
         openCodex,

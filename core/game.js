@@ -63,7 +63,7 @@
         ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn'], ['gameoverMenuBtn', 'gameover-menu-btn'],
         ['gameoverRatingStatusEl', 'gameover-rating-status'], ['gameoverCopyReportBtn', 'gameover-copy-report-btn'],
         ['helpBtn', 'help-btn'], ['guideOverlayEl', 'guide-overlay'], ['guideCloseBtn', 'guide-close-btn'],
-        ['terrainTooltipEl', 'terrain-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
+        ['terrainTooltipEl', 'terrain-tooltip'], ['towerTooltipEl', 'tower-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
         ['forecastToggleBtn', 'forecast-toggle-btn'], ['forecastBarTitleEl', 'forecast-bar-title'],
         ['forecastToggleIndicatorEl', 'forecast-toggle-indicator'], ['forecastInlineSummaryEl', 'forecast-inline-summary'],
         ['forecastDetailDrawerEl', 'forecast-detail-drawer'],
@@ -600,13 +600,18 @@
             const type = shopTypes[i], ref = dom.spawnerBtns[type];
             if (!ref) continue;
             const cost = EconSys.getSummonCost(type);
-            if (ref.costEl) ref.costEl.innerText = `${cost} 💰`;
-            ref.btn.classList.toggle('btn-disabled', !activePlay || st.currentGold < cost);
+            const isLowGold = st.currentGold < cost;
+            if (ref.costEl) {
+                ref.costEl.innerText = `${cost} 💰`;
+                ref.costEl.classList.toggle('cost-insufficient', isLowGold);
+            }
+            ref.btn.classList.toggle('btn-low-gold', isLowGold);
+            ref.btn.classList.toggle('btn-disabled', !activePlay || isLowGold);
         }
     }
 
     /**
-     * 透過 Object.keys() 動態掃描 tower_data.js 基礎角色，生成下方拖拉召喚卡片
+     * 透過 Object.keys() 動態掃描 tower_data.js 基礎角色，生成下方「44x44 圖片 ＋ 名字 ＋ 價錢」三段式拖拉召喚卡片
      */
     function renderSpawnerButtons() {
         const container = G.dom.spawnerContainer;
@@ -629,10 +634,20 @@
                 btn.style.borderLeftColor = data.color;
             }
             const cost = EconSys.getSummonCost(type);
-            btn.innerHTML = `<span class="spawn-card-top"><span class="spawn-card-name">${data.icon} ${data.name}</span><span class="btn-cost-val num">${cost} 💰</span></span><span class="btn-sub-info num">${data.roleTag || '拖曳至棋盤召喚'}</span>`;
+            btn.innerHTML = `
+                <span class="spawn-card-portrait">
+                    <canvas class="spawn-portrait-canvas" width="44" height="44" data-size="44" aria-hidden="true"></canvas>
+                </span>
+                <span class="spawn-card-name">${data.icon} ${data.name}</span>
+                <span class="btn-cost-val num">${cost} 💰</span>
+            `;
+            const canvasEl = btn.querySelector('.spawn-portrait-canvas');
+            if (canvasEl && Renderer && typeof Renderer.drawPortrait === 'function') {
+                Renderer.drawPortrait(canvasEl, 'tower', type, { tier: 1, size: 44 });
+            }
             DragSys.bindShopCardElement(btn, type);
             container.appendChild(btn);
-            G.dom.spawnerBtns[type] = { btn, costEl: btn.querySelector('.btn-cost-val') };
+            G.dom.spawnerBtns[type] = { btn, costEl: btn.querySelector('.btn-cost-val'), canvasEl };
         });
 
         const pityBadge = document.createElement('div');

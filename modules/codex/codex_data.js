@@ -5,7 +5,7 @@
  *               並提供未填寫文案的新增角色／怪物自動生成預設圖鑑卡之模板函式。
  * 【讀取資料】：無（本檔為純圖鑑文字與分類設定表，供 codex_system.js 讀取）。
  * 【常見修改入口】：
- *   1. 修改各防禦塔、怪物或地形的圖鑑介紹文字：調整 CODEX_ENTRIES。
+ *   1. 修改各防禦塔、怪物或地形的圖鑑介紹文字與預設解鎖狀態：調整 CODEX_ENTRIES。
  *   2. 修改新增角色或怪物的自動預設圖鑑卡格式：調整 buildFallbackTowerCard()、buildFallbackMonsterCard()。
  * ============================================================================
  */
@@ -50,25 +50,28 @@
             steam: {
                 title: '💨 蒸氣爆裂塔',
                 recipeText: '🔥 火 + ❄️ 冰 = <strong>蒸氣爆裂塔</strong>',
+                lockedRecipeText: '🔥 火 + ❄️ 冰 = <strong>？？？</strong>',
                 desc: '射程 2.5 格｜攻速 1.15s｜命中產生 1.3 格爆裂濺射，並<strong>無視目標 50% 護甲</strong>。',
-                unlockRule: '合成過一次蒸氣爆裂塔即可記錄解鎖',
-                defaultUnlocked: true,
+                unlockRule: '於戰場中將同星級「火塔 ＋ 冰塔」合成即可解鎖',
+                defaultUnlocked: false,
                 cardClass: 'codex-steam'
             },
             magnet: {
                 title: '💠 極地磁暴塔',
                 recipeText: '❄️ 冰 + ⚡ 雷 = <strong>極地磁暴塔</strong>',
+                lockedRecipeText: '❄️ 冰 + ⚡ 雷 = <strong>？？？</strong>',
                 desc: '射程 3.2 格｜攻速 0.95s｜釋放感電冰環<strong>群體緩速 50%</strong>，連鎖彈跳額外 2 名敵人。',
-                unlockRule: '合成過一次極地磁暴塔即可記錄解鎖',
-                defaultUnlocked: true,
+                unlockRule: '於戰場中將同星級「冰塔 ＋ 雷塔」合成即可解鎖',
+                defaultUnlocked: false,
                 cardClass: 'codex-magnet'
             },
             plasma: {
                 title: '☄️ 電漿聚焦塔',
                 recipeText: '🔥 火 + ⚡ 雷 = <strong>電漿聚焦塔</strong>',
+                lockedRecipeText: '🔥 火 + ⚡ 雷 = <strong>？？？</strong>',
                 desc: '射程 3.8 格｜攻速 0.45s｜高頻聚焦光束，連續鎖定同一目標<strong>遞增 15% 傷害</strong>（最高 5 層）。',
-                unlockRule: '合成過一次電漿聚焦塔即可記錄解鎖',
-                defaultUnlocked: true,
+                unlockRule: '於戰場中將同星級「火塔 ＋ 雷塔」合成即可解鎖',
+                defaultUnlocked: false,
                 cardClass: 'codex-plasma'
             }
         },
@@ -77,37 +80,43 @@
                 title: '🌿 蔓藤巨魔',
                 subtitle: '弱點：🔥 火屬性（200% 暴擊）',
                 desc: '森林常見的堅韌樹怪，移速均衡，部署火塔可迅速瓦解其防線。',
+                unlockRule: 'Wave 1 起登場',
                 defaultUnlocked: true
             },
             lava: {
                 title: '🌋 熔岩傀儡',
                 subtitle: '弱點：❄️ 冰屬性（200% 暴擊）',
                 desc: '由熾熱岩漿凝聚而成的重步兵，血量偏高，懼怕寒冰緩速與凍結。',
+                unlockRule: 'Wave 1 起登場',
                 defaultUnlocked: true
             },
             air: {
                 title: '🛸 機械飛艇',
                 subtitle: '弱點：⚡ 雷屬性（200% 暴擊）',
                 desc: '高速推進的古代浮空艇，能迅速掠過前線，宜用長射程雷塔攔截。',
+                unlockRule: 'Wave 1 起登場',
                 defaultUnlocked: true
             },
             hound: {
                 title: '🐺 疾風獵犬',
                 subtitle: '弱點：❄️ 冰屬性｜特殊機制：極速突襲',
                 desc: '移動速度高達 1.65 倍的敏捷獵犬，務必配置冰塔或磁暴塔進行減速控場。',
-                defaultUnlocked: true
+                unlockRule: '推進至第 2 波遭遇「疾風獵犬」後自動解鎖',
+                defaultUnlocked: false
             },
             slime: {
                 title: '🟢 分裂史萊姆',
                 subtitle: '弱點：🔥 火屬性｜特殊機制：死亡分裂',
                 desc: '被擊殺時會就地分裂為 2 隻迷你史萊姆，適合以範圍濺射或連發雷電清場。',
-                defaultUnlocked: true
+                unlockRule: '推進至第 3 波遭遇「分裂史萊姆」後自動解鎖',
+                defaultUnlocked: false
             },
             golem: {
                 title: '🗿 重裝魔像',
                 subtitle: '弱點：⚡ 雷屬性｜特殊機制：高額原生護甲',
                 desc: '自帶厚重岩石護甲的巨型魔像，需依靠火塔破甲、蒸氣穿甲或雷塔高頻打擊。',
-                defaultUnlocked: true
+                unlockRule: '推進至第 4 波遭遇「重裝魔像」後自動解鎖',
+                defaultUnlocked: false
             }
         },
         terrain: {
@@ -157,9 +166,10 @@
         return {
             title: `${towerCfg.icon || '✨'} ${towerCfg.name || towerKey}`,
             recipeText: `${towerCfg.icon || '✨'} <strong>${towerCfg.name || towerKey}</strong>（${styleText}）`,
+            lockedRecipeText: `<strong>？？？ · 未知防禦塔</strong>`,
             desc: `射程 ${towerCfg.range || 2.5} 格｜攻速 ${sec}s｜階級傷害 [${dmgArr}]｜攻擊樣式：${styleText}。`,
-            unlockRule: '動態擴充角色（自動收錄）',
-            defaultUnlocked: true,
+            unlockRule: towerCfg.isHybrid ? '於戰場中合成此融合塔後解鎖' : '於戰場中召喚此防禦塔後解鎖',
+            defaultUnlocked: !towerCfg.isHybrid,
             cardClass: 'codex-steam'
         };
     }
@@ -171,11 +181,13 @@
         const towersDict = (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
         const wCfg = towersDict[mCfg.weakness];
         const weakName = wCfg ? `${wCfg.icon} ${wCfg.name}` : (mCfg.weakness || '無');
+        const minW = Number(mCfg.minWave) || 1;
         return {
             title: `${mCfg.icon || '👾'} ${mCfg.name || monsterKey}`,
             subtitle: `弱點：${weakName}｜基礎血量 ${mCfg.baseHp || 70} · 護甲 ${mCfg.baseArmor || 0}`,
             desc: `移速倍率 ${mCfg.speedMult || 1.0}x，擊殺賞金 +${mCfg.baseReward || 10} 💰${mCfg.splitsOnDeath ? '（具備死亡分裂特性）' : ''}。`,
-            defaultUnlocked: true
+            unlockRule: `於戰場遭遇「${mCfg.name || monsterKey}」（Wave ${minW}+）後自動解鎖`,
+            defaultUnlocked: minW <= 1
         };
     }
 
