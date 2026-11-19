@@ -553,6 +553,14 @@ body.map-frost {
     line-height: 1.3;
     white-space: nowrap;
 }
+.terrain-tooltip.touch-top-edge {
+    top: 6px !important;
+    left: 50% !important;
+    transform: translateX(-50%);
+    max-width: calc(100% - 16px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .terrain-tooltip.hidden { display: none; }
 
 /* 地圖防禦塔懸停 3 行詳細能力名牌 */
@@ -1478,6 +1486,7 @@ body.map-frost .cell.path-cell {
     max-width: 100%;
     pointer-events: none;
 }
+.spawn-card-role .role-short { display: none; }
 
 .btn-cost-val {
     font-size: 12px;
@@ -2459,7 +2468,7 @@ body.map-frost .cell.path-cell {
     :root {
         --grid-gap: 2px;
         --board-pad: 3px;
-        --cell-size: clamp(18px, calc((100vw - 56px) / 15), 34px);
+        --cell-size: clamp(18px, calc((100vw - 44px) / 15), 32px);
     }
 
     html, body {
@@ -2471,28 +2480,47 @@ body.map-frost .cell.path-cell {
 
     body {
         justify-content: flex-start;
-        padding: 12px 8px calc(16px + env(safe-area-inset-bottom));
+        padding: 6px 8px calc(12px + env(safe-area-inset-bottom));
     }
 
-    #hud-container { flex-wrap: wrap; padding: 8px; gap: 4px 8px; }
-    .hud-stats { flex-wrap: wrap; gap: 8px; }
-    .hud-ctrl-btn, .inspector-btn { min-height: 44px; padding: 8px 12px; }
+    #hud-container { flex-wrap: wrap; padding: 4px 8px; gap: 4px 6px; margin-bottom: 4px; }
+    .hud-stats { flex-wrap: wrap; gap: 6px; }
+    .hud-ctrl-btn { min-height: 40px; padding: 4px 8px; font-size: 12px; }
     .wt-reset-view-btn, .contract-chip, .pause-banner-btn, .codex-close-top-btn, .forecast-toggle-btn { min-height: 40px; }
     .info-legend-inline { display: none; }
     .forecast-detail-drawer { grid-template-columns: 1fr; }
 
-    #tower-inspector { height: auto; padding: 8px; }
+    #tower-inspector { min-height: 0; height: auto; padding: 4px 8px; margin-top: 4px; }
     .inspector-empty { white-space: normal; text-align: center; }
-    .inspector-active { flex-direction: column; align-items: stretch; gap: 8px; }
-    .inspector-metrics { justify-content: center; flex-wrap: wrap; }
-    .inspector-actions { justify-content: center; }
-    .inspector-btn { flex: 1; }
+    .inspector-active { flex-direction: column; align-items: stretch; gap: 4px; }
+    .inspector-top-row { gap: 6px; }
+    .inspector-badge { font-size: 12px; }
+    .inspector-lineage { font-size: 11px; flex: 1; min-width: 0; }
+    .inspector-terrain { font-size: 11px; padding: 0 6px; }
+    .inspector-bottom-row { flex-direction: column; align-items: stretch; gap: 4px; }
+    .inspector-metrics { justify-content: flex-start; flex-wrap: wrap; gap: 4px; overflow: visible; }
+    .inspector-stat { font-size: 11px; padding: 1px 6px; line-height: 1.25; }
+    .inspector-actions { justify-content: stretch; gap: 6px; }
+    .inspector-btn { flex: 1; min-height: 40px; padding: 4px 6px; font-size: 12px; }
 
-    .bottom-action-deck { grid-template-columns: 1fr; gap: 8px; }
-    #element-spawner-container { gap: 8px; }
-    .spawn-card-btn { min-height: 44px; padding: 8px; }
-    .debug-controls { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    .debug-controls button { min-height: 44px; padding: 8px; }
+    .bottom-action-deck { grid-template-columns: 1fr; gap: 6px; margin-top: 4px; }
+    #element-spawner-container { gap: 6px; }
+    .spawn-card-btn { min-height: 44px; padding: 4px; gap: 2px; }
+    .spawn-card-portrait, .spawn-portrait-canvas { width: 28px; height: 28px; }
+    .spawn-card-role .role-full { display: none; }
+    .spawn-card-role .role-short { display: inline; }
+    .debug-controls { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .debug-controls button { min-height: 40px; padding: 4px 6px; font-size: 12px; }
+    #msg-text { margin-top: 4px; font-size: 12px; min-height: 16px; }
+
+    .terrain-tooltip {
+        top: 6px !important;
+        left: 50% !important;
+        transform: translateX(-50%);
+        max-width: calc(100% - 16px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 
     .blessing-choices, .map-selector-grid { grid-template-columns: 1fr; }
     .tree-viewport { height: 320px; }
@@ -2516,6 +2544,10 @@ body.map-frost .cell.path-cell {
     .tower-base-layer,
     .tower-head-rotator {
         inset: 18%;
+    }
+    .tower-base-svg,
+    .tower-head-svg {
+        filter: brightness(1.1) contrast(1.08);
     }
     .tower-el-dot {
         display: block;
@@ -2545,16 +2577,16 @@ body.map-frost .cell.path-cell {
         line-height: 1;
         padding: 1px 2px;
         border-radius: 3px;
-        letter-spacing: -0.8px;
-        background-color: rgba(27, 33, 30, 0.88);
+        letter-spacing: -0.7px;
+        background-color: rgba(27, 33, 30, 0.90);
         border: 1px solid rgba(244, 241, 234, 0.28);
         z-index: 6;
     }
     .tower-name.is-compact {
-        font-size: 7px;
-        letter-spacing: -1.4px;
-        padding: 1px 1.5px;
-        transform: scale(0.82);
+        font-size: 9px;
+        letter-spacing: -0.9px;
+        padding: 0 2px;
+        transform: scale(0.86);
         transform-origin: right bottom;
     }
 }
@@ -2802,12 +2834,14 @@ body.map-frost .cell.path-cell {
     }
 
     body { padding: 4px 12px; }
-    #hud-container { padding: 4px 8px; margin-bottom: 4px; }
-    .hud-stats { gap: 8px; }
+    #hud-container { padding: 4px 8px; margin-bottom: 4px; gap: 6px; }
+    .hud-stats { gap: 6px; flex: 1; min-width: 0; }
     .hud-item { font-size: 12px; }
     .hud-best { display: none; }
-    .dew-bar-track { width: 24px; }
-    .hud-ctrl-btn { min-height: 36px; padding: 4px 8px; font-size: 12px; }
+    .dew-bar-track { width: 20px; }
+    .hud-actions { gap: 4px; }
+    .hud-ctrl-btn { min-height: 36px; min-width: 28px; padding: 4px 6px; font-size: 12px; }
+    .hud-lang-btn { min-width: 36px; padding: 4px 6px; }
     .hud-sub-slot { margin-bottom: 4px; }
     .wave-forecast-bar { padding: 4px 8px; }
     #tower-inspector { margin-top: 4px; min-height: 44px; padding: 4px 8px; }
@@ -2829,12 +2863,14 @@ body.map-frost .cell.path-cell {
 }
 
 /* EN 雙語模式緊湊字級微調，防止英語詞彙溢出或撐爆按鈕 */
-html[lang="en"] .hud-stats { gap: 8px; }
+html[lang="en"] .hud-stats { gap: 6px; }
+html[lang="en"] .hud-actions { gap: 4px; }
 html[lang="en"] .hud-item { font-size: 12px; }
-html[lang="en"] .hud-ctrl-btn { padding: 4px 8px; font-size: 12px; }
+html[lang="en"] .hud-ctrl-btn { padding: 4px 6px; font-size: 12px; }
+html[lang="en"] .hud-lang-btn { min-width: 38px; padding: 4px 6px; }
 html[lang="en"] .spawn-card-head { font-size: 12px; }
 html[lang="en"] .spawn-card-role { font-size: 12px; }
 html[lang="en"] .skill-btn .skill-label { font-size: 12px; }
-html[lang="en"] .debug-controls button { font-size: 12px; padding: 4px 8px; }
+html[lang="en"] .debug-controls button { font-size: 12px; padding: 4px 6px; }
 html[lang="en"] .inspector-stat,
 html[lang="en"] .inspector-btn { font-size: 12px; }

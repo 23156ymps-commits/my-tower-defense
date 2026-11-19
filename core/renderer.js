@@ -652,7 +652,7 @@
         const str = String(text);
         const maxWidth = Math.max(8, (Number(cellWidth) || (G && G.boardMetrics && G.boardMetrics.cellW) || 34) - 8);
         const weight = options.fontWeight || '700';
-        const family = options.fontFamily || '"Plus Jakarta Sans", "Noto Sans TC", sans-serif';
+        const family = options.fontFamily || '"Noto Sans TC", "Plus Jakarta Sans", sans-serif';
         let fontSize = Math.max(8, Number(baseFontSize) || 11);
 
         ctx.save();
@@ -1170,9 +1170,11 @@
         const name = document.createElement('div'); name.classList.add('tower-name');
         const starLabel = towerObj.isCrowned ? '👑' : getTierStars(towerObj.tier);
         name.innerText = branchCode ? `${branchCode}${starLabel}` : starLabel;
-        if (name.innerText.length >= 4 || (G.boardMetrics && G.boardMetrics.cellW <= 32)) {
+        const cellW = (G && G.boardMetrics && G.boardMetrics.cellW) || 34;
+        if (name.innerText.length >= 4 || cellW <= 32) {
             name.classList.add('is-compact');
         }
+        name.style.maxWidth = `${Math.max(14, cellW - 2)}px`;
 
         tower._rotator = headRotator;
         tower._recoilEl = headRecoil;
@@ -1447,6 +1449,17 @@
         positionBoardTooltip(towerTipEl, indexToCoords(idx), false);
     }
 
+    let terrainTipAutoHideTimer = null;
+
+    function hideTerrainTooltip() {
+        if (terrainTipAutoHideTimer !== null) {
+            clearTimeout(terrainTipAutoHideTimer);
+            terrainTipAutoHideTimer = null;
+        }
+        const tipEl = G && G.dom ? G.dom.terrainTooltipEl : null;
+        if (tipEl) tipEl.classList.add('hidden');
+    }
+
     function updateTerrainTooltip() {
         const tipEl = G.dom.terrainTooltipEl, st = G.state;
         updateTowerHoverTooltip();
@@ -1454,12 +1467,12 @@
         const isDraggingNow = GameApp.systems && GameApp.systems.drag && GameApp.systems.drag.isDragging();
         if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'
             || st.waveState === 'BLESSING_SELECT' || isDraggingNow) {
-            tipEl.classList.add('hidden');
+            hideTerrainTooltip();
             return;
         }
         // 若滑鼠懸停在已有防禦塔的格子上，優先顯示乾淨的角色名牌，避免雙重提示重疊
         if (!st.isTouchMode && st.hoveredIndex !== null && st.board[st.hoveredIndex] !== null) {
-            tipEl.classList.add('hidden');
+            hideTerrainTooltip();
             return;
         }
         const idx = (!st.isTouchMode && st.hoveredIndex !== null)
@@ -1468,16 +1481,35 @@
         const terrainKey = idx !== null ? G.map.terrainMap.get(idx) : null;
         const tCfg = terrainKey ? getTerrainsDict()[terrainKey] : null;
         if (!tCfg || !tCfg.shortTag) {
-            tipEl.classList.add('hidden');
+            hideTerrainTooltip();
             return;
         }
-        const coords = indexToCoords(idx), center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
-        const clampedX = Math.max(76, Math.min((m.stageW || 600) - 76, center.left));
-        const topPx = coords.y <= 1 ? (center.top + m.cellH * 0.65) : (center.top - m.cellH * 0.72);
         tipEl.innerText = `${tCfg.name} · ${tCfg.shortTag}`;
-        tipEl.style.left = `${clampedX}px`;
-        tipEl.style.top = `${topPx}px`;
-        tipEl.classList.remove('hidden');
+        if (st.isTouchMode) {
+            tipEl.classList.add('touch-top-edge');
+            tipEl.style.left = '';
+            tipEl.style.top = '';
+            tipEl.classList.remove('hidden');
+            if (terrainTipAutoHideTimer !== null) clearTimeout(terrainTipAutoHideTimer);
+            terrainTipAutoHideTimer = setTimeout(() => {
+                terrainTipAutoHideTimer = null;
+                if (G && G.dom && G.dom.terrainTooltipEl) {
+                    G.dom.terrainTooltipEl.classList.add('hidden');
+                }
+            }, 1800);
+        } else {
+            tipEl.classList.remove('touch-top-edge');
+            if (terrainTipAutoHideTimer !== null) {
+                clearTimeout(terrainTipAutoHideTimer);
+                terrainTipAutoHideTimer = null;
+            }
+            const coords = indexToCoords(idx), center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
+            const clampedX = Math.max(76, Math.min((m.stageW || 600) - 76, center.left));
+            const topPx = coords.y <= 1 ? (center.top + m.cellH * 0.65) : (center.top - m.cellH * 0.72);
+            tipEl.style.left = `${clampedX}px`;
+            tipEl.style.top = `${topPx}px`;
+            tipEl.classList.remove('hidden');
+        }
     }
 
     /**
@@ -1563,6 +1595,7 @@
         showDragEvolutionPreview,
         clearDragEvolutionPreview,
         updateTowerHoverTooltip,
+        hideTerrainTooltip,
         resizeFxCanvas,
         measureBoardMetrics,
         fillCellClampedText,

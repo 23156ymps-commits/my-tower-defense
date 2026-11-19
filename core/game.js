@@ -496,13 +496,20 @@
         const st = G.state;
         const m = st.monsters.find(item => item.id === monsterId && item.hp > 0);
         if (!m) return false;
+        if (st.isTouchMode) {
+            lockTouchMonsterInspect(m);
+            updateHUD();
+            return true;
+        }
         st.selectedIndex = null;
         st.buildTargetIndex = null;
+        st.hoveredIndex = null;
         st.pendingSpawnType = null;
         st.inspectedMonsterId = m.id;
         const summary = formatMonsterInspectText(m);
         setDomText(G.dom.msgText, summary);
         Renderer.renderBoard([]);
+        Renderer.updateRangeIndicator();
         updateHUD();
         return true;
     }
@@ -607,6 +614,10 @@
                 debuffs: buildMonsterActiveDebuffList(liveM)
             };
         } else if (st.hoverLockMonster) {
+            if (st.isTouchMode) {
+                clearMonsterHoverLock();
+                return;
+            }
             isKilledDisplay = true;
             st.isCursorOnHoveredMonster = false;
             if (st.hoverKillUntilPerfMs <= 0) {
@@ -700,12 +711,12 @@
         if (dom.mobileMonsterCardEl) {
             dom.mobileMonsterCardEl.classList.remove('hidden');
             dom.mobileMonsterCardEl.classList.toggle('is-killed', isKilledDisplay);
-            const shieldBit = (m.shield || 0) > 0 ? ` · 盾 ${m.shield}` : '';
+            const shieldBit = (m.shield || 0) > 0 ? ` · ${L('盾', 'Shd')} ${m.shield}` : '';
             const debuffs = m.debuffs || [];
             const debuffBit = (!isKilledDisplay && debuffs.length > 0) ? ` [${debuffs.slice(0, 2).join('/')}]` : '';
-            const hpLabel = isKilledDisplay ? '已擊殺' : `HP ${m.hp}/${m.maxHp}`;
+            const hpLabel = isKilledDisplay ? L('已擊殺', 'Slain') : `HP ${m.hp}/${m.maxHp}`;
             const barWidth = `${Math.max(0, Math.min(100, lockRatio * 100)).toFixed(1)}%`;
-            dom.mobileMonsterCardEl.innerHTML = `<div class="mmc-top num"><span>${m.name} · ${hpLabel}${shieldBit} · 甲 ${armorStr} · 弱 ${weakStr}</span><span class="mmc-lock-tag">${lockHintText}</span></div><div class="mmc-sub">${traitText}${debuffBit}</div><div class="mmc-lock-track"><div class="mmc-lock-fill${isKilledDisplay ? ' is-killed' : ''}" style="width:${barWidth}"></div></div>`;
+            dom.mobileMonsterCardEl.innerHTML = `<div class="mmc-top num"><span>${m.name} · ${hpLabel}${shieldBit} · ${L('甲', 'ARM')} ${armorStr} · ${L('弱', 'Weak')} ${weakStr}</span><span class="mmc-lock-tag">${lockHintText}</span></div><div class="mmc-sub">${traitText}${debuffBit}</div><div class="mmc-lock-track"><div class="mmc-lock-fill${isKilledDisplay ? ' is-killed' : ''}" style="width:${barWidth}"></div></div>`;
         }
     }
 
@@ -1095,13 +1106,19 @@
             }
             const cost = EconSys.getSummonCost(type);
             const roleLabel = data.shopRoleTag || data.roleTag || '';
+            const compactRoleMap = {
+                fire_bud: L('破甲 25', 'Break 25'),
+                ice_bud: L('緩速 15', 'Slow 15'),
+                thunder_bud: L('連鎖 13', 'Chain 13')
+            };
+            const shortRoleLabel = compactRoleMap[type] || `${(roleLabel.split('·')[0] || '').trim()} ${data.damage || ''}`.trim();
             btn.innerHTML = `
                 <span class="spawn-pity-tag hidden" aria-hidden="true">✨ 下次必出 ★★</span>
                 <span class="spawn-card-portrait">
                     <canvas class="spawn-portrait-canvas" width="36" height="36" data-size="36" aria-hidden="true"></canvas>
                 </span>
                 <span class="spawn-card-head">${data.icon} ${data.name} · <span class="btn-cost-val num">${cost} 💰</span></span>
-                <span class="spawn-card-role num">${roleLabel}</span>
+                <span class="spawn-card-role num"><span class="role-full">${roleLabel}</span><span class="role-short">${shortRoleLabel}</span></span>
             `;
             const canvasEl = btn.querySelector('.spawn-portrait-canvas');
             if (canvasEl && Renderer && typeof Renderer.drawPortrait === 'function') {
@@ -1292,15 +1309,21 @@
                 } else {
                     const nearMon = findMonsterNearCell(index);
                     if (nearMon) {
+                        if (st.isTouchMode) {
+                            lockTouchMonsterInspect(nearMon);
+                            return;
+                        }
                         st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
                         st.inspectedMonsterId = nearMon.id;
                         G.dom.msgText.innerText = formatMonsterInspectText(nearMon);
                     } else {
                         st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
+                        if (st.isTouchMode) clearMonsterHoverLock();
                         G.dom.msgText.innerText = st.board[index] === null ? '暫停中可點防禦塔／怪物檢視與切換索敵，按「繼續」或 Space 恢復操作。' : '已取消選取。';
                     }
                 }
                 Renderer.renderBoard([]);
+                Renderer.updateRangeIndicator();
                 updateTowerInspector();
             }
             return;
@@ -2108,12 +2131,14 @@
                 const tgt = e.target;
                 if (tgt && typeof tgt.closest === 'function'
                     && !tgt.closest('#grid-board') && !tgt.closest('#tower-inspector') && !tgt.closest('#evo-confirm-overlay')) {
-                    if (G.state.selectedIndex !== null) {
+                    if (G.state.selectedIndex !== null || G.state.buildTargetIndex !== null || G.state.hoveredIndex !== null) {
                         G.state.selectedIndex = null;
                         G.state.buildTargetIndex = null;
+                        G.state.hoveredIndex = null;
                         Renderer.renderBoard([]);
                         Renderer.updateRangeIndicator();
                     }
+                    if (typeof Renderer.hideTerrainTooltip === 'function') Renderer.hideTerrainTooltip();
                     clearMonsterHoverLock();
                 }
             }
