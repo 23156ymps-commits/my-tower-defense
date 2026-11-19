@@ -222,39 +222,40 @@
             singleDps += Math.round((fxParams.burnFlatDps || 8) * 2);
         }
 
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         let aoeDps = null;
         let aoeLabel = null;
         if (style === 'chain_lightning') {
             const chainTotalMult = getThunderChainScales(towerObj, cfg).reduce((sum, s) => sum + s, 0);
             aoeDps = Math.round((unitDmg * chainTotalMult) / intervalSec);
-            aoeLabel = '連鎖 DPS';
+            aoeLabel = isEn ? 'Chain DPS' : '連鎖 DPS';
         } else if (style === 'stun_pulse' || style === 'magnet_B_overload') {
             const extraChain = (fxParams.chainTargets ? fxParams.chainTargets - 1 : (fxParams.chainExtraTargets ?? 2))
                 + (TreeSys ? TreeSys.getThunderChainBonus(towerObj.type) : 0);
             const chainRatio = fxParams.chainDamageRatio ?? 0.70;
             const shockExtra = style === 'magnet_B_overload' ? (fxParams.shockBonusDamage || 12) * 2 : 0;
             aoeDps = Math.round((unitDmg * (1 + extraChain * chainRatio)) / intervalSec + shockExtra);
-            aoeLabel = '連鎖 DPS';
+            aoeLabel = isEn ? 'Chain DPS' : '連鎖 DPS';
         } else if (style === 'aoe_mist' || style === 'fire_A_mortar' || style === 'steam_A_pressure') {
             const splashRatio = fxParams.splashRatio ?? 0.65;
             const poolDps = style === 'steam_A_pressure' ? (fxParams.poolDps || 28) * 2 : 0;
             aoeDps = Math.round((unitDmg * (1 + 2 * splashRatio)) / intervalSec + poolDps);
-            aoeLabel = '預估群傷';
+            aoeLabel = isEn ? 'Est. AoE' : '預估群傷';
         } else if (style === 'ice_A_permafrost' || style === 'steam_B_fog' || style === 'magnet_A_singularity') {
             aoeDps = Math.round((unitDmg * 2.4) / intervalSec);
-            aoeLabel = '預估群傷';
+            aoeLabel = isEn ? 'Est. AoE' : '預估群傷';
         } else if (style === 'ice_B_icicle') {
             const secondRatio = fxParams.secondTargetRatio ?? 0.60;
             aoeDps = Math.round((unitDmg * (1 + secondRatio)) / intervalSec);
-            aoeLabel = '穿透 DPS';
+            aoeLabel = isEn ? 'Pierce DPS' : '穿透 DPS';
         } else if (style === 'plasma_B_refract') {
             const refCount = fxParams.refractTargets ?? 2;
             const refRatio = fxParams.refractRatio ?? 0.50;
             aoeDps = Math.round((unitDmg * (singleHitFactor + refCount * refRatio)) / intervalSec);
-            aoeLabel = '折射 DPS';
+            aoeLabel = isEn ? 'Refract DPS' : '折射 DPS';
         } else if (style === 'fire_B_ember') {
             aoeDps = Math.round(singleDps * 2.1);
-            aoeLabel = '瘟疫群傷';
+            aoeLabel = isEn ? 'Plague AoE' : '瘟疫群傷';
         }
 
         return {
@@ -410,7 +411,8 @@
         if (!monster || !monster.isStealthed) return;
         const MonsterSys = GameApp.systems && GameApp.systems.monster;
         if (MonsterSys && typeof MonsterSys.revealStealthMonster === 'function') {
-            MonsterSys.revealStealthMonster(monster, '破隱現形');
+            const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+            MonsterSys.revealStealthMonster(monster, isEn ? 'Revealed' : '破隱現形');
         }
     }
 
@@ -503,7 +505,7 @@
                     monster._crownMagnetReadyAt = nowMs + 4000;
                     const dur = monster.isBoss ? 600 : 1200;
                     monster.rootTimer = Math.max(monster.rootTimer || 0, dur);
-                    if (GameApp.renderer) GameApp.renderer.spawnFloatingNotice('🧲 磁場定身', monster.pixelX, monster.pixelY, 'pity-seed');
+                    if (GameApp.renderer) GameApp.renderer.spawnFloatingNotice((GameApp.i18n && GameApp.i18n.isEnglish()) ? '🧲 Magnet Root' : '🧲 磁場定身', monster.pixelX, monster.pixelY, 'pity-seed');
                 }
             }
         }
@@ -514,8 +516,9 @@
             TreeSys.trySpawnScorchedBrand(towerObj, monster, didShredOrCrit);
         }
 
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         const displayDmg = hpDmg > 0 ? hpDmg : shieldAbsorbed;
-        const dmgTag = options.dmgTag || (shellReduced ? '甲殼 ' : (shieldAbsorbed > 0 && hpDmg === 0 ? '破盾 ' : ''));
+        const dmgTag = options.dmgTag || (shellReduced ? (isEn ? 'Shell ' : '甲殼 ') : (shieldAbsorbed > 0 && hpDmg === 0 ? (isEn ? 'Shield ' : '破盾 ') : ''));
         GameApp.renderer.spawnDamageNumber(displayDmg, result.isWeakness, monster.pixelX, monster.pixelY, dmgTag, result.isAffinity);
 
         // 感電協同觸發：任何防禦塔命中感電怪額外觸發 +12 雷傷（單怪 0.35s 內置冷卻）
@@ -528,7 +531,7 @@
             const shatterDmg = monster.hp;
             monster.hp = 0;
             recordTowerDamage(towerObj, shatterDmg);
-            GameApp.renderer.spawnDamageNumber(shatterDmg, true, monster.pixelX, monster.pixelY, '碎冰 ');
+            GameApp.renderer.spawnDamageNumber(shatterDmg, true, monster.pixelX, monster.pixelY, isEn ? 'Shatter ' : '碎冰 ');
             GameApp.renderer.emitParticleBurst(monster.pixelX, monster.pixelY, '#4A9EBF', 8, 85);
         }
 
@@ -539,7 +542,7 @@
                 const execDmg = monster.hp;
                 monster.hp = 0;
                 recordTowerDamage(towerObj, execDmg);
-                GameApp.renderer.spawnDamageNumber(execDmg, true, monster.pixelX, monster.pixelY, '⚡天雷 ');
+                GameApp.renderer.spawnDamageNumber(execDmg, true, monster.pixelX, monster.pixelY, isEn ? '⚡Smite ' : '⚡天雷 ');
             }
         }
 
@@ -548,7 +551,7 @@
             const execDmg = monster.hp;
             monster.hp = 0;
             recordTowerDamage(towerObj, execDmg);
-            GameApp.renderer.spawnDamageNumber(execDmg, true, monster.pixelX, monster.pixelY, '斬殺');
+            GameApp.renderer.spawnDamageNumber(execDmg, true, monster.pixelX, monster.pixelY, isEn ? 'Execute ' : '斬殺 ');
         }
 
         if (monster.hp > 0 && MonsterSys) {
@@ -800,7 +803,7 @@
             applyHitToMonster(towerIndex, towerObj, target, {
                 extraMult,
                 armorPierce,
-                dmgTag: isJudgment ? '⚡天罰 ' : ''
+                dmgTag: isJudgment ? ((GameApp.i18n && GameApp.i18n.isEnglish()) ? '⚡Judge ' : '⚡天罰 ') : ''
             });
             GameApp.renderer.emitCanvasAttackFX('thunder', towerPos, targetPos, { isLv3: true });
             if (isJudgment) {

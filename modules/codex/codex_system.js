@@ -22,6 +22,28 @@
     // Phase 5：圖鑑改為單局重置（僅保存於本局記憶體，開新局或重開一律重置為尚未合成）
     const unlockedSet = new Set();
 
+    const EN_TREE_NODE_LABELS = {
+        world_core: 'World Tree Core',
+        fire_bud: 'Fire 1★', ice_bud: 'Ice 1★', thunder_bud: 'Bolt 1★',
+        steam_bud: 'Steam 1★', magnet_bud: 'Magnet 1★', plasma_bud: 'Plasma 1★',
+        fire_trunk: 'Ember 2★', steam_trunk: 'Hi-Steam', ice_trunk: 'Frost 2★',
+        magnet_trunk: 'Hi-Magnet', thunder_trunk: 'Volt 2★', plasma_trunk: 'Hi-Plasma',
+        fire_A: 'A Bombard', fire_B: 'B Cinder', steam_A: 'A Pressure', steam_B: 'B Frostmist',
+        ice_A: 'A Permafrost', ice_B: 'B Icicle', magnet_A: 'A Gravity', magnet_B: 'B Overload',
+        thunder_A: 'A Tempest', thunder_B: 'B Judgment', plasma_A: 'A Deathray', plasma_B: 'B Prism'
+    };
+
+    function L(zh, en) {
+        return (GameApp.i18n && typeof GameApp.i18n.pick === 'function') ? GameApp.i18n.pick(zh, en) : zh;
+    }
+
+    function getTreeNodeLabel(nodeId, meta) {
+        if (GameApp.i18n && GameApp.i18n.isEnglish() && EN_TREE_NODE_LABELS[nodeId]) {
+            return EN_TREE_NODE_LABELS[nodeId];
+        }
+        return (meta && meta.label) || nodeId;
+    }
+
     // SVG 世界樹演化圖譜畫布與扇形樹冠座標拓撲（1320 × 680，自底向上：原核 → 3 基礎 1★ → 3 轉職 1★ → 6 主幹 2★ → 12 冠枝 3★）
     const TREE_VIEW_W = 1320;
     const TREE_VIEW_H = 680;
@@ -282,11 +304,11 @@
                 <div class="wt-detail-portrait core-emblem" aria-hidden="true">🌳</div>
                 <div class="wt-detail-body">
                     <div class="wt-detail-top">
-                        <span class="wt-detail-title">世界樹原核</span>
-                        <span class="wt-detail-tag num">已喚醒枝脈：${totalUnlocked} / 24</span>
+                        <span class="wt-detail-title">${L('世界樹原核', 'World Tree Core')}</span>
+                        <span class="wt-detail-tag num">${L(`已喚醒枝脈：${totalUnlocked} / 24`, `Awakened Nodes: ${totalUnlocked} / 24`)}</span>
                     </div>
-                    <div class="wt-detail-row"><strong>轉職與升星脈絡：</strong>基礎 1★ 異系轉職 ➔ 轉職 1★ 新物種；同物種 1★ + 1★（或基礎芽灌注轉職 1★）➔ 2★ 主幹 ➔ 3★ 冠枝分岔</div>
-                    <div class="wt-detail-row"><strong>戰術指引：</strong>點擊上方任一節點可檢視合成路徑與數值；場上素材就緒或可進化方向將以琥珀金框提示。</div>
+                    <div class="wt-detail-row">${L('<strong>轉職與升星脈絡：</strong>基礎 1★ 異系轉職 ➔ 轉職 1★ 新物種；同物種 1★ + 1★（或基礎芽灌注轉職 1★）➔ 2★ 主幹 ➔ 3★ 冠枝分岔', '<strong>Evolution Lineage:</strong> Cross 1★ buds ➔ Hybrid 1★; same species 1★+1★ (or bud infusion) ➔ 2★ Trunk ➔ 3★ Crown Branch')}</div>
+                    <div class="wt-detail-row">${L('<strong>戰術指引：</strong>點擊上方任一節點可檢視合成路徑與數值；場上素材就緒或可進化方向將以琥珀金框提示。', '<strong>Tactical Guide:</strong> Click any node above to inspect recipes & stats. Craftable nodes glow with an amber outline.')}</div>
                 </div>
             `;
             return;
@@ -304,11 +326,11 @@
         detailEl.className = `wt-detail-card family-${nodeMeta.family}${unlocked ? '' : ' is-locked'}${isCraftable ? ' is-craftable' : ''}`;
 
         const statusBadge = unlocked
-            ? '<span class="codex-status-badge unlocked">已解鎖</span>'
-            : '<span class="codex-status-badge locked">未解鎖</span>';
+            ? `<span class="codex-status-badge unlocked">${L('已解鎖', 'Unlocked')}</span>`
+            : `<span class="codex-status-badge locked">${L('未解鎖', 'Locked')}</span>`;
         const craftBadge = isReadyNow
-            ? '<span class="wt-detail-craft-badge ready">素材就緒 · 可直接融合</span>'
-            : (isCraftable ? '<span class="wt-detail-craft-badge">場上已有素材 · 可進化方向</span>' : '');
+            ? `<span class="wt-detail-craft-badge ready">${L('素材就緒 · 可直接融合', 'Materials Ready · Craftable')}</span>`
+            : (isCraftable ? `<span class="wt-detail-craft-badge">${L('場上已有素材 · 可進化方向', 'Materials on Board')}</span>` : '');
 
         const portraitWrap = document.createElement('div');
         portraitWrap.className = 'wt-detail-portrait';
@@ -331,22 +353,22 @@
             bodyEl.innerHTML = `
                 <div class="wt-detail-top">
                     <span class="wt-detail-title">${custom.title || tCfg.name || nodeId} <span class="num">${starStr}</span></span>
-                    <span class="wt-detail-tag num">Tier ${tierNum} · 成本 ${costMult}</span>
+                    <span class="wt-detail-tag num">Tier ${tierNum} · ${L('成本', 'Cost')} ${costMult}</span>
                     ${statusBadge}${craftBadge}
                 </div>
-                <div class="wt-detail-row"><strong>進化合成路徑：</strong><span class="num">${custom.formula || tCfg.lineagePath || '基礎召喚'}</span></div>
-                <div class="wt-detail-row"><strong>核心機制：</strong><span class="num">${custom.mech || custom.desc || ''}</span></div>
-                <div class="wt-detail-row"><strong>推薦搭配：</strong>${custom.synergy || ''}</div>
+                <div class="wt-detail-row"><strong>${L('進化合成路徑：', 'Recipe: ')}</strong><span class="num">${custom.formula || tCfg.lineagePath || L('基礎召喚', 'Base Summon')}</span></div>
+                <div class="wt-detail-row"><strong>${L('核心機制：', 'Mechanic: ')}</strong><span class="num">${custom.mech || custom.desc || ''}</span></div>
+                <div class="wt-detail-row"><strong>${L('推薦搭配：', 'Synergy: ')}</strong>${custom.synergy || ''}</div>
             `;
         } else {
             bodyEl.innerHTML = `
                 <div class="wt-detail-top">
-                    <span class="wt-detail-title">？？？ · 未知世界樹節點 <span class="num">${starStr}</span></span>
-                    <span class="wt-detail-tag num">Tier ${tierNum} · 成本 ${costMult}</span>
+                    <span class="wt-detail-title">${L('？？？ · 未知世界樹節點', '??? · Unknown Node')} <span class="num">${starStr}</span></span>
+                    <span class="wt-detail-tag num">Tier ${tierNum} · ${L('成本', 'Cost')} ${costMult}</span>
                     ${statusBadge}${craftBadge}
                 </div>
-                <div class="wt-detail-row"><strong>解鎖條件：</strong>${custom.unlockRule || '於戰場合成此防禦塔即可點亮枝脈。'}</div>
-                <div class="wt-detail-row">${isCraftable ? '⚡ 戰術提醒：當前場上已持有可通往此冠枝的素材，於棋盤拖曳合成即可於本局點亮！' : '每局開局圖譜皆重新探索；本局成功合成該防禦塔後即立刻點亮。'}</div>
+                <div class="wt-detail-row"><strong>${L('解鎖條件：', 'Unlock Rule: ')}</strong>${custom.unlockRule || L('於戰場合成此防禦塔即可點亮枝脈。', 'Synthesize this tower in battle to unlock.')}</div>
+                <div class="wt-detail-row">${isCraftable ? L('⚡ 戰術提醒：當前場上已持有可通往此冠枝的素材，於棋盤拖曳合成即可於本局點亮！', '⚡ Ready: You already have matching towers on board—merge them to unlock!') : L('每局開局圖譜皆重新探索；本局成功合成該防禦塔後即立刻點亮。', 'Codex resets each run; synthesize this tower to illuminate the node.')}</div>
             `;
         }
 
@@ -406,14 +428,17 @@
 
         const scanState = scanBoardCraftableState();
         const craftableNames = Array.from(scanState.craftableNodeSet)
-            .map(id => WORLD_TREE_LAYOUT[id] ? WORLD_TREE_LAYOUT[id].label : id);
+            .map(id => getTreeNodeLabel(id, WORLD_TREE_LAYOUT[id]));
 
         const bannerEl = document.createElement('div');
         bannerEl.className = `wt-tactical-banner${scanState.craftableNodeSet.size > 0 ? ' has-matches' : ''}`;
         if (scanState.craftableNodeSet.size > 0) {
-            bannerEl.innerHTML = `<span class="wt-banner-dot"></span><span class="num">場上素材偵測：可朝 <strong>${craftableNames.join('、')}</strong> 方向融合（琥珀金框標示）</span>`;
+            bannerEl.innerHTML = L(
+                `<span class="wt-banner-dot"></span><span class="num">場上素材偵測：可朝 <strong>${craftableNames.join('、')}</strong> 方向融合（琥珀金框標示）</span>`,
+                `<span class="wt-banner-dot"></span><span class="num">Craftable paths detected: <strong>${craftableNames.join(', ')}</strong> (highlighted in amber)</span>`
+            );
         } else {
-            bannerEl.innerText = '拖曳平移、滾輪縮放視角；點擊或懸停節點高亮完整進化血脈與詳細數值。';
+            bannerEl.innerText = L('拖曳平移、滾輪縮放視角；點擊或懸停節點高亮完整進化血脈與詳細數值。', 'Drag to pan, scroll to zoom; click or hover a node to inspect its full lineage.');
         }
         treeShellEl.appendChild(bannerEl);
 
@@ -435,7 +460,7 @@
         resetViewBtn.type = 'button';
         resetViewBtn.id = 'wt-reset-view-btn';
         resetViewBtn.className = 'wt-reset-view-btn';
-        resetViewBtn.innerText = '重置視角';
+        resetViewBtn.innerText = L('重置視角', 'Reset View');
         controlsEl.appendChild(zoomBadgeEl);
         controlsEl.appendChild(resetViewBtn);
         viewportEl.appendChild(controlsEl);
@@ -561,7 +586,7 @@
 
             if (nodeId === 'world_core') {
                 btn.className = `wt-node wt-node-core wt-node-pop${selectedTreeNodeId === 'world_core' ? ' is-selected' : ''}`;
-                btn.innerHTML = `<span class="wt-core-icon">🌳</span><span class="wt-node-caption">世界樹原核</span>`;
+                btn.innerHTML = `<span class="wt-core-icon">🌳</span><span class="wt-node-caption">${getTreeNodeLabel('world_core', meta)}</span>`;
             } else {
                 const entryInfo = codexEntries[nodeId] || {};
                 const isBaseBud = ['fire_bud', 'ice_bud', 'thunder_bud'].includes(nodeId);
@@ -603,13 +628,13 @@
                     const bTag = document.createElement('span');
                     bTag.className = 'wt-board-pip num';
                     bTag.innerText = String(scanState.boardNodeCounts[nodeId] || 1);
-                    bTag.title = '當前棋盤持有數量';
+                    bTag.title = L('當前棋盤持有數量', 'Count on board');
                     canvasWrap.appendChild(bTag);
                 }
 
                 const cap = document.createElement('span');
                 cap.className = 'wt-node-caption num';
-                cap.innerText = unlocked ? meta.label : (meta.branch ? `${meta.branch} ???` : '???');
+                cap.innerText = unlocked ? getTreeNodeLabel(nodeId, meta) : (meta.branch ? `${meta.branch} ???` : '???');
 
                 btn.appendChild(canvasWrap);
                 btn.appendChild(cap);
@@ -843,12 +868,12 @@
                 const card = (entries.towers && entries.towers[key]) || codexData.buildFallbackTowerCard(key, tCfg);
                 const unlocked = isEntryUnlocked(`tower:${key}`, Boolean(card.defaultUnlocked));
                 const statusBadge = unlocked
-                    ? '<span class="codex-status-badge unlocked">✅ 已解鎖</span>'
-                    : '<span class="codex-status-badge locked">🔒 未解鎖</span>';
+                    ? `<span class="codex-status-badge unlocked">${L('✅ 已解鎖', '✅ Unlocked')}</span>`
+                    : `<span class="codex-status-badge locked">${L('🔒 未解鎖', '🔒 Locked')}</span>`;
                 const headerHtml = unlocked
                     ? `<strong>${card.title}</strong> ${statusBadge}`
-                    : `<strong>？？？ · 未知節點</strong> ${statusBadge}`;
-                const descHtml = unlocked ? (card.mech || card.desc) : `🔒 解鎖條件：${card.unlockRule || '於戰場召喚或合成解鎖'}`;
+                    : `<strong>${L('？？？ · 未知節點', '??? · Unknown Node')}</strong> ${statusBadge}`;
+                const descHtml = unlocked ? (card.mech || card.desc) : `${L('🔒 解鎖條件：', '🔒 Unlock: ')}${card.unlockRule || L('於戰場召喚或合成解鎖', 'Summon or merge to unlock')}`;
 
                 listEl.appendChild(createCodexCardElement({
                     portraitCat: 'tower',
@@ -870,14 +895,14 @@
                 const card = (entries.monsters && entries.monsters[key]) || codexData.buildFallbackMonsterCard(key, mCfg);
                 const unlocked = isEntryUnlocked(`monster:${key}`, Boolean(card.defaultUnlocked));
                 const statusBadge = unlocked
-                    ? '<span class="codex-status-badge unlocked">✅ 已解鎖</span>'
-                    : '<span class="codex-status-badge locked">🔒 未解鎖</span>';
+                    ? `<span class="codex-status-badge unlocked">${L('✅ 已解鎖', '✅ Unlocked')}</span>`
+                    : `<span class="codex-status-badge locked">${L('🔒 未解鎖', '🔒 Locked')}</span>`;
                 const headerHtml = unlocked
                     ? `<strong>${card.title}</strong> <span class="num" style="font-size:12px;color:#E0B43C;">｜${card.subtitle || ''}</span> ${statusBadge}`
-                    : `<strong>？？？ · 未知魔物</strong> ${statusBadge}`;
+                    : `<strong>${L('？？？ · 未知魔物', '??? · Unknown Enemy')}</strong> ${statusBadge}`;
                 const descHtml = unlocked
                     ? card.desc
-                    : `🔒 解鎖條件：${card.unlockRule || '於戰場遭遇此魔物後自動解鎖彩圖與弱點情報。'}`;
+                    : `${L('🔒 解鎖條件：', '🔒 Unlock: ')}${card.unlockRule || L('於戰場遭遇此魔物後自動解鎖彩圖與弱點情報。', 'Unlocks upon encountering this enemy in battle.')}`;
 
                 listEl.appendChild(createCodexCardElement({
                     portraitCat: 'monster',
@@ -941,9 +966,9 @@
         if (!cardEl) return;
 
         const categories = getCodexData().CODEX_CATEGORIES || [
-            { id: 'fusion', label: '世界樹演化圖譜' },
-            { id: 'monsters', label: '入侵魔物' },
-            { id: 'terrain', label: '戰術地形' }
+            { id: 'fusion', label: L('世界樹演化圖譜', 'World Tree Codex') },
+            { id: 'monsters', label: L('入侵魔物', 'Enemy Bestiary') },
+            { id: 'terrain', label: L('戰術地形', 'Tactical Terrain') }
         ];
 
         const tabsEl = cardEl.querySelector('.codex-tabs');

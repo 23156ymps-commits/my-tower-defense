@@ -198,6 +198,10 @@
         return;
     }
 
+    function L(zh, en) {
+        return (GameApp.i18n && typeof GameApp.i18n.pick === 'function') ? GameApp.i18n.pick(zh, en) : zh;
+    }
+
     /**
      * 主動技能 1：根鬚纏繞（全場敵人定身 2.5s + 易傷 20%）
      */
@@ -207,11 +211,11 @@
         const entCfg = skills.entangle || { cost: 40, cdMs: 8000, durationMs: 2500, vulnBonus: 0.20 };
         if (!G.callbacks.isGameplayActive() || st.entangleCdMs > 0) return false;
         if (st.monsters.length === 0) {
-            G.dom.msgText.innerText = '場上目前沒有敵人，無需施放根鬚纏繞。';
+            G.dom.msgText.innerText = L('場上目前沒有敵人，無需施放根鬚纏繞。', 'No enemies on the field—Root Entangle not needed.');
             return false;
         }
         if (st.dewEnergy < entCfg.cost) {
-            G.dom.msgText.innerText = `靈露不足，需要 ${entCfg.cost} 靈露才能施放根鬚纏繞。`;
+            G.dom.msgText.innerText = L(`靈露不足，需要 ${entCfg.cost} 靈露才能施放根鬚纏繞。`, `Not enough Dew: Root Entangle requires ${entCfg.cost} Dew.`);
             return false;
         }
         st.dewEnergy -= entCfg.cost;
@@ -233,8 +237,8 @@
         GameApp.audio.playMagic('entangle');
         const overcharged = activateDewOverchargeIfUnlocked();
         G.dom.msgText.innerText = overcharged
-            ? '施放「根鬚纏繞」：全場敵人定身 2.5 秒且易傷 +20%，並觸發 3 秒靈露超載。'
-            : '施放「根鬚纏繞」：全場敵人定身 2.5 秒且易傷 +20%。';
+            ? L('施放「根鬚纏繞」：全場敵人定身 2.5 秒且易傷 +20%，並觸發 3 秒靈露超載。', 'Cast Root Entangle: All foes rooted 2.5s (+20% DMG taken) & triggered Dew Overcharge (3s)!')
+            : L('施放「根鬚纏繞」：全場敵人定身 2.5 秒且易傷 +20%。', 'Cast Root Entangle: All foes rooted for 2.5s and take +20% DMG.');
         if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
             GameApp.backend.recordPlayerAction();
             GameApp.backend.trackFeel('Tree:SkillCast:entangle', st.currentWave, { skillId: 'entangle', wave: st.currentWave });
@@ -253,12 +257,12 @@
         const frzCfg = skills.frenzy || { cost: 60, cdMs: 12000, durationMs: 5000, speedBonus: 0.35 };
         if (!G.callbacks.isGameplayActive()) return false;
         if (st.frenzyActiveMs > 0) {
-            G.dom.msgText.innerText = '自然狂熱效果持續中，無法重複施放。';
+            G.dom.msgText.innerText = L('自然狂熱效果持續中，無法重複施放。', 'Nature Frenzy is already active.');
             return false;
         }
         if (st.frenzyCdMs > 0) return false;
         if (st.dewEnergy < frzCfg.cost) {
-            G.dom.msgText.innerText = `靈露不足，需要 ${frzCfg.cost} 靈露才能施放自然狂熱。`;
+            G.dom.msgText.innerText = L(`靈露不足，需要 ${frzCfg.cost} 靈露才能施放自然狂熱。`, `Not enough Dew: Nature Frenzy requires ${frzCfg.cost} Dew.`);
             return false;
         }
         st.dewEnergy -= frzCfg.cost;
@@ -276,8 +280,8 @@
         GameApp.audio.playMagic('frenzy');
         const overcharged = activateDewOverchargeIfUnlocked();
         G.dom.msgText.innerText = overcharged
-            ? '施放「自然狂熱」：全場攻速 +35% 持續 5.0 秒，並觸發 3 秒靈露超載。'
-            : '施放「自然狂熱」：全場防禦塔攻速提升 +35%，持續 5.0 秒。';
+            ? L('施放「自然狂熱」：全場攻速 +35% 持續 5.0 秒，並觸發 3 秒靈露超載。', 'Cast Nature Frenzy: +35% ATK Spd (5s) & triggered Dew Overcharge (3s)!')
+            : L('施放「自然狂熱」：全場防禦塔攻速提升 +35%，持續 5.0 秒。', 'Cast Nature Frenzy: All towers gain +35% ATK Spd for 5.0s.');
         if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
             GameApp.backend.recordPlayerAction();
             GameApp.backend.trackFeel('Tree:SkillCast:frenzy', st.currentWave, { skillId: 'frenzy', wave: st.currentWave });
@@ -315,7 +319,10 @@
         GameApp.renderer.updateRangeIndicator();
 
         if (G.dom.blessingWaveSubtitleEl) {
-            G.dom.blessingWaveSubtitleEl.innerText = `第 ${clearedWave} 波捷報！世界樹賜予枝枒祝福，請擇一強化防線`;
+            G.dom.blessingWaveSubtitleEl.innerText = L(
+                `第 ${clearedWave} 波捷報！世界樹賜予枝枒祝福，請擇一強化防線`,
+                `Wave ${clearedWave} cleared! Choose a World Tree Blessing to empower your defense.`
+            );
         }
         if (G.dom.blessingChoicesEl) {
             G.dom.blessingChoicesEl.innerHTML = '';
@@ -366,7 +373,10 @@
 
         st.waveState = 'INTERMISSION';
         st.waveTimerMs = intermissionMs;
-        G.dom.msgText.innerText = `已獲得祝福【${picked.icon} ${picked.name}】，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後到來。`;
+        G.dom.msgText.innerText = L(
+            `已獲得祝福【${picked.icon} ${picked.name}】，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後到來。`,
+            `Blessing gained: ${picked.icon} ${picked.name}. Next wave begins in ${Math.ceil(intermissionMs / 1000)}s.`
+        );
         GameApp.audio.playMagic('blessing');
         G.callbacks.updateHUD();
         G.callbacks.startMainLoop();

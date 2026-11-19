@@ -259,6 +259,7 @@
                 vy: (idx % 2 === 0 ? -4 : 4)
             }));
 
+        const isEnSplit = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         offsets.forEach(off => {
             const cProj = Math.max(0, Math.min(segLen, proj + off.along)), gx = wpA.x + ux * cProj, gy = wpA.y + uy * cProj;
             const center = Renderer.getCellCenter(gx, gy);
@@ -266,7 +267,7 @@
                 id: st.monsterIdCounter++,
                 sessionId: st.sessionId,
                 typeKey: parent.typeKey,
-                name: parent.splitChildName || '迷你史萊姆',
+                name: isEnSplit ? 'Mini Slime' : (parent.splitChildName || '迷你史萊姆'),
                 icon: parent.splitChildIcon || '🟢',
                 weakness: parent.weakness,
                 hp: childMaxHp,
@@ -450,23 +451,26 @@
         const dur = monster.isBoss ? Math.max(100, Math.round(baseDur * bossMult)) : baseDur;
         fz.durationMs = dur;
         fz.pendingImmuneMs = Number(freezeParams.freezeImmuneMs) || 6000;
+        const isEnSt = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         if (monster.isStealthed) {
-            revealStealthMonster(monster, '❄️ 凍結現形');
+            revealStealthMonster(monster, isEnSt ? '❄️ Freeze Reveal' : '❄️ 凍結現形');
         }
 
         if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
-            GameApp.renderer.spawnFloatingNotice('❄️ 永凍凍結', monster.pixelX, monster.pixelY, 'pity-seed');
+            GameApp.renderer.spawnFloatingNotice(isEnSt ? '❄️ Permafrost Freeze' : '❄️ 永凍凍結', monster.pixelX, monster.pixelY, 'pity-seed');
         }
         return true;
     }
 
-    function revealStealthMonster(monster, label = '現形') {
+    function revealStealthMonster(monster, label) {
         if (!monster || !monster.isStealthed) return false;
+        const isEnSt = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+        const showLabel = label || (isEnSt ? 'Revealed' : '現形');
         monster.isStealthed = false;
         monster.stealthTimerMs = 0;
         monster.isTargetable = true;
         if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
-            GameApp.renderer.spawnFloatingNotice(label, monster.pixelX, monster.pixelY, 'pity-seed');
+            GameApp.renderer.spawnFloatingNotice(showLabel, monster.pixelX, monster.pixelY, 'pity-seed');
         }
         return true;
     }
@@ -475,6 +479,7 @@
         if (!monster || monster.hp <= 0 || monster.voidCloakUsed || !monster.pantherSpec) return false;
         const threshold = monster.pantherSpec.stealthThresholdPct || 0.50;
         if ((monster.hp / Math.max(1, monster.maxHp)) < threshold) {
+            const isEnSt = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
             monster.voidCloakUsed = true;
             monster.isStealthed = true;
             monster.stealthTimerMs = monster.pantherSpec.stealthDurationMs || 2200;
@@ -482,7 +487,7 @@
             if (GameApp.renderer) {
                 GameApp.renderer.emitParticleBurst(monster.pixelX, monster.pixelY, '#4A9EBF', 8, 80);
                 if (typeof GameApp.renderer.spawnFloatingNotice === 'function') {
-                    GameApp.renderer.spawnFloatingNotice('💨 隱身疾行', monster.pixelX, monster.pixelY, 'pity-seed');
+                    GameApp.renderer.spawnFloatingNotice(isEnSt ? '💨 Stealth Dash' : '💨 隱身疾行', monster.pixelX, monster.pixelY, 'pity-seed');
                 }
             }
             return true;
@@ -521,8 +526,11 @@
         if (GameApp.renderer) {
             GameApp.renderer.emitRingFX(monster.pixelX, monster.pixelY, G.boardMetrics.step * 1.4, '#D97724', 0.30, 360);
             if (typeof GameApp.renderer.spawnFloatingNotice === 'function') {
-                const wName = monster.weakness === 'fire' ? '🔥火' : (monster.weakness === 'ice' ? '❄️冰' : '⚡雷');
-                GameApp.renderer.spawnFloatingNotice(`🕳️ 弱點切換：${wName}`, monster.pixelX, monster.pixelY, 'pity-seed');
+                const isEnSt = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                const wName = isEnSt
+                    ? (monster.weakness === 'fire' ? '🔥Fire' : (monster.weakness === 'ice' ? '❄️Ice' : '⚡Bolt'))
+                    : (monster.weakness === 'fire' ? '🔥火' : (monster.weakness === 'ice' ? '❄️冰' : '⚡雷'));
+                GameApp.renderer.spawnFloatingNotice(isEnSt ? `🕳️ Weakness Shift: ${wName}` : `🕳️ 弱點切換：${wName}`, monster.pixelX, monster.pixelY, 'pity-seed');
             }
         }
         return true;
@@ -725,12 +733,18 @@
         GameApp.renderer.removeMonsterDom(monster.id);
         GameApp.audio.playKill();
 
+        const isEnKill = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         if (monster.splitsOnDeath) {
             spawnSplitMiniSlimes(monster);
             const splitCnt = monster.splitCount || getRules().SLIME_SPLIT_COUNT || 2;
-            G.dom.msgText.innerText = `【${monster.name}】分裂為 ${splitCnt} 隻${monster.splitChildName || '迷你史萊姆'}。`;
+            const childLabel = isEnKill ? 'Mini Slimes' : (monster.splitChildName || '迷你史萊姆');
+            G.dom.msgText.innerText = isEnKill
+                ? `${monster.name} split into ${splitCnt} ${childLabel}!`
+                : `【${monster.name}】分裂為 ${splitCnt} 隻${childLabel}。`;
         } else if (killGold > 0 && !options.isEmberSplash && !options.isDotKill) {
-            G.dom.msgText.innerText = `擊殺【${monster.name}】，獲得 +${killGold} 💰${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
+            G.dom.msgText.innerText = isEnKill
+                ? `Slain ${monster.name}: +${killGold} 💰${dewGain > 0 ? `, +${dewGain} 💧` : ''}.`
+                : `擊殺【${monster.name}】，獲得 +${killGold} 💰${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
         }
 
         // 🔥 熔核自爆蟲：非減速且非凍結狀態死亡時癱瘓 1.4 格內防禦塔 1.5s
@@ -787,7 +801,7 @@
                 for (let v = 0; v < victims.length; v++) {
                     const m = victims[v];
                     if (m.hp <= 0) continue;
-                    if (m.isStealthed) revealStealthMonster(m, 'AoE 現形');
+                    if (m.isStealthed) revealStealthMonster(m, (GameApp.i18n && GameApp.i18n.isEnglish()) ? 'AoE Reveal' : 'AoE 現形');
                     const before = m.hp;
                     m.hp = Math.max(0, before - tickDmg);
                     if (AttackSys && hz.sourceTower) {
@@ -958,7 +972,7 @@
         if (m.isStealthed) {
             m.stealthTimerMs = Math.max(0, (m.stealthTimerMs || 0) - dtMs);
             if (m.stealthTimerMs <= 0) {
-                revealStealthMonster(m, '顯形');
+                revealStealthMonster(m, (GameApp.i18n && GameApp.i18n.isEnglish()) ? 'Revealed' : '顯形');
             }
         }
 
@@ -1061,7 +1075,7 @@
                         }
                     }
                     if (empCount > 0 && GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
-                        GameApp.renderer.spawnFloatingNotice('⚡ EMP 干擾', m.pixelX, m.pixelY, 'pity-seed');
+                        GameApp.renderer.spawnFloatingNotice((GameApp.i18n && GameApp.i18n.isEnglish()) ? '⚡ EMP Disrupt' : '⚡ EMP 干擾', m.pixelX, m.pixelY, 'pity-seed');
                     }
                 }
             }
@@ -1127,8 +1141,9 @@
                 }
 
                 if (G.dom.msgText) {
-                    G.dom.msgText.innerText = m.isBoss
-                        ? `【${m.name}】突破防線，世界樹受損 -${leakDmg} 生命。`
+                    const isEnLeak = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                    G.dom.msgText.innerText = isEnLeak
+                        ? `${m.name} breached the line! World Tree -${leakDmg} HP.`
                         : `【${m.name}】突破防線，世界樹受損 -${leakDmg} 生命。`;
                 }
                 st.monsters.splice(i, 1);

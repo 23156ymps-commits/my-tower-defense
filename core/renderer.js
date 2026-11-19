@@ -721,7 +721,8 @@
         const dmgEl = document.createElement('div');
         const toneClass = isWeakness ? 'weakness' : (isAffinity ? 'affinity' : 'normal');
         dmgEl.classList.add('floating-dmg', toneClass);
-        dmgEl.innerText = isWeakness ? `WEAK! -${amount}` : (isAffinity ? `親和 -${amount}` : `${tagPrefix}-${amount}`);
+        const affinityLabel = (GameApp.i18n && typeof GameApp.i18n.pick === 'function') ? GameApp.i18n.pick('親和', 'Affinity') : '親和';
+        dmgEl.innerText = isWeakness ? `WEAK! -${amount}` : (isAffinity ? `${affinityLabel} -${amount}` : `${tagPrefix}-${amount}`);
         dmgEl.style.left = `${px + (Math.random() - 0.5) * 18}px`;
         dmgEl.style.top = `${py - 18 + (Math.random() - 0.5) * 8}px`;
         const durationMs = Math.round(720 / Math.max(1, clampNumber(G.state.gameSpeed, 1, 5, 1) * 0.75));
@@ -1000,7 +1001,10 @@
         const armorPrefix = isEn ? 'ARM ' : '甲 ';
         const armorHtml = monster.armor > 0 ? `<span class="m-armor-badge num">${armorPrefix}${monster.armor}</span>` : '';
         const weakCfg = getTowersDict()[monster.weakness];
-        const weakShort = weakCfg ? `${weakCfg.icon}${isEn ? weakCfg.name.split(' ')[0] : weakCfg.name.charAt(0)}` : (monster.weakness || '');
+        const weakText = (GameApp.i18n && typeof GameApp.i18n.getWeaknessLabel === 'function')
+            ? GameApp.i18n.getWeaknessLabel(monster.weakness)
+            : (weakCfg ? weakCfg.name.charAt(0) : (monster.weakness || ''));
+        const weakShort = weakCfg ? `${weakCfg.icon}${weakText}` : weakText;
         const bossHtml = monster.isBoss ? `<span class="m-boss-badge weak-${monster.weakness}">${isEn ? 'B·' : '王·弱'}${weakShort}</span>` : '';
         el.innerHTML = `<div class="m-hud-stack" aria-hidden="true"><div class="m-debuff-strip"></div><div class="m-shield-bar hidden"><div class="m-shield-fill"></div></div><div class="m-hp-bar"><div class="m-hp-fill"></div></div></div>${armorHtml}<span class="m-icon">${createMonsterSvgHtml(monster)}</span>${bossHtml}`;
         G.dom.monsterLayerEl.appendChild(el);
@@ -1013,7 +1017,8 @@
             bossBadgeEl: el.querySelector('.m-boss-badge'),
             debuffStripEl: el.querySelector('.m-debuff-strip'),
             lastDebuffHtml: '',
-            lastWeakness: monster.weakness
+            lastWeakness: monster.weakness,
+            lastLang: isEn ? 'en' : 'zh-TW'
         };
         G.monsterDomMap.set(monster.id, rec);
         return rec;
@@ -1027,9 +1032,10 @@
     function buildMonsterDebuffMicroHtml(m, MonsterSys) {
         const st = m.status;
         if (!st && (m.armorShredTimer || 0) <= 0 && (m.slowTimer || 0) <= 0) return '';
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         const tags = [];
         if (st && st.burn && st.burn.stacks > 0 && st.burn.durationMs > 0) {
-            tags.push(`<span class="m-debuff-tag debuff-burn num">🔥${st.burn.stacks}層</span>`);
+            tags.push(`<span class="m-debuff-tag debuff-burn num">🔥${st.burn.stacks}${isEn ? '' : '層'}</span>`);
         }
         const frozen = MonsterSys && typeof MonsterSys.isMonsterFrozen === 'function' && MonsterSys.isMonsterFrozen(m);
         const slowed = MonsterSys && typeof MonsterSys.isMonsterSlowed === 'function' ? MonsterSys.isMonsterSlowed(m) : (m.slowTimer > 0);
@@ -1058,6 +1064,8 @@
         }
 
         const MonsterSys = GameApp.systems && GameApp.systems.monster;
+        const isEnNow = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+        const curLang = isEnNow ? 'en' : 'zh-TW';
         for (let i = 0; i < monsters.length; i++) {
             const m = monsters[i];
             const rec = G.monsterDomMap.get(m.id) || createMonsterDom(m);
@@ -1069,13 +1077,16 @@
             rec.el.classList.toggle('frozen', isFrozen);
             rec.el.classList.toggle('rooted', (m.rootTimer || 0) > 0);
             rec.el.classList.toggle('stealthed', Boolean(m.isStealthed));
-            if (m.isBoss && rec.bossBadgeEl && rec.lastWeakness !== m.weakness) {
+            if (m.isBoss && rec.bossBadgeEl && (rec.lastWeakness !== m.weakness || rec.lastLang !== curLang)) {
                 rec.lastWeakness = m.weakness;
-                const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                rec.lastLang = curLang;
                 const weakCfg = getTowersDict()[m.weakness];
-                const weakShort = weakCfg ? `${weakCfg.icon}${isEn ? weakCfg.name.split(' ')[0] : weakCfg.name.charAt(0)}` : (m.weakness || '');
-                rec.bossBadgeEl.className = `m-boss-badge weak-${m.weakness || ''}`;
-                rec.bossBadgeEl.innerText = `${isEn ? 'B·' : '王·弱'}${weakShort}`;
+                const weakText = (GameApp.i18n && typeof GameApp.i18n.getWeaknessLabel === 'function')
+                    ? GameApp.i18n.getWeaknessLabel(m.weakness)
+                    : (weakCfg ? weakCfg.name.charAt(0) : (m.weakness || ''));
+                const weakShort = weakCfg ? `${weakCfg.icon}${weakText}` : weakText;
+                rec.bossBadgeEl.className = `m-boss-badge weak-${m.weakness}`;
+                rec.bossBadgeEl.innerText = `${isEnNow ? 'B·' : '王·弱'}${weakShort}`;
             }
             if (rec.debuffStripEl) {
                 const debuffHtml = buildMonsterDebuffMicroHtml(m, MonsterSys);

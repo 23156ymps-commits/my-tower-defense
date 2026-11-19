@@ -185,13 +185,14 @@
 
                 const dstTower = G.state.board[cellIndex];
                 if (dstTower && typeof Renderer.showDragEvolutionPreview === 'function') {
+                    const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
                     const fusion = EvoSys && typeof EvoSys.getFusionResult === 'function' ? EvoSys.getFusionResult(srcTower, dstTower) : null;
                     if (fusion) {
-                        Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, fusion.previewLabel || '可融合進化', true);
+                        Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, fusion.previewLabel || (isEn ? 'Can Evolve' : '可融合進化'), true);
                     } else {
                         const reason = EvoSys && typeof EvoSys.getIncompatibilityReason === 'function'
                             ? EvoSys.getIncompatibilityReason(srcTower, dstTower)
-                            : '血脈不相容';
+                            : (isEn ? 'Incompatible lineage' : '血脈不相容');
                         Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, `⚠️ ${reason}`, false);
                     }
                 } else if (typeof Renderer.clearDragEvolutionPreview === 'function') {
@@ -231,7 +232,10 @@
         const cost = EconSys ? EconSys.getSummonCost(towerType) : 10;
         if (!EconSys || !EconSys.canAffordSummon(towerType)) {
             if (G.dom.msgText) {
-                G.dom.msgText.innerText = `❌ 金幣不足，無法召喚【${tCfg.name}】！需要 ${cost} 💰`;
+                const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                G.dom.msgText.innerText = isEn
+                    ? `Insufficient Gold to summon ${tCfg.name} (${cost} 💰 needed).`
+                    : `❌ 金幣不足，無法召喚【${tCfg.name}】！需要 ${cost} 💰`;
             }
             if (btnEl) {
                 btnEl.classList.remove('shake-anim', 'insufficient-gold');
@@ -286,7 +290,10 @@
         if (activeDrag.btnEl) activeDrag.btnEl.classList.add('dragging-card');
 
         if (G.dom.msgText && tCfg) {
-            G.dom.msgText.innerText = `拖曳【${tCfg.icon} ${tCfg.name}】至棋盤可建格放開召喚（花費 ${cost} 💰）。`;
+            const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+            G.dom.msgText.innerText = isEn
+                ? `Drag ${tCfg.icon} ${tCfg.name} onto a valid tile to summon (${cost} 💰).`
+                : `拖曳【${tCfg.icon} ${tCfg.name}】至棋盤可建格放開召喚（花費 ${cost} 💰）。`;
         }
     }
 
@@ -344,7 +351,10 @@
             activeDrag.ghostEl = createGhostElement(activeDrag.towerType, activeDrag.tier);
             const tCfg = getTowersDict()[activeDrag.towerType];
             if (G.dom.msgText && tCfg) {
-                G.dom.msgText.innerText = `移動【${tCfg.name} ${GameApp.renderer.getTierStars(activeDrag.tier)}】：放至空地移位，或拖向相容防禦塔融合。`;
+                const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                G.dom.msgText.innerText = isEn
+                    ? `Moving ${tCfg.name} ${GameApp.renderer.getTierStars(activeDrag.tier)}: Drop on empty tile or merge with a compatible tower.`
+                    : `移動【${tCfg.name} ${GameApp.renderer.getTierStars(activeDrag.tier)}】：放至空地移位，或拖向相容防禦塔融合。`;
             }
             G.callbacks.updateTowerInspector();
         }
@@ -388,14 +398,17 @@
                     });
                 }
                 if (G.dom.msgText) {
+                    const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
                     if (targetIndex !== null) {
                         const isPath = G.map.pathCellIndices.has(targetIndex);
                         const hasTower = G.state.board[targetIndex] !== null;
                         G.dom.msgText.innerText = isPath
-                            ? '怪物路徑不可建塔，已取消召喚（未扣金幣）。'
-                            : (hasTower ? '商店召喚不可直接覆蓋場上防禦塔，請放置於空白地塊（未扣金幣）。' : '該地形不可建塔，已取消召喚（未扣金幣）。');
+                            ? (isEn ? 'Cannot build on enemy path. Summon cancelled (no Gold spent).' : '怪物路徑不可建塔，已取消召喚（未扣金幣）。')
+                            : (hasTower
+                                ? (isEn ? 'Drop on an open green tile to summon (no Gold spent).' : '商店召喚不可直接覆蓋場上防禦塔，請放置於空白地塊（未扣金幣）。')
+                                : (isEn ? 'Cannot build on this terrain. Summon cancelled (no Gold spent).' : '該地形不可建塔，已取消召喚（未扣金幣）。'));
                     } else {
-                        G.dom.msgText.innerText = '已取消拖曳召喚（未扣金幣）。';
+                        G.dom.msgText.innerText = isEn ? 'Drag summon cancelled (no Gold spent).' : '已取消拖曳召喚（未扣金幣）。';
                     }
                 }
                 GameApp.renderer.updateRangeIndicator();

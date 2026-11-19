@@ -173,6 +173,8 @@ body.map-frost {
 
 /* ==================== 2. 單排不折行頂部 HUD ==================== */
 #hud-container {
+    position: relative;
+    z-index: 45;
     width: var(--board-width);
     max-width: 100%;
     display: flex;
@@ -186,7 +188,7 @@ body.map-frost {
     border-radius: 8px;
     border: 1px solid var(--border-subtle);
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .hud-stats {
@@ -302,14 +304,70 @@ body.map-frost {
     border-color: var(--border-subtle);
     color: var(--el-lightning);
 }
+.lang-dropdown {
+    position: relative;
+    flex-shrink: 0;
+}
 .hud-lang-btn {
-    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     padding: 4px 8px;
     font-size: 12px;
     font-weight: 700;
     color: var(--el-lightning);
     white-space: nowrap;
 }
+.lang-globe-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+.lang-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 136px;
+    padding: 4px;
+    border-radius: 8px;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 120;
+}
+.lang-menu.hidden { display: none; }
+.lang-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    background-color: transparent;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.lang-option:hover { background-color: var(--bg-surface); }
+.lang-option.is-active {
+    background-color: var(--bg-canvas);
+    color: var(--el-lightning);
+}
+.lang-option .lang-check {
+    visibility: hidden;
+    font-weight: 700;
+    color: var(--el-lightning);
+}
+.lang-option.is-active .lang-check { visibility: visible; }
 
 /* ==================== 2B. 備戰期展開／開波自動收折預告條 ＋ HUD 下方輕量暫停條 ==================== */
 .hud-sub-slot {
@@ -464,8 +522,7 @@ body.map-frost {
     gap: 8px;
     padding: 4px 8px;
     border-radius: 4px;
-    background-color: var(--bg-canvas);
-    border: 1px solid var(--border-subtle);
+    background-color: var(--bg-grid-elevated);
     font-size: 14px;
     line-height: 1.4;
     min-width: 0;
@@ -500,7 +557,7 @@ body.map-frost {
 .swatch-tree { background-color: #233C2E; border: 1px solid #4E9A68; }
 
 .forecast-item.forecast-boss {
-    border-color: var(--accent-cta);
+    border-left: 4px solid var(--accent-cta);
     color: var(--text-primary);
     font-weight: 600;
 }
@@ -515,14 +572,14 @@ body.map-frost {
 .forecast-weak {
     font-size: 12px;
     font-weight: 600;
-    padding: 0 4px;
+    padding: 0 8px;
     border-radius: 4px;
     white-space: nowrap;
-    border: 1px solid var(--border-subtle);
+    background-color: var(--bg-canvas);
 }
-.forecast-weak.weak-fire { color: #EE9B8F; border-color: var(--el-fire); }
-.forecast-weak.weak-ice { color: #9BD3E8; border-color: var(--el-ice); }
-.forecast-weak.weak-thunder { color: #F2D785; border-color: var(--el-lightning); }
+.forecast-weak.weak-fire { color: #EE9B8F; }
+.forecast-weak.weak-ice { color: #9BD3E8; }
+.forecast-weak.weak-thunder { color: #F2D785; }
 
 /* ==================== 3. 15x10 戰場舞台與棋盤降噪 ==================== */
 #board-stage {
@@ -1690,7 +1747,8 @@ body.map-frost .cell.path-cell {
     color: var(--text-primary);
 }
 
-.start-card, .guide-card { max-width: 520px; }
+.start-card { max-width: min(600px, 94vw); }
+.guide-card { max-width: 520px; }
 .codex-card {
     max-width: min(880px, 96vw);
     padding: 16px;
@@ -1755,7 +1813,7 @@ body.map-frost .cell.path-cell {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     align-items: stretch;
-    gap: 8px;
+    gap: 12px;
 }
 
 .map-card {
@@ -1764,15 +1822,17 @@ body.map-frost .cell.path-cell {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    justify-content: space-between;
+    gap: 8px;
     padding: 12px;
     border-radius: 8px;
     cursor: pointer;
     text-align: left;
+    overflow: hidden;
     color: var(--text-primary);
     background-color: var(--bg-grid-elevated);
     border: 1px solid var(--border-subtle);
-    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
 }
 .map-card:hover { background-color: #2E3833; }
 .map-card:active { transform: scale(0.98); }
@@ -1781,22 +1841,61 @@ body.map-frost .cell.path-cell {
     border: 2px solid var(--accent-cta);
 }
 
-.map-card-top { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
-.map-card-name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
-.map-diff-badge { font-size: 12px; font-weight: 600; padding: 0 8px; border-radius: 4px; white-space: nowrap; border: 1px solid var(--border-subtle); }
-.map-diff-badge.diff-std { border-color: #4E9A68; color: #A8D5B5; }
-.map-diff-badge.diff-hard { border-color: var(--el-fire); color: #EE9B8F; }
-.map-diff-badge.diff-ice { border-color: var(--el-ice); color: #A6D7E8; }
-.map-card-desc { font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
-.map-card-record { font-size: 12px; font-weight: 600; color: var(--el-lightning); margin-top: auto; padding-top: 4px; }
+.map-card-top { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.map-card-name {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text-primary);
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.map-diff-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background-color: var(--bg-canvas);
+}
+.map-diff-badge.diff-std { color: #A8D5B5; }
+.map-diff-badge.diff-hard { color: #EE9B8F; }
+.map-diff-badge.diff-ice { color: #A6D7E8; }
+.map-card-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    min-width: 0;
+    max-width: 100%;
+}
+.map-card-record {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: break-word;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--el-lightning);
+    margin-top: auto;
+    padding-top: 4px;
+}
 
 /* 祝福與圖鑑列表 */
 .blessing-choices { display: grid; grid-template-columns: repeat(3, 1fr); align-items: stretch; gap: 12px; margin-top: 8px; }
 .blessing-choice-btn {
+    height: 100%;
     min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: space-between;
     text-align: center;
     gap: 8px;
     padding: 12px;
@@ -1805,7 +1904,7 @@ body.map-frost .cell.path-cell {
     color: var(--text-primary);
     background-color: var(--bg-grid-elevated);
     border: 1px solid var(--border-subtle);
-    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
 }
 .blessing-choice-btn:hover { background-color: #303A35; border-color: var(--accent-cta); }
 .blessing-choice-btn:active { transform: scale(0.98); }
@@ -1816,19 +1915,19 @@ body.map-frost .cell.path-cell {
 .codex-tabs {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    margin-bottom: 10px;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 .codex-tab-btn {
-    padding: 6px 8px;
+    padding: 8px;
     font-size: 12px;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     background-color: var(--bg-grid-elevated);
     border: 1px solid var(--border-subtle);
     color: var(--text-secondary);
-    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .codex-tab-btn:hover { background-color: #343F39; color: var(--text-primary); }
 .codex-tab-btn.active {
@@ -2360,35 +2459,34 @@ body.map-frost .cell.path-cell {
 
 /* 結算雙重回饋工具：5 秒主觀體感快評列 ＋ 單局黑盒子複製按鈕 */
 .feel-feedback-box {
-    background-color: var(--bg-grid-elevated);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    padding: 12px;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 12px 0;
     margin-bottom: 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 .feel-rating-header {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-primary);
 }
 .feel-rating-bar {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    gap: 8px;
 }
 .feel-rating-btn {
-    padding: 6px 8px;
+    padding: 8px;
     font-size: 12px;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    background-color: var(--bg-canvas);
+    background-color: var(--bg-grid-elevated);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
-    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
 }
 .feel-rating-btn:hover { background-color: #323D37; border-color: var(--accent-cta); }
 .feel-rating-btn:active { transform: scale(0.98); }
@@ -2404,11 +2502,11 @@ body.map-frost .cell.path-cell {
 }
 .copy-report-btn {
     width: 100%;
-    min-height: 38px;
-    padding: 6px 12px;
-    font-size: 13px;
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 12px;
     font-weight: 700;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     background-color: var(--bg-canvas);
     border: 1px dashed var(--el-ice);
@@ -2486,7 +2584,7 @@ body.map-frost .cell.path-cell {
     #hud-container { flex-wrap: wrap; padding: 4px 8px; gap: 4px 6px; margin-bottom: 4px; }
     .hud-stats { flex-wrap: wrap; gap: 6px; }
     .hud-ctrl-btn { min-height: 40px; padding: 4px 8px; font-size: 12px; }
-    .wt-reset-view-btn, .contract-chip, .pause-banner-btn, .codex-close-top-btn, .forecast-toggle-btn { min-height: 40px; }
+    .wt-reset-view-btn, .contract-chip, .pause-banner-btn, .codex-close-top-btn, .forecast-toggle-btn, .lang-option { min-height: 40px; }
     .info-legend-inline { display: none; }
     .forecast-detail-drawer { grid-template-columns: 1fr; }
 
@@ -2841,7 +2939,7 @@ body.map-frost .cell.path-cell {
     .dew-bar-track { width: 20px; }
     .hud-actions { gap: 4px; }
     .hud-ctrl-btn { min-height: 36px; min-width: 28px; padding: 4px 6px; font-size: 12px; }
-    .hud-lang-btn { min-width: 36px; padding: 4px 6px; }
+    .hud-lang-btn { min-width: auto; padding: 4px 8px; }
     .hud-sub-slot { margin-bottom: 4px; }
     .wave-forecast-bar { padding: 4px 8px; }
     #tower-inspector { margin-top: 4px; min-height: 44px; padding: 4px 8px; }
@@ -2867,7 +2965,7 @@ html[lang="en"] .hud-stats { gap: 6px; }
 html[lang="en"] .hud-actions { gap: 4px; }
 html[lang="en"] .hud-item { font-size: 12px; }
 html[lang="en"] .hud-ctrl-btn { padding: 4px 6px; font-size: 12px; }
-html[lang="en"] .hud-lang-btn { min-width: 38px; padding: 4px 6px; }
+html[lang="en"] .hud-lang-btn { min-width: auto; padding: 4px 8px; }
 html[lang="en"] .spawn-card-head { font-size: 12px; }
 html[lang="en"] .spawn-card-role { font-size: 12px; }
 html[lang="en"] .skill-btn .skill-label { font-size: 12px; }

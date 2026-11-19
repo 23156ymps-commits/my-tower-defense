@@ -76,26 +76,30 @@
         return getShortNodeLabel(nodeId);
     }
 
+    function L(zh, en) {
+        return (GameApp.i18n && typeof GameApp.i18n.pick === 'function') ? GameApp.i18n.pick(zh, en) : zh;
+    }
+
     /**
      * 檢查兩座塔若不可合成，其具體不相容原因
      */
     function getIncompatibilityReason(fromTower, toTower) {
         const evo = getEvoData();
         const maxTier = evo.MAX_TIER || 3;
-        if (!fromTower || !toTower) return '無效的防禦塔';
+        if (!fromTower || !toTower) return L('無效的防禦塔', 'Invalid tower');
         if (fromTower.tier >= maxTier || toTower.tier >= maxTier) {
-            return '已達 3★ 冠枝最高階級，無法繼續融合';
+            return L('已達 3★ 冠枝最高階級，無法繼續融合', 'Already at max 3★ Crown tier');
         }
         if (fromTower.tier !== toTower.tier) {
-            return '兩座防禦塔星級不同（須同為 1★ 或同為 2★）';
+            return L('兩座防禦塔星級不同（須同為 1★ 或同為 2★）', 'Towers must be the same star tier (1★ or 2★)');
         }
         if (fromTower.tier === 1 && toTower.tier === 1) {
-            return '僅同物種 1★、異系基礎芽轉職，或同血脈基礎芽灌注轉職 1★ 可融合';
+            return L('僅同物種 1★、異系基礎芽轉職，或同血脈基礎芽灌注轉職 1★ 可融合', 'Requires matching 1★ pair, distinct base buds, or matching lineage infusion');
         }
         if (fromTower.tier === 2 && toTower.tier === 2) {
-            return '須兩座同物種 2★ 塔才能觸發冠枝分岔進化';
+            return L('須兩座同物種 2★ 塔才能觸發冠枝分岔進化', 'Requires two matching 2★ trunks for Crown evolution');
         }
-        return '該組合無法進行融合';
+        return L('該組合無法進行融合', 'Incompatible merge pair');
     }
 
     /**
@@ -123,11 +127,11 @@
                 const resTier = Number.isFinite(matched.resultTier) ? matched.resultTier : (resCfg.nodeTier || 2);
                 const requiresConf = Boolean(matched.requiresConfirmation);
                 const mode = matched.mode || (resTier === 1 ? 'transfer_t1' : 'star_up_t2');
-                let previewLabel = `升星 ▸ ${resCfg.icon} ${resCfg.name} ★★`;
+                let previewLabel = `${L('升星', 'Star Up')} ▸ ${resCfg.icon} ${resCfg.name} ★★`;
                 if (mode === 'transfer_t1') {
-                    previewLabel = `轉職 ▸ ${resCfg.icon} ${resCfg.name} ★`;
+                    previewLabel = `${L('轉職', 'Transfer')} ▸ ${resCfg.icon} ${resCfg.name} ★`;
                 } else if (mode === 'infusion_single') {
-                    previewLabel = `元素灌注 ▸ ${resCfg.icon} ${resCfg.name} ★★`;
+                    previewLabel = `${L('元素灌注', 'Infusion')} ▸ ${resCfg.icon} ${resCfg.name} ★★`;
                 }
                 return {
                     type: matched.resultType,
@@ -136,7 +140,9 @@
                     isCrossElement: Boolean(matched.isCrossElement),
                     mode,
                     requiresConfirmation: requiresConf,
-                    title: matched.title || `${resCfg.icon} ${resCfg.name}`,
+                    title: mode === 'infusion_single'
+                        ? L('元素灌注升星確認（0.15x 子彈時間）', 'Confirm Elemental Infusion (0.15x Bullet Time)')
+                        : `${resCfg.icon} ${resCfg.name}`,
                     previewLabel
                 };
             }
@@ -164,8 +170,8 @@
                 mode: rule.mode || (validOptions.length > 1 ? 'dual_choice' : 'directed_single'),
                 family: rule.family || '',
                 requiresConfirmation: true,
-                title: rule.title || '世界樹冠枝開花',
-                previewLabel: rule.previewLabel || `冠枝進化 ▸ ${getShortNodeLabel(validOptions[0])}`
+                title: L(rule.title || '世界樹冠枝開花', 'Crown Branch Evolution'),
+                previewLabel: L(rule.previewLabel || `冠枝進化 ▸ ${getShortNodeLabel(validOptions[0])}`, `Crown Evolution ▸ ${getShortNodeLabel(validOptions[0])}`)
             };
         }
 
@@ -181,11 +187,15 @@
         const targetType = chosenType || fusion.type;
         const evo = getEvoData();
         if (fusion.tier === (evo.MAX_TIER || 3)) {
+            if (GameApp.i18n && GameApp.i18n.isEnglish()) {
+                const tCfg = getTowersDict()[targetType];
+                return (tCfg && tCfg.roleSummary) ? ` [${tCfg.roleSummary}]` : ' [3★ Crown Blossomed]';
+            }
             return (evo.LV3_ASCENSION_HINTS && evo.LV3_ASCENSION_HINTS[targetType]) || '【3★ 冠枝盛開】';
         }
-        if (fusion.mode === 'transfer_t1') return '【異系轉職為 1★ 新物種】';
-        if (fusion.mode === 'infusion_single') return '【元素灌注升為 2★】';
-        return '【同物種升為 2★】';
+        if (fusion.mode === 'transfer_t1') return L('【異系轉職為 1★ 新物種】', ' [Transferred to 1★ Hybrid]');
+        if (fusion.mode === 'infusion_single') return L('【元素灌注升為 2★】', ' [Infused to 2★]');
+        return L('【同物種升為 2★】', ' [Starred Up to 2★]');
     }
 
     function buildMergedLineagePath(fromTower, toTower, resultNodeId, resultTier, mode = '') {
