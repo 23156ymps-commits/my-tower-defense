@@ -30,6 +30,7 @@ html, body {
     scroll-behavior: auto !important;
     user-select: none;
     -webkit-user-select: none;
+    touch-action: manipulation;
     font-family: "Plus Jakarta Sans", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Segoe UI", sans-serif;
     background-color: var(--bg-canvas);
     color: var(--text-primary);
@@ -186,6 +187,7 @@ body.map-frost {
     border-radius: 8px;
     border: 1px solid var(--border-subtle);
     min-width: 0;
+    overflow: hidden;
 }
 
 .hud-stats {
@@ -263,6 +265,7 @@ body.map-frost {
 
 .hud-ctrl-btn {
     min-height: 40px;
+    min-width: 0;
     padding: 4px 10px;
     border-radius: 6px;
     font-size: 13px;
@@ -270,6 +273,9 @@ body.map-frost {
     line-height: 1.25;
     cursor: pointer;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    touch-action: manipulation;
     background-color: var(--bg-grid-elevated);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
@@ -296,6 +302,14 @@ body.map-frost {
     text-align: center;
     border-color: var(--border-subtle);
     color: var(--el-lightning);
+}
+.hud-lang-btn {
+    min-width: 44px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--el-lightning);
+    white-space: nowrap;
 }
 
 /* ==================== 2B. 備戰期展開／開波自動收折預告條 ＋ HUD 下方輕量暫停條 ==================== */
@@ -661,6 +675,14 @@ body.map-frost {
     75% { transform: translate(2px, 0); }
 }
 
+#board-stage,
+#grid-board {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
 #grid-board {
     position: relative;
     z-index: 1;
@@ -845,10 +867,13 @@ body.map-frost .cell.path-cell {
 @keyframes turretRecoilA { 0%, 100% { transform: translateY(0) scale(1); } 28% { transform: translateY(15%) scale(0.94, 0.92); } }
 @keyframes turretRecoilB { 0%, 100% { transform: translateY(0) scale(1); } 28% { transform: translateY(15%) scale(0.94, 0.92); } }
 
-/* 格子內微標示（10px–11px 高對比） */
+/* 格子內微標示（10px–11px 高對比，嚴格限寬不超出格子） */
 .tower-name {
     position: relative;
     z-index: 3;
+    max-width: calc(var(--cell-size) - 2px);
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 10px;
     font-weight: 700;
     line-height: 1.1;
@@ -860,9 +885,15 @@ body.map-frost .cell.path-cell {
     color: var(--text-primary);
     pointer-events: none;
 }
+.tower-name.is-compact {
+    font-size: 7.5px;
+    letter-spacing: -1.1px;
+    padding: 0 1.5px;
+}
 
 .tower.lv-2 .tower-name { border-color: var(--text-secondary); }
 .tower.lv-3 .tower-name { border-color: var(--el-lightning); color: var(--el-lightning); }
+.tower-el-dot { display: none; pointer-events: none; }
 
 .touch-drag-ghost {
     position: fixed;
@@ -967,6 +998,9 @@ body.map-frost .cell.path-cell {
 
 .m-armor-badge, .m-boss-badge {
     position: absolute;
+    max-width: calc(var(--cell-size) * 1.18);
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 9.5px;
     font-weight: 700;
     line-height: 1.1;
@@ -1303,6 +1337,8 @@ body.map-frost .cell.path-cell {
 .inspector-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .inspector-btn {
     min-height: 26px;
+    min-width: 0;
+    max-width: 100%;
     padding: 2px 10px;
     font-size: 11.5px;
     font-weight: 600;
@@ -1310,6 +1346,9 @@ body.map-frost .cell.path-cell {
     border: 1px solid var(--border-subtle);
     cursor: pointer;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    touch-action: manipulation;
     background-color: var(--bg-grid-elevated);
     color: var(--text-primary);
     transition: background-color 0.1s ease, border-color 0.1s ease, opacity 0.1s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1507,6 +1546,9 @@ body.map-frost .cell.path-cell {
     font-weight: 700;
     line-height: 1.2;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    touch-action: manipulation;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2446,9 +2488,9 @@ body.map-frost .cell.path-cell {
 
 @media (max-width: 767px) {
     :root {
-        --grid-gap: 4px;
-        --board-pad: 4px;
-        --cell-size: clamp(18px, calc((100vw - 96px) / 15), 34px);
+        --grid-gap: 2px;
+        --board-pad: 3px;
+        --cell-size: clamp(18px, calc((100vw - 56px) / 15), 34px);
     }
 
     html, body {
@@ -2460,7 +2502,7 @@ body.map-frost .cell.path-cell {
 
     body {
         justify-content: flex-start;
-        padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+        padding: 12px 8px calc(16px + env(safe-area-inset-bottom));
     }
 
     #hud-container { flex-wrap: wrap; padding: 8px; gap: 4px 8px; }
@@ -2485,6 +2527,66 @@ body.map-frost .cell.path-cell {
     .blessing-choices, .map-selector-grid { grid-template-columns: 1fr; }
     .tree-viewport { height: 320px; }
     .wt-detail-card { flex-direction: column; align-items: flex-start; }
+
+    /* 手機端防禦塔角標外移＋屬性邊框識別（不遮擋中央 2.5D 砲塔主體） */
+    .tower {
+        width: 100%;
+        height: 100%;
+        border-radius: 5px;
+        box-sizing: border-box;
+        border: 1.5px solid var(--border-subtle);
+    }
+    .tower.type-fire { border-color: #C94A38; }
+    .tower.type-ice { border-color: #4A9EBF; }
+    .tower.type-thunder { border-color: #E0B43C; }
+    .tower.type-steam { border-color: #C94A38 #4A9EBF #4A9EBF #C94A38; }
+    .tower.type-magnet { border-color: #4A9EBF #E0B43C #E0B43C #4A9EBF; }
+    .tower.type-plasma { border-color: #C94A38 #E0B43C #E0B43C #C94A38; }
+
+    .tower-base-layer,
+    .tower-head-rotator {
+        inset: 18%;
+    }
+    .tower-el-dot {
+        display: block;
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        z-index: 5;
+        background-color: var(--text-secondary);
+    }
+    .tower.type-fire .tower-el-dot { background-color: #C94A38; }
+    .tower.type-ice .tower-el-dot { background-color: #4A9EBF; }
+    .tower.type-thunder .tower-el-dot { background-color: #E0B43C; }
+    .tower.type-steam .tower-el-dot { background: linear-gradient(135deg, #C94A38 50%, #4A9EBF 50%); }
+    .tower.type-magnet .tower-el-dot { background: linear-gradient(135deg, #4A9EBF 50%, #E0B43C 50%); }
+    .tower.type-plasma .tower-el-dot { background: linear-gradient(135deg, #C94A38 50%, #E0B43C 50%); }
+
+    .tower-name {
+        position: absolute;
+        right: 1px;
+        bottom: 1px;
+        max-width: calc(100% - 2px);
+        font-size: 9px;
+        font-weight: 800;
+        line-height: 1;
+        padding: 1px 2px;
+        border-radius: 3px;
+        letter-spacing: -0.8px;
+        background-color: rgba(27, 33, 30, 0.88);
+        border: 1px solid rgba(244, 241, 234, 0.28);
+        z-index: 6;
+    }
+    .tower-name.is-compact {
+        font-size: 7px;
+        letter-spacing: -1.4px;
+        padding: 1px 1.5px;
+        transform: scale(0.82);
+        transform-origin: right bottom;
+    }
 }
 
 /* ==================== 怪物即時情報卡 (#side-monster-card / #mobile-monster-card) ==================== */
@@ -2736,6 +2838,12 @@ body.map-frost .cell.path-cell {
     }
 
     body { padding: 4px 12px; }
+    #hud-container,
+    .hud-sub-slot,
+    #tower-inspector,
+    .bottom-action-deck {
+        width: max(var(--board-width), min(760px, calc(100vw - 32px)));
+    }
     #hud-container { padding: 2px 8px; margin-bottom: 3px; }
     .hud-stats { gap: 6px; }
     .hud-item { font-size: 12.5px; }
@@ -2761,3 +2869,14 @@ body.map-frost .cell.path-cell {
     .tree-viewport { height: 300px; }
     .wt-detail-card { padding: 8px 10px; min-height: 76px; }
 }
+
+/* EN 雙語模式緊湊字級微調，防止英語詞彙溢出或撐爆按鈕 */
+html[lang="en"] .hud-stats { gap: 8px; }
+html[lang="en"] .hud-item { font-size: 12.5px; }
+html[lang="en"] .hud-ctrl-btn { padding: 4px 7px; font-size: 12px; }
+html[lang="en"] .spawn-card-head { font-size: 11.5px; }
+html[lang="en"] .spawn-card-role { font-size: 10px; }
+html[lang="en"] .skill-btn .skill-label { font-size: 11px; }
+html[lang="en"] .debug-controls button { font-size: 12px; padding: 3px 6px; }
+html[lang="en"] .inspector-stat,
+html[lang="en"] .inspector-btn { font-size: 11px; }

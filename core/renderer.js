@@ -644,6 +644,30 @@
         }
     }
 
+    /**
+     * 格子內 Canvas 文字限寬繪製工具：依 cellWidth - 8 自動縮放字級並以 fillText(..., maxWidth) 防溢出
+     */
+    function fillCellClampedText(ctx, text, x, y, cellWidth, baseFontSize = 11, options = {}) {
+        if (!ctx || text === undefined || text === null) return;
+        const str = String(text);
+        const maxWidth = Math.max(8, (Number(cellWidth) || (G && G.boardMetrics && G.boardMetrics.cellW) || 34) - 8);
+        const weight = options.fontWeight || '700';
+        const family = options.fontFamily || '"Plus Jakarta Sans", "Noto Sans TC", sans-serif';
+        let fontSize = Math.max(8, Number(baseFontSize) || 11);
+
+        ctx.save();
+        ctx.font = `${weight} ${fontSize}px ${family}`;
+        while (fontSize > 8 && ctx.measureText(str).width > maxWidth) {
+            fontSize -= 0.5;
+            ctx.font = `${weight} ${fontSize}px ${family}`;
+        }
+        if (options.align) ctx.textAlign = options.align;
+        if (options.baseline) ctx.textBaseline = options.baseline;
+        if (options.fillStyle) ctx.fillStyle = options.fillStyle;
+        ctx.fillText(str, x, y, maxWidth);
+        ctx.restore();
+    }
+
     function measureBoardMetrics() {
         if (!G || !G.dom) return;
         const cells = G.dom.boardElement ? G.dom.boardElement.children : null;
@@ -972,10 +996,12 @@
             }
         });
 
-        const armorHtml = monster.armor > 0 ? `<span class="m-armor-badge num">甲 ${monster.armor}</span>` : '';
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+        const armorPrefix = isEn ? 'ARM ' : '甲 ';
+        const armorHtml = monster.armor > 0 ? `<span class="m-armor-badge num">${armorPrefix}${monster.armor}</span>` : '';
         const weakCfg = getTowersDict()[monster.weakness];
-        const weakShort = weakCfg ? `${weakCfg.icon}${weakCfg.name.charAt(0)}` : (monster.weakness || '');
-        const bossHtml = monster.isBoss ? `<span class="m-boss-badge weak-${monster.weakness}">王·弱${weakShort}</span>` : '';
+        const weakShort = weakCfg ? `${weakCfg.icon}${isEn ? weakCfg.name.split(' ')[0] : weakCfg.name.charAt(0)}` : (monster.weakness || '');
+        const bossHtml = monster.isBoss ? `<span class="m-boss-badge weak-${monster.weakness}">${isEn ? 'B·' : '王·弱'}${weakShort}</span>` : '';
         el.innerHTML = `<div class="m-hud-stack" aria-hidden="true"><div class="m-debuff-strip"></div><div class="m-shield-bar hidden"><div class="m-shield-fill"></div></div><div class="m-hp-bar"><div class="m-hp-fill"></div></div></div>${armorHtml}<span class="m-icon">${createMonsterSvgHtml(monster)}</span>${bossHtml}`;
         G.dom.monsterLayerEl.appendChild(el);
         const rec = {
@@ -1045,10 +1071,11 @@
             rec.el.classList.toggle('stealthed', Boolean(m.isStealthed));
             if (m.isBoss && rec.bossBadgeEl && rec.lastWeakness !== m.weakness) {
                 rec.lastWeakness = m.weakness;
+                const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
                 const weakCfg = getTowersDict()[m.weakness];
-                const weakShort = weakCfg ? `${weakCfg.icon}${weakCfg.name.charAt(0)}` : (m.weakness || '');
+                const weakShort = weakCfg ? `${weakCfg.icon}${isEn ? weakCfg.name.split(' ')[0] : weakCfg.name.charAt(0)}` : (m.weakness || '');
                 rec.bossBadgeEl.className = `m-boss-badge weak-${m.weakness || ''}`;
-                rec.bossBadgeEl.innerText = `王·弱${weakShort}`;
+                rec.bossBadgeEl.innerText = `${isEn ? 'B·' : '王·弱'}${weakShort}`;
             }
             if (rec.debuffStripEl) {
                 const debuffHtml = buildMonsterDebuffMicroHtml(m, MonsterSys);
@@ -1065,10 +1092,11 @@
                 }
             }
             if (m.armor > 0 && rec.armorBadgeEl) {
+                const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
                 const isShredded = m.armorShredTimer > 0;
                 rec.armorBadgeEl.classList.toggle('shredded', isShredded);
                 const effArmor = MonsterSys ? MonsterSys.getMonsterEffectiveArmor(m) : m.armor;
-                rec.armorBadgeEl.innerText = isShredded ? `🔥${Math.round(effArmor)}` : `甲 ${m.armor}`;
+                rec.armorBadgeEl.innerText = isShredded ? `🔥${Math.round(effArmor)}` : `${isEn ? 'ARM ' : '甲 '}${m.armor}`;
             }
             const hpPct = Math.max(0, (m.hp / m.maxHp) * 100);
             if (rec.hpFillEl) {
@@ -1106,6 +1134,12 @@
                 if (G.towerElements[i]) G.towerElements[i].classList.remove('dragging');
             }
         }
+        if (G && G.dom && G.dom.rangeCircleEl && G.state && G.state.selectedIndex === null) {
+            G.dom.rangeCircleEl.className = '';
+            G.dom.rangeCircleEl.style.width = '';
+            G.dom.rangeCircleEl.style.height = '';
+        }
+        updateRangeIndicator();
     }
 
     function createTowerElement(towerObj, index) {
@@ -1130,13 +1164,19 @@
         const headRotator = document.createElement('div'); headRotator.classList.add('tower-head-rotator'); headRotator.style.transform = `rotate(${towerObj.aimAngleDeg || 0}deg)`;
         const headRecoil = document.createElement('div'); headRecoil.classList.add('tower-head-recoil'); headRecoil.innerHTML = headSvgHtml;
         headRotator.appendChild(headRecoil);
+        const elDot = document.createElement('span');
+        elDot.className = 'tower-el-dot';
+        elDot.setAttribute('aria-hidden', 'true');
         const name = document.createElement('div'); name.classList.add('tower-name');
         const starLabel = towerObj.isCrowned ? '👑' : getTierStars(towerObj.tier);
         name.innerText = branchCode ? `${branchCode}${starLabel}` : starLabel;
+        if (name.innerText.length >= 4 || (G.boardMetrics && G.boardMetrics.cellW <= 32)) {
+            name.classList.add('is-compact');
+        }
 
         tower._rotator = headRotator;
         tower._recoilEl = headRecoil;
-        tower.appendChild(baseLayer); tower.appendChild(headRotator); tower.appendChild(name);
+        tower.appendChild(elDot); tower.appendChild(baseLayer); tower.appendChild(headRotator); tower.appendChild(name);
 
         if (GameApp.systems && GameApp.systems.drag && typeof GameApp.systems.drag.bindBoardTowerElement === 'function') {
             GameApp.systems.drag.bindBoardTowerElement(tower, index, towerObj);
@@ -1464,11 +1504,18 @@
         if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'
             || st.waveState === 'BLESSING_SELECT') {
             el.className = '';
+            el.style.width = '';
+            el.style.height = '';
             return;
         }
         const targetIdx = (!st.isTouchMode && st.hoveredIndex !== null && st.board[st.hoveredIndex] !== null)
             ? st.hoveredIndex : ((st.selectedIndex !== null && st.board[st.selectedIndex] !== null) ? st.selectedIndex : null);
-        if (targetIdx === null) { el.className = ''; return; }
+        if (targetIdx === null) {
+            el.className = '';
+            el.style.width = '';
+            el.style.height = '';
+            return;
+        }
 
         const towerObj = st.board[targetIdx], coords = indexToCoords(targetIdx), center = getCellCenter(coords.x, coords.y);
         const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
@@ -1518,6 +1565,7 @@
         updateTowerHoverTooltip,
         resizeFxCanvas,
         measureBoardMetrics,
+        fillCellClampedText,
         getCellCenter,
         clearCanvasFXState,
         emitParticleBurst,

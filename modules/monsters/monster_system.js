@@ -1133,6 +1133,9 @@
                 }
                 st.monsters.splice(i, 1);
                 Renderer.removeMonsterDom(m.id);
+                if (G.callbacks && typeof G.callbacks.onMonsterLeaked === 'function') {
+                    G.callbacks.onMonsterLeaked(m.id);
+                }
                 if (st.baseHp <= 0) {
                     G.callbacks.triggerGameOver();
                     return;

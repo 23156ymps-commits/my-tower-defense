@@ -35,6 +35,8 @@
                 <button id="sound-btn" class="hud-ctrl-btn hud-sound-btn" type="button" title="切換音效">音效</button>
                 <button id="help-btn" class="hud-ctrl-btn hud-help-btn" type="button" aria-expanded="false"
                     title="開啟戰術手冊與屬性地形速查">？</button>
+                <button id="lang-btn" class="hud-ctrl-btn hud-lang-btn num" type="button"
+                    title="切換語言 / Switch Language">EN</button>
             </div>
         </div>
 
@@ -539,8 +541,9 @@
         </div>
     </div>
 
-    <!-- 嚴格排位順序載入全專案 22 個腳本（禁止使用 ES Module，確保本機雙擊 index.html 可離線執行） -->
+    <!-- 嚴格排位順序載入全專案腳本（禁止使用 ES Module，確保本機雙擊 index.html 可離線執行） -->
     <script src="config.js"></script>
+    <script src="core/i18n.js"></script>
     <script src="core/audio.js"></script>
     <script src="core/backend.js"></script>
     <script src="core/renderer.js"></script>

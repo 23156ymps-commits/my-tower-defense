@@ -283,13 +283,17 @@
             ? GameApp.renderer.getTierStars(towerObj.tier)
             : '★'.repeat(Math.max(1, Math.min(3, towerObj.tier || 1)));
         const desc = cfg.tooltipSummary || cfg.roleSummary || (Array.isArray(cfg.badges) ? cfg.badges.join(' · ') : '');
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         const titlePrefix = towerObj.isCrowned ? '👑 ' : '';
-        const tierLabel = towerObj.isCrowned ? 'T4 聖冠' : stars;
-        const crownDescTag = towerObj.isCrowned ? ' ｜ 聖冠覺醒被動啟動' : '';
+        const tierLabel = towerObj.isCrowned ? (isEn ? 'T4 Crown' : 'T4 聖冠') : stars;
+        const crownDescTag = towerObj.isCrowned ? (isEn ? ' | Crown Passive Active' : ' ｜ 聖冠覺醒被動啟動') : '';
+        const statsLine = isEn
+            ? `DMG ${effDmg} | CD ${intervalSec}s | Rng ${effRange}`
+            : `單發 ${effDmg} ｜ 攻速 ${intervalSec}s ｜ 射程 ${effRange}`;
 
         return {
             nameLine: `${titlePrefix}${cfg.icon || '✨'} ${cfg.name || towerObj.type} · ${tierLabel}`,
-            statsLine: `單發 ${effDmg} ｜ 攻速 ${intervalSec}s ｜ 射程 ${effRange}`,
+            statsLine,
             descLine: `${desc}${crownDescTag}`
         };
     }
