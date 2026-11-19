@@ -216,7 +216,7 @@
                 <h2 class="guide-section-title">防線紀要與快捷鍵</h2>
                 <div class="codex-note">
                     每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波迎戰領主魔王。<br>
-                    熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W]</b> 技能 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消
+                    熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W]</b> 技能 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消
                 </div>
             </div>
 
@@ -237,17 +237,19 @@
         </div>
     </div>
 
-    <!-- 跨元素融合與戰場百科圖鑑彈窗（由 codex_system.js 動態渲染） -->
+    <!-- 互動式元素世界樹演化圖譜與戰場百科彈窗（由 codex_system.js 動態渲染） -->
     <div id="codex-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="codex-title">
         <div class="modal-card codex-card">
-            <h1 id="codex-title" class="codex-title">元素戰場百科圖鑑</h1>
-            <p class="modal-subtitle">同星級（★＋★、★★＋★★）不同基礎元素相融即可進階。</p>
-            <div class="codex-tabs"></div>
-            <div class="codex-list"></div>
-            <div class="codex-note">
-                同種融合塔 ★★＋★★ 可升為 ★★★；跨元素融合塔打中任一親和元素弱點享 135% 增傷。
+            <div class="codex-header-bar">
+                <div>
+                    <h1 id="codex-title" class="codex-title">元素世界樹演化圖譜</h1>
+                    <p class="modal-subtitle codex-subtitle">由世界樹原核向上生長：3 根芽 ➔ 6 主幹 ➔ 12 冠枝（按 [T] 隨時開啟並自動暫停）。</p>
+                </div>
+                <button id="codex-close-btn" class="codex-close-top-btn" type="button" aria-label="關閉圖鑑">關閉 [Esc]</button>
             </div>
-            <button id="codex-close-btn" class="primary-cta-btn" type="button">關閉圖鑑</button>
+            <div class="codex-tabs"></div>
+            <div id="codex-tree-shell" class="codex-tree-shell"></div>
+            <div class="codex-list hidden"></div>
         </div>
     </div>
 

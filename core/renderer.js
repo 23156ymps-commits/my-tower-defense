@@ -102,45 +102,94 @@
         return { rune: mainColor, glow: tk.textPrimary };
     }
 
-    function buildBranchCrownSvgOverlay(branchCode, pal, tk) {
-        if (branchCode === 'A') {
-            // A 分支：重炮／領域／黑洞／聚變寬冠（厚實雙肩護甲翼＋寬口聚能環）
-            return `<polygon points="9,34 18,22 20,43 11,42" fill="${pal.rune}" stroke="#1B211E" stroke-width="1.5"/><polygon points="55,34 46,22 44,43 53,42" fill="${pal.rune}" stroke="#1B211E" stroke-width="1.5"/><ellipse cx="32" cy="11" rx="9.5" ry="3.4" fill="${tk.bgCanvas}" stroke="${tk.elLightning}" stroke-width="1.6"/><circle cx="15" cy="33" r="2.2" fill="${tk.elLightning}"/><circle cx="49" cy="33" r="2.2" fill="${tk.elLightning}"/>`;
+    /**
+     * 依血脈繪製 2.5D 樹幹底座（純火深赤岩裂紋／純冰六角晶柱／純雷黃銅線圈／共生雙色交織藤蔓）
+     */
+    function buildLineageBaseSvg(family, pal, effTier, branchCode, tk) {
+        const gemCoords = effTier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
+        const cornerGems = gemCoords.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="${effTier >= 2 ? 2.1 : 1.4}" fill="${effTier >= 2 ? pal.glow : tk.textSecondary}"/>`).join('');
+        const crownOutline = effTier >= 3
+            ? (branchCode === 'B'
+                ? `<polygon points="32,10 52,22 47,46 17,46 12,22" fill="none" stroke="${tk.elLightning}" stroke-width="1.5"/>`
+                : `<polygon points="15,13 49,13 55,24 55,37 46,46 18,46 9,37 9,24" fill="none" stroke="${tk.elLightning}" stroke-width="1.7"/>`)
+            : '';
+
+        // 1. 純冰血脈：寒霜六角晶柱底座
+        if (family === 'ice') {
+            const innerRim = `<polygon points="32,14 48,23 48,39 32,48 16,39 16,23" fill="#214657" stroke="${tk.elIce}" stroke-width="1.5"/><polygon points="32,14 48,23 32,30 16,23" fill="rgba(244,241,234,0.16)"/><polygon points="16,23 32,30 32,48 16,39" fill="rgba(74,158,191,0.18)"/>`;
+            return `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="54" rx="22" ry="7.5" fill="rgba(0,0,0,0.40)"/><polygon points="32,11 53,22 53,43 32,54 11,43 11,22" fill="#172B36" stroke="${tk.bgCanvas}" stroke-width="2"/><polygon points="11,43 32,54 32,47 16,38" fill="rgba(74,158,191,0.22)"/>${innerRim}${crownOutline}<circle cx="32" cy="30" r="12.5" fill="${tk.bgCanvas}" stroke="${tk.elIce}" stroke-width="${effTier >= 3 ? 2 : 1.4}"/>${cornerGems}</svg>`;
         }
-        if (branchCode === 'B') {
-            // B 分支：狙擊／灼燒／穿刺／折射尖冠（高聳尖刺矛冠＋斜向稜鏡翼）
-            return `<polygon points="32,1 37,16 32,13 27,16" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.4"/><polygon points="13,20 22,27 17,33" fill="${pal.glow}" stroke="#1B211E" stroke-width="1.3"/><polygon points="51,20 42,27 47,33" fill="${pal.glow}" stroke="#1B211E" stroke-width="1.3"/>`;
+
+        // 2. 純雷血脈：黃銅琥珀線圈底座
+        if (family === 'thunder') {
+            const coils = `<circle cx="32" cy="30" r="17" fill="none" stroke="#9E7E26" stroke-width="2.2" stroke-dasharray="6 3"/><circle cx="32" cy="30" r="13" fill="${tk.bgCanvas}" stroke="${tk.elLightning}" stroke-width="${effTier >= 3 ? 2.1 : 1.5}"/><rect x="12" y="28" width="5" height="5" rx="1" fill="#D97724" stroke="#1B211E" stroke-width="1.2"/><rect x="47" y="28" width="5" height="5" rx="1" fill="#D97724" stroke="#1B211E" stroke-width="1.2"/>`;
+            return `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="23" ry="8" fill="rgba(0,0,0,0.42)"/><polygon points="15,21 49,21 55,32 55,44 47,53 17,53 9,44 9,32" fill="#322A16" stroke="${tk.bgCanvas}" stroke-width="2"/><polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="#463A1B" stroke="#9E7E26" stroke-width="1.5"/>${crownOutline}${coils}${cornerGems}</svg>`;
         }
-        return '';
+
+        // 3. 共生血脈（蒸氣／磁環／電漿）：雙色交織藤蔓根須底座
+        if (family === 'steam' || family === 'magnet' || family === 'plasma') {
+            const vineA = family === 'magnet' ? tk.elIce : tk.elFire;
+            const vineB = family === 'steam' ? tk.elIce : tk.elLightning;
+            const vines = `<path d="M11,38 Q16,18 32,16 Q48,18 53,38" fill="none" stroke="${vineA}" stroke-width="2.4" stroke-linecap="round"/><path d="M12,26 Q22,47 32,48 Q42,47 52,26" fill="none" stroke="${vineB}" stroke-width="2.4" stroke-linecap="round"/><path d="M15,44 L22,39 M49,44 L42,39" stroke="${vineA}" stroke-width="1.6" stroke-linecap="round"/>`;
+            return `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="23" ry="8" fill="rgba(0,0,0,0.42)"/><polygon points="15,22 49,22 55,33 55,44 47,53 17,53 9,44 9,33" fill="#202B25" stroke="${tk.bgCanvas}" stroke-width="2"/><polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="#2C3A32" stroke="${tk.borderSubtle}" stroke-width="1.5"/>${vines}${crownOutline}<circle cx="32" cy="30" r="12.5" fill="${tk.bgCanvas}" stroke="${pal.rune}" stroke-width="1.8"/>${cornerGems}</svg>`;
+        }
+
+        // 4. 純火血脈：深赤岩八角座＋熔岩裂紋
+        const cracks = `<polyline points="14,34 21,30 19,22" fill="none" stroke="${tk.elFire}" stroke-width="1.8" stroke-linecap="round"/><polyline points="50,34 43,30 46,22" fill="none" stroke="${tk.accentCta}" stroke-width="1.8" stroke-linecap="round"/><polyline points="32,49 32,42 36,39" fill="none" stroke="${tk.elFire}" stroke-width="1.8" stroke-linecap="round"/>`;
+        return `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="23" ry="8" fill="rgba(0,0,0,0.42)"/><polygon points="15,22 49,22 55,33 55,44 47,53 17,53 9,44 9,33" fill="#2A1715" stroke="${tk.bgCanvas}" stroke-width="2"/><polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="#3D201C" stroke="#6E281E" stroke-width="1.5"/>${cracks}${crownOutline}<circle cx="32" cy="30" r="13.5" fill="${tk.bgCanvas}" stroke="${pal.rune}" stroke-width="${effTier >= 3 ? 2 : 1.5}"/>${cornerGems}</svg>`;
     }
 
     const TOWER_HEAD_TEMPLATES = {
-        fire: (tier, tk, branchCode) => {
-            const fins = tier >= 3 ? `<polygon points="14,40 22,25 24,42" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/><polygon points="50,40 42,25 40,42" fill="#8C2F23" stroke="#2B1410" stroke-width="1.5"/>` : '';
+        // ---------- Tier 1 / 2 基礎家族造型 ----------
+        fire: (tier, tk) => {
             const pods = tier >= 2 ? `<rect x="16.5" y="30" width="5" height="11" rx="2" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><rect x="42.5" y="30" width="5" height="11" rx="2" fill="#9E5214" stroke="#2B1410" stroke-width="1.5"/>` : '';
-            const barrel = branchCode === 'B'
-                ? `<polygon points="29,3 35,3 37,29 27,29" fill="#6E281E" stroke="#2B1410" stroke-width="1.5"/>`
-                : `<polygon points="25,7 39,7 41,30 23,30" fill="#6E281E" stroke="#2B1410" stroke-width="1.5"/>`;
-            return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/>${fins}${barrel}<rect x="29" y="9" width="3" height="19" rx="1" fill="${tk.elFire}" fill-opacity="0.7"/><polygon points="24.5,6 39.5,6 37.5,12 26.5,12" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><ellipse cx="32" cy="7" rx="4.5" ry="2.2" fill="${tk.elLightning}"/><polygon points="22,26 42,26 45,38 38,46 26,46 19,38" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/>${pods}<polygon points="22,26 36,26 32,35 20,37" fill="rgba(244,241,234,0.22)"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5}" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><circle cx="31" cy="34.5" r="${tier >= 3 ? 2.8 : 2.1}" fill="${tk.textPrimary}"/>`;
+            return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="27,7 37,7 39,30 25,30" fill="#6E281E" stroke="#2B1410" stroke-width="1.5"/><rect x="29" y="9" width="3" height="19" rx="1" fill="${tk.elFire}" fill-opacity="0.7"/><polygon points="24.5,6 39.5,6 37.5,12 26.5,12" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><ellipse cx="32" cy="7" rx="4.5" ry="2.2" fill="${tk.elLightning}"/><polygon points="22,26 42,26 45,38 38,46 26,46 19,38" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/>${pods}<circle cx="32" cy="36" r="5" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><circle cx="31" cy="34.5" r="2.1" fill="${tk.textPrimary}"/>`;
         },
-        ice: (tier, tk, branchCode) => {
+        ice: (tier, tk) => {
             const shards = tier >= 2 ? `<polygon points="18,16 24,28 19,38 14,32" fill="${tk.elIce}" stroke="#143240" stroke-width="1.5"/><polygon points="46,16 40,28 45,38 50,32" fill="#2E6F8A" stroke="#143240" stroke-width="1.5"/>` : '';
-            const crest = tier >= 3 ? `<polygon points="16,40 21,36 22,44" fill="${tk.elLightning}"/><polygon points="48,40 43,36 42,44" fill="${tk.elLightning}"/>` : '';
-            const lance = branchCode === 'B'
-                ? `<polygon points="32,1 37,28 32,34 27,28" fill="${tk.textPrimary}" stroke="#143240" stroke-width="1.5"/>`
-                : `<polygon points="32,4 39,28 32,34 25,28" fill="${tk.elIce}" stroke="#143240" stroke-width="1.5"/>`;
-            return `<ellipse cx="33" cy="36" rx="12" ry="11" fill="rgba(0,0,0,0.30)"/>${shards}${lance}<polygon points="32,4 32,34 25,28" fill="rgba(244,241,234,0.36)"/>${crest}<polygon points="21,28 43,28 46,39 32,47 18,39" fill="#2B6780" stroke="#143240" stroke-width="1.5"/><polygon points="21,28 34,28 31,41 19,38" fill="rgba(244,241,234,0.18)"/><polygon points="32,29 38,36 32,43 26,36" fill="${tier >= 3 ? tk.textPrimary : '#A6D7EA'}" stroke="#143240" stroke-width="1.5"/>`;
+            return `<ellipse cx="33" cy="36" rx="12" ry="11" fill="rgba(0,0,0,0.30)"/>${shards}<polygon points="32,4 39,28 32,34 25,28" fill="${tk.elIce}" stroke="#143240" stroke-width="1.5"/><polygon points="32,4 32,34 25,28" fill="rgba(244,241,234,0.36)"/><polygon points="21,28 43,28 46,39 32,47 18,39" fill="#2B6780" stroke="#143240" stroke-width="1.5"/><polygon points="32,29 38,36 32,43 26,36" fill="#A6D7EA" stroke="#143240" stroke-width="1.5"/>`;
         },
-        thunder: (tier, tk, branchCode) => {
-            const orb = tier >= 3 ? `<circle cx="32" cy="40" r="${branchCode === 'A' ? 5.2 : 4.2}" fill="${tk.elLightning}" stroke="#2B2410" stroke-width="1.5"/>` : '';
-            const spear = branchCode === 'B'
-                ? `<polygon points="32,2 36,28 28,28" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/>`
-                : `<polygon points="32,12 35,28 29,28" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/>`;
-            return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="20,9 25,9 26,30 20,30" fill="#5A4B22" stroke="#241F10" stroke-width="1.5"/><polygon points="39,9 44,9 44,30 38,30" fill="#463A1A" stroke="#241F10" stroke-width="1.5"/><circle cx="22.5" cy="9" r="3.4" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><circle cx="41.5" cy="9" r="3.4" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><polyline points="23,9 29,6 33,12 41,9" fill="none" stroke="${tk.elLightning}" stroke-width="${tier >= 3 ? 2.2 : 1.6}" stroke-linecap="round" stroke-linejoin="round"/>${spear}<polygon points="19,28 45,28 47,40 39,47 25,47 17,40" fill="#3D341E" stroke="#241F10" stroke-width="1.5"/><polygon points="19,28 34,28 30,43 18,39" fill="rgba(244,241,234,0.16)"/><rect x="23" y="30" width="18" height="4" rx="2" fill="${tk.accentCta}"/><rect x="25" y="36" width="14" height="3.5" rx="1.5" fill="${tier >= 2 ? tk.elLightning : tk.accentCta}"/>${orb}`;
-        },
-        steam: (tier, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><rect x="23" y="7" width="8" height="22" rx="2" fill="#8C3326" stroke="#1E1814" stroke-width="1.5"/><rect x="33" y="7" width="8" height="22" rx="2" fill="#2D6A82" stroke="#1E1814" stroke-width="1.5"/><rect x="21" y="6" width="22" height="5" rx="2" fill="${tk.textSecondary}" stroke="#1E1814" stroke-width="1.5"/><circle cx="27" cy="8.5" r="2.1" fill="${tk.elFire}"/><circle cx="37" cy="8.5" r="2.1" fill="${tk.elIce}"/><polygon points="18,27 32,27 32,47 23,46 16,38" fill="${tk.elFire}" stroke="#1E1814" stroke-width="1.5"/><polygon points="32,27 46,27 48,38 41,46 32,47" fill="${tk.elIce}" stroke="#1E1814" stroke-width="1.5"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5.2}" fill="${tk.textPrimary}" stroke="#1E1814" stroke-width="1.5"/><circle cx="32" cy="36" r="2.6" fill="${tier >= 3 ? tk.elLightning : tk.accentCta}"/>`,
-        magnet: (tier, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="18,6 25,6 26,33 17,37" fill="${tk.elIce}" stroke="#142C36" stroke-width="1.5"/><polygon points="46,6 39,6 38,33 47,37" fill="#9E7E26" stroke="#241F10" stroke-width="1.5"/><polygon points="20,8 23,8 23,28 20,28" fill="rgba(244,241,234,0.45)"/><polygon points="41,8 44,8 44,28 41,28" fill="rgba(244,241,234,0.35)"/><circle cx="32" cy="16" r="5" fill="${tk.elIce}" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="32" cy="16" r="2" fill="${tk.textPrimary}"/><polygon points="21,30 43,30 47,39 39,47 25,47 17,39" fill="${tk.bgSurface}" stroke="${tk.elIce}" stroke-width="1.5"/><circle cx="32" cy="38" r="${tier >= 3 ? 6 : 5}" fill="${tk.elLightning}" stroke="#142C36" stroke-width="1.5"/>`,
-        plasma: (tier, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="14,34 25,21 26,41 18,43" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/><polygon points="50,34 39,21 38,41 46,43" fill="#8C2F23" stroke="#2B1410" stroke-width="1.5"/><polygon points="32,5 37,27 27,27" fill="${tk.elLightning}" stroke="#2B1410" stroke-width="1.5"/><polygon points="32,8 34,26 30,26" fill="rgba(244,241,234,0.6)"/><ellipse cx="32" cy="20" rx="8" ry="3.2" fill="none" stroke="${tk.accentCta}" stroke-width="1.5"/><polygon points="22,27 42,27 44,39 32,48 20,39" fill="#7D2B1F" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5}" fill="${tk.accentCta}" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="31.5" cy="35" r="2.2" fill="${tk.textPrimary}"/>`
+        thunder: (tier, tk) => `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="20,9 25,9 26,30 20,30" fill="#5A4B22" stroke="#241F10" stroke-width="1.5"/><polygon points="39,9 44,9 44,30 38,30" fill="#463A1A" stroke="#241F10" stroke-width="1.5"/><circle cx="22.5" cy="9" r="3.4" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><circle cx="41.5" cy="9" r="3.4" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><polyline points="23,9 29,6 33,12 41,9" fill="none" stroke="${tk.elLightning}" stroke-width="1.7" stroke-linecap="round"/><polygon points="19,28 45,28 47,40 39,47 25,47 17,40" fill="#3D341E" stroke="#241F10" stroke-width="1.5"/><rect x="23" y="30" width="18" height="4" rx="2" fill="${tk.accentCta}"/><rect x="25" y="36" width="14" height="3.5" rx="1.5" fill="${tier >= 2 ? tk.elLightning : tk.accentCta}"/>`,
+        steam: (_, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><rect x="23" y="7" width="8" height="22" rx="2" fill="#8C3326" stroke="#1E1814" stroke-width="1.5"/><rect x="33" y="7" width="8" height="22" rx="2" fill="#2D6A82" stroke="#1E1814" stroke-width="1.5"/><rect x="21" y="6" width="22" height="5" rx="2" fill="${tk.textSecondary}" stroke="#1E1814" stroke-width="1.5"/><polygon points="18,27 32,27 32,47 23,46 16,38" fill="${tk.elFire}" stroke="#1E1814" stroke-width="1.5"/><polygon points="32,27 46,27 48,38 41,46 32,47" fill="${tk.elIce}" stroke="#1E1814" stroke-width="1.5"/><circle cx="32" cy="36" r="5.2" fill="${tk.textPrimary}" stroke="#1E1814" stroke-width="1.5"/><circle cx="32" cy="36" r="2.6" fill="${tk.accentCta}"/>`,
+        magnet: (_, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="18,6 25,6 26,33 17,37" fill="${tk.elIce}" stroke="#142C36" stroke-width="1.5"/><polygon points="46,6 39,6 38,33 47,37" fill="#9E7E26" stroke="#241F10" stroke-width="1.5"/><circle cx="32" cy="16" r="5" fill="${tk.elIce}" stroke="${tk.elLightning}" stroke-width="1.5"/><polygon points="21,30 43,30 47,39 39,47 25,47 17,39" fill="${tk.bgSurface}" stroke="${tk.elIce}" stroke-width="1.5"/><circle cx="32" cy="38" r="5" fill="${tk.elLightning}" stroke="#142C36" stroke-width="1.5"/>`,
+        plasma: (_, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="14,34 25,21 26,41 18,43" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/><polygon points="50,34 39,21 38,41 46,43" fill="#8C2F23" stroke="#2B1410" stroke-width="1.5"/><polygon points="32,5 37,27 27,27" fill="${tk.elLightning}" stroke="#2B1410" stroke-width="1.5"/><ellipse cx="32" cy="20" rx="8" ry="3.2" fill="none" stroke="${tk.accentCta}" stroke-width="1.5"/><polygon points="22,27 42,27 44,39 32,48 20,39" fill="#7D2B1F" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="32" cy="36" r="5" fill="${tk.accentCta}" stroke="${tk.elLightning}" stroke-width="1.5"/>`,
+
+        // ---------- Tier 3：12 座冠枝專屬幾何（Branch A 寬闊重裝 vs Branch B 尖銳高頻） ----------
+        fire_A: (_, tk) => // 寬口熔爐砲
+            `<ellipse cx="32" cy="37" rx="16" ry="12" fill="rgba(0,0,0,0.35)"/><polygon points="8,36 18,22 21,45 10,44" fill="#8C2F23" stroke="#1B211E" stroke-width="1.6"/><polygon points="56,36 46,22 43,45 54,44" fill="#8C2F23" stroke="#1B211E" stroke-width="1.6"/><polygon points="21,6 43,6 45,29 19,29" fill="#591F17" stroke="#1B211E" stroke-width="1.8"/><rect x="19" y="5" width="26" height="6.5" rx="2" fill="${tk.accentCta}" stroke="#1B211E" stroke-width="1.6"/><ellipse cx="32" cy="6.5" rx="8.5" ry="2.6" fill="${tk.elLightning}"/><polygon points="18,27 46,27 49,40 40,48 24,48 15,40" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.8"/><circle cx="32" cy="37" r="6.8" fill="${tk.accentCta}" stroke="#1B211E" stroke-width="1.6"/><circle cx="32" cy="37" r="3" fill="${tk.textPrimary}"/>`,
+
+        fire_B: (_, tk) => // 懸浮三火羽
+            `<ellipse cx="32" cy="38" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><path d="M12,31 Q14,13 22,19 Q19,29 16,35 Z" fill="${tk.accentCta}" stroke="#1B211E" stroke-width="1.5"/><path d="M52,31 Q50,13 42,19 Q45,29 48,35 Z" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.5"/><path d="M32,1 Q39,14 35,28 L29,28 Q25,14 32,1 Z" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.5"/><polygon points="24,25 40,25 42,38 32,48 22,38" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.7"/><circle cx="32" cy="35" r="4.8" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.4"/><circle cx="32" cy="35" r="2.1" fill="${tk.textPrimary}"/>`,
+
+        ice_A: (_, tk) => // 六角冰環冠
+            `<ellipse cx="32" cy="37" rx="16" ry="11.5" fill="rgba(0,0,0,0.32)"/><polygon points="32,8 52,19 52,41 32,52 12,41 12,19" fill="none" stroke="${tk.elIce}" stroke-width="3.6"/><polygon points="32,8 52,19 52,41 32,52 12,41 12,19" fill="none" stroke="${tk.textPrimary}" stroke-width="1.2"/><polygon points="25,6 39,6 41,25 23,25" fill="#2B6780" stroke="#143240" stroke-width="1.6"/><polygon points="20,24 44,24 46,38 32,47 18,38" fill="${tk.elIce}" stroke="#143240" stroke-width="1.7"/><circle cx="12" cy="19" r="2.5" fill="${tk.textPrimary}"/><circle cx="52" cy="19" r="2.5" fill="${tk.textPrimary}"/><circle cx="32" cy="8" r="2.6" fill="${tk.elLightning}"/><polygon points="32,27 38,35 32,43 26,35" fill="${tk.textPrimary}" stroke="#143240" stroke-width="1.4"/>`,
+
+        ice_B: (_, tk) => // 三棱尖冰矛
+            `<ellipse cx="32" cy="38" rx="13" ry="10.5" fill="rgba(0,0,0,0.30)"/><polygon points="13,12 24,25 20,38 11,31" fill="${tk.elIce}" stroke="#143240" stroke-width="1.5"/><polygon points="51,12 40,25 44,38 53,31" fill="#2E6F8A" stroke="#143240" stroke-width="1.5"/><polygon points="32,1 37.5,27 32,33 26.5,27" fill="${tk.textPrimary}" stroke="#143240" stroke-width="1.6"/><polygon points="32,1 32,33 26.5,27" fill="${tk.elIce}"/><polygon points="22,28 42,28 44,39 32,48 20,39" fill="#21556B" stroke="#143240" stroke-width="1.6"/><polygon points="32,29 36,36 32,43 28,36" fill="${tk.elLightning}" stroke="#143240" stroke-width="1.2"/>`,
+
+        thunder_A: (_, tk) => // 雙弧導雷環
+            `<ellipse cx="32" cy="37" rx="16" ry="11" fill="rgba(0,0,0,0.32)"/><path d="M11,22 A13,15 0 0,0 11,42" fill="none" stroke="${tk.elLightning}" stroke-width="3.2" stroke-linecap="round"/><path d="M53,22 A13,15 0 0,1 53,42" fill="none" stroke="${tk.elLightning}" stroke-width="3.2" stroke-linecap="round"/><polyline points="13,18 22,12 32,17 42,12 51,18" fill="none" stroke="${tk.textPrimary}" stroke-width="2" stroke-linejoin="round"/><rect x="17" y="13" width="6" height="22" rx="2" fill="#463A1A" stroke="#1B211E" stroke-width="1.5"/><rect x="41" y="13" width="6" height="22" rx="2" fill="#463A1A" stroke="#1B211E" stroke-width="1.5"/><polygon points="19,27 45,27 47,40 39,47 25,47 17,40" fill="#3D341E" stroke="#1B211E" stroke-width="1.7"/><circle cx="32" cy="36" r="6" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.5"/>`,
+
+        thunder_B: (_, tk) => // 高聳避雷尖塔
+            `<ellipse cx="32" cy="38" rx="14" ry="10.5" fill="rgba(0,0,0,0.30)"/><polygon points="32,1 35.5,26 28.5,26" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.6"/><rect x="24" y="11" width="16" height="3.5" rx="1.5" fill="${tk.accentCta}" stroke="#1B211E" stroke-width="1.3"/><rect x="21" y="18" width="22" height="3.8" rx="1.5" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.3"/><polygon points="21,26 43,26 45,39 38,47 26,47 19,39" fill="#3D341E" stroke="#1B211E" stroke-width="1.7"/><polygon points="32,28 36,36 32,44 28,36" fill="${tk.textPrimary}" stroke="#1B211E" stroke-width="1.3"/>`,
+
+        steam_A: (_, tk) => // 雙噴口蒸壓鍋
+            `<ellipse cx="32" cy="37" rx="16" ry="12" fill="rgba(0,0,0,0.34)"/><rect x="11" y="25" width="7" height="17" rx="2" fill="${tk.accentCta}" stroke="#1B211E" stroke-width="1.5"/><rect x="46" y="25" width="7" height="17" rx="2" fill="#2D6A82" stroke="#1B211E" stroke-width="1.5"/><rect x="20" y="6" width="9" height="22" rx="2" fill="#8C3326" stroke="#1B211E" stroke-width="1.6"/><rect x="35" y="6" width="9" height="22" rx="2" fill="#2D6A82" stroke="#1B211E" stroke-width="1.6"/><rect x="18" y="5" width="13" height="5" rx="1.5" fill="${tk.accentCta}" stroke="#1B211E" stroke-width="1.4"/><rect x="33" y="5" width="13" height="5" rx="1.5" fill="${tk.elIce}" stroke="#1B211E" stroke-width="1.4"/><polygon points="16,25 48,25 50,39 42,47 22,47 14,39" fill="#5E2D24" stroke="#1B211E" stroke-width="1.7"/><circle cx="32" cy="36" r="6.4" fill="${tk.textPrimary}" stroke="#1B211E" stroke-width="1.5"/><circle cx="32" cy="36" r="3" fill="${tk.elFire}"/>`,
+
+        steam_B: (_, tk) => // 擴散霧晶冠
+            `<ellipse cx="32" cy="37" rx="14" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="32,2 38,16 32,22 26,16" fill="${tk.elIce}" stroke="#143240" stroke-width="1.5"/><polygon points="12,17 25,22 22,31 11,26" fill="${tk.textPrimary}" stroke="#143240" stroke-width="1.4"/><polygon points="52,17 39,22 42,31 53,26" fill="${tk.accentCta}" stroke="#1B211E" stroke-width="1.4"/><polygon points="21,26 43,26 46,38 32,47 18,38" fill="#2D6A82" stroke="#1B211E" stroke-width="1.6"/><polygon points="32,27 39,35 32,44 25,35" fill="${tk.elIce}" stroke="#1B211E" stroke-width="1.4"/>`,
+
+        magnet_A: (_, tk) => // 暗核引力環
+            `<ellipse cx="32" cy="37" rx="16" ry="11.5" fill="rgba(0,0,0,0.36)"/><circle cx="32" cy="30" r="18" fill="none" stroke="${tk.elIce}" stroke-width="3"/><circle cx="32" cy="30" r="13" fill="none" stroke="${tk.elLightning}" stroke-width="1.8" stroke-dasharray="6 3"/><polygon points="12,18 22,22 20,38 11,36" fill="#2D6A82" stroke="#1B211E" stroke-width="1.5"/><polygon points="52,18 42,22 44,38 53,36" fill="#9E7E26" stroke="#1B211E" stroke-width="1.5"/><circle cx="32" cy="30" r="8" fill="${tk.bgCanvas}" stroke="${tk.elIce}" stroke-width="2"/><circle cx="32" cy="30" r="3.2" fill="${tk.textPrimary}"/>`,
+
+        magnet_B: (_, tk) => // 三極磁針冠
+            `<ellipse cx="32" cy="37" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="32,1 36,24 28,24" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.5"/><polygon points="10,16 25,25 19,32" fill="${tk.elIce}" stroke="#1B211E" stroke-width="1.5"/><polygon points="54,16 39,25 45,32" fill="${tk.elIce}" stroke="#1B211E" stroke-width="1.5"/><polygon points="21,26 43,26 46,39 38,47 26,47 18,39" fill="${tk.bgSurface}" stroke="${tk.elLightning}" stroke-width="1.7"/><circle cx="32" cy="36" r="5.6" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.5"/><circle cx="32" cy="36" r="2.2" fill="${tk.elIce}"/>`,
+
+        plasma_A: (_, tk) => // 粗束聚能砲
+            `<ellipse cx="32" cy="37" rx="16" ry="12" fill="rgba(0,0,0,0.34)"/><polygon points="10,33 21,18 23,43 12,44" fill="#8C2F23" stroke="#1B211E" stroke-width="1.6"/><polygon points="54,33 43,18 41,43 52,44" fill="#8C2F23" stroke="#1B211E" stroke-width="1.6"/><polygon points="25,4 39,4 41,28 23,28" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.7"/><rect x="28" y="4" width="8" height="23" fill="${tk.elLightning}"/><ellipse cx="32" cy="14" rx="10" ry="3.4" fill="none" stroke="${tk.elLightning}" stroke-width="1.8"/><polygon points="20,26 44,26 46,40 32,48 18,40" fill="#6E281E" stroke="${tk.elLightning}" stroke-width="1.7"/><circle cx="32" cy="36" r="6.4" fill="${tk.accentCta}" stroke="${tk.elLightning}" stroke-width="1.5"/>`,
+
+        plasma_B: (_, tk) => // 多面折射稜鏡
+            `<ellipse cx="32" cy="38" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="32,1 38,17 32,26 26,17" fill="${tk.textPrimary}" stroke="#1B211E" stroke-width="1.5"/><polygon points="11,19 25,20 23,31 12,28" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.5"/><polygon points="53,19 39,20 41,31 52,28" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.5"/><polygon points="22,26 42,26 44,39 32,48 20,39" fill="#7D2B1F" stroke="${tk.elLightning}" stroke-width="1.6"/><polygon points="32,27 38,36 32,44 26,36" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.3"/>`
     };
 
     function createTowerSvgParts(type, tier = 1) {
@@ -148,18 +197,9 @@
         const pal = getTowerPaletteForType(type, tk);
         const { family, branchCode, nodeTier } = resolveTowerVisualFamily(type);
         const effTier = Math.max(tier || 1, nodeTier || 1);
-        const crownTrim = effTier >= 3
-            ? (branchCode === 'B'
-                ? `<polygon points="32,9 51,22 47,46 17,46 13,22" fill="none" stroke="${tk.elLightning}" stroke-width="1.6"/>`
-                : `<polygon points="16,13 48,13 54,24 54,37 46,46 18,46 10,37 10,24" fill="none" stroke="${tk.elLightning}" stroke-width="1.8"/>`)
-            : '';
-        const gemCoords = effTier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
-        const cornerGems = gemCoords.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="${effTier >= 2 ? 2.1 : 1.4}" fill="${effTier >= 2 ? pal.glow : tk.textSecondary}"/>`).join('');
-
-        const baseSvgHtml = `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="23" ry="8" fill="rgba(0,0,0,0.40)"/><polygon points="15,22 49,22 55,33 55,44 47,53 17,53 9,44 9,33" fill="${tk.bgGridElevated}" stroke="${tk.bgCanvas}" stroke-width="2"/><polygon points="9,44 17,53 17,43 11,35" fill="rgba(244,241,234,0.08)"/><polygon points="55,44 47,53 47,43 53,35" fill="rgba(0,0,0,0.25)"/><polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="#3B453F" stroke="${tk.borderSubtle}" stroke-width="1.5"/><polyline points="14,24 19,15 45,15 50,24" fill="none" stroke="rgba(244,241,234,0.28)" stroke-width="1.5"/>${crownTrim}<circle cx="32" cy="30" r="14" fill="${tk.bgCanvas}" stroke="${tk.bgCanvas}" stroke-width="1.5"/><circle cx="32" cy="30" r="11.5" fill="none" stroke="${pal.rune}" stroke-width="${effTier >= 3 ? 2 : 1.5}" stroke-opacity="${effTier === 1 ? 0.72 : 0.95}"/>${cornerGems}</svg>`;
+        const baseSvgHtml = buildLineageBaseSvg(family, pal, effTier, branchCode, tk);
         const headBuilder = TOWER_HEAD_TEMPLATES[type] || TOWER_HEAD_TEMPLATES[family] || ((t, tokens) => buildParametricTowerHeadSvg(type, t, tokens));
-        const branchOverlay = effTier >= 3 ? buildBranchCrownSvgOverlay(branchCode, pal, tk) : '';
-        return { baseSvgHtml, headSvgHtml: `<svg class="tower-head-svg" viewBox="0 0 64 64" aria-hidden="true">${headBuilder(effTier, tk, branchCode)}${branchOverlay}</svg>` };
+        return { baseSvgHtml, headSvgHtml: `<svg class="tower-head-svg" viewBox="0 0 64 64" aria-hidden="true">${headBuilder(effTier, tk, branchCode)}</svg>` };
     }
 
     const BOSS_SVG_BY_TYPE = {
@@ -239,27 +279,121 @@
         const pal = getTowerPaletteForType(type, tk);
         const { family, branchCode, nodeTier } = resolveTowerVisualFamily(type);
         const effTier = Math.max(tier || 1, nodeTier || 1);
-        // 2.5D 八角石座底盤
+
+        // 1. 樹幹底座（依血脈區分：純冰六角晶柱 / 純雷黃銅線圈 / 共生雙色藤蔓 / 純火熔岩裂紋）
         ellipse2D(ctx, 32, 53, 23, 8, 'rgba(0,0,0,0.42)');
-        poly2D(ctx, [[15, 22], [49, 22], [55, 33], [55, 44], [47, 53], [17, 53], [9, 44], [9, 33]], tk.bgGridElevated, tk.bgCanvas, 2);
-        poly2D(ctx, [[18, 14], [46, 14], [52, 24], [52, 36], [45, 45], [19, 45], [12, 36], [12, 24]], '#3B453F', effTier >= 3 ? tk.elLightning : tk.borderSubtle, 1.5);
-        circle2D(ctx, 32, 30, 14, tk.bgCanvas, tk.bgCanvas, 1.5);
-        circle2D(ctx, 32, 30, 11.5, null, pal.rune, effTier >= 3 ? 2 : 1.5);
+        if (family === 'ice') {
+            poly2D(ctx, [[32, 11], [53, 22], [53, 43], [32, 54], [11, 43], [11, 22]], '#172B36', tk.bgCanvas, 2);
+            poly2D(ctx, [[32, 14], [48, 23], [48, 39], [32, 48], [16, 39], [16, 23]], '#214657', tk.elIce, 1.5);
+            circle2D(ctx, 32, 30, 12.5, tk.bgCanvas, tk.elIce, effTier >= 3 ? 2 : 1.5);
+        } else if (family === 'thunder') {
+            poly2D(ctx, [[15, 21], [49, 21], [55, 32], [55, 44], [47, 53], [17, 53], [9, 44], [9, 32]], '#322A16', tk.bgCanvas, 2);
+            poly2D(ctx, [[18, 14], [46, 14], [52, 24], [52, 36], [45, 45], [19, 45], [12, 36], [12, 24]], '#463A1B', '#9E7E26', 1.5);
+            circle2D(ctx, 32, 30, 17, null, '#9E7E26', 2);
+            circle2D(ctx, 32, 30, 13, tk.bgCanvas, tk.elLightning, effTier >= 3 ? 2.1 : 1.5);
+        } else if (family === 'steam' || family === 'magnet' || family === 'plasma') {
+            poly2D(ctx, [[15, 22], [49, 22], [55, 33], [55, 44], [47, 53], [17, 53], [9, 44], [9, 33]], '#202B25', tk.bgCanvas, 2);
+            poly2D(ctx, [[18, 14], [46, 14], [52, 24], [52, 36], [45, 45], [19, 45], [12, 36], [12, 24]], '#2C3A32', tk.borderSubtle, 1.5);
+            ctx.beginPath(); ctx.moveTo(11, 38); ctx.quadraticCurveTo(32, 14, 53, 38);
+            ctx.strokeStyle = family === 'magnet' ? tk.elIce : tk.elFire; ctx.lineWidth = 2.2; ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(12, 26); ctx.quadraticCurveTo(32, 50, 52, 26);
+            ctx.strokeStyle = family === 'steam' ? tk.elIce : tk.elLightning; ctx.lineWidth = 2.2; ctx.stroke();
+            circle2D(ctx, 32, 30, 12.5, tk.bgCanvas, pal.rune, 1.8);
+        } else {
+            poly2D(ctx, [[15, 22], [49, 22], [55, 33], [55, 44], [47, 53], [17, 53], [9, 44], [9, 33]], '#2A1715', tk.bgCanvas, 2);
+            poly2D(ctx, [[18, 14], [46, 14], [52, 24], [52, 36], [45, 45], [19, 45], [12, 36], [12, 24]], '#3D201C', '#6E281E', 1.5);
+            circle2D(ctx, 32, 30, 13.5, tk.bgCanvas, pal.rune, effTier >= 3 ? 2 : 1.5);
+        }
 
         const gemCoords = effTier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
         gemCoords.forEach(([gx, gy]) => circle2D(ctx, gx, gy, effTier >= 2 ? 2.1 : 1.5, effTier >= 2 ? pal.glow : tk.textSecondary));
 
-        // 砲塔上層結構（與戰場 SVG 100% 視覺一致）
-        if (family === 'fire') {
-            if (effTier >= 3) {
-                poly2D(ctx, [[14, 40], [22, 25], [24, 42]], tk.elFire, '#2B1410', 1.5);
-                poly2D(ctx, [[50, 40], [42, 25], [40, 42]], '#8C2F23', '#2B1410', 1.5);
-            }
+        // 2. 砲塔樹冠結構（12 座 T3 冠枝與 T1/T2 家族與戰場 SVG 一致）
+        if (type === 'fire_A') {
+            poly2D(ctx, [[8, 36], [18, 22], [21, 45], [10, 44]], '#8C2F23', '#1B211E', 1.5);
+            poly2D(ctx, [[56, 36], [46, 22], [43, 45], [54, 44]], '#8C2F23', '#1B211E', 1.5);
+            poly2D(ctx, [[21, 6], [43, 6], [45, 29], [19, 29]], '#591F17', '#1B211E', 1.7);
+            rect2D(ctx, 19, 5, 26, 6.5, tk.accentCta, '#1B211E', 1.5);
+            ellipse2D(ctx, 32, 6.5, 8.5, 2.5, tk.elLightning);
+            poly2D(ctx, [[18, 27], [46, 27], [49, 40], [40, 48], [24, 48], [15, 40]], tk.elFire, '#1B211E', 1.7);
+            circle2D(ctx, 32, 37, 6.5, tk.accentCta, '#1B211E', 1.5);
+            circle2D(ctx, 32, 37, 2.8, tk.textPrimary);
+        } else if (type === 'fire_B') {
+            poly2D(ctx, [[12, 31], [17, 15], [22, 22], [16, 35]], tk.accentCta, '#1B211E', 1.4);
+            poly2D(ctx, [[52, 31], [47, 15], [42, 22], [48, 35]], tk.elFire, '#1B211E', 1.4);
+            poly2D(ctx, [[32, 2], [37, 18], [35, 28], [29, 28], [27, 18]], tk.elLightning, '#1B211E', 1.5);
+            poly2D(ctx, [[24, 25], [40, 25], [42, 38], [32, 48], [22, 38]], tk.elFire, '#1B211E', 1.6);
+            circle2D(ctx, 32, 35, 4.6, tk.elLightning, '#1B211E', 1.3);
+        } else if (type === 'ice_A') {
+            poly2D(ctx, [[32, 8], [52, 19], [52, 41], [32, 52], [12, 41], [12, 19]], null, tk.elIce, 3.2);
+            poly2D(ctx, [[25, 6], [39, 6], [41, 25], [23, 25]], '#2B6780', '#143240', 1.5);
+            poly2D(ctx, [[20, 24], [44, 24], [46, 38], [32, 47], [18, 38]], tk.elIce, '#143240', 1.6);
+            poly2D(ctx, [[32, 27], [38, 35], [32, 43], [26, 35]], tk.textPrimary, '#143240', 1.3);
+        } else if (type === 'ice_B') {
+            poly2D(ctx, [[13, 12], [24, 25], [20, 38], [11, 31]], tk.elIce, '#143240', 1.5);
+            poly2D(ctx, [[51, 12], [40, 25], [44, 38], [53, 31]], '#2E6F8A', '#143240', 1.5);
+            poly2D(ctx, [[32, 1], [37.5, 27], [32, 33], [26.5, 27]], tk.textPrimary, '#143240', 1.6);
+            poly2D(ctx, [[22, 28], [42, 28], [44, 39], [32, 48], [20, 39]], '#21556B', '#143240', 1.6);
+            poly2D(ctx, [[32, 29], [36, 36], [32, 43], [28, 36]], tk.elLightning, '#143240', 1.2);
+        } else if (type === 'thunder_A') {
+            circle2D(ctx, 32, 32, 19, null, tk.elLightning, 2.4);
+            rect2D(ctx, 17, 13, 6, 22, '#463A1A', '#1B211E', 1.4);
+            rect2D(ctx, 41, 13, 6, 22, '#463A1A', '#1B211E', 1.4);
+            poly2D(ctx, [[19, 27], [45, 27], [47, 40], [39, 47], [25, 47], [17, 40]], '#3D341E', '#1B211E', 1.6);
+            circle2D(ctx, 32, 36, 5.8, tk.elLightning, '#1B211E', 1.5);
+        } else if (type === 'thunder_B') {
+            poly2D(ctx, [[32, 1], [36, 26], [28, 26]], tk.elLightning, '#1B211E', 1.5);
+            rect2D(ctx, 24, 11, 16, 3.5, tk.accentCta, '#1B211E', 1.2);
+            rect2D(ctx, 21, 18, 22, 3.8, tk.elLightning, '#1B211E', 1.2);
+            poly2D(ctx, [[21, 26], [43, 26], [45, 39], [38, 47], [26, 47], [19, 39]], '#3D341E', '#1B211E', 1.6);
+            poly2D(ctx, [[32, 28], [36, 36], [32, 44], [28, 36]], tk.textPrimary, '#1B211E', 1.2);
+        } else if (type === 'steam_A') {
+            rect2D(ctx, 11, 25, 7, 17, tk.accentCta, '#1B211E', 1.4);
+            rect2D(ctx, 46, 25, 7, 17, '#2D6A82', '#1B211E', 1.4);
+            rect2D(ctx, 20, 6, 9, 22, '#8C3326', '#1B211E', 1.5);
+            rect2D(ctx, 35, 6, 9, 22, '#2D6A82', '#1B211E', 1.5);
+            poly2D(ctx, [[16, 25], [48, 25], [50, 39], [42, 47], [22, 47], [14, 39]], '#5E2D24', '#1B211E', 1.6);
+            circle2D(ctx, 32, 36, 6, tk.textPrimary, '#1B211E', 1.4);
+            circle2D(ctx, 32, 36, 2.8, tk.elFire);
+        } else if (type === 'steam_B') {
+            poly2D(ctx, [[32, 2], [38, 16], [32, 22], [26, 16]], tk.elIce, '#143240', 1.4);
+            poly2D(ctx, [[12, 17], [25, 22], [22, 31], [11, 26]], tk.textPrimary, '#143240', 1.4);
+            poly2D(ctx, [[52, 17], [39, 22], [42, 31], [53, 26]], tk.accentCta, '#1B211E', 1.4);
+            poly2D(ctx, [[21, 26], [43, 26], [46, 38], [32, 47], [18, 38]], '#2D6A82', '#1B211E', 1.5);
+            poly2D(ctx, [[32, 27], [39, 35], [32, 44], [25, 35]], tk.elIce, '#1B211E', 1.3);
+        } else if (type === 'magnet_A') {
+            circle2D(ctx, 32, 30, 18, null, tk.elIce, 2.8);
+            circle2D(ctx, 32, 30, 13, null, tk.elLightning, 1.6);
+            poly2D(ctx, [[12, 18], [22, 22], [20, 38], [11, 36]], '#2D6A82', '#1B211E', 1.4);
+            poly2D(ctx, [[52, 18], [42, 22], [44, 38], [53, 36]], '#9E7E26', '#1B211E', 1.4);
+            circle2D(ctx, 32, 30, 8, tk.bgCanvas, tk.elIce, 2);
+            circle2D(ctx, 32, 30, 3, tk.textPrimary);
+        } else if (type === 'magnet_B') {
+            poly2D(ctx, [[32, 1], [36, 24], [28, 24]], tk.elLightning, '#1B211E', 1.4);
+            poly2D(ctx, [[10, 16], [25, 25], [19, 32]], tk.elIce, '#1B211E', 1.4);
+            poly2D(ctx, [[54, 16], [39, 25], [45, 32]], tk.elIce, '#1B211E', 1.4);
+            poly2D(ctx, [[21, 26], [43, 26], [46, 39], [38, 47], [26, 47], [18, 39]], tk.bgSurface, tk.elLightning, 1.6);
+            circle2D(ctx, 32, 36, 5.4, tk.elLightning, '#1B211E', 1.4);
+        } else if (type === 'plasma_A') {
+            poly2D(ctx, [[10, 33], [21, 18], [23, 43], [12, 44]], '#8C2F23', '#1B211E', 1.5);
+            poly2D(ctx, [[54, 33], [43, 18], [41, 43], [52, 44]], '#8C2F23', '#1B211E', 1.5);
+            poly2D(ctx, [[25, 4], [39, 4], [41, 28], [23, 28]], tk.elFire, '#1B211E', 1.6);
+            rect2D(ctx, 28.5, 4, 7, 23, tk.elLightning);
+            ellipse2D(ctx, 32, 14, 10, 3.2, null, tk.elLightning, 1.6);
+            poly2D(ctx, [[20, 26], [44, 26], [46, 40], [32, 48], [18, 40]], '#6E281E', tk.elLightning, 1.6);
+            circle2D(ctx, 32, 36, 6, tk.accentCta, tk.elLightning, 1.4);
+        } else if (type === 'plasma_B') {
+            poly2D(ctx, [[32, 1], [38, 17], [32, 26], [26, 17]], tk.textPrimary, '#1B211E', 1.4);
+            poly2D(ctx, [[11, 19], [25, 20], [23, 31], [12, 28]], tk.elLightning, '#1B211E', 1.4);
+            poly2D(ctx, [[53, 19], [39, 20], [41, 31], [52, 28]], tk.elFire, '#1B211E', 1.4);
+            poly2D(ctx, [[22, 26], [42, 26], [44, 39], [32, 48], [20, 39]], '#7D2B1F', tk.elLightning, 1.5);
+            poly2D(ctx, [[32, 27], [38, 36], [32, 44], [26, 36]], tk.elLightning, '#1B211E', 1.2);
+        } else if (family === 'fire') {
             poly2D(ctx, [[27, 7], [37, 7], [39, 30], [25, 30]], '#6E281E', '#2B1410', 1.5);
             poly2D(ctx, [[24.5, 6], [39.5, 6], [37.5, 12], [26.5, 12]], tk.accentCta, '#2B1410', 1.5);
             ellipse2D(ctx, 32, 7, 4.5, 2.2, tk.elLightning);
             poly2D(ctx, [[22, 26], [42, 26], [45, 38], [38, 46], [26, 46], [19, 38]], tk.elFire, '#2B1410', 1.5);
-            circle2D(ctx, 32, 36, effTier >= 3 ? 6.2 : 5, tk.accentCta, '#2B1410', 1.5);
+            circle2D(ctx, 32, 36, 5, tk.accentCta, '#2B1410', 1.5);
             circle2D(ctx, 31, 34.5, 2.2, tk.textPrimary);
         } else if (family === 'ice') {
             poly2D(ctx, [[18, 16], [24, 28], [19, 38], [14, 32]], tk.elIce, '#143240', 1.5);
@@ -272,7 +406,6 @@
             poly2D(ctx, [[39, 9], [44, 9], [44, 30], [38, 30]], '#463A1A', '#241F10', 1.5);
             circle2D(ctx, 22.5, 9, 3.4, tk.elLightning, '#241F10', 1.5);
             circle2D(ctx, 41.5, 9, 3.4, tk.elLightning, '#241F10', 1.5);
-            poly2D(ctx, [[32, 12], [35, 28], [29, 28]], tk.elLightning, '#241F10', 1.5);
             poly2D(ctx, [[19, 28], [45, 28], [47, 40], [39, 47], [25, 47], [17, 40]], '#3D341E', '#241F10', 1.5);
             rect2D(ctx, 23, 30, 18, 4, tk.accentCta);
             rect2D(ctx, 25, 36, 14, 3.5, tk.elLightning);
@@ -290,33 +423,13 @@
             circle2D(ctx, 32, 16, 5, tk.elIce, tk.elLightning, 1.5);
             poly2D(ctx, [[21, 30], [43, 30], [47, 39], [39, 47], [25, 47], [17, 39]], tk.bgSurface, tk.elIce, 1.5);
             circle2D(ctx, 32, 38, 5.2, tk.elLightning, '#142C36', 1.5);
-        } else if (family === 'plasma') {
+        } else {
             poly2D(ctx, [[14, 34], [25, 21], [26, 41], [18, 43]], tk.elFire, '#2B1410', 1.5);
             poly2D(ctx, [[50, 34], [39, 21], [38, 41], [46, 43]], '#8C2F23', '#2B1410', 1.5);
             poly2D(ctx, [[32, 5], [37, 27], [27, 27]], tk.elLightning, '#2B1410', 1.5);
             ellipse2D(ctx, 32, 20, 8, 3.2, null, tk.accentCta, 1.5);
             poly2D(ctx, [[22, 27], [42, 27], [44, 39], [32, 48], [20, 39]], '#7D2B1F', tk.elLightning, 1.5);
             circle2D(ctx, 32, 36, 5.2, tk.accentCta, tk.elLightning, 1.5);
-        } else {
-            const tCfg = getTowersDict()[type] || {};
-            const primary = tCfg.color || tk.accentCta;
-            const accent = (tCfg.palette && tCfg.palette.glow) || tk.elLightning;
-            poly2D(ctx, [[15, 36], [22, 24], [23, 41]], primary, '#1B211E', 1.5);
-            poly2D(ctx, [[49, 36], [42, 24], [41, 41]], primary, '#1B211E', 1.5);
-            poly2D(ctx, [[27, 7], [37, 7], [39, 29], [25, 29]], primary, '#1B211E', 1.5);
-            poly2D(ctx, [[21, 27], [43, 27], [46, 39], [38, 47], [26, 47], [18, 39]], primary, '#1B211E', 1.5);
-            circle2D(ctx, 32, 36, 5.2, accent, '#1B211E', 1.5);
-        }
-
-        // T3 冠枝專屬 A 寬冠 vs B 尖冠 2.5D 幾何覆層
-        if (effTier >= 3 && branchCode === 'A') {
-            poly2D(ctx, [[9, 34], [18, 22], [20, 43], [11, 42]], pal.rune, '#1B211E', 1.4);
-            poly2D(ctx, [[55, 34], [46, 22], [44, 43], [53, 42]], pal.rune, '#1B211E', 1.4);
-            ellipse2D(ctx, 32, 11, 9, 3.2, tk.bgCanvas, tk.elLightning, 1.5);
-        } else if (effTier >= 3 && branchCode === 'B') {
-            poly2D(ctx, [[32, 2], [37, 16], [32, 13], [27, 16]], tk.elLightning, '#1B211E', 1.4);
-            poly2D(ctx, [[13, 20], [22, 27], [17, 33]], pal.glow, '#1B211E', 1.3);
-            poly2D(ctx, [[51, 20], [42, 27], [47, 33]], pal.glow, '#1B211E', 1.3);
         }
     }
 
@@ -831,11 +944,13 @@
         const weakCfg = getTowersDict()[monster.weakness];
         const weakShort = weakCfg ? `${weakCfg.icon}${weakCfg.name.charAt(0)}` : (monster.weakness || '');
         const bossHtml = monster.isBoss ? `<span class="m-boss-badge weak-${monster.weakness}">王·弱${weakShort}</span>` : '';
-        el.innerHTML = `<div class="m-debuff-strip" aria-hidden="true"></div><span class="m-slow-badge">❄️</span>${armorHtml}<span class="m-icon">${createMonsterSvgHtml(monster)}</span><div class="m-hp-bar"><div class="m-hp-fill"></div></div>${bossHtml}`;
+        el.innerHTML = `<div class="m-hud-stack" aria-hidden="true"><div class="m-debuff-strip"></div><div class="m-shield-bar hidden"><div class="m-shield-fill"></div></div><div class="m-hp-bar"><div class="m-hp-fill"></div></div></div>${armorHtml}<span class="m-icon">${createMonsterSvgHtml(monster)}</span>${bossHtml}`;
         G.dom.monsterLayerEl.appendChild(el);
         const rec = {
             el,
             hpFillEl: el.querySelector('.m-hp-fill'),
+            shieldBarEl: el.querySelector('.m-shield-bar'),
+            shieldFillEl: el.querySelector('.m-shield-fill'),
             armorBadgeEl: el.querySelector('.m-armor-badge'),
             debuffStripEl: el.querySelector('.m-debuff-strip'),
             lastDebuffHtml: ''
@@ -851,24 +966,23 @@
 
     function buildMonsterDebuffMicroHtml(m, MonsterSys) {
         const st = m.status;
-        if (!st) return '';
+        if (!st && (m.armorShredTimer || 0) <= 0 && (m.slowTimer || 0) <= 0) return '';
         const tags = [];
-        if (st.burn && st.burn.stacks > 0 && st.burn.durationMs > 0) {
-            tags.push(`<span class="m-debuff-tag debuff-burn num">🔥${st.burn.stacks}</span>`);
+        if (st && st.burn && st.burn.stacks > 0 && st.burn.durationMs > 0) {
+            tags.push(`<span class="m-debuff-tag debuff-burn num">🔥${st.burn.stacks}層</span>`);
         }
         const frozen = MonsterSys && typeof MonsterSys.isMonsterFrozen === 'function' && MonsterSys.isMonsterFrozen(m);
         const slowed = MonsterSys && typeof MonsterSys.isMonsterSlowed === 'function' ? MonsterSys.isMonsterSlowed(m) : (m.slowTimer > 0);
-        if (frozen) {
-            tags.push('<span class="m-debuff-tag debuff-ice">❄️凍</span>');
-        } else if (slowed) {
+        if (frozen || slowed) {
             tags.push('<span class="m-debuff-tag debuff-ice">❄️</span>');
         }
-        if (st.shock && st.shock.durationMs > 0) {
+        if (st && st.shock && st.shock.durationMs > 0) {
             tags.push('<span class="m-debuff-tag debuff-shock">⚡</span>');
         }
-        const hasGrievous = st.grievousWound && st.grievousWound.durationMs > 0;
+        const hasShred = (m.armorShredTimer || 0) > 0;
+        const hasGrievous = Boolean(st && st.grievousWound && st.grievousWound.durationMs > 0);
         const hasVuln = MonsterSys && typeof MonsterSys.getMonsterVulnerabilityMultiplier === 'function' && MonsterSys.getMonsterVulnerabilityMultiplier(m) > 1.01;
-        if (hasGrievous || hasVuln) {
+        if (hasShred || hasGrievous || hasVuln) {
             tags.push('<span class="m-debuff-tag debuff-wound">💔</span>');
         }
         return tags.join('');
@@ -899,6 +1013,13 @@
                 if (rec.lastDebuffHtml !== debuffHtml) {
                     rec.debuffStripEl.innerHTML = debuffHtml;
                     rec.lastDebuffHtml = debuffHtml;
+                }
+            }
+            if (rec.shieldBarEl && rec.shieldFillEl) {
+                const hasShield = (m.shield || 0) > 0 && (m.maxShield || 0) > 0;
+                rec.shieldBarEl.classList.toggle('hidden', !hasShield);
+                if (hasShield) {
+                    rec.shieldFillEl.style.width = `${Math.max(0, Math.min(100, (m.shield / m.maxShield) * 100))}%`;
                 }
             }
             if (m.armor > 0 && rec.armorBadgeEl) {

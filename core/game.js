@@ -820,19 +820,20 @@
             seedTriggered = true;
         }
 
-        st.board[targetIndex] = AttackSys.createTowerObj(type, spawnedTier, deduct.cost);
+        const placedTower = AttackSys.createTowerObj(type, spawnedTier, deduct.cost);
+        st.board[targetIndex] = placedTower;
         st.buildTargetIndex = null;
         st.pendingSpawnType = null;
         st.inspectedMonsterId = null;
 
-        const cfg = towersDict[type];
+        const cfg = towersDict[placedTower.type] || towersDict[type];
         const terrainKey = TerrainSys.getTerrainAt(targetIndex);
         const terrainsDict = (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
         const tInfo = terrainKey ? terrainsDict[terrainKey] : null;
         const coords = indexToCoords(targetIndex);
 
         SoundEngine.playSpawn(spawnedTier);
-        CodexSys.unlockEntry(`tower:${type}`);
+        CodexSys.unlockEntry(`tower:${placedTower.type}`);
         Backend.recordPlayerAction();
         Backend.trackFeel(`Tower:Summon:${type}`, deduct.cost, {
             towerType: type,
@@ -1629,6 +1630,23 @@
                     setPauseState(!st.isPaused);
                 }
                 return;
+            }
+            if (lowerKey === 't' && !e.repeat) {
+                if (isCodexOpen()) {
+                    e.preventDefault();
+                    CodexSys.closeCodex();
+                    return;
+                }
+                const blockingOverlay = isOverlayVisible(G.dom.startOverlayEl)
+                    || isOverlayVisible(G.dom.blessingOverlayEl)
+                    || isOverlayVisible(G.dom.victoryOverlayEl)
+                    || isOverlayVisible(G.dom.gameOverOverlayEl);
+                if (!blockingOverlay && st.waveState !== 'BLESSING_SELECT' && !st.isGameOver) {
+                    e.preventDefault();
+                    SoundEngine.ensureContext();
+                    CodexSys.openCodex();
+                    return;
+                }
             }
             if (isAnyModalOpen() || !isMatchPhaseActive()) return;
             if (key === 'Tab' || lowerKey === 's') { e.preventDefault(); SoundEngine.ensureContext(); cycleGameSpeed(); return; }

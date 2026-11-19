@@ -764,6 +764,28 @@ body.map-lava .cell.path-cell {
 .monster-unit.mini-slime .m-icon { width: calc(var(--cell-size) * 0.58); height: calc(var(--cell-size) * 0.54); }
 .monster-unit.boss .m-icon { width: calc(var(--cell-size) * 0.94); height: calc(var(--cell-size) * 0.86); }
 
+.monster-unit .m-hud-stack {
+    position: absolute;
+    bottom: calc(100% + 1px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    pointer-events: none;
+    z-index: 14;
+}
+.monster-unit .m-shield-bar {
+    width: calc(var(--cell-size) * 0.84);
+    height: 3px;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--el-ice);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.monster-unit .m-shield-bar.hidden { display: none; }
+.monster-unit .m-shield-fill { width: 100%; height: 100%; background-color: var(--el-ice); transition: width 0.08s linear; }
 .monster-unit .m-hp-bar {
     width: calc(var(--cell-size) * 0.84);
     height: 4px;
@@ -774,20 +796,18 @@ body.map-lava .cell.path-cell {
 }
 .monster-unit .m-hp-fill { width: 100%; height: 100%; background-color: #4E9A68; transition: width 0.08s linear; }
 
-.m-slow-badge, .m-armor-badge, .m-boss-badge {
+.m-armor-badge, .m-boss-badge {
     position: absolute;
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 700;
     line-height: 1.1;
-    padding: 0 4px;
+    padding: 0 3px;
     border-radius: 4px;
     white-space: nowrap;
 }
-.m-slow-badge { top: -4px; left: -4px; background-color: var(--bg-canvas); border: 1px solid var(--el-ice); color: var(--el-ice); display: none; }
-.monster-unit.slowed .m-slow-badge { display: block; }
-.m-armor-badge { top: -4px; right: -4px; background-color: var(--bg-canvas); border: 1px solid var(--border-subtle); color: var(--text-primary); }
+.m-armor-badge { bottom: -2px; right: -4px; background-color: var(--bg-canvas); border: 1px solid var(--border-subtle); color: var(--text-primary); z-index: 13; }
 .m-armor-badge.shredded { border-color: var(--el-fire); color: #EE9B8F; }
-.m-boss-badge { bottom: -4px; left: 50%; transform: translateX(-50%); background-color: var(--bg-canvas); color: var(--text-primary); border: 1px solid var(--accent-cta); }
+.m-boss-badge { bottom: -5px; left: 50%; transform: translateX(-50%); background-color: var(--bg-canvas); color: var(--text-primary); border: 1px solid var(--accent-cta); z-index: 14; }
 .m-boss-badge.weak-fire { border-color: var(--el-fire); }
 .m-boss-badge.weak-ice { border-color: var(--el-ice); }
 .m-boss-badge.weak-thunder { border-color: var(--el-lightning); }
@@ -857,24 +877,20 @@ body.map-lava .cell.path-cell {
     100% { transform: translate(-50%, -32px) scale(0.98); opacity: 0; }
 }
 
-/* 怪物頭頂 Debuff 微縮標示與進化確認輪盤 */
+/* 怪物血條上方 Debuff 高對比微縮標示與進化確認輪盤 */
 .m-debuff-strip {
-    position: absolute;
-    bottom: calc(100% + 9px);
-    left: 50%;
-    transform: translateX(-50%);
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 2px;
     pointer-events: none;
-    z-index: 6;
 }
 .m-debuff-tag {
     padding: 0 3px;
     border-radius: 3px;
     font-size: 9px;
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.15;
     white-space: nowrap;
     background-color: var(--bg-canvas);
     border: 1px solid var(--border-subtle);
@@ -884,9 +900,10 @@ body.map-lava .cell.path-cell {
 .m-debuff-tag.debuff-ice { border-color: var(--el-ice); color: var(--text-primary); }
 .m-debuff-tag.debuff-shock { border-color: var(--el-lightning); color: var(--el-lightning); }
 .m-debuff-tag.debuff-wound { border-color: var(--el-fire); color: var(--el-fire); }
-.monster.frozen .m-body {
-    border-color: var(--el-ice) !important;
+.monster-unit.frozen .m-icon {
+    border-radius: 6px;
     outline: 2px solid var(--el-ice);
+    background-color: rgba(74, 158, 191, 0.16);
 }
 
 .tower-tooltip.tooltip-invalid {
@@ -1456,9 +1473,37 @@ body.map-lava .cell.path-cell {
 }
 
 .start-card, .guide-card { max-width: 520px; }
-.codex-card { max-width: 480px; }
+.codex-card {
+    max-width: min(880px, 96vw);
+    padding: 16px 18px;
+    text-align: left;
+}
 .blessing-modal-card { max-width: 680px; border-color: var(--accent-cta); }
 .victory-card, .gameover-card { max-width: 440px; }
+
+.codex-header-bar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.codex-subtitle {
+    margin: 0 !important;
+    font-size: 13px !important;
+}
+.codex-close-top-btn {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    background-color: var(--accent-cta);
+    border: 1px solid var(--accent-cta);
+    color: #1B211E;
+}
+.codex-close-top-btn:hover { background-color: #E38432; }
 
 .modal-card h1, .modal-card .start-title, .modal-card .codex-title, .modal-card .blessing-title, .modal-card .victory-title, .modal-card .gameover-title {
     margin: 0 0 8px 0;
@@ -1549,9 +1594,9 @@ body.map-lava .cell.path-cell {
 
 .codex-tabs {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 6px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 .codex-tab-btn {
     padding: 6px 8px;
@@ -1570,6 +1615,263 @@ body.map-lava .cell.path-cell {
     border-color: var(--accent-cta);
     color: #1B211E;
 }
+
+/* 互動式 SVG 世界樹演化圖譜 */
+.codex-tree-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.codex-tree-shell.hidden, .codex-list.hidden { display: none; }
+
+.wt-tactical-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+}
+.wt-tactical-banner.has-matches {
+    border-color: var(--accent-cta);
+    color: var(--text-primary);
+}
+.wt-banner-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background-color: var(--accent-cta);
+}
+
+.world-tree-stage {
+    position: relative;
+    width: 100%;
+    height: 296px;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.wt-edge-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.wt-tier-guide {
+    stroke: #2B342F;
+    stroke-width: 1;
+    stroke-dasharray: 3 5;
+}
+.wt-tier-label {
+    position: absolute;
+    left: 6px;
+    transform: translateY(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    opacity: 0.72;
+    pointer-events: none;
+}
+.wt-nodes-layer {
+    position: absolute;
+    inset: 0;
+}
+
+@keyframes wtAmberBreath {
+    0%, 100% {
+        border-color: var(--accent-cta);
+        box-shadow: 0 0 0 1px rgba(217, 119, 36, 0.35);
+    }
+    50% {
+        border-color: var(--el-lightning);
+        box-shadow: 0 0 0 3px rgba(217, 119, 36, 0.55);
+    }
+}
+
+.wt-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    min-width: 56px;
+    padding: 3px 4px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    transition: transform 0.1s ease, border-color 0.12s ease, background-color 0.12s ease;
+}
+.wt-node.wt-tier-3 { min-width: 52px; padding: 2px 3px; }
+.wt-node:hover {
+    transform: translate(-50%, -52%);
+    border-color: var(--text-primary);
+    z-index: 4;
+}
+.wt-node.is-selected {
+    border: 2px solid var(--text-primary);
+    background-color: var(--bg-grid-elevated);
+    z-index: 5;
+}
+.wt-node.is-locked {
+    background-color: var(--bg-canvas);
+    border-color: var(--border-subtle);
+    color: var(--text-secondary);
+}
+.wt-node.wt-family-fire.is-unlocked { border-color: var(--el-fire); }
+.wt-node.wt-family-ice.is-unlocked { border-color: var(--el-ice); }
+.wt-node.wt-family-thunder.is-unlocked { border-color: var(--el-lightning); }
+.wt-node.wt-family-steam.is-unlocked,
+.wt-node.wt-family-plasma.is-unlocked { border-color: var(--accent-cta); }
+.wt-node.wt-family-magnet.is-unlocked { border-color: var(--el-ice); }
+
+.wt-node.wt-craftable {
+    border-width: 2px;
+    border-color: var(--accent-cta);
+    animation: wtAmberBreath 1.5s ease-in-out infinite;
+    z-index: 4;
+}
+.wt-node.wt-on-board {
+    box-shadow: inset 0 0 0 1px var(--el-lightning);
+}
+
+.wt-node-core {
+    min-width: 96px;
+    padding: 3px 10px;
+    flex-direction: row;
+    gap: 5px;
+    background-color: var(--bg-grid-elevated);
+    border-color: #4E9A68;
+}
+.wt-core-icon { font-size: 13px; line-height: 1; }
+
+.wt-node-icon-box {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background-color: var(--bg-canvas);
+}
+.wt-node.wt-tier-3 .wt-node-icon-box { width: 26px; height: 26px; }
+.wt-node-icon-box canvas { display: block; width: 100%; height: 100%; }
+.wt-locked-q {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+.wt-board-pip {
+    position: absolute;
+    top: -4px;
+    right: -5px;
+    padding: 0 4px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    background-color: var(--accent-cta);
+    color: #1B211E;
+}
+.wt-node-caption {
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.wt-detail-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    min-height: 86px;
+}
+.wt-detail-card.is-craftable { border-color: var(--accent-cta); }
+.wt-detail-portrait {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.wt-detail-portrait.core-emblem { font-size: 28px; border-color: #4E9A68; }
+.wt-detail-portrait canvas { width: 64px; height: 64px; display: block; }
+.wt-detail-q {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-secondary);
+}
+.wt-detail-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.wt-detail-top {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.wt-detail-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.wt-detail-tag {
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+}
+.wt-detail-craft-badge {
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: var(--accent-cta);
+    color: #1B211E;
+}
+.wt-detail-row {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+.wt-detail-row strong { color: var(--text-primary); }
 
 .codex-list, .rules-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; text-align: left; }
 .codex-item, .rule-item {
@@ -1910,6 +2212,9 @@ body.map-lava .cell.path-cell {
     .debug-controls button { min-height: 44px; padding: 8px; }
 
     .blessing-choices, .map-selector-grid { grid-template-columns: 1fr; }
+    .codex-tree-shell { overflow-x: auto; }
+    .world-tree-stage { min-width: 720px; height: 270px; }
+    .wt-detail-card { flex-direction: column; align-items: flex-start; }
 }
 
 @media (min-width: 768px) and (max-height: 660px) {
@@ -1938,4 +2243,7 @@ body.map-lava .cell.path-cell {
     .debug-controls { gap: 8px; }
     .debug-controls button { padding: 2px 6px; font-size: 12.5px; }
     #msg-text { margin-top: 2px; min-height: 15px; line-height: 1.25; }
+    .codex-card { padding: 12px 14px; }
+    .world-tree-stage { height: 262px; }
+    .wt-detail-card { padding: 8px 10px; min-height: 76px; }
 }
