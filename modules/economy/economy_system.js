@@ -20,11 +20,13 @@
         return (GameApp.data && GameApp.data.economy) || {};
     }
 
-    function getInitialGold(mapSpec) {
+    function getInitialGold(mapSpec, contractsOverride = null) {
         const d = getData();
         const base = Number.isFinite(d.INITIAL_GOLD) ? d.INITIAL_GOLD : 40;
         const bonus = (mapSpec && Number.isFinite(mapSpec.startGoldBonus)) ? mapSpec.startGoldBonus : 0;
-        return base + bonus;
+        const contracts = contractsOverride || (G && G.state && G.state.activeContracts);
+        const penalty = (contracts && typeof contracts.has === 'function' && contracts.has('budget_crunch')) ? 15 : 0;
+        return Math.max(10, base + bonus - penalty);
     }
 
     function resolveShopTypeKey(type) {

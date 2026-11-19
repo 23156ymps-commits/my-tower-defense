@@ -1482,8 +1482,11 @@
     function updateWorldTreeVisualState() {
         const st = G.state, treeCell = G.cellElements[G.map.endCellIndex], hpHudEl = G.dom.hpHudEl;
         const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
-        const healthyMin = treeCfg.WORLD_TREE_HEALTHY_MIN || 14;
-        const warningMin = treeCfg.WORLD_TREE_WARNING_MIN || 7;
+        const baseMax = treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
+        const maxHp = st.maxBaseHp || baseMax;
+        const scale = maxHp / Math.max(1, baseMax);
+        const healthyMin = Math.round((treeCfg.WORLD_TREE_HEALTHY_MIN || 14) * scale);
+        const warningMin = Math.round((treeCfg.WORLD_TREE_WARNING_MIN || 7) * scale);
         const isHealthy = st.baseHp >= healthyMin, isWarn = st.baseHp >= warningMin;
         const stateClass = isHealthy ? 'tree-healthy' : (isWarn ? 'tree-warning' : 'tree-critical');
         const hudClass = isHealthy ? '' : (isWarn ? 'hp-warning' : 'hp-critical');

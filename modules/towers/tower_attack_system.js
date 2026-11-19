@@ -437,7 +437,12 @@
 
         let finalDamage = result.damage;
         let shellReduced = false;
-        if ((monster.hardShellHitsLeft || 0) > 0) {
+        if ((monster.shellHitsLeft || 0) > 0) {
+            monster.shellHitsLeft -= 1;
+            const red = Number.isFinite(monster.shellReduction) ? monster.shellReduction : 0.50;
+            finalDamage = Math.max(1, Math.round(finalDamage * (1 - red)));
+            shellReduced = true;
+        } else if ((monster.hardShellHitsLeft || 0) > 0) {
             monster.hardShellHitsLeft -= 1;
             finalDamage = Math.max(1, Math.round(finalDamage * (monster.hardShellDmgMult ?? 0.5)));
             shellReduced = true;

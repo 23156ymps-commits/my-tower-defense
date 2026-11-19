@@ -79,7 +79,11 @@
         ['sideMonsterPortraitEl', 'side-monster-portrait'], ['sideMonsterNameEl', 'side-monster-name'],
         ['sideMonsterHpEl', 'side-monster-hp'], ['sideMonsterShieldEl', 'side-monster-shield'],
         ['sideMonsterStatsEl', 'side-monster-stats'], ['sideMonsterDebuffsEl', 'side-monster-debuffs'],
-        ['sideMonsterTraitEl', 'side-monster-trait'], ['mobileMonsterCardEl', 'mobile-monster-card']
+        ['sideMonsterTraitEl', 'side-monster-trait'], ['mobileMonsterCardEl', 'mobile-monster-card'],
+        ['sideMonsterLockTagEl', 'side-monster-lock-tag'], ['sideMonsterLockTrackEl', 'side-monster-lock-track'],
+        ['sideMonsterLockFillEl', 'side-monster-lock-fill'], ['startCareerBannerEl', 'start-career-banner'],
+        ['contractsGridEl', 'contracts-grid'], ['contractsSummaryBadgeEl', 'contracts-summary-badge'],
+        ['victoryContractsRowEl', 'victory-contracts-row'], ['gameoverContractsRowEl', 'gameover-contracts-row']
     ];
 
     function buildDomCache() {
@@ -117,20 +121,29 @@
         return Object.keys(getTowersDict()).filter(k => !getTowersDict()[k].isHybrid);
     }
 
-    function createInitialMatchState(mapId = 'forest', initialWaveState = 'WAITING_START', nextSessionId = 1, keepSpeed = 1) {
+    const selectedContracts = new Set();
+
+    function createInitialMatchState(mapId = 'forest', initialWaveState = 'WAITING_START', nextSessionId = 1, keepSpeed = 1, contractsOverride = null) {
         const maps = getMapsConfig();
         const spec = maps[mapId] || maps.forest || { id: 'forest', name: '🌲 晨光森林', startGoldBonus: 0 };
         const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
         const wb = (GameApp.data && GameApp.data.routes && GameApp.data.routes.WAVE_BALANCE) || {};
+        const activeContracts = new Set(contractsOverride || selectedContracts);
+        const maxBaseHp = activeContracts.has('fragile_heart') ? 12 : (treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20);
+        const initDew = activeContracts.has('dew_drought') ? 0 : (treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20);
+        const basePrepMs = CONFIG.INITIAL_PREP_MS || 6000;
+        const initPrepMs = activeContracts.has('rapid_waves') ? Math.round(basePrepMs * 0.5) : basePrepMs;
 
         const spawnCounts = { fire: 0, ice: 0, thunder: 0 };
         getShopTowerTypes().forEach(tKey => { spawnCounts[tKey] = 0; });
 
         return {
             currentMapId: spec.id,
-            currentGold: EconSys ? EconSys.getInitialGold(spec) : (40 + (spec.startGoldBonus || 0)),
-            baseHp: treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20,
-            dewEnergy: treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20,
+            activeContracts,
+            currentGold: EconSys ? EconSys.getInitialGold(spec, activeContracts) : Math.max(10, 40 + (spec.startGoldBonus || 0) - (activeContracts.has('budget_crunch') ? 15 : 0)),
+            maxBaseHp,
+            baseHp: maxBaseHp,
+            dewEnergy: initDew,
             entangleCdMs: 0, frenzyCdMs: 0, frenzyActiveMs: 0, dewOverchargeMs: 0,
             activeBlessings: new Set(), blessingGrantedWaves: new Set(), blessingChoices: [],
             seedPityCount: 0, treeHitShakeTimer: null,
@@ -144,11 +157,14 @@
             spawnCounts,
             board: Array(CONFIG.BOARD_SIZE || 150).fill(null), monsters: [], monsterIdCounter: 1,
             groundHazards: [], dragTether: null, pendingEvolution: null,
-            selectedIndex: null, buildTargetIndex: null, pendingSpawnType: null, hoveredIndex: null, hoveredMonsterId: null, draggedIndex: null, inspectedMonsterId: null,
+            selectedIndex: null, buildTargetIndex: null, pendingSpawnType: null, hoveredIndex: null,
+            hoveredMonsterId: null, hoverLockMonster: null, isCursorOnHoveredMonster: false,
+            hoverStickUntilPerfMs: 0, hoverKillUntilPerfMs: 0,
+            draggedIndex: null, inspectedMonsterId: null,
             lastRenderedSelected: null, lastRenderedBuildTarget: null, lastRenderedPendingSpawn: null,
             isTouchMode: false, touchDragState: null, lastTouchDragEndTime: 0,
             sessionId: nextSessionId, activeTimers: new Set(), pendingBolts: [], pendingOverchargeShots: [], towerPhaseSeq: 0,
-            waveState: initialWaveState, waveTimerMs: CONFIG.INITIAL_PREP_MS || 6000,
+            waveState: initialWaveState, waveTimerMs: initPrepMs,
             waveSpawnQueue: [], waveSpawnIntervalMs: wb.SPAWN_INTERVAL_BASE_MS || 1600, waveSpawnAccMs: 0,
             lastFrameTime: null, rafId: null
         };
@@ -226,9 +242,54 @@
         if (G.state.hoveredIndex !== null) { G.state.hoveredIndex = null; Renderer.updateRangeIndicator(); }
     }
 
-    // ==================== 3. 地圖選擇與局末戰報 ====================
+    // ==================== 3. 地圖選擇、難度契約與局末戰報 ====================
+    function renderContractSelectorUI() {
+        const list = Array.isArray(CONFIG.DIFFICULTY_CONTRACTS) ? CONFIG.DIFFICULTY_CONTRACTS : [];
+        const bonusPerItem = Math.round((CONFIG.CONTRACT_SCORE_BONUS_PER_ITEM || 0.15) * 100);
+        const count = selectedContracts.size;
+        if (G.dom.contractsSummaryBadgeEl) {
+            G.dom.contractsSummaryBadgeEl.innerText = count > 0
+                ? `已啟用 ${count} 項 · 榮譽 +${count * bonusPerItem}%`
+                : '未啟用契約 · 榮譽 +0%';
+            G.dom.contractsSummaryBadgeEl.classList.toggle('has-contracts', count > 0);
+        }
+        if (!G.dom.contractsGridEl) return;
+        G.dom.contractsGridEl.innerHTML = '';
+        list.forEach((c) => {
+            const active = selectedContracts.has(c.id);
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `contract-chip${active ? ' is-selected' : ''}`;
+            btn.dataset.contractId = c.id;
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            btn.innerHTML = `<div class="contract-chip-top"><span class="contract-code num">${c.code}</span><span class="contract-name">${c.name}</span></div><div class="contract-desc num">${c.desc}</div>`;
+            btn.addEventListener('click', () => {
+                if (G.state.waveState !== 'WAITING_START') return;
+                SoundEngine.ensureContext();
+                if (selectedContracts.has(c.id)) selectedContracts.delete(c.id);
+                else selectedContracts.add(c.id);
+
+                // 即時預覽契約對開局初始金幣、生命上限與靈露的調整
+                const mapSpec = WaveSys.getCurrentMapSpec();
+                const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
+                G.state.activeContracts = new Set(selectedContracts);
+                G.state.maxBaseHp = selectedContracts.has('fragile_heart') ? 12 : (treeCfg.INITIAL_BASE_HP || 20);
+                G.state.baseHp = G.state.maxBaseHp;
+                G.state.dewEnergy = selectedContracts.has('dew_drought') ? 0 : (treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20);
+                G.state.currentGold = EconSys.getInitialGold(mapSpec, G.state.activeContracts);
+                renderContractSelectorUI();
+                updateHUD();
+            });
+            G.dom.contractsGridEl.appendChild(btn);
+        });
+    }
+
     function renderMapSelectorUI() {
         const records = Backend.loadMapRecords();
+        const career = Backend.loadCareerStats ? Backend.loadCareerStats() : { bestWaveOverall: 1, totalClears: 0 };
+        if (G.dom.startCareerBannerEl) {
+            G.dom.startCareerBannerEl.innerText = `全圖最高 Wave ${career.bestWaveOverall || 1} · 累計通關 ${career.totalClears || 0} 次`;
+        }
         if (G.dom.mapSelectorGridEl) {
             G.dom.mapSelectorGridEl.querySelectorAll('.map-card').forEach(card => {
                 const isSel = card.dataset.mapId === G.state.currentMapId;
@@ -249,7 +310,8 @@
         WaveSys.applyMapConfig(mapId);
         const mapSpec = WaveSys.getCurrentMapSpec();
         st.bestWave = Backend.getMapBestWave(st.currentMapId);
-        st.currentGold = EconSys.getInitialGold(mapSpec);
+        st.activeContracts = new Set(selectedContracts);
+        st.currentGold = EconSys.getInitialGold(mapSpec, st.activeContracts);
         st.selectedIndex = null; st.buildTargetIndex = null; st.hoveredIndex = null;
         Renderer.initBoard();
         Renderer.renderBoard();
@@ -301,10 +363,24 @@
         if (G.dom.gameoverCopyReportBtn) G.dom.gameoverCopyReportBtn.innerText = '複製本局數據戰報';
     }
 
+    function computeRunHonorSummary(st) {
+        const count = (st.activeContracts && st.activeContracts.size) || 0;
+        const perBonus = CONFIG.CONTRACT_SCORE_BONUS_PER_ITEM || 0.15;
+        const mult = 1 + count * perBonus;
+        const baseScore = Math.max(0, (st.currentWave || 1) * 120 + (st.killsCount || 0) * 8 + (st.baseHp || 0) * 35);
+        const honorScore = Math.round(baseScore * mult);
+        const defs = Array.isArray(CONFIG.DIFFICULTY_CONTRACTS) ? CONFIG.DIFFICULTY_CONTRACTS : [];
+        const names = defs.filter(d => st.activeContracts && st.activeContracts.has(d.id)).map(d => `${d.code}·${d.name}`);
+        return { count, bonusPct: Math.round(count * perBonus * 100), honorScore, names };
+    }
+
     function populateBattleRecap(mode) {
         const st = G.state, dom = G.dom, mapSpec = WaveSys.getCurrentMapSpec();
         const { mvp, pct, text: mvpText } = getMvpData();
-        const maxHp = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.INITIAL_BASE_HP) || CONFIG.INITIAL_BASE_HP || 20;
+        const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
+        const maxHp = st.maxBaseHp || treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
+        const honor = computeRunHonorSummary(st);
+        const career = Backend.loadCareerStats ? Backend.loadCareerStats() : { totalClears: 0 };
 
         if (mvp) {
             Backend.trackFeel(`MVP:DamageShare:${mvp.type}`, pct, { mvpType: mvp.type, sharePct: pct });
@@ -312,6 +388,10 @@
         Backend.trackFeel('Economy:EndGold', st.currentGold, { endGold: st.currentGold, mode });
 
         resetFeedbackUI();
+
+        const contractSummaryHtml = honor.count > 0
+            ? `榮譽積分 ${honor.honorScore.toLocaleString()}（+${honor.bonusPct}% 契約）· ${honor.names.join('、')}`
+            : `榮譽積分 ${honor.honorScore.toLocaleString()} · 累計通關 ${career.totalClears || 0} 次`;
 
         if (mode === 'victory') {
             setDomText(dom.victoryMapTextEl, mapSpec.name);
@@ -321,6 +401,10 @@
             setDomText(dom.victoryMvpTextEl, mvpText);
             setDomText(dom.victoryGoldEarnedTextEl, `${st.totalGoldEarned.toLocaleString()} 💰`);
             setDomText(dom.victoryFusionTextEl, `${st.fusionCount} 次`);
+            if (dom.victoryContractsRowEl) {
+                dom.victoryContractsRowEl.classList.remove('hidden');
+                dom.victoryContractsRowEl.innerText = contractSummaryHtml;
+            }
             return;
         }
         setDomText(dom.gameoverMapTextEl, mapSpec.name);
@@ -333,6 +417,10 @@
         if (dom.gameoverBreakerRowEl) {
             dom.gameoverBreakerRowEl.classList.toggle('hidden', !st.lastBreakerName);
             if (st.lastBreakerName) setDomText(dom.gameoverBreakerTextEl, st.lastBreakerName);
+        }
+        if (dom.gameoverContractsRowEl) {
+            dom.gameoverContractsRowEl.classList.remove('hidden');
+            dom.gameoverContractsRowEl.innerText = contractSummaryHtml;
         }
     }
 
@@ -386,12 +474,52 @@
     }
 
     let lastHoverPortraitKey = '';
+    let hoverStickyTickInterval = null;
+    const MONSTER_HOVER_STICK_MS = 2800;
+    const MONSTER_HOVER_KILL_MS = 1000;
+
+    function stopHoverStickyTicker() {
+        if (hoverStickyTickInterval !== null) {
+            clearInterval(hoverStickyTickInterval);
+            hoverStickyTickInterval = null;
+        }
+    }
+
+    function ensureHoverStickyTicker() {
+        if (hoverStickyTickInterval !== null) return;
+        hoverStickyTickInterval = setInterval(() => {
+            if (!G || !G.state || G.state.hoveredMonsterId === null) {
+                stopHoverStickyTicker();
+                return;
+            }
+            updateMonsterHoverCardUI();
+        }, 80);
+    }
+
+    function clearMonsterHoverLock() {
+        const st = G && G.state;
+        const dom = G && G.dom;
+        if (st) {
+            st.hoveredMonsterId = null;
+            st.hoverLockMonster = null;
+            st.isCursorOnHoveredMonster = false;
+            st.hoverStickUntilPerfMs = 0;
+            st.hoverKillUntilPerfMs = 0;
+        }
+        stopHoverStickyTicker();
+        lastHoverPortraitKey = '';
+        if (dom && dom.boardStageEl) dom.boardStageEl.classList.remove('monster-hovering');
+        if (dom && dom.sideMonsterCardEl) dom.sideMonsterCardEl.classList.add('hidden');
+        if (dom && dom.sideWaveCurrentSectionEl) dom.sideWaveCurrentSectionEl.classList.remove('hidden');
+        if (dom && dom.mobileMonsterCardEl) dom.mobileMonsterCardEl.classList.add('hidden');
+    }
 
     function buildMonsterActiveDebuffList(m) {
         const list = [];
         const st = m.status || {};
         if (m.isStealthed) list.push(`隱身 (${((m.stealthTimerMs || 0) / 1000).toFixed(1)}s)`);
-        if ((m.hardShellHitsLeft || 0) > 0) list.push(`甲殼減傷 ×${m.hardShellHitsLeft}`);
+        const shellLeft = m.shellHitsLeft || m.hardShellHitsLeft || 0;
+        if (shellLeft > 0) list.push(`甲殼減傷 ×${shellLeft}`);
         if ((m.rootTimer || 0) > 0) list.push(`定身 ${(m.rootTimer / 1000).toFixed(1)}s`);
         if (MonsterSys && MonsterSys.isMonsterFrozen(m)) list.push('凍結');
         else if (MonsterSys && MonsterSys.isMonsterSlowed(m)) {
@@ -407,64 +535,143 @@
 
     function updateMonsterHoverCardUI() {
         const dom = G.dom, st = G.state;
-        const m = (st.hoveredMonsterId !== null && !st.isGameOver && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY')
-            ? st.monsters.find(item => item.id === st.hoveredMonsterId && item.hp > 0)
-            : null;
-
-        if (!m) {
-            if (st.hoveredMonsterId !== null) st.hoveredMonsterId = null;
-            lastHoverPortraitKey = '';
-            if (dom.boardStageEl) dom.boardStageEl.classList.remove('monster-hovering');
-            if (dom.sideMonsterCardEl) dom.sideMonsterCardEl.classList.add('hidden');
-            if (dom.sideWaveCurrentSectionEl) dom.sideWaveCurrentSectionEl.classList.remove('hidden');
-            if (dom.mobileMonsterCardEl) dom.mobileMonsterCardEl.classList.add('hidden');
+        if (!st || st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY') {
+            clearMonsterHoverLock();
+            return;
+        }
+        if (st.hoveredMonsterId === null) {
+            clearMonsterHoverLock();
             return;
         }
 
-        if (dom.boardStageEl) dom.boardStageEl.classList.add('monster-hovering');
+        const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const liveM = st.monsters.find(item => item.id === st.hoveredMonsterId && item.hp > 0) || null;
+        let isKilledDisplay = false;
+
+        if (liveM) {
+            const slowFactor = MonsterSys ? (1 - MonsterSys.getMonsterEffectiveSlowRate(liveM)) : 1;
+            const effSpeed = (MonsterSys && (MonsterSys.isMonsterFrozen(liveM) || (liveM.rootTimer || 0) > 0))
+                ? 0
+                : Math.round((liveM.speed || 40) * (liveM.isStealthed ? 1.65 : 1.0) * slowFactor);
+            st.hoverLockMonster = {
+                id: liveM.id,
+                typeKey: liveM.typeKey,
+                name: liveM.name,
+                hp: liveM.hp,
+                maxHp: liveM.maxHp,
+                shield: liveM.shield || 0,
+                maxShield: liveM.maxShield || 0,
+                armor: liveM.armor || 0,
+                effArmor: Math.round(MonsterSys ? MonsterSys.getMonsterEffectiveArmor(liveM) : (liveM.armor || 0)),
+                armorShredTimer: liveM.armorShredTimer || 0,
+                weakness: liveM.weakness,
+                effSpeed,
+                isBoss: Boolean(liveM.isBoss),
+                isElite: Boolean(liveM.isElite),
+                bossMechanic: liveM.bossMechanic || '',
+                traitDesc: liveM.traitDesc || '',
+                debuffs: buildMonsterActiveDebuffList(liveM)
+            };
+        } else if (st.hoverLockMonster) {
+            isKilledDisplay = true;
+            st.isCursorOnHoveredMonster = false;
+            if (st.hoverKillUntilPerfMs <= 0) {
+                st.hoverKillUntilPerfMs = nowPerf + MONSTER_HOVER_KILL_MS;
+                st.hoverStickUntilPerfMs = 0;
+                ensureHoverStickyTicker();
+            }
+            if (nowPerf >= st.hoverKillUntilPerfMs) {
+                clearMonsterHoverLock();
+                return;
+            }
+            st.hoverLockMonster.hp = 0;
+            st.hoverLockMonster.shield = 0;
+            st.hoverLockMonster.effSpeed = 0;
+        } else {
+            clearMonsterHoverLock();
+            return;
+        }
+
+        let lockRatio = 1;
+        let lockHintText = '';
+        if (isKilledDisplay) {
+            const remKill = Math.max(0, st.hoverKillUntilPerfMs - nowPerf);
+            lockRatio = remKill / MONSTER_HOVER_KILL_MS;
+            lockHintText = '已擊殺';
+        } else if (!st.isCursorOnHoveredMonster) {
+            if (st.hoverStickUntilPerfMs <= 0) {
+                st.hoverStickUntilPerfMs = nowPerf + MONSTER_HOVER_STICK_MS;
+                ensureHoverStickyTicker();
+            }
+            const remStick = Math.max(0, st.hoverStickUntilPerfMs - nowPerf);
+            if (remStick <= 0) {
+                clearMonsterHoverLock();
+                return;
+            }
+            lockRatio = remStick / MONSTER_HOVER_STICK_MS;
+            lockHintText = `鎖定檢視 ${(remStick / 1000).toFixed(1)}s`;
+        } else {
+            stopHoverStickyTicker();
+            lockHintText = '鎖定檢視';
+        }
+
+        const m = st.hoverLockMonster;
+        if (dom.boardStageEl) dom.boardStageEl.classList.toggle('monster-hovering', Boolean(liveM && st.isCursorOnHoveredMonster));
+
         const towersDict = getTowersDict();
         const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
         const mCfg = monsterDb[m.typeKey] || {};
         const weakCfg = towersDict[m.weakness];
         const weakStr = weakCfg ? `${weakCfg.icon}${weakCfg.name.charAt(0)}` : (m.weakness || '無');
-        const effArmor = Math.round(MonsterSys ? MonsterSys.getMonsterEffectiveArmor(m) : (m.armor || 0));
-        const armorStr = m.armorShredTimer > 0 ? `${effArmor}/${m.armor}` : `${effArmor}`;
-        const slowFactor = MonsterSys ? (1 - MonsterSys.getMonsterEffectiveSlowRate(m)) : 1;
-        const effSpeed = (MonsterSys && (MonsterSys.isMonsterFrozen(m) || (m.rootTimer || 0) > 0))
-            ? 0
-            : Math.round((m.speed || 40) * (m.isStealthed ? 1.65 : 1.0) * slowFactor);
+        const armorStr = m.armorShredTimer > 0 ? `${m.effArmor}/${m.armor}` : `${m.effArmor}`;
         const tierBadge = m.isBoss ? 'Boss' : (m.isElite ? '菁英' : '敵軍');
-        const debuffs = buildMonsterActiveDebuffList(m);
         const traitText = m.traitDesc || mCfg.traitDesc || (m.isBoss ? '階段首領 · 留意頭像旁弱點屬性' : '沿路徑前進攻擊世界樹');
 
         if (dom.sideMonsterCardEl && dom.sideWaveCurrentSectionEl) {
             dom.sideMonsterCardEl.classList.remove('hidden');
+            dom.sideMonsterCardEl.classList.toggle('is-killed', isKilledDisplay);
             dom.sideWaveCurrentSectionEl.classList.add('hidden');
             const portraitKey = m.bossMechanic === 'void_shift' ? 'void_boss' : m.typeKey;
             if (dom.sideMonsterPortraitEl && lastHoverPortraitKey !== portraitKey && Renderer && typeof Renderer.drawPortrait === 'function') {
                 lastHoverPortraitKey = portraitKey;
                 Renderer.drawPortrait(dom.sideMonsterPortraitEl, 'monster', portraitKey, { size: 44 });
             }
+            if (dom.sideMonsterLockTagEl) {
+                dom.sideMonsterLockTagEl.classList.toggle('hidden', !lockHintText);
+                dom.sideMonsterLockTagEl.classList.toggle('is-killed', isKilledDisplay);
+                dom.sideMonsterLockTagEl.innerText = lockHintText;
+            }
+            if (dom.sideMonsterLockTrackEl && dom.sideMonsterLockFillEl) {
+                const showBar = isKilledDisplay || (!st.isCursorOnHoveredMonster && st.hoverStickUntilPerfMs > 0);
+                dom.sideMonsterLockTrackEl.classList.toggle('hidden', !showBar);
+                dom.sideMonsterLockFillEl.style.width = `${Math.max(0, Math.min(100, lockRatio * 100)).toFixed(1)}%`;
+                dom.sideMonsterLockFillEl.classList.toggle('is-killed', isKilledDisplay);
+            }
             setDomText(dom.sideMonsterNameEl, `${m.name} (${tierBadge})`);
-            setDomText(dom.sideMonsterHpEl, `HP ${m.hp} / ${m.maxHp}`);
+            setDomText(dom.sideMonsterHpEl, isKilledDisplay ? `HP 0 / ${m.maxHp} · 已擊殺` : `HP ${m.hp} / ${m.maxHp}`);
             if (dom.sideMonsterShieldEl) {
                 const hasShield = (m.shield || 0) > 0;
                 dom.sideMonsterShieldEl.classList.toggle('hidden', !hasShield);
                 if (hasShield) dom.sideMonsterShieldEl.innerText = `護盾 ${m.shield} / ${m.maxShield || m.shield}`;
             }
-            setDomText(dom.sideMonsterStatsEl, `甲 ${armorStr} · 弱 ${weakStr} · 速 ${effSpeed}`);
+            setDomText(dom.sideMonsterStatsEl, `甲 ${armorStr} · 弱 ${weakStr} · 速 ${m.effSpeed}`);
             if (dom.sideMonsterDebuffsEl) {
-                dom.sideMonsterDebuffsEl.classList.toggle('hidden', debuffs.length === 0);
-                if (debuffs.length > 0) dom.sideMonsterDebuffsEl.innerText = debuffs.join(' · ');
+                const debuffs = m.debuffs || [];
+                dom.sideMonsterDebuffsEl.classList.toggle('hidden', isKilledDisplay || debuffs.length === 0);
+                if (!isKilledDisplay && debuffs.length > 0) dom.sideMonsterDebuffsEl.innerText = debuffs.join(' · ');
             }
             setDomText(dom.sideMonsterTraitEl, traitText);
         }
 
         if (dom.mobileMonsterCardEl) {
             dom.mobileMonsterCardEl.classList.remove('hidden');
+            dom.mobileMonsterCardEl.classList.toggle('is-killed', isKilledDisplay);
             const shieldBit = (m.shield || 0) > 0 ? ` · 盾 ${m.shield}` : '';
-            const debuffBit = debuffs.length > 0 ? ` [${debuffs.slice(0, 2).join('/')}]` : '';
-            dom.mobileMonsterCardEl.innerHTML = `<div class="mmc-top num">${m.name} · HP ${m.hp}/${m.maxHp}${shieldBit} · 甲 ${armorStr} · 弱 ${weakStr}</div><div class="mmc-sub">${traitText}${debuffBit}</div>`;
+            const debuffs = m.debuffs || [];
+            const debuffBit = (!isKilledDisplay && debuffs.length > 0) ? ` [${debuffs.slice(0, 2).join('/')}]` : '';
+            const hpLabel = isKilledDisplay ? '已擊殺' : `HP ${m.hp}/${m.maxHp}`;
+            const barWidth = `${Math.max(0, Math.min(100, lockRatio * 100)).toFixed(1)}%`;
+            dom.mobileMonsterCardEl.innerHTML = `<div class="mmc-top num"><span>${m.name} · ${hpLabel}${shieldBit} · 甲 ${armorStr} · 弱 ${weakStr}</span><span class="mmc-lock-tag">${lockHintText}</span></div><div class="mmc-sub">${traitText}${debuffBit}</div><div class="mmc-lock-track"><div class="mmc-lock-fill${isKilledDisplay ? ' is-killed' : ''}" style="width:${barWidth}"></div></div>`;
         }
     }
 
@@ -795,7 +1002,8 @@
 
     function updateHUD() {
         const dom = G.dom, st = G.state;
-        const maxHp = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.INITIAL_BASE_HP) || 20;
+        const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
+        const maxHp = st.maxBaseHp || treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
         setDomText(dom.goldDisplay, st.currentGold);
         setDomText(dom.baseHpDisplay, `${st.baseHp}/${maxHp}`);
         setDomText(dom.waveDisplay, st.isEndlessMode ? `Wave ${st.currentWave} (無盡)` : `Wave ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10}`);
@@ -1385,17 +1593,23 @@
     function triggerVictory() {
         const st = G.state;
         if (st.isGameOver || st.waveState === 'VICTORY') return;
-        const maxHp = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.INITIAL_BASE_HP) || 20;
+        const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
+        const maxHp = st.maxBaseHp || treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
         let starsNum = 1, stars = '★', rankText = '驚險死守，於危急時刻擊退腐朽古樹王。';
         if (st.baseHp >= maxHp) { starsNum = 3; stars = '★★★'; rankText = '完美防守，世界樹滿血守護通關第 10 波。'; }
-        else if (st.baseHp >= 10) { starsNum = 2; stars = '★★'; rankText = '穩固防線，成功守護世界樹擊敗腐朽古樹王。'; }
+        else if (st.baseHp >= Math.ceil(maxHp * 0.5)) { starsNum = 2; stars = '★★'; rankText = '穩固防線，成功守護世界樹擊敗腐朽古樹王。'; }
 
+        const honor = computeRunHonorSummary(st);
         Backend.finalizeWaveFeel(st.currentWave);
-        Backend.saveMapRecord(st.currentMapId, st.currentWave, starsNum);
+        Backend.saveMapRecord(st.currentMapId, st.currentWave, starsNum, {
+            isClear: true,
+            honorScore: honor.honorScore,
+            contractCount: honor.count
+        });
         st.bestWave = Math.max(st.bestWave, st.currentWave);
         renderMapSelectorUI();
         finalizeOutcomeScreen('VICTORY', 'victory');
-        Backend.trackFeel('Progression:Complete', st.currentGold, { wave: st.currentWave, mapId: st.currentMapId });
+        Backend.trackFeel('Progression:Complete', st.currentGold, { wave: st.currentWave, mapId: st.currentMapId, contracts: honor.count });
         Backend.trackFeel(`Run:Victory:${st.currentMapId}:Wave_${st.currentWave}`, st.baseHp);
         setDomText(G.dom.victoryStarsEl, stars); setDomText(G.dom.victoryRankTextEl, rankText);
         populateBattleRecap('victory');
@@ -1406,12 +1620,19 @@
         const st = G.state;
         if (st.isGameOver && st.waveState === 'GAMEOVER') return;
         st.isGameOver = true;
+        const honor = computeRunHonorSummary(st);
         Backend.finalizeWaveFeel(st.currentWave);
+        Backend.saveMapRecord(st.currentMapId, st.currentWave, null, {
+            isClear: false,
+            honorScore: honor.honorScore,
+            contractCount: honor.count
+        });
+        renderMapSelectorUI();
         ['startOverlayEl', 'victoryOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl', 'evoConfirmOverlayEl'].forEach(k => {
             if (G.dom[k]) G.dom[k].classList.add('hidden');
         });
         finalizeOutcomeScreen('GAMEOVER', 'gameover');
-        Backend.trackFeel('Progression:Fail', st.killsCount, { wave: st.currentWave, mapId: st.currentMapId });
+        Backend.trackFeel('Progression:Fail', st.killsCount, { wave: st.currentWave, mapId: st.currentMapId, contracts: honor.count });
         Backend.trackFeel(`Run:Fail:${st.currentMapId}:Wave_${st.currentWave}`, st.killsCount);
         populateBattleRecap('gameover');
         if (G.dom.newRecordBadgeEl) G.dom.newRecordBadgeEl.classList.toggle('hidden', !st.isNewRecordThisRun);
@@ -1423,6 +1644,7 @@
         if (prev.rafId !== null) cancelAnimationFrame(prev.rafId);
         const nextSession = prev.sessionId + 1;
         clearAllGameTimers();
+        clearMonsterHoverLock();
         if (DragSys && typeof DragSys.cancelActiveDrag === 'function') {
             DragSys.cancelActiveDrag({ silent: true, resetTimestamps: true });
         }
@@ -1433,7 +1655,12 @@
         if (G.dom.floatingLayerEl) G.dom.floatingLayerEl.innerHTML = '';
         Renderer.clearTouchDragVisuals();
 
-        G.state = createInitialMatchState(prev.currentMapId, initialWaveState, nextSession, resetSpeed);
+        // Phase 5：每局開始／重新開始時重置本局世界樹演化圖譜（保留本地歷史戰績）
+        if (CodexSys && typeof CodexSys.resetRunCodex === 'function') {
+            CodexSys.resetRunCodex();
+        }
+
+        G.state = createInitialMatchState(prev.currentMapId, initialWaveState, nextSession, resetSpeed, selectedContracts);
         G.state.isTouchMode = prev.isTouchMode;
         const mapSpec = WaveSys.getCurrentMapSpec();
         Backend.resetRunTelemetry(G.state.currentMapId, mapSpec.name);
@@ -1454,6 +1681,7 @@
         resetMatchSession('WAITING_START', 1);
         WaveSys.applyMapConfig(G.state.currentMapId);
         renderMapSelectorUI();
+        renderContractSelectorUI();
         if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.remove('hidden');
         G.dom.msgText.innerText = '請選擇戰場地圖，點擊「開始防守」進入第 1 波備戰。';
         Renderer.initBoard(); Renderer.renderBoard(); updateHUD(); updateSpeedButtonUI();
@@ -1463,10 +1691,22 @@
         const st = G.state;
         if (st.waveState !== 'WAITING_START') return;
         const mapSpec = WaveSys.getCurrentMapSpec();
+        st.activeContracts = new Set(selectedContracts);
+        const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
+        st.maxBaseHp = st.activeContracts.has('fragile_heart') ? 12 : (treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20);
+        st.baseHp = st.maxBaseHp;
+        st.dewEnergy = st.activeContracts.has('dew_drought') ? 0 : (treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20);
+        st.currentGold = EconSys ? EconSys.getInitialGold(mapSpec, st.activeContracts) : st.currentGold;
+        if (CodexSys && typeof CodexSys.resetRunCodex === 'function') {
+            CodexSys.resetRunCodex();
+        }
         Backend.resetRunTelemetry(st.currentMapId, mapSpec.name);
         if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.add('hidden');
-        st.waveState = 'PREP'; st.waveTimerMs = CONFIG.INITIAL_PREP_MS || 6000;
-        G.dom.msgText.innerText = `【${mapSpec.name}】第 1 波備戰開始，拖曳下方元素卡至空地佈置防線。`;
+        const basePrepMs = CONFIG.INITIAL_PREP_MS || 6000;
+        st.waveState = 'PREP';
+        st.waveTimerMs = st.activeContracts.has('rapid_waves') ? Math.round(basePrepMs * 0.5) : basePrepMs;
+        const contractTag = st.activeContracts.size > 0 ? `（契約 ×${st.activeContracts.size}）` : '';
+        G.dom.msgText.innerText = `【${mapSpec.name}】${contractTag}第 1 波備戰開始，拖曳下方元素卡至空地佈置防線。`;
         setPauseState(false, { silent: true });
     }
 
@@ -1475,7 +1715,9 @@
         if (st.waveState !== 'VICTORY') return;
         st.isEndlessMode = true;
         if (G.dom.victoryOverlayEl) G.dom.victoryOverlayEl.classList.add('hidden');
-        st.waveState = 'INTERMISSION'; st.waveTimerMs = CONFIG.WAVE_INTERMISSION_MS || 4000;
+        const baseInterMs = CONFIG.WAVE_INTERMISSION_MS || 4000;
+        st.waveState = 'INTERMISSION';
+        st.waveTimerMs = (st.activeContracts && st.activeContracts.has('rapid_waves')) ? Math.round(baseInterMs * 0.5) : baseInterMs;
         G.dom.msgText.innerText = '無盡挑戰模式已開啟，波數上限解除。';
         setPauseState(false, { silent: true });
     }
@@ -1507,7 +1749,8 @@
 
         const victoryWave = CONFIG.VICTORY_WAVE || 10;
         const blessingInterval = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.BLESSING_INTERVAL_WAVES) || 3;
-        const intermissionMs = CONFIG.WAVE_INTERMISSION_MS || 4000;
+        const baseInterMs = CONFIG.WAVE_INTERMISSION_MS || 4000;
+        const intermissionMs = (st.activeContracts && st.activeContracts.has('rapid_waves')) ? Math.round(baseInterMs * 0.5) : baseInterMs;
 
         if (st.waveState === 'PREP' || st.waveState === 'INTERMISSION') {
             const prevSec = Math.ceil(st.waveTimerMs / 1000);
@@ -1757,11 +2000,7 @@
     if (G.dom.boardStageEl) {
         G.dom.boardStageEl.addEventListener('mousemove', (e) => {
             const st = G.state;
-            if (st.isTouchMode || DragSys.isDragging() || !isMatchPhaseActive() || st.monsters.length === 0) {
-                if (st.hoveredMonsterId !== null) {
-                    st.hoveredMonsterId = null;
-                    updateMonsterHoverCardUI();
-                }
+            if (st.isTouchMode || DragSys.isDragging() || !isMatchPhaseActive()) {
                 return;
             }
             const rect = G.dom.boardStageEl.getBoundingClientRect();
@@ -1779,16 +2018,27 @@
                     best = m;
                 }
             }
-            const nextId = best ? best.id : null;
-            if (st.hoveredMonsterId !== nextId) {
-                st.hoveredMonsterId = nextId;
+            if (best) {
+                const switchedMonster = st.hoveredMonsterId !== best.id || st.hoverKillUntilPerfMs > 0;
+                st.hoveredMonsterId = best.id;
+                st.isCursorOnHoveredMonster = true;
+                st.hoverStickUntilPerfMs = 0;
+                if (switchedMonster) st.hoverKillUntilPerfMs = 0;
+                updateMonsterHoverCardUI();
+            } else if (st.hoveredMonsterId !== null && st.isCursorOnHoveredMonster) {
+                st.isCursorOnHoveredMonster = false;
+                st.hoverStickUntilPerfMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + MONSTER_HOVER_STICK_MS;
+                ensureHoverStickyTicker();
                 updateMonsterHoverCardUI();
             }
         });
 
         G.dom.boardStageEl.addEventListener('mouseleave', () => {
-            if (G.state.hoveredMonsterId !== null) {
-                G.state.hoveredMonsterId = null;
+            const st = G.state;
+            if (st.hoveredMonsterId !== null && st.isCursorOnHoveredMonster) {
+                st.isCursorOnHoveredMonster = false;
+                st.hoverStickUntilPerfMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + MONSTER_HOVER_STICK_MS;
+                ensureHoverStickyTicker();
                 updateMonsterHoverCardUI();
             }
         });
@@ -1938,12 +2188,21 @@
     Renderer.initBoard();
     Renderer.renderBoard();
     renderMapSelectorUI();
+    renderContractSelectorUI();
     updateHUD();
     updateSpeedButtonUI();
     updateSoundButtonUI();
 
     Backend.init({
         onBalanceApplied: () => {
+            if (G.state.waveState === 'WAITING_START') {
+                const mapSpec = WaveSys.getCurrentMapSpec();
+                const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
+                G.state.maxBaseHp = G.state.activeContracts.has('fragile_heart') ? 12 : (treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20);
+                G.state.baseHp = G.state.maxBaseHp;
+                G.state.dewEnergy = G.state.activeContracts.has('dew_drought') ? 0 : (treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20);
+                G.state.currentGold = EconSys.getInitialGold(mapSpec, G.state.activeContracts);
+            }
             if (G.dom.spawnerContainer) renderSpawnerButtons();
             if (CodexSys && typeof CodexSys.renderCodexModal === 'function') CodexSys.renderCodexModal('fusion');
             updateHUD();

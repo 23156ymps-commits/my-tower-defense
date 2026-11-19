@@ -19,7 +19,8 @@
     let G = null;
     let currentCategory = 'fusion';
     let selectedTreeNodeId = 'fire_bud';
-    const unlockedSet = loadUnlockedSet();
+    // Phase 5：圖鑑改為單局重置（僅保存於本局記憶體，開新局或重開一律重置為尚未合成）
+    const unlockedSet = new Set();
 
     // SVG 世界樹演化圖譜畫布與扇形樹冠座標拓撲（1320 × 680，自底向上：原核 → 3 基礎 1★ → 3 轉職 1★ → 6 主幹 2★ → 12 冠枝 3★）
     const TREE_VIEW_W = 1320;
@@ -124,20 +125,6 @@
         initCodexModalDom();
     }
 
-    function loadUnlockedSet() {
-        const set = new Set();
-        try {
-            const raw = typeof localStorage !== 'undefined'
-                ? localStorage.getItem(CONFIG.STORAGE_CODEX_KEY || 'merge_defense_codex_unlocked')
-                : null;
-            if (raw) {
-                const arr = JSON.parse(raw);
-                if (Array.isArray(arr)) arr.forEach(item => set.add(String(item)));
-            }
-        } catch (_) {}
-        return set;
-    }
-
     function syncDefaultUnlockedEntries() {
         const entries = getCodexData().CODEX_ENTRIES || {};
         if (entries.towers) {
@@ -161,15 +148,11 @@
         }
     }
 
-    function saveUnlockedSet() {
-        try {
-            if (typeof localStorage !== 'undefined') {
-                localStorage.setItem(
-                    CONFIG.STORAGE_CODEX_KEY || 'merge_defense_codex_unlocked',
-                    JSON.stringify(Array.from(unlockedSet))
-                );
-            }
-        } catch (_) {}
+    function resetRunCodex() {
+        unlockedSet.clear();
+        selectedTreeNodeId = 'fire_bud';
+        syncDefaultUnlockedEntries();
+        if (isCodexOpen()) renderCodexModal(currentCategory);
     }
 
     function isEntryUnlocked(entryId, defaultUnlocked = false) {
@@ -186,9 +169,8 @@
         if (!entryId) return;
         const wasLocked = !unlockedSet.has(entryId);
         unlockedSet.add(entryId);
-        if (wasLocked) {
-            saveUnlockedSet();
-            if (isCodexOpen()) renderCodexModal(currentCategory);
+        if (wasLocked && isCodexOpen()) {
+            renderCodexModal(currentCategory);
         }
     }
 
@@ -364,7 +346,7 @@
                     ${statusBadge}${craftBadge}
                 </div>
                 <div class="wt-detail-row"><strong>解鎖條件：</strong>${custom.unlockRule || '於戰場合成此防禦塔即可點亮枝脈。'}</div>
-                <div class="wt-detail-row">${isCraftable ? '⚡ 戰術提醒：當前場上已持有可通往此冠枝的 T2 主幹素材，於棋盤拖曳相容主幹即可解鎖！' : '合成並喚醒該節點後，即永久記錄於圖鑑與本機存檔。'}</div>
+                <div class="wt-detail-row">${isCraftable ? '⚡ 戰術提醒：當前場上已持有可通往此冠枝的素材，於棋盤拖曳合成即可於本局點亮！' : '每局開局圖譜皆重新探索；本局成功合成該防禦塔後即立刻點亮。'}</div>
             `;
         }
 
@@ -1035,6 +1017,7 @@
 
     const CodexSystem = {
         bind,
+        resetRunCodex,
         isEntryUnlocked,
         unlockEntry,
         isCodexOpen,

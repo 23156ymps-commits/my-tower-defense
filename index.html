@@ -157,7 +157,13 @@
 
                 <aside id="side-panel-right" class="side-panel side-panel-right" aria-label="本波與下波出怪詳情">
                     <div id="side-monster-card" class="side-panel-section side-monster-card hidden" aria-live="polite">
-                        <h2 class="side-panel-title">目標敵軍情報</h2>
+                        <div class="smc-title-bar">
+                            <h2 class="side-panel-title">目標敵軍情報</h2>
+                            <span id="side-monster-lock-tag" class="smc-lock-tag num hidden">鎖定檢視</span>
+                        </div>
+                        <div id="side-monster-lock-track" class="smc-lock-track hidden" aria-hidden="true">
+                            <div id="side-monster-lock-fill" class="smc-lock-fill"></div>
+                        </div>
                         <div class="smc-header">
                             <canvas id="side-monster-portrait" class="smc-portrait" width="44" height="44" data-size="44" aria-hidden="true"></canvas>
                             <div class="smc-title-wrap">
@@ -341,6 +347,7 @@
         <div class="modal-card start-card">
             <h1 id="start-title" class="start-title">元素陣線：合成塔防</h1>
             <p class="modal-subtitle">15×10 古林戰線 · 守護世界樹抵禦 10 波攻勢</p>
+            <div id="start-career-banner" class="start-career-banner num">全圖最高 Wave 1 · 累計通關 0 次</div>
 
             <!-- 三地圖關卡選擇 -->
             <div class="map-selector-section">
@@ -372,6 +379,15 @@
                     </button>
                 </div>
             </div>
+
+            <!-- 8 項世界樹難度契約詞條（預設全部不勾選，可自由展開挑戰） -->
+            <details id="contracts-drawer" class="contracts-drawer">
+                <summary class="contracts-summary">
+                    <span>難度契約（選填挑戰）</span>
+                    <span id="contracts-summary-badge" class="contracts-summary-badge num">未啟用契約 · 榮譽 +0%</span>
+                </summary>
+                <div id="contracts-grid" class="contracts-grid"></div>
+            </details>
 
             <div class="rules-list">
                 <div class="rule-item">
@@ -435,6 +451,7 @@
                     <div class="recap-cell"><span>合成融合次數</span><strong id="victory-fusion-text" class="num">0 次</strong>
                     </div>
                 </div>
+                <div id="victory-contracts-row" class="recap-contracts num hidden"></div>
             </div>
 
             <!-- 試玩 5 秒主觀體感快評列 ＋ 單局黑盒子戰報複製 -->
@@ -497,6 +514,7 @@
                     <span>致命突破敵人</span>
                     <strong id="gameover-breaker-text">—</strong>
                 </div>
+                <div id="gameover-contracts-row" class="recap-contracts num hidden"></div>
             </div>
 
             <div id="new-record-badge" class="new-record-badge hidden">刷新歷史最高波數紀錄</div>

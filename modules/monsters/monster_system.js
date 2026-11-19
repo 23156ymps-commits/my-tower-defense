@@ -130,8 +130,13 @@
         const routeCum = useAlt ? G.map.altWaypointCumDist : G.map.waypointCumDist;
         const wp0 = routeWps[0];
         const startPos = Renderer.getCellCenter(wp0.x, wp0.y);
-        const spdGlobal = clampNumber(rules.MONSTER_SPEED_SCALE ?? CONFIG.MONSTER_SPEED_SCALE ?? 1.0, 0.2, 5.0, 1.0);
-        const hpGlobal = clampNumber(rules.MONSTER_HP_SCALE ?? CONFIG.MONSTER_HP_SCALE ?? 1.0, 0.1, 20.0, 1.0);
+        const hasContract = (id) => Boolean(st.activeContracts && st.activeContracts.has(id));
+        const baseSpdScale = clampNumber(rules.MONSTER_SPEED_SCALE ?? CONFIG.MONSTER_SPEED_SCALE ?? 1.0, 0.2, 5.0, 1.0);
+        const baseHpScale = clampNumber(rules.MONSTER_HP_SCALE ?? CONFIG.MONSTER_HP_SCALE ?? 1.0, 0.1, 20.0, 1.0);
+        const armorScale = clampNumber(rules.MONSTER_ARMOR_SCALE ?? CONFIG.MONSTER_ARMOR_SCALE ?? 1.0, 0.1, 5.0, 1.0);
+        const armorBonus = (Number(rules.MONSTER_ARMOR_BONUS) || 0) + (hasContract('iron_armor') ? 4 : 0);
+        const spdGlobal = baseSpdScale * (hasContract('fast_tide') ? 1.15 : 1.0);
+        const hpGlobal = baseHpScale * (hasContract('frenzied_hp') ? 1.20 : 1.0);
         const baseSpeedConst = rules.MONSTER_BASE_SPEED ?? CONFIG.MONSTER_BASE_SPEED ?? 2.6;
 
         if (GameApp.systems && GameApp.systems.codex && typeof GameApp.systems.codex.unlockEntry === 'function') {
@@ -139,9 +144,11 @@
         }
 
         if (entry.isBoss) {
-            const bossHp = Math.max(10, Math.round((entry.bossHp || 2800) * hpGlobal));
+            const bossContractMult = hasContract('boss_tyranny') ? 1.30 : 1.0;
+            const bossHp = Math.max(10, Math.round((entry.bossHp || 2800) * hpGlobal * bossContractMult));
             const bSpec = entry.bossSpec || {};
             const bossShield = bSpec.shieldRatio > 0 ? Math.round(bossHp * bSpec.shieldRatio) : 0;
+            const bossArmor = Math.max(0, Math.round((entry.armor || 0) * armorScale) + armorBonus);
             st.monsters.push(makeMonsterRecord({
                 id: st.monsterIdCounter++,
                 sessionId: st.sessionId,
@@ -153,7 +160,7 @@
                 maxHp: bossHp,
                 shield: bossShield,
                 maxShield: bossShield,
-                armor: entry.armor || 0,
+                armor: bossArmor,
                 isElite: true,
                 isBoss: true,
                 bossMechanic: bSpec.bossMechanic || '',
@@ -199,7 +206,7 @@
             maxHp,
             shield: maxShield,
             maxShield,
-            armor: entry.armor || 0,
+            armor: Math.max(0, Math.round((entry.armor || 0) * armorScale) + armorBonus),
             isElite: Boolean(entry.isElite),
             isBoss: false,
             isSplitChild: false,
@@ -264,7 +271,7 @@
                 weakness: parent.weakness,
                 hp: childMaxHp,
                 maxHp: childMaxHp,
-                armor: 0,
+                armor: (st.activeContracts && st.activeContracts.has('iron_armor')) ? 4 : 0,
                 isElite: false,
                 isBoss: false,
                 isSplitChild: true,

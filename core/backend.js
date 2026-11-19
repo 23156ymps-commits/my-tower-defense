@@ -225,6 +225,10 @@
             const summary = {
                 monster_speed_scale: monsterRules.MONSTER_SPEED_SCALE || CONFIG.MONSTER_SPEED_SCALE || 1.0,
                 monster_hp_scale: monsterRules.MONSTER_HP_SCALE || CONFIG.MONSTER_HP_SCALE || 1.0,
+                monster_armor_scale: monsterRules.MONSTER_ARMOR_SCALE || CONFIG.MONSTER_ARMOR_SCALE || 1.0,
+                monster_armor_bonus: monsterRules.MONSTER_ARMOR_BONUS || 0,
+                crown_t3_damage_scale: 1.0,
+                crown_t3_speed_scale: 1.0,
                 towers: {},
                 monsters: {}
             };
@@ -243,6 +247,21 @@
                 monsterRules.MONSTER_HP_SCALE = clampedHp;
                 CONFIG.MONSTER_HP_SCALE = clampedHp;
                 summary.monster_hp_scale = clampedHp;
+            }
+
+            const armorScale = Number(balance.monster_armor_scale);
+            if (Number.isFinite(armorScale) && armorScale > 0) {
+                const clampedArmorScale = clampNumber(armorScale, 0.1, 5.0, summary.monster_armor_scale);
+                monsterRules.MONSTER_ARMOR_SCALE = clampedArmorScale;
+                CONFIG.MONSTER_ARMOR_SCALE = clampedArmorScale;
+                summary.monster_armor_scale = clampedArmorScale;
+            }
+
+            const armorBonus = Number(balance.monster_armor_bonus);
+            if (Number.isFinite(armorBonus)) {
+                const clampedArmorBonus = Math.round(clampNumber(armorBonus, -20, 50, 0));
+                monsterRules.MONSTER_ARMOR_BONUS = clampedArmorBonus;
+                summary.monster_armor_bonus = clampedArmorBonus;
             }
 
             // 支援深度覆蓋或動態新增防禦塔
@@ -362,6 +381,35 @@
                     deepMerge(GameApp.data[modKey], balance[modKey]);
                 }
             });
+
+            // 支援 3★ 冠枝全局傷害／攻速倍率（來自 admin.html 或 game_balance_json）
+            const t3DmgScale = Number(balance.crown_t3_damage_scale);
+            const t3SpdScale = Number(balance.crown_t3_speed_scale);
+            if ((Number.isFinite(t3DmgScale) && t3DmgScale > 0 && Math.abs(t3DmgScale - 1.0) > 1e-4)
+                || (Number.isFinite(t3SpdScale) && t3SpdScale > 0 && Math.abs(t3SpdScale - 1.0) > 1e-4)) {
+                const safeDmgScale = Number.isFinite(t3DmgScale) && t3DmgScale > 0 ? clampNumber(t3DmgScale, 0.2, 5.0, 1.0) : 1.0;
+                const safeSpdScale = Number.isFinite(t3SpdScale) && t3SpdScale > 0 ? clampNumber(t3SpdScale, 0.2, 5.0, 1.0) : 1.0;
+                summary.crown_t3_damage_scale = safeDmgScale;
+                summary.crown_t3_speed_scale = safeSpdScale;
+                Object.keys(towersDict).forEach((type) => {
+                    const elCfg = towersDict[type];
+                    if (!elCfg || elCfg.isAlias) return;
+                    const tNum = Number(elCfg.nodeTier) || Number(elCfg.tier) || 1;
+                    if (tNum !== 3) return;
+                    if (safeDmgScale !== 1.0) {
+                        if (Number.isFinite(elCfg.damage)) elCfg.damage = Math.max(1, Math.round(elCfg.damage * safeDmgScale));
+                        if (Array.isArray(elCfg.tierDamage) && Number.isFinite(elCfg.tierDamage[3])) {
+                            elCfg.tierDamage[3] = Math.max(1, Math.round(elCfg.tierDamage[3] * safeDmgScale));
+                        }
+                        if (Array.isArray(tierDamageTable[type]) && Number.isFinite(tierDamageTable[type][3])) {
+                            tierDamageTable[type][3] = Math.max(1, Math.round(tierDamageTable[type][3] * safeDmgScale));
+                        }
+                    }
+                    if (safeSpdScale !== 1.0 && Number.isFinite(elCfg.attackIntervalMs)) {
+                        elCfg.attackIntervalMs = Math.max(120, Math.round(elCfg.attackIntervalMs / safeSpdScale));
+                    }
+                });
+            }
 
             if (towersData && typeof towersData.syncLegacyAliases === 'function') {
                 towersData.syncLegacyAliases();
@@ -937,7 +985,44 @@
         }
     }
 
-    function saveMapRecord(mapId, wave, stars = null) {
+    function loadCareerStats() {
+        const records = loadMapRecords();
+        const maxFromMaps = Math.max(
+            (records.forest && records.forest.bestWave) || 1,
+            (records.lava && records.lava.bestWave) || 1,
+            (records.frost && records.frost.bestWave) || 1
+        );
+        const career = {
+            bestWaveOverall: maxFromMaps,
+            totalClears: 0,
+            bestHonorScore: 0,
+            bestContractCount: 0,
+            mapRecords: records
+        };
+        try {
+            const raw = safeCloudStorageGet(CONFIG.STORAGE_CAREER_STATS_KEY || 'merge_defense_career_stats');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') {
+                    if (Number.isFinite(Number(parsed.bestWaveOverall))) {
+                        career.bestWaveOverall = Math.max(maxFromMaps, Math.floor(Number(parsed.bestWaveOverall)));
+                    }
+                    if (Number.isFinite(Number(parsed.totalClears))) {
+                        career.totalClears = Math.max(0, Math.floor(Number(parsed.totalClears)));
+                    }
+                    if (Number.isFinite(Number(parsed.bestHonorScore))) {
+                        career.bestHonorScore = Math.max(0, Math.floor(Number(parsed.bestHonorScore)));
+                    }
+                    if (Number.isFinite(Number(parsed.bestContractCount))) {
+                        career.bestContractCount = Math.max(0, Math.floor(Number(parsed.bestContractCount)));
+                    }
+                }
+            }
+        } catch (_) {}
+        return career;
+    }
+
+    function saveMapRecord(mapId, wave, stars = null, options = {}) {
         const records = loadMapRecords();
         const target = records[mapId] || { bestWave: 1, bestStars: 0 };
         if (Number.isFinite(wave) && wave > target.bestWave) target.bestWave = wave;
@@ -951,6 +1036,24 @@
             (records.frost && records.frost.bestWave) || 1
         );
         safeCloudStorageSet(CONFIG.STORAGE_BEST_WAVE_KEY || 'merge_defense_best_wave', String(maxOverall));
+
+        const career = loadCareerStats();
+        career.bestWaveOverall = Math.max(career.bestWaveOverall || 1, maxOverall);
+        if (options && options.isClear) {
+            career.totalClears = (career.totalClears || 0) + 1;
+        }
+        if (options && Number.isFinite(options.honorScore) && options.honorScore > (career.bestHonorScore || 0)) {
+            career.bestHonorScore = Math.round(options.honorScore);
+        }
+        if (options && Number.isFinite(options.contractCount) && options.contractCount > (career.bestContractCount || 0)) {
+            career.bestContractCount = Math.round(options.contractCount);
+        }
+        safeCloudStorageSet(CONFIG.STORAGE_CAREER_STATS_KEY || 'merge_defense_career_stats', JSON.stringify({
+            bestWaveOverall: career.bestWaveOverall,
+            totalClears: career.totalClears,
+            bestHonorScore: career.bestHonorScore,
+            bestContractCount: career.bestContractCount
+        }));
         return records;
     }
 
@@ -959,13 +1062,26 @@
         return (records[mapId] && records[mapId].bestWave) || 1;
     }
 
+    function applyLocalBalanceOverride() {
+        try {
+            const raw = safeCloudStorageGet(CONFIG.STORAGE_LOCAL_BALANCE_KEY || 'merge_defense_local_balance_override');
+            if (!raw) return false;
+            const parsed = JSON.parse(raw);
+            return Boolean(applyRemoteBalanceConfig(parsed));
+        } catch (_) {
+            return false;
+        }
+    }
+
     function init(options = {}) {
         try {
             if (options && typeof options.onBalanceApplied === 'function') {
                 onBalanceAppliedHook = options.onBalanceApplied;
             }
+            // 本機 admin.html 預覽覆蓋（無論離線或連線皆優先檢查，確保測試平衡即時生效）
+            const hasLocalOverride = applyLocalBalanceOverride();
             if (isNetworkOffline()) return;
-            initRemoteConfigBalance();
+            if (!hasLocalOverride) initRemoteConfigBalance();
             GameAnalyticsTracker.init();
         } catch (_) {}
     }
@@ -973,6 +1089,7 @@
     const BackendModule = {
         CLOUD_CONFIG,
         applyRemoteBalanceConfig,
+        applyLocalBalanceOverride,
         initRemoteConfigBalance,
         GameAnalyticsTracker,
         trackFeel,
@@ -984,6 +1101,7 @@
         generateBattleReportText,
         copyBattleReportToClipboard,
         loadMapRecords,
+        loadCareerStats,
         saveMapRecord,
         getMapBestWave,
         init

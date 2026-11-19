@@ -73,7 +73,7 @@
         let damageMult = 1.0;
         if (Number.isFinite(tCfg.maxDamageBonus) && tCfg.maxDamageBonus > 0) {
             const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
-            const maxHp = treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
+            const maxHp = (G && G.state && G.state.maxBaseHp) || treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
             const curHp = (G && G.state && Number.isFinite(G.state.baseHp)) ? G.state.baseHp : maxHp;
             const hpRatio = Math.max(0, Math.min(1, curHp / Math.max(1, maxHp)));
             damageMult = 1.0 + tCfg.maxDamageBonus * hpRatio;

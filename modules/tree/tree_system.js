@@ -74,9 +74,11 @@
         const mCfg = monsterDb[monster.typeKey] || {};
         const isSpec = Boolean(mCfg.isSpecialMechanic);
 
-        return monster.isBoss
+        const rawGain = monster.isBoss
             ? (tc.DEW_GAIN_BOSS || 30)
             : (isSpec ? (tc.DEW_GAIN_SPECIAL || 8) : (tc.DEW_GAIN_NORMAL || 4));
+        const hasDrought = Boolean(G && G.state && G.state.activeContracts && G.state.activeContracts.has('dew_drought'));
+        return hasDrought ? Math.max(1, Math.round(rawGain * 0.80)) : rawGain;
     }
 
     /**
@@ -341,7 +343,10 @@
         if (!picked || st.activeBlessings.has(blessingId)) return;
 
         const tc = getTreeConfig();
-        const intermissionMs = (GameApp.config && GameApp.config.WAVE_INTERMISSION_MS) || 4000;
+        const baseIntermissionMs = (GameApp.config && GameApp.config.WAVE_INTERMISSION_MS) || 4000;
+        const intermissionMs = (st.activeContracts && st.activeContracts.has('rapid_waves'))
+            ? Math.round(baseIntermissionMs * 0.5)
+            : baseIntermissionMs;
         st.activeBlessings.add(blessingId);
         st.blessingChoices = [];
         if (G.dom.blessingOverlayEl) G.dom.blessingOverlayEl.classList.add('hidden');

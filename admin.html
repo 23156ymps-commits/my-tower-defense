@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元素陣線：本機數值平衡中控台</title>
+    <style>
+        :root {
+            --bg-canvas: #1B211E;
+            --bg-grid-elevated: #242C28;
+            --bg-surface: #2C3530;
+            --border-subtle: #46544C;
+            --text-primary: #F4F1EA;
+            --text-secondary: #B8C2BC;
+            --accent-cta: #D97724;
+            --el-fire: #C94A38;
+            --el-ice: #4A9EBF;
+            --el-lightning: #E0B43C;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: "Plus Jakarta Sans", "Noto Sans TC", "Segoe UI", sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .num {
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .lock-shell {
+            max-width: 420px;
+            margin: 80px auto;
+            padding: 24px;
+            border-radius: 10px;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .lock-title {
+            margin: 0 0 6px 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .lock-desc {
+            margin: 0 0 16px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .lock-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .lock-input {
+            width: 100%;
+            min-height: 42px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 15px;
+            color: var(--text-primary);
+            background-color: var(--bg-canvas);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .lock-error {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #EE9B8F;
+            min-height: 18px;
+        }
+
+        .admin-shell {
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        .admin-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px;
+            border-radius: 10px;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            margin-bottom: 14px;
+        }
+
+        .admin-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .admin-subtitle {
+            margin: 4px 0 0 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .admin-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary,
+        .btn-secondary,
+        .btn-danger {
+            min-height: 40px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            border: 1px solid var(--border-subtle);
+            transition: background-color 0.12s ease, transform 0.1s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-cta);
+            border-color: #E68F3C;
+            color: #1B211E;
+        }
+
+        .btn-primary:hover {
+            background-color: #E58634;
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-grid-elevated);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background-color: #323D37;
+            border-color: var(--el-lightning);
+        }
+
+        .btn-danger {
+            background-color: #3B201D;
+            border-color: var(--el-fire);
+            color: #F4F1EA;
+        }
+
+        .btn-danger:hover {
+            background-color: #4D2824;
+        }
+
+        .status-banner {
+            padding: 10px 14px;
+            border-radius: 8px;
+            background-color: var(--bg-grid-elevated);
+            border: 1px solid var(--border-subtle);
+            font-size: 13px;
+            color: var(--el-lightning);
+            margin-bottom: 16px;
+        }
+
+        .panel-section {
+            margin-bottom: 16px;
+            padding: 16px 18px;
+            border-radius: 10px;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .section-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .section-note {
+            font-size: 12.5px;
+            color: var(--text-secondary);
+        }
+
+        .kv-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 10px;
+        }
+
+        .kv-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: var(--bg-grid-elevated);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .kv-field label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .kv-field input {
+            width: 100%;
+            min-height: 36px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text-primary);
+            background-color: var(--bg-canvas);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table.balance-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .balance-table th,
+        .balance-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+            white-space: nowrap;
+        }
+
+        .balance-table th {
+            background-color: var(--bg-grid-elevated);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .balance-table td input {
+            width: 96px;
+            min-height: 32px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            background-color: var(--bg-canvas);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .json-preview {
+            width: 100%;
+            min-height: 170px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+            color: var(--text-primary);
+            background-color: var(--bg-canvas);
+            border: 1px solid var(--border-subtle);
+            resize: vertical;
+        }
+
+        .tag-tier {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            background-color: var(--bg-canvas);
+            border: 1px solid var(--border-subtle);
+            color: var(--el-lightning);
+        }
+    </style>
+</head>
+
+<body>
+    <section id="lock-screen" class="lock-shell" aria-label="本機管理驗證">
+        <h1 class="lock-title">元素陣線 · 本機調整中控台</h1>
+        <p class="lock-desc">僅限製作與數值測試人員於本機開啟使用。請輸入管理密碼（預設密碼：<span class="num">2026</span>，可於本檔內修改）。</p>
+        <form id="lock-form" class="lock-form">
+            <input id="admin-password-input" class="lock-input num" type="password" autocomplete="off"
+                placeholder="請輸入管理密碼">
+            <div id="lock-error" class="lock-error" role="alert"></div>
+            <button type="submit" class="btn-primary">解鎖中控台</button>
+        </form>
+    </section>
+
+    <main id="admin-main" class="admin-shell hidden">
+        <header class="admin-header">
+            <div>
+                <h1 class="admin-title">《元素陣線：合成塔防》數值平衡調整中控台</h1>
+                <p class="admin-subtitle">修改後可寫入本機預覽（重開 index.html 立即生效），或匯出 Firebase Remote Config 的 <span
+                        class="num">game_balance_json</span>。</p>
+            </div>
+            <div class="admin-actions">
+                <button id="apply-local-btn" type="button" class="btn-primary">套用至本機瀏覽器預覽</button>
+                <button id="copy-firebase-btn" type="button" class="btn-secondary">一鍵複製 Firebase game_balance_json 設定檔</button>
+                <button id="reset-default-btn" type="button" class="btn-danger">清除本機覆蓋並還原預設</button>
+            </div>
+        </header>
+
+        <div id="status-banner" class="status-banner num">狀態就緒：目前載入遊戲預設數值表。</div>
+
+        <!-- 區塊 1：經濟金幣 -->
+        <section class="panel-section">
+            <div class="section-head">
+                <h2 class="section-title">1. 經濟金幣與拓荒覺醒參數</h2>
+                <span class="section-note">調整起始金幣、召喚階梯價格、賣塔比例與聖冠／爆破花費</span>
+            </div>
+            <div id="economy-fields" class="kv-grid"></div>
+        </section>
+
+        <!-- 區塊 2：基礎與轉職塔數值 -->
+        <section class="panel-section">
+            <div class="section-head">
+                <h2 class="section-title">2. 基礎 1★／轉職 1★／進階 2★ 防禦塔數值</h2>
+                <span class="section-note">單位：攻擊間隔 ms（如 1000 = 1.00s）、射程為格數</span>
+            </div>
+            <div class="table-wrap">
+                <table class="balance-table">
+                    <thead>
+                        <tr>
+                            <th>防禦塔</th>
+                            <th>階級</th>
+                            <th>單發傷害</th>
+                            <th>攻速間隔 (ms)</th>
+                            <th>射程 (格)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="base-towers-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 區塊 3：3★ 冠枝倍率與個別數值 -->
+        <section class="panel-section">
+            <div class="section-head">
+                <h2 class="section-title">3. 3★ 終極冠枝倍率與細調</h2>
+                <span class="section-note">先設全局 3★ 倍率，亦可逐一微調 12 座終極冠枝數值</span>
+            </div>
+            <div id="t3-scale-fields" class="kv-grid" style="margin-bottom: 12px;"></div>
+            <div class="table-wrap">
+                <table class="balance-table">
+                    <thead>
+                        <tr>
+                            <th>終極冠枝</th>
+                            <th>分支</th>
+                            <th>單發傷害</th>
+                            <th>攻速間隔 (ms)</th>
+                            <th>射程 (格)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="t3-towers-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 區塊 4：怪物血量／護甲／移速全局倍率 -->
+        <section class="panel-section">
+            <div class="section-head">
+                <h2 class="section-title">4. 怪物血量／護甲／移速全局倍率與個體參數</h2>
+                <span class="section-note">全局倍率會即時作用於全部波次普通怪、菁英、機制怪與 Boss</span>
+            </div>
+            <div id="monster-global-fields" class="kv-grid" style="margin-bottom: 12px;"></div>
+            <div class="table-wrap">
+                <table class="balance-table">
+                    <thead>
+                        <tr>
+                            <th>魔物</th>
+                            <th>基礎生命</th>
+                            <th>基礎護甲</th>
+                            <th>移速倍率</th>
+                            <th>擊殺金幣</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monsters-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 區塊 5：世界樹技能消耗與冷卻 -->
+        <section class="panel-section">
+            <div class="section-head">
+                <h2 class="section-title">5. 世界樹靈露能量與主動技能參數</h2>
+                <span class="section-note">調整靈露上限、擊殺回復量與主動技能消耗／冷卻</span>
+            </div>
+            <div id="tree-fields" class="kv-grid"></div>
+        </section>
+
+        <!-- JSON 輸出預覽區 -->
+        <section class="panel-section">
+            <div class="section-head">
+                <h2 class="section-title">game_balance_json 輸出預覽</h2>
+                <span class="section-note">可直接複製貼上至 Firebase Remote Config 的 game_balance_json 參數</span>
+            </div>
+            <textarea id="json-preview" class="json-preview" readonly aria-label="Firebase game_balance_json 預覽"></textarea>
+        </section>
+    </main>
+
+    <!-- 離線直讀遊戲實際資料表，確保預設欄位永遠與最新版本同步 -->
+    <script src="config.js"></script>
+    <script src="modules/economy/economy_data.js"></script>
+    <script src="modules/towers/tower_data.js"></script>
+    <script src="modules/monsters/monster_data.js"></script>
+    <script src="modules/tree/tree_data.js"></script>
+    <script src="modules/routes/route_data.js"></script>
+    <script src="core/backend.js"></script>
+
+    <script>
+        (function () {
+            'use strict';
+
+            // 如需更改本機管理密碼，請直接修改下行字串
+            const ADMIN_PASSWORD = '2026';
+
+            const App = window.GameApp || {};
+            const CONFIG = App.config || {};
+            const OVERRIDE_KEY = CONFIG.STORAGE_LOCAL_BALANCE_KEY || 'merge_defense_local_balance_override';
+            const SESSION_AUTH_KEY = 'merge_defense_admin_unlocked';
+
+            const lockScreen = document.getElementById('lock-screen');
+            const adminMain = document.getElementById('admin-main');
+            const lockForm = document.getElementById('lock-form');
+            const passInput = document.getElementById('admin-password-input');
+            const lockError = document.getElementById('lock-error');
+            const statusBanner = document.getElementById('status-banner');
+            const jsonPreviewEl = document.getElementById('json-preview');
+
+            function unlockConsole() {
+                lockScreen.classList.add('hidden');
+                adminMain.classList.remove('hidden');
+                initEditor();
+            }
+
+            try {
+                if (sessionStorage.getItem(SESSION_AUTH_KEY) === 'true') {
+                    unlockConsole();
+                }
+            } catch (_) {}
+
+            lockForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if ((passInput.value || '').trim() === ADMIN_PASSWORD) {
+                    try { sessionStorage.setItem(SESSION_AUTH_KEY, 'true'); } catch (_) {}
+                    lockError.innerText = '';
+                    unlockConsole();
+                } else {
+                    lockError.innerText = '密碼錯誤，請重新輸入。';
+                    passInput.select();
+                }
+            });
+
+            function readExistingOverride() {
+                try {
+                    const raw = localStorage.getItem(OVERRIDE_KEY);
+                    return raw ? JSON.parse(raw) : null;
+                } catch (_) {
+                    return null;
+                }
+            }
+
+            let initialized = false;
+            const formRefs = {
+                economy: {},
+                stepsInput: null,
+                t3Scales: {},
+                monsterGlobals: {},
+                treeCfg: {},
+                skills: { entangle: {}, frenzy: {} },
+                towers: {},
+                monsters: {}
+            };
+
+            function makeKvField(labelText, value, attrs = {}) {
+                const wrap = document.createElement('div');
+                wrap.className = 'kv-field';
+                const label = document.createElement('label');
+                label.innerText = labelText;
+                const input = document.createElement('input');
+                input.type = attrs.type || 'number';
+                if (attrs.step !== undefined) input.step = String(attrs.step);
+                if (attrs.min !== undefined) input.min = String(attrs.min);
+                if (attrs.max !== undefined) input.max = String(attrs.max);
+                input.className = 'num';
+                input.value = String(value);
+                wrap.appendChild(label);
+                wrap.appendChild(input);
+                return { wrap, input };
+            }
+
+            function initEditor() {
+                if (initialized) return;
+                initialized = true;
+
+                // 若本機已有預覽覆蓋，先套用基礎數值（不含 t3 全局乘數以免重複疊乘），讓欄位與倍率分開維持冪等
+                const existing = readExistingOverride();
+                if (existing && App.backend && typeof App.backend.applyRemoteBalanceConfig === 'function') {
+                    const basePreviewPatch = Object.assign({}, existing, {
+                        crown_t3_damage_scale: 1.0,
+                        crown_t3_speed_scale: 1.0
+                    });
+                    App.backend.applyRemoteBalanceConfig(basePreviewPatch);
+                    statusBanner.innerText = '已偵測並載入本機瀏覽器現有預覽覆蓋（merge_defense_local_balance_override）。';
+                }
+
+                const econData = (App.data && App.data.economy) || {};
+                const towersDict = (App.data && App.data.towers && App.data.towers.TOWERS) || {};
+                const monsterRules = (App.data && App.data.monsters && App.data.monsters.GLOBAL_MONSTER_RULES) || {};
+                const monsterDb = (App.data && App.data.monsters && App.data.monsters.MONSTER_DATABASE) || {};
+                const treeData = (App.data && App.data.tree) || {};
+                const treeCfg = treeData.TREE_CONFIG || {};
+                const activeSkills = treeData.ACTIVE_SKILLS || {};
+
+                // 1. 經濟金幣欄位
+                const econContainer = document.getElementById('economy-fields');
+                const econSpecs = [
+                    ['INITIAL_GOLD', '開局初始金幣', econData.INITIAL_GOLD ?? 40, { min: 0, step: 1 }],
+                    ['BASE_COST', '召喚起始基礎價', econData.BASE_COST ?? 10, { min: 1, step: 1 }],
+                    ['COST_MAX', '單元素召喚上限價', econData.COST_MAX ?? 80, { min: 10, step: 1 }],
+                    ['SELL_REFUND_RATE', '賣塔退款比例 (0~1)', econData.SELL_REFUND_RATE ?? 0.70, { min: 0.1, max: 1, step: 0.05 }],
+                    ['COMBAT_MOVE_COST', '戰時移塔手續費', econData.COMBAT_MOVE_COST ?? 5, { min: 0, step: 1 }],
+                    ['OBSTACLE_CLEAR_COST', '岩石爆破拓荒費', econData.OBSTACLE_CLEAR_COST ?? 45, { min: 0, step: 5 }],
+                    ['CROWN_AWAKEN_GOLD_COST', '無盡 T4 聖冠金幣', econData.CROWN_AWAKEN_GOLD_COST ?? 220, { min: 0, step: 10 }],
+                    ['CROWN_AWAKEN_DEW_COST', '無盡 T4 聖冠靈露', econData.CROWN_AWAKEN_DEW_COST ?? 60, { min: 0, step: 5 }]
+                ];
+                econSpecs.forEach(([key, label, val, attrs]) => {
+                    const f = makeKvField(label, val, attrs);
+                    formRefs.economy[key] = f.input;
+                    econContainer.appendChild(f.wrap);
+                });
+                const stepsVal = Array.isArray(econData.SUMMON_COST_STEPS) ? econData.SUMMON_COST_STEPS.join(',') : '10,18,26,35,45,55,68,80';
+                const stepsField = makeKvField('召喚階梯價格表 (逗號分隔)', stepsVal, { type: 'text' });
+                formRefs.stepsInput = stepsField.input;
+                econContainer.appendChild(stepsField.wrap);
+
+                // 2 & 3. 防禦塔拆分為 (1★/2★) 與 (3★ 冠枝)
+                const baseBody = document.getElementById('base-towers-tbody');
+                const t3Body = document.getElementById('t3-towers-tbody');
+                const t3ScaleContainer = document.getElementById('t3-scale-fields');
+                const prevT3DmgScale = existing && Number.isFinite(Number(existing.crown_t3_damage_scale)) ? Number(existing.crown_t3_damage_scale) : 1.0;
+                const prevT3SpdScale = existing && Number.isFinite(Number(existing.crown_t3_speed_scale)) ? Number(existing.crown_t3_speed_scale) : 1.0;
+
+                const t3DmgF = makeKvField('全 3★ 冠枝額外傷害倍率', prevT3DmgScale, { min: 0.2, max: 5, step: 0.05 });
+                const t3SpdF = makeKvField('全 3★ 冠枝額外攻速倍率', prevT3SpdScale, { min: 0.2, max: 5, step: 0.05 });
+                formRefs.t3Scales.crown_t3_damage_scale = t3DmgF.input;
+                formRefs.t3Scales.crown_t3_speed_scale = t3SpdF.input;
+                t3ScaleContainer.appendChild(t3DmgF.wrap);
+                t3ScaleContainer.appendChild(t3SpdF.wrap);
+
+                Object.keys(towersDict).forEach((key) => {
+                    const t = towersDict[key];
+                    if (!t || t.isAlias) return;
+                    const tierNum = Number(t.nodeTier) || Number(t.tier) || 1;
+                    const tr = document.createElement('tr');
+                    const dmgVal = Number.isFinite(t.damage) ? t.damage : (Array.isArray(t.tierDamage) ? t.tierDamage[tierNum] : 20);
+                    const intervalVal = Number.isFinite(t.attackIntervalMs) ? t.attackIntervalMs : 1000;
+                    const rangeVal = Number.isFinite(t.range) ? t.range : 2.5;
+
+                    const tierTag = tierNum === 3
+                        ? `Branch ${t.branch || 'A'}`
+                        : (t.isHybrid ? `${tierNum}★ 轉職` : `${tierNum}★ 基礎`);
+
+                    tr.innerHTML = `
+                        <td><strong>${t.icon || ''} ${t.name || key}</strong></td>
+                        <td><span class="tag-tier num">${tierTag}</span></td>
+                        <td><input type="number" class="num" min="1" step="1" value="${dmgVal}"></td>
+                        <td><input type="number" class="num" min="120" step="10" value="${intervalVal}"></td>
+                        <td><input type="number" class="num" min="0.5" max="15" step="0.1" value="${rangeVal}"></td>
+                    `;
+                    const inputs = tr.querySelectorAll('input');
+                    formRefs.towers[key] = {
+                        tierNum,
+                        damageInput: inputs[0],
+                        intervalInput: inputs[1],
+                        rangeInput: inputs[2]
+                    };
+                    if (tierNum === 3) t3Body.appendChild(tr);
+                    else baseBody.appendChild(tr);
+                });
+
+                // 4. 怪物全局倍率與各怪基礎參數
+                const monGlobalContainer = document.getElementById('monster-global-fields');
+                const monGlobalSpecs = [
+                    ['monster_hp_scale', '怪物血量全局倍率', monsterRules.MONSTER_HP_SCALE ?? 1.0, { min: 0.1, max: 20, step: 0.05 }],
+                    ['monster_armor_scale', '怪物護甲全局倍率', monsterRules.MONSTER_ARMOR_SCALE ?? 1.0, { min: 0.1, max: 5, step: 0.05 }],
+                    ['monster_armor_bonus', '全體怪物額外護甲加減', monsterRules.MONSTER_ARMOR_BONUS ?? 0, { min: -20, max: 50, step: 1 }],
+                    ['monster_speed_scale', '怪物移速全局倍率', monsterRules.MONSTER_SPEED_SCALE ?? 1.0, { min: 0.2, max: 5, step: 0.05 }]
+                ];
+                monGlobalSpecs.forEach(([key, label, val, attrs]) => {
+                    const f = makeKvField(label, val, attrs);
+                    formRefs.monsterGlobals[key] = f.input;
+                    monGlobalContainer.appendChild(f.wrap);
+                });
+
+                const monTbody = document.getElementById('monsters-tbody');
+                Object.keys(monsterDb).forEach((mKey) => {
+                    const m = monsterDb[mKey];
+                    if (!m) return;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${m.icon || ''} ${m.name || mKey}</strong></td>
+                        <td><input type="number" class="num" min="1" step="1" value="${m.baseHp ?? 60}"></td>
+                        <td><input type="number" class="num" min="0" step="1" value="${m.baseArmor ?? 0}"></td>
+                        <td><input type="number" class="num" min="0.1" max="5" step="0.05" value="${m.speedMult ?? 1.0}"></td>
+                        <td><input type="number" class="num" min="0" step="1" value="${m.baseReward ?? 8}"></td>
+                    `;
+                    const inputs = tr.querySelectorAll('input');
+                    formRefs.monsters[mKey] = {
+                        hpInput: inputs[0],
+                        armorInput: inputs[1],
+                        speedInput: inputs[2],
+                        rewardInput: inputs[3]
+                    };
+                    monTbody.appendChild(tr);
+                });
+
+                // 5. 世界樹靈露與技能欄位
+                const treeContainer = document.getElementById('tree-fields');
+                const ent = activeSkills.entangle || {};
+                const frz = activeSkills.frenzy || {};
+                const treeSpecs = [
+                    [formRefs.treeCfg, 'DEW_MAX', '靈露能量上限', treeCfg.DEW_MAX ?? 120, { min: 40, step: 10 }],
+                    [formRefs.treeCfg, 'DEW_INITIAL', '開局初始靈露', treeCfg.DEW_INITIAL ?? 20, { min: 0, step: 5 }],
+                    [formRefs.treeCfg, 'DEW_GAIN_NORMAL', '普通怪擊殺靈露', treeCfg.DEW_GAIN_NORMAL ?? 4, { min: 0, step: 1 }],
+                    [formRefs.treeCfg, 'DEW_GAIN_SPECIAL', '菁英/機制怪擊殺靈露', treeCfg.DEW_GAIN_SPECIAL ?? 8, { min: 0, step: 1 }],
+                    [formRefs.treeCfg, 'DEW_GAIN_BOSS', 'Boss 擊殺靈露', treeCfg.DEW_GAIN_BOSS ?? 30, { min: 0, step: 5 }],
+                    [formRefs.skills.entangle, 'cost', '根鬚纏繞靈露消耗', ent.cost ?? 40, { min: 0, step: 5 }],
+                    [formRefs.skills.entangle, 'cdMs', '根鬚纏繞冷卻 (ms)', ent.cdMs ?? 8000, { min: 1000, step: 500 }],
+                    [formRefs.skills.frenzy, 'cost', '自然狂熱靈露消耗', frz.cost ?? 60, { min: 0, step: 5 }],
+                    [formRefs.skills.frenzy, 'cdMs', '自然狂熱冷卻 (ms)', frz.cdMs ?? 12000, { min: 1000, step: 500 }]
+                ];
+                treeSpecs.forEach(([targetObj, key, label, val, attrs]) => {
+                    const f = makeKvField(label, val, attrs);
+                    targetObj[key] = f.input;
+                    treeContainer.appendChild(f.wrap);
+                });
+
+                adminMain.addEventListener('input', refreshJsonPreview);
+                refreshJsonPreview();
+            }
+
+            function collectBalancePayload() {
+                const payload = {
+                    economy: {},
+                    monster_hp_scale: Number(formRefs.monsterGlobals.monster_hp_scale.value) || 1.0,
+                    monster_armor_scale: Number(formRefs.monsterGlobals.monster_armor_scale.value) || 1.0,
+                    monster_armor_bonus: Number(formRefs.monsterGlobals.monster_armor_bonus.value) || 0,
+                    monster_speed_scale: Number(formRefs.monsterGlobals.monster_speed_scale.value) || 1.0,
+                    crown_t3_damage_scale: Number(formRefs.t3Scales.crown_t3_damage_scale.value) || 1.0,
+                    crown_t3_speed_scale: Number(formRefs.t3Scales.crown_t3_speed_scale.value) || 1.0,
+                    towers: {},
+                    monsters: {},
+                    tree: {
+                        TREE_CONFIG: {},
+                        ACTIVE_SKILLS: { entangle: {}, frenzy: {} }
+                    }
+                };
+
+                Object.keys(formRefs.economy).forEach((k) => {
+                    const n = Number(formRefs.economy[k].value);
+                    if (Number.isFinite(n)) payload.economy[k] = n;
+                });
+                if (formRefs.stepsInput) {
+                    const arr = formRefs.stepsInput.value.split(',')
+                        .map(s => Number(s.trim()))
+                        .filter(n => Number.isFinite(n) && n >= 0);
+                    if (arr.length > 0) payload.economy.SUMMON_COST_STEPS = arr;
+                }
+
+                Object.keys(formRefs.towers).forEach((key) => {
+                    const ref = formRefs.towers[key];
+                    const dmg = Math.max(1, Math.round(Number(ref.damageInput.value) || 1));
+                    const intervalMs = Math.max(120, Math.round(Number(ref.intervalInput.value) || 1000));
+                    const range = Number((Number(ref.rangeInput.value) || 2.5).toFixed(2));
+                    const entry = {
+                        damage: dmg,
+                        attackIntervalMs: intervalMs,
+                        range
+                    };
+                    if (ref.tierNum === 1) entry.tierDamage = [0, dmg, dmg * 2, dmg * 4];
+                    payload.towers[key] = entry;
+                });
+
+                Object.keys(formRefs.monsters).forEach((mKey) => {
+                    const ref = formRefs.monsters[mKey];
+                    payload.monsters[mKey] = {
+                        baseHp: Math.max(1, Math.round(Number(ref.hpInput.value) || 60)),
+                        baseArmor: Math.max(0, Math.round(Number(ref.armorInput.value) || 0)),
+                        speedMult: Number((Number(ref.speedInput.value) || 1.0).toFixed(2)),
+                        baseReward: Math.max(0, Math.round(Number(ref.rewardInput.value) || 8))
+                    };
+                });
+
+                Object.keys(formRefs.treeCfg).forEach((k) => {
+                    const n = Number(formRefs.treeCfg[k].value);
+                    if (Number.isFinite(n)) payload.tree.TREE_CONFIG[k] = n;
+                });
+                ['entangle', 'frenzy'].forEach((sk) => {
+                    Object.keys(formRefs.skills[sk]).forEach((k) => {
+                        const n = Number(formRefs.skills[sk][k].value);
+                        if (Number.isFinite(n)) payload.tree.ACTIVE_SKILLS[sk][k] = n;
+                    });
+                });
+
+                return payload;
+            }
+
+            function refreshJsonPreview() {
+                if (!initialized) return '';
+                const jsonStr = JSON.stringify(collectBalancePayload(), null, 2);
+                jsonPreviewEl.value = jsonStr;
+                return jsonStr;
+            }
+
+            document.getElementById('apply-local-btn').addEventListener('click', function () {
+                const jsonStr = refreshJsonPreview();
+                try {
+                    localStorage.setItem(OVERRIDE_KEY, jsonStr);
+                    statusBanner.innerText = '已寫入本機瀏覽器預覽！請重新整理或開啟 index.html 立即實測新數值。';
+                } catch (err) {
+                    statusBanner.innerText = '寫入 localStorage 失敗，請確認瀏覽器未封鎖本機儲存空間。';
+                }
+            });
+
+            document.getElementById('copy-firebase-btn').addEventListener('click', async function () {
+                const jsonStr = refreshJsonPreview();
+                let copied = false;
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    try {
+                        await navigator.clipboard.writeText(jsonStr);
+                        copied = true;
+                    } catch (_) {}
+                }
+                if (!copied) {
+                    jsonPreviewEl.focus();
+                    jsonPreviewEl.select();
+                    try { copied = document.execCommand('copy'); } catch (_) {}
+                }
+                statusBanner.innerText = copied
+                    ? '已複製完整 game_balance_json 至剪貼簿，可直接貼進 Firebase Remote Config 發布。'
+                    : '已全選下方 JSON 預覽框內容，請按 Ctrl+C 手動複製。';
+            });
+
+            document.getElementById('reset-default-btn').addEventListener('click', function () {
+                try { localStorage.removeItem(OVERRIDE_KEY); } catch (_) {}
+                statusBanner.innerText = '已清除本機預覽覆蓋紀錄，正在還原為遊戲原始預設數值...';
+                location.reload();
+            });
+        })();
+    </script>
+</body>
+
+</html>

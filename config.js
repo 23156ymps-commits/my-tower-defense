@@ -24,9 +24,9 @@
     };
     global.GameApp = GameApp;
 
-    // 總控開關與基礎棋盤常數（其餘專屬數值將由各功能夾 *_data.js 自動掛載匯入）
+    // ==================== 發佈總控開關（對外公開版請維持 DEBUG_MODE: false） ====================
     const GLOBAL_CONFIG = {
-        DEBUG_MODE: false,                  // 試玩模式預設隱藏測試作弊按鈕；改為 true 可開啟開發測試工具
+        DEBUG_MODE: false,                  // 發佈總控開關：false = 正式公開版（隱藏測試加錢鈕）；true = 開發測試版
         VICTORY_WAVE: 10,                   // 正式版總關卡波數（第 10 波為最終魔王戰）
         BOARD_COLS: 15,
         BOARD_ROWS: 10,
@@ -36,8 +36,21 @@
         FEEL_IDLE_THRESHOLD_MS: 4000,       // 試玩體感追蹤：超過 4 秒無任何操作視為發呆
         STORAGE_BEST_WAVE_KEY: 'merge_defense_best_wave',
         STORAGE_MAP_RECORDS_KEY: 'merge_defense_map_records',
+        STORAGE_CAREER_STATS_KEY: 'merge_defense_career_stats',
+        STORAGE_LOCAL_BALANCE_KEY: 'merge_defense_local_balance_override',
         STORAGE_MUTE_KEY: 'merge_defense_muted',
         STORAGE_CODEX_KEY: 'merge_defense_codex_unlocked',
+        CONTRACT_SCORE_BONUS_PER_ITEM: 0.15,
+        DIFFICULTY_CONTRACTS: [
+            { id: 'fast_tide', code: '契約 I', name: '疾行魔潮', desc: '全體敵軍移動速度 +15%' },
+            { id: 'iron_armor', code: '契約 II', name: '鐵壁重甲', desc: '全體敵軍基礎護甲 +4' },
+            { id: 'frenzied_hp', code: '契約 III', name: '狂暴生命', desc: '全體敵軍最大生命值 +20%' },
+            { id: 'dew_drought', code: '契約 IV', name: '靈露枯竭', desc: '初始靈露降為 0，回復速度 -20%' },
+            { id: 'budget_crunch', code: '契約 V', name: '軍費緊縮', desc: '開局初始金幣 -15' },
+            { id: 'fragile_heart', code: '契約 VI', name: '脆弱樹心', desc: '世界樹初始生命上限降為 12' },
+            { id: 'rapid_waves', code: '契約 VII', name: '急速波次', desc: '波間休息準備時間減半（早鳥獎金照常計算）' },
+            { id: 'boss_tyranny', code: '契約 VIII', name: '霸主威壓', desc: '所有波次 Boss 生命值額外 +30%' }
+        ],
         SFX_VOLUME_MIN: 0.08,
         SFX_VOLUME_MAX: 0.18
     };
