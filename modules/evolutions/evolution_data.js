@@ -17,149 +17,98 @@
 
     const MAX_TIER = 3;
 
-    // T1 根芽 -> T2 主幹 配方表（Key 為排序後的基礎元素鍵）
-    const T1_TO_T2_RECIPES = {
-        'fire+fire': { resultType: 'fire_trunk', isCrossElement: false },
-        'ice+ice': { resultType: 'ice_trunk', isCrossElement: false },
-        'thunder+thunder': { resultType: 'thunder_trunk', isCrossElement: false },
-        'fire+ice': { resultType: 'steam_trunk', isCrossElement: true },
-        'ice+thunder': { resultType: 'magnet_trunk', isCrossElement: true },
-        'fire+thunder': { resultType: 'plasma_trunk', isCrossElement: true }
+    // 1★ + 1★ 轉職／升星配方表（Key 為排序後的兩個 1★ 標準節點 ID）
+    // - 異系基礎 1★ 相融 -> 1★ 新轉職物種（不升星）
+    // - 同物種 1★ 相融 -> 2★ 高階主幹
+    // - 同血脈基礎 1★ 灌注轉職 1★ -> 2★ 高階轉職主幹（需經過確認防手滑）
+    const T1_RECIPES = {
+        // 異系轉職 (1★ + 1★ -> 1★ 新物種)
+        'fire_bud+ice_bud': { resultType: 'steam_bud', resultTier: 1, isCrossElement: true, mode: 'transfer_t1', requiresConfirmation: false },
+        'ice_bud+thunder_bud': { resultType: 'magnet_bud', resultTier: 1, isCrossElement: true, mode: 'transfer_t1', requiresConfirmation: false },
+        'fire_bud+thunder_bud': { resultType: 'plasma_bud', resultTier: 1, isCrossElement: true, mode: 'transfer_t1', requiresConfirmation: false },
+
+        // 同物種升星 (1★ + 1★ -> 2★)
+        'fire_bud+fire_bud': { resultType: 'fire_trunk', resultTier: 2, isCrossElement: false, mode: 'star_up_t2', requiresConfirmation: false },
+        'ice_bud+ice_bud': { resultType: 'ice_trunk', resultTier: 2, isCrossElement: false, mode: 'star_up_t2', requiresConfirmation: false },
+        'thunder_bud+thunder_bud': { resultType: 'thunder_trunk', resultTier: 2, isCrossElement: false, mode: 'star_up_t2', requiresConfirmation: false },
+        'steam_bud+steam_bud': { resultType: 'steam_trunk', resultTier: 2, isCrossElement: true, mode: 'star_up_t2', requiresConfirmation: false },
+        'magnet_bud+magnet_bud': { resultType: 'magnet_trunk', resultTier: 2, isCrossElement: true, mode: 'star_up_t2', requiresConfirmation: false },
+        'plasma_bud+plasma_bud': { resultType: 'plasma_trunk', resultTier: 2, isCrossElement: true, mode: 'star_up_t2', requiresConfirmation: false },
+
+        // 轉職系快捷元素灌注（同血脈基礎 1★ + 轉職 1★ -> 該轉職系 2★，需彈窗確認防手滑）
+        'fire_bud+steam_bud': { resultType: 'steam_trunk', resultTier: 2, isCrossElement: true, mode: 'infusion_single', requiresConfirmation: true, title: '元素灌注升星 · 高階蒸氣' },
+        'ice_bud+steam_bud': { resultType: 'steam_trunk', resultTier: 2, isCrossElement: true, mode: 'infusion_single', requiresConfirmation: true, title: '元素灌注升星 · 高階蒸氣' },
+        'ice_bud+magnet_bud': { resultType: 'magnet_trunk', resultTier: 2, isCrossElement: true, mode: 'infusion_single', requiresConfirmation: true, title: '元素灌注升星 · 高階磁環' },
+        'magnet_bud+thunder_bud': { resultType: 'magnet_trunk', resultTier: 2, isCrossElement: true, mode: 'infusion_single', requiresConfirmation: true, title: '元素灌注升星 · 高階磁環' },
+        'fire_bud+plasma_bud': { resultType: 'plasma_trunk', resultTier: 2, isCrossElement: true, mode: 'infusion_single', requiresConfirmation: true, title: '元素灌注升星 · 高階電漿' },
+        'plasma_bud+thunder_bud': { resultType: 'plasma_trunk', resultTier: 2, isCrossElement: true, mode: 'infusion_single', requiresConfirmation: true, title: '元素灌注升星 · 高階電漿' }
     };
+
+    // 相容舊鍵別名
+    const T1_TO_T2_RECIPES = T1_RECIPES;
 
     // 向下相容跨元素配方查表
     const FUSION_RECIPES = {
-        'fire+ice': 'steam_trunk',
-        'ice+thunder': 'magnet_trunk',
-        'fire+thunder': 'plasma_trunk',
-        'fire_bud+ice_bud': 'steam_trunk',
-        'ice_bud+thunder_bud': 'magnet_trunk',
-        'fire_bud+thunder_bud': 'plasma_trunk'
+        'fire+ice': 'steam_bud',
+        'ice+thunder': 'magnet_bud',
+        'fire+thunder': 'plasma_bud',
+        'fire_bud+ice_bud': 'steam_bud',
+        'ice_bud+thunder_bud': 'magnet_bud',
+        'fire_bud+thunder_bud': 'plasma_bud'
     };
 
     // 結構化融合配方清單（供圖鑑與合成系統自動掃描）
     const FUSION_RECIPE_LIST = [
-        { ingredients: ['fire_bud', 'ice_bud'], resultType: 'steam_trunk', recipeKey: 'fire+ice', branches: ['steam_A', 'steam_B'] },
-        { ingredients: ['ice_bud', 'thunder_bud'], resultType: 'magnet_trunk', recipeKey: 'ice+thunder', branches: ['magnet_A', 'magnet_B'] },
-        { ingredients: ['fire_bud', 'thunder_bud'], resultType: 'plasma_trunk', recipeKey: 'fire+thunder', branches: ['plasma_A', 'plasma_B'] }
+        { ingredients: ['fire_bud', 'ice_bud'], resultType: 'steam_bud', trunkType: 'steam_trunk', recipeKey: 'fire_bud+ice_bud', branches: ['steam_A', 'steam_B'] },
+        { ingredients: ['ice_bud', 'thunder_bud'], resultType: 'magnet_bud', trunkType: 'magnet_trunk', recipeKey: 'ice_bud+thunder_bud', branches: ['magnet_A', 'magnet_B'] },
+        { ingredients: ['fire_bud', 'thunder_bud'], resultType: 'plasma_bud', trunkType: 'plasma_trunk', recipeKey: 'fire_bud+thunder_bud', branches: ['plasma_A', 'plasma_B'] }
     ];
 
     /**
-     * T2 主幹 -> T3 冠枝 進化規則表（Key 為字母排序後的兩座 T2 主幹標準 ID）
-     * - mode: 'dual_choice'（雙分支二選一輪盤 [A / B]）
-     * - mode: 'directed_single'（同血脈定向催熟單一確認卡）
-     * 未列於表內的 T2 組合（如 steam_trunk + thunder_trunk）皆屬「血脈不相容」禁止合成
+     * T2 (2★) -> T3 (3★) 冠枝進化規則表（6 大物種各自「同物種 2★ + 2★」觸發雙分支輪盤）
      */
     const T2_TO_T3_RULES = {
-        // 1. 純血主幹 + 同系純血主幹 -> 該純血系 A / B 二選一
         'fire_trunk+fire_trunk': {
             mode: 'dual_choice',
             family: 'fire',
             options: ['fire_A', 'fire_B'],
-            title: '炎核主幹 · 冠枝分岔開花',
-            previewLabel: '🔥 分岔進化 ▸ A 熔核轟擊 / B 焚世餘燼'
+            title: '炎核樹幹 · 冠枝分岔開花',
+            previewLabel: '🔥 冠枝進化 ▸ A 熔核轟擊 / B 焚世餘燼'
         },
         'ice_trunk+ice_trunk': {
             mode: 'dual_choice',
             family: 'ice',
             options: ['ice_A', 'ice_B'],
-            title: '霜晶主幹 · 冠枝分岔開花',
-            previewLabel: '❄️ 分岔進化 ▸ A 永凍領域 / B 冰錐穿刺'
+            title: '霜晶樹幹 · 冠枝分岔開花',
+            previewLabel: '❄️ 冠枝進化 ▸ A 永凍領域 / B 冰錐穿刺'
         },
         'thunder_trunk+thunder_trunk': {
             mode: 'dual_choice',
             family: 'thunder',
             options: ['thunder_A', 'thunder_B'],
-            title: '雷紋主幹 · 冠枝分岔開花',
-            previewLabel: '⚡ 分岔進化 ▸ A 連鎖天雷 / B 落雷審判'
+            title: '雷紋樹幹 · 冠枝分岔開花',
+            previewLabel: '⚡ 冠枝進化 ▸ A 連鎖天雷 / B 落雷審判'
         },
-
-        // 2. 共生主幹 + 同血脈純血主幹 -> 同血脈定向催熟（單一分支確認）
-        'fire_trunk+steam_trunk': {
-            mode: 'directed_single',
-            family: 'steam',
-            options: ['steam_A'],
-            title: '同血脈定向催熟 · 火系蒸壓',
-            previewLabel: '💨A 焦熱蒸壓樹（火血脈定向催熟）'
-        },
-        'ice_trunk+steam_trunk': {
-            mode: 'directed_single',
-            family: 'steam',
-            options: ['steam_B'],
-            title: '同血脈定向催熟 · 冰系霜霧',
-            previewLabel: '💨B 霜霧迷宮樹（冰血脈定向催熟）'
-        },
-        'ice_trunk+magnet_trunk': {
-            mode: 'directed_single',
-            family: 'magnet',
-            options: ['magnet_A'],
-            title: '同血脈定向催熟 · 冰系黑洞',
-            previewLabel: '💠A 引力黑洞樹（冰血脈定向催熟）'
-        },
-        'magnet_trunk+thunder_trunk': {
-            mode: 'directed_single',
-            family: 'magnet',
-            options: ['magnet_B'],
-            title: '同血脈定向催熟 · 雷系超載',
-            previewLabel: '💠B 電磁超載樹（雷血脈定向催熟）'
-        },
-        'fire_trunk+plasma_trunk': {
-            mode: 'directed_single',
-            family: 'plasma',
-            options: ['plasma_A'],
-            title: '同血脈定向催熟 · 火系死光',
-            previewLabel: '☄️A 聚變死光樹（火血脈定向催熟）'
-        },
-        'plasma_trunk+thunder_trunk': {
-            mode: 'directed_single',
-            family: 'plasma',
-            options: ['plasma_B'],
-            title: '同血脈定向催熟 · 雷系折射',
-            previewLabel: '☄️B 弧光折射樹（雷血脈定向催熟）'
-        },
-
-        // 3. 雙同系共生主幹 或 異系純血主幹相融 -> 該共生系 A / B 二選一
         'steam_trunk+steam_trunk': {
             mode: 'dual_choice',
             family: 'steam',
             options: ['steam_A', 'steam_B'],
-            title: '蒸氣噴泉 · 冠枝分岔開花',
-            previewLabel: '💨 分岔進化 ▸ A 焦熱蒸壓 / B 霜霧迷宮'
-        },
-        'fire_trunk+ice_trunk': {
-            mode: 'dual_choice',
-            family: 'steam',
-            options: ['steam_A', 'steam_B'],
-            title: '火冰交融 · 蒸氣冠枝分岔',
-            previewLabel: '💨 分岔進化 ▸ A 焦熱蒸壓 / B 霜霧迷宮'
+            title: '高階蒸氣 · 冠枝分岔開花',
+            previewLabel: '💨 冠枝進化 ▸ A 焦熱蒸壓 / B 霜霧迷宮'
         },
         'magnet_trunk+magnet_trunk': {
             mode: 'dual_choice',
             family: 'magnet',
             options: ['magnet_A', 'magnet_B'],
-            title: '極地磁環 · 冠枝分岔開花',
-            previewLabel: '💠 分岔進化 ▸ A 引力黑洞 / B 電磁超載'
-        },
-        'ice_trunk+thunder_trunk': {
-            mode: 'dual_choice',
-            family: 'magnet',
-            options: ['magnet_A', 'magnet_B'],
-            title: '冰雷交融 · 磁暴冠枝分岔',
-            previewLabel: '💠 分岔進化 ▸ A 引力黑洞 / B 電磁超載'
+            title: '高階磁環 · 冠枝分岔開花',
+            previewLabel: '💠 冠枝進化 ▸ A 引力黑洞 / B 電磁超載'
         },
         'plasma_trunk+plasma_trunk': {
             mode: 'dual_choice',
             family: 'plasma',
             options: ['plasma_A', 'plasma_B'],
-            title: '電漿導管 · 冠枝分岔開花',
-            previewLabel: '☄️ 分岔進化 ▸ A 聚變死光 / B 弧光折射'
-        },
-        'fire_trunk+thunder_trunk': {
-            mode: 'dual_choice',
-            family: 'plasma',
-            options: ['plasma_A', 'plasma_B'],
-            title: '火雷交融 · 電漿冠枝分岔',
-            previewLabel: '☄️ 分岔進化 ▸ A 聚變死光 / B 弧光折射'
+            title: '高階電漿 · 冠枝分岔開花',
+            previewLabel: '☄️ 冠枝進化 ▸ A 聚變死光 / B 弧光折射'
         }
     };
 
@@ -183,6 +132,7 @@
     GameApp.data = GameApp.data || {};
     GameApp.data.evolutions = {
         MAX_TIER,
+        T1_RECIPES,
         T1_TO_T2_RECIPES,
         T2_TO_T3_RULES,
         FUSION_RECIPES,

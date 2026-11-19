@@ -72,7 +72,9 @@
         ['forecastToggleIndicatorEl', 'forecast-toggle-indicator'], ['forecastInlineSummaryEl', 'forecast-inline-summary'],
         ['forecastDetailDrawerEl', 'forecast-detail-drawer'],
         ['forecastCurrentHeaderEl', 'forecast-current-header'], ['forecastCurrentListEl', 'forecast-current-list'],
-        ['forecastNextHeaderEl', 'forecast-next-header'], ['forecastNextListEl', 'forecast-next-list']
+        ['forecastNextHeaderEl', 'forecast-next-header'], ['forecastNextListEl', 'forecast-next-list'],
+        ['sideCurrentHeaderEl', 'side-current-header'], ['sideCurrentListEl', 'side-current-list'],
+        ['sideNextHeaderEl', 'side-next-header'], ['sideNextListEl', 'side-next-list']
     ];
 
     function buildDomCache() {
@@ -124,7 +126,7 @@
             currentGold: EconSys ? EconSys.getInitialGold(spec) : (40 + (spec.startGoldBonus || 0)),
             baseHp: treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20,
             dewEnergy: treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20,
-            entangleCdMs: 0, frenzyCdMs: 0, frenzyActiveMs: 0,
+            entangleCdMs: 0, frenzyCdMs: 0, frenzyActiveMs: 0, dewOverchargeMs: 0,
             activeBlessings: new Set(), blessingGrantedWaves: new Set(), blessingChoices: [],
             seedPityCount: 0, treeHitShakeTimer: null,
             bestWave: Backend.getMapBestWave(spec.id), currentWave: 1, killsCount: 0,
@@ -139,7 +141,7 @@
             selectedIndex: null, buildTargetIndex: null, pendingSpawnType: null, hoveredIndex: null, draggedIndex: null, inspectedMonsterId: null,
             lastRenderedSelected: null, lastRenderedBuildTarget: null, lastRenderedPendingSpawn: null,
             isTouchMode: false, touchDragState: null, lastTouchDragEndTime: 0,
-            sessionId: nextSessionId, activeTimers: new Set(), pendingBolts: [], towerPhaseSeq: 0,
+            sessionId: nextSessionId, activeTimers: new Set(), pendingBolts: [], pendingOverchargeShots: [], towerPhaseSeq: 0,
             waveState: initialWaveState, waveTimerMs: CONFIG.INITIAL_PREP_MS || 6000,
             waveSpawnQueue: [], waveSpawnIntervalMs: wb.SPAWN_INTERVAL_BASE_MS || 1600, waveSpawnAccMs: 0,
             lastFrameTime: null, rafId: null
@@ -209,6 +211,7 @@
         st.activeTimers.clear();
         if (st.treeHitShakeTimer) { clearTimeout(st.treeHitShakeTimer); st.treeHitShakeTimer = null; }
         st.pendingBolts = [];
+        st.pendingOverchargeShots = [];
         Renderer.clearCanvasFXState();
     }
 
@@ -287,8 +290,8 @@
         document.querySelectorAll('.feel-rating-btn').forEach(btn => btn.classList.remove('selected'));
         setDomText(G.dom.victoryRatingStatusEl, '點擊上方標籤一鍵回饋本局體感');
         setDomText(G.dom.gameoverRatingStatusEl, '點擊上方標籤一鍵回饋本局體感');
-        if (G.dom.victoryCopyReportBtn) G.dom.victoryCopyReportBtn.innerText = '📋 複製本局數據戰報';
-        if (G.dom.gameoverCopyReportBtn) G.dom.gameoverCopyReportBtn.innerText = '📋 複製本局數據戰報';
+        if (G.dom.victoryCopyReportBtn) G.dom.victoryCopyReportBtn.innerText = '複製本局數據戰報';
+        if (G.dom.gameoverCopyReportBtn) G.dom.gameoverCopyReportBtn.innerText = '複製本局數據戰報';
     }
 
     function populateBattleRecap(mode) {
@@ -388,15 +391,8 @@
             const inspectedMonster = st.inspectedMonsterId !== null ? st.monsters.find(m => m.id === st.inspectedMonsterId && m.hp > 0) : null;
             if (inspectedMonster) {
                 dom.inspectorEmptyEl.innerText = formatMonsterInspectText(inspectedMonster);
-            } else if (st.pendingSpawnType && getTowersDict()[st.pendingSpawnType]) {
-                const pCfg = getTowersDict()[st.pendingSpawnType];
-                dom.inspectorEmptyEl.innerText = `🎯 待放置【${pCfg.icon} ${pCfg.name}】(${EconSys.getSummonCost(st.pendingSpawnType)} 💰) — 請點選棋盤綠色高亮空地建塔`;
-            } else if (st.buildTargetIndex !== null && st.board[st.buildTargetIndex] === null && TerrainSys.canBuildAt(st.buildTargetIndex)) {
-                const c = indexToCoords(st.buildTargetIndex), terrain = TerrainSys.getTerrainAt(st.buildTargetIndex);
-                const tInfo = terrain && terrainsDict[terrain];
-                dom.inspectorEmptyEl.innerText = `已選空格 (${c.x + 1},${c.y + 1})${tInfo && tInfo.shortTag ? `｜${tInfo.shortTag}` : ''} — 點擊下方元素卡即可建塔，或直接拖卡至任一空地`;
             } else {
-                dom.inspectorEmptyEl.innerText = '拖曳或點擊下方元素卡＋空地即可建塔；點選場上防禦塔／怪物可檢視屬性';
+                dom.inspectorEmptyEl.innerText = '點選場上防禦塔或敵軍以檢視屬性與切換索敵';
             }
             return;
         }
@@ -651,6 +647,8 @@
 
         renderForecastListInto(dom.forecastCurrentHeaderEl, dom.forecastCurrentListEl, curWave, '本波情報');
         renderForecastListInto(dom.forecastNextHeaderEl, dom.forecastNextListEl, nextWave, '下波預告', isFinalClear);
+        renderForecastListInto(dom.sideCurrentHeaderEl, dom.sideCurrentListEl, curWave, '本波情報');
+        renderForecastListInto(dom.sideNextHeaderEl, dom.sideNextListEl, nextWave, '下波預告', isFinalClear);
 
         if (dom.forecastBarTitleEl) {
             dom.forecastBarTitleEl.innerText = isPrepPhase ? `下波預告 · Wave ${targetWave}` : `戰況預告 · Wave ${curWave}`;
@@ -742,17 +740,18 @@
                 btn.style.borderLeftColor = data.color;
             }
             const cost = EconSys.getSummonCost(type);
+            const roleLabel = data.shopRoleTag || data.roleTag || '';
             btn.innerHTML = `
                 <span class="spawn-pity-tag hidden" aria-hidden="true">✨ 下次必出 ★★</span>
                 <span class="spawn-card-portrait">
-                    <canvas class="spawn-portrait-canvas" width="44" height="44" data-size="44" aria-hidden="true"></canvas>
+                    <canvas class="spawn-portrait-canvas" width="36" height="36" data-size="36" aria-hidden="true"></canvas>
                 </span>
-                <span class="spawn-card-name">${data.icon} ${data.name}</span>
-                <span class="btn-cost-val num">${cost} 💰</span>
+                <span class="spawn-card-head">${data.icon} ${data.name} · <span class="btn-cost-val num">${cost} 💰</span></span>
+                <span class="spawn-card-role num">${roleLabel}</span>
             `;
             const canvasEl = btn.querySelector('.spawn-portrait-canvas');
             if (canvasEl && Renderer && typeof Renderer.drawPortrait === 'function') {
-                Renderer.drawPortrait(canvasEl, 'tower', type, { tier: 1, size: 44 });
+                Renderer.drawPortrait(canvasEl, 'tower', type, { tier: 1, size: 36 });
             }
             DragSys.bindShopCardElement(btn, type, handleShopCardClick);
             container.appendChild(btn);
@@ -766,12 +765,7 @@
             G.dom.spawnerBtns[shopKey] = ref;
         });
 
-        const pityBadge = document.createElement('div');
-        pityBadge.id = 'seed-pity-badge';
-        pityBadge.className = 'seed-pity-badge hidden';
-        pityBadge.innerText = '豐饒種子保底進度：0/5';
-        container.appendChild(pityBadge);
-        G.dom.seedPityBadgeEl = pityBadge;
+        G.dom.seedPityBadgeEl = null;
         updateSeedPityUI();
     }
 
@@ -849,8 +843,8 @@
         }
 
         G.dom.msgText.innerText = seedTriggered
-            ? `🌿 豐饒種子觸發！直接於 (${coords.x + 1},${coords.y + 1}) 獲得【${cfg.name} ★★】${tInfo && tInfo.shortTag ? `（位於 ${tInfo.shortTag}）` : ''}！花費 ${deduct.cost} 💰。`
-            : `成功於指定格 (${coords.x + 1},${coords.y + 1}) 召喚【${cfg.name} ${Renderer.getTierStars(spawnedTier)}】${tInfo && tInfo.shortTag ? `（位於 ${tInfo.shortTag}）` : ''}！花費 ${deduct.cost} 💰。`;
+            ? `豐饒種子觸發：於 (${coords.x + 1},${coords.y + 1}) 召喚【${cfg.name} ★★】${tInfo && tInfo.shortTag ? `（${tInfo.shortTag}）` : ''}，花費 ${deduct.cost} 💰。`
+            : `已於 (${coords.x + 1},${coords.y + 1}) 召喚【${cfg.name} ${Renderer.getTierStars(spawnedTier)}】${tInfo && tInfo.shortTag ? `（${tInfo.shortTag}）` : ''}，花費 ${deduct.cost} 💰。`;
         Renderer.renderBoard([targetIndex]);
         updateHUD();
         return true;
@@ -871,7 +865,7 @@
         const btnEl = G.dom.spawnerBtns[type] && G.dom.spawnerBtns[type].btn;
         if (!EconSys.canAffordSummon(type)) {
             st.pendingSpawnType = null;
-            G.dom.msgText.innerText = `❌ 金幣不足，無法召喚【${towersDict[type].name}】！需要 ${cost} 💰`;
+            G.dom.msgText.innerText = `金幣不足，召喚【${towersDict[type].name}】需要 ${cost} 💰。`;
             if (btnEl) {
                 btnEl.classList.remove('shake-anim', 'insufficient-gold');
                 void btnEl.offsetWidth;
@@ -895,7 +889,7 @@
             st.pendingSpawnType = type;
             st.buildTargetIndex = null;
             const cfg = towersDict[type];
-            G.dom.msgText.innerText = `🎯 已選擇【${cfg.icon} ${cfg.name}】(${cost} 💰) — 請點擊棋盤任一綠色高亮空地建塔（按 Esc 或再點卡片取消）`;
+            G.dom.msgText.innerText = `已選取【${cfg.icon} ${cfg.name}】(${cost} 💰)，點選棋盤可建格放置（按 Esc 或再點卡片取消）。`;
         }
         Renderer.renderBoard([]);
         updateHUD();
@@ -909,7 +903,7 @@
         const cost = EconSys.getSummonCost(type);
         const btnEl = G.dom.spawnerBtns[type] && G.dom.spawnerBtns[type].btn;
         if (!EconSys.canAffordSummon(type)) {
-            G.dom.msgText.innerText = `❌ 金幣不足，無法召喚【${towersDict[type].name}】！需要 ${cost} 💰`;
+            G.dom.msgText.innerText = `金幣不足，召喚【${towersDict[type].name}】需要 ${cost} 💰。`;
             if (btnEl) { btnEl.classList.remove('shake-anim', 'insufficient-gold'); void btnEl.offsetWidth; btnEl.classList.add('shake-anim', 'insufficient-gold'); }
             return;
         }
@@ -921,7 +915,7 @@
             if (pick) targetIdx = pick.index;
         }
         if (targetIdx === null) {
-            G.dom.msgText.innerText = '⚠️ 可建造格子已經全滿，請先融合或出售騰出空間！';
+            G.dom.msgText.innerText = '可建造地塊已滿，請先融合或出售騰出空間。';
             return;
         }
         spawnTowerAtCell(type, targetIdx);
@@ -940,7 +934,7 @@
                     st.selectedIndex = index; st.buildTargetIndex = null; st.pendingSpawnType = null;
                     const t = st.board[index], terrain = TerrainSys.getTerrainAt(index);
                     const tInfo = terrain ? terrainsDict[terrain] : null;
-                    G.dom.msgText.innerText = `⏸️ 暫停檢視：【${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}】${tInfo && tInfo.shortTag ? `｜地形：${tInfo.shortTag}` : ''}（可切換索敵，恢復後才能移塔／合成／出售）`;
+                    G.dom.msgText.innerText = `暫停檢視：【${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}】${tInfo && tInfo.shortTag ? `｜${tInfo.shortTag}` : ''}（可切換索敵，恢復後可移塔或融合）。`;
                 } else {
                     const nearMon = findMonsterNearCell(index);
                     if (nearMon) {
@@ -975,8 +969,8 @@
                 return;
             }
             G.dom.msgText.innerText = G.map.pathCellIndices.has(index)
-                ? '⚠️ 怪物跑道禁止建塔，請點擊綠色高亮空地（按 Esc 或再點卡片取消）。'
-                : '⚠️ 該地形禁止建塔，請點擊綠色高亮空地（按 Esc 或再點卡片取消）。';
+                ? '怪物路徑不可建塔，請點選可建地塊（按 Esc 取消）。'
+                : '該地形不可建塔，請點選可建地塊（按 Esc 取消）。';
             return;
         }
 
@@ -995,7 +989,7 @@
                     st.buildTargetIndex = index;
                     const c = indexToCoords(index), terrain = TerrainSys.getTerrainAt(index);
                     const tInfo = terrain ? terrainsDict[terrain] : null;
-                    G.dom.msgText.innerText = `📍 已選中空地 (${c.x + 1},${c.y + 1})${tInfo && tInfo.shortTag ? `（${tInfo.shortTag}）` : ''} — 點擊下方元素卡即可直接建塔！`;
+                    G.dom.msgText.innerText = `已選取空地 (${c.x + 1},${c.y + 1})${tInfo && tInfo.shortTag ? `（${tInfo.shortTag}）` : ''}，點擊下方元素卡即可建塔。`;
                 }
             } else {
                 st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
@@ -1025,8 +1019,8 @@
         if (fromIndex < 0 || fromIndex >= boardSize || toIndex < 0 || toIndex >= boardSize || !st.board[fromIndex]) return false;
         if (!TerrainSys.canBuildAt(toIndex)) {
             G.dom.msgText.innerText = G.map.pathCellIndices.has(toIndex)
-                ? '⚠️ 該位置是怪物跑道，不能放置防禦塔！'
-                : '⚠️ 該位置是障礙地形，不能放置防禦塔！';
+                ? '怪物路徑不可放置防禦塔。'
+                : '該地形不可放置防禦塔。';
             Renderer.renderBoard([]);
             return false;
         }
@@ -1037,14 +1031,14 @@
             const moveCost = EconSys.getCombatMoveCost();
             if (!isRelocationFree()) {
                 if (st.currentGold < moveCost) {
-                    G.dom.msgText.innerText = `⚠️ 戰鬥期間調度塔位需花費 ${moveCost} 💰，金幣不足！`;
+                    G.dom.msgText.innerText = `戰鬥期間調度塔位需花費 ${moveCost} 💰，金幣不足。`;
                     Renderer.renderBoard([]);
                     return false;
                 }
                 st.currentGold -= moveCost;
-                G.dom.msgText.innerText = `🚚 戰術調度成功！花費 ${moveCost} 💰。`;
+                G.dom.msgText.innerText = `戰術調度完成，花費 ${moveCost} 💰。`;
             } else {
-                G.dom.msgText.innerText = '已免費移動塔的位置。';
+                G.dom.msgText.innerText = '已免費移動防禦塔位置。';
             }
             st.board[toIndex] = fromTower;
             st.board[fromIndex] = null;
@@ -1065,18 +1059,19 @@
             const { fusion, bonusHint } = res;
             const cfg = getTowersDict()[fusion.type] || { name: fusion.type };
             SoundEngine.playMerge(fusion.tier, fusion.isCrossElement);
-            G.dom.msgText.innerText = `✨ 融合成功！進化為【${cfg.name} ${Renderer.getTierStars(fusion.tier)}】${bonusHint || ''}`;
+            const actionVerb = fusion.mode === 'transfer_t1' ? '轉職成功' : '升星成功';
+            G.dom.msgText.innerText = `${actionVerb}：【${cfg.name} ${Renderer.getTierStars(fusion.tier)}】${bonusHint || ''}`;
             Renderer.renderBoard([fromIndex, toIndex]);
             updateHUD();
             return true;
         }
         const maxTier = (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || 3;
         if (fromTower.tier >= maxTier || toTower.tier >= maxTier) {
-            G.dom.msgText.innerText = `⚠️ ${Renderer.getTierStars(maxTier)} 已達最高星級，無法再融合！`;
+            G.dom.msgText.innerText = `${Renderer.getTierStars(maxTier)} 已達最高星級，無法繼續融合。`;
         } else if (EvoSys && typeof EvoSys.getIncompatibilityReason === 'function') {
-            G.dom.msgText.innerText = `⚠️ ${EvoSys.getIncompatibilityReason(fromTower, toTower)}（詳見融合圖鑑）！`;
+            G.dom.msgText.innerText = `${EvoSys.getIncompatibilityReason(fromTower, toTower)}（詳見世界樹圖譜）。`;
         } else {
-            G.dom.msgText.innerText = '⚠️ 該組合無法融合（須同星級基礎元素，或相容血脈主幹；詳見融合圖鑑）！';
+            G.dom.msgText.innerText = '該組合無法融合，請於「世界樹圖譜」確認轉職與升星規則。';
         }
         Renderer.renderBoard([]);
         return false;
@@ -1091,27 +1086,32 @@
         st.pendingEvolution = {
             fromIndex,
             toIndex,
+            tier: fusionPreview.tier || 3,
             mode: fusionPreview.mode,
             options: fusionPreview.options.slice(),
             previewLabel: fusionPreview.previewLabel || ''
         };
 
         if (typeof Renderer.showDragEvolutionPreview === 'function') {
-            Renderer.showDragEvolutionPreview(fromIndex, toIndex, fusionPreview.previewLabel || '世界樹冠枝開花', true);
+            Renderer.showDragEvolutionPreview(fromIndex, toIndex, fusionPreview.previewLabel || '世界樹進化確認', true);
         }
 
         const towersDict = getTowersDict();
         const isSingle = fusionPreview.options.length === 1;
+        const isInfusion = fusionPreview.mode === 'infusion_single' || (fusionPreview.tier === 2 && isSingle);
         if (dom.evoConfirmTitleEl) {
-            dom.evoConfirmTitleEl.innerText = isSingle
-                ? '定向冠枝開花確認（0.15x 子彈時間）'
-                : '世界樹冠枝雙分岔選擇（0.15x 子彈時間）';
+            dom.evoConfirmTitleEl.innerText = isInfusion
+                ? (fusionPreview.title || '元素灌注升星確認（0.15x 子彈時間）')
+                : (isSingle ? '定向冠枝開花確認（0.15x 子彈時間）' : '世界樹冠枝雙分岔選擇（0.15x 子彈時間）');
         }
         if (dom.evoConfirmOptionsEl) {
             dom.evoConfirmOptionsEl.innerHTML = '';
             dom.evoConfirmOptionsEl.classList.toggle('single-branch', isSingle);
             fusionPreview.options.forEach((optType, idx) => {
-                const cfg = towersDict[optType] || { icon: '✨', name: optType, badges: [], lineagePath: optType };
+                const cfg = towersDict[optType] || { icon: '✨', name: optType, badges: [], defaultLineagePath: [] };
+                const targetTier = cfg.nodeTier || fusionPreview.tier || 3;
+                const targetStars = Renderer.getTierStars(targetTier);
+                const lineageText = Array.isArray(cfg.defaultLineagePath) ? cfg.defaultLineagePath.join(' ▸ ') : (cfg.lineagePath || '');
                 const card = document.createElement('button');
                 card.type = 'button';
                 card.className = 'evo-branch-card';
@@ -1119,15 +1119,15 @@
                 const badgeChips = Array.isArray(cfg.badges)
                     ? cfg.badges.slice(0, 3).map(b => `<span class="evo-badge-chip">${b}</span>`).join('')
                     : '';
-                const hotkeyLabel = isSingle
-                    ? '確認開花 [Enter]'
-                    : (idx === 0 ? '選擇 A 分支 [A / 1]' : '選擇 B 分支 [D / 2]');
+                const hotkeyLabel = isInfusion
+                    ? '確認灌注升星 [Enter]'
+                    : (isSingle ? '確認開花 [Enter]' : (idx === 0 ? '選擇 A 分支 [A / 1]' : '選擇 B 分支 [D / 2]'));
                 card.innerHTML = `
                     <div class="evo-branch-top">
                         <canvas class="evo-branch-portrait" width="44" height="44" aria-hidden="true"></canvas>
                         <div class="evo-branch-meta">
-                            <span class="evo-branch-name">${cfg.icon} ${cfg.name} ★★★</span>
-                            <span class="evo-branch-lineage">${cfg.lineagePath || ''}</span>
+                            <span class="evo-branch-name">${cfg.icon} ${cfg.name} ${targetStars}</span>
+                            <span class="evo-branch-lineage">${lineageText}</span>
                         </div>
                     </div>
                     <div class="evo-badge-list">${badgeChips}</div>
@@ -1135,7 +1135,7 @@
                 `;
                 const canvasEl = card.querySelector('.evo-branch-portrait');
                 if (canvasEl && Renderer && typeof Renderer.drawPortrait === 'function') {
-                    Renderer.drawPortrait(canvasEl, 'tower', optType, { tier: 3, size: 44 });
+                    Renderer.drawPortrait(canvasEl, 'tower', optType, { tier: targetTier, size: 44 });
                 }
                 card.addEventListener('click', () => {
                     confirmPendingEvolution(optType);
@@ -1147,9 +1147,11 @@
             dom.evoConfirmOverlayEl.classList.remove('hidden');
         }
         if (dom.msgText) {
-            dom.msgText.innerText = isSingle
-                ? `🌱 ${fusionPreview.previewLabel}：點擊「確認開花」或按 [Enter] 完成進化，按 [Esc] 取消退回原位。`
-                : `🌱 ${fusionPreview.previewLabel}：請選擇 A 或 B 冠枝（熱鍵 [A]/[D]），或按 [Esc] 取消退回原位。`;
+            dom.msgText.innerText = isInfusion
+                ? `${fusionPreview.previewLabel}：點擊「確認灌注升星」或按 [Enter] 完成升星，按 [Esc] 取消。`
+                : (isSingle
+                    ? `${fusionPreview.previewLabel}：點擊「確認開花」或按 [Enter] 完成進化，按 [Esc] 取消。`
+                    : `${fusionPreview.previewLabel}：請選擇 A 或 B 冠枝（熱鍵 [A]/[D]），或按 [Esc] 取消。`);
         }
         return true;
     }
@@ -1174,7 +1176,8 @@
             st.selectedIndex = pending.toIndex;
             SoundEngine.playMerge(fusion.tier, fusion.isCrossElement);
             if (dom.msgText) {
-                dom.msgText.innerText = `✨ 冠枝開花完成！進化為【${cfg.icon || ''} ${cfg.name} ${Renderer.getTierStars(fusion.tier)}】${bonusHint || ''}`;
+                const verb = fusion.tier === 2 ? '元素灌注升星完成' : '冠枝開花完成';
+                dom.msgText.innerText = `${verb}：【${cfg.icon || ''} ${cfg.name} ${Renderer.getTierStars(fusion.tier)}】${bonusHint || ''}`;
             }
             Renderer.renderBoard([pending.fromIndex, pending.toIndex]);
             updateHUD();
@@ -1195,7 +1198,7 @@
             Renderer.clearDragEvolutionPreview();
         }
         if (dom.msgText) {
-            dom.msgText.innerText = '已取消冠枝進化，兩座主幹維持原位且未消耗。';
+            dom.msgText.innerText = '已取消進化確認，防禦塔維持原位且未消耗。';
         }
         Renderer.renderBoard([fromIndex, toIndex]);
         updateHUD();
@@ -1311,7 +1314,7 @@
 
     function restartGame() {
         resetMatchSession('PREP', 1);
-        G.dom.msgText.innerText = `【${WaveSys.getCurrentMapSpec().name}】按住下方元素卡拖曳至棋盤空地可指定格召喚；點擊圖鑑或按 1/2/3/Q/W/Space 快速操作！`;
+        G.dom.msgText.innerText = `【${WaveSys.getCurrentMapSpec().name}】拖曳下方元素卡至棋盤可建格召喚，或按 1/2/3/Q/W/Space 快速操作。`;
         Renderer.renderBoard(); updateHUD(); updateSpeedButtonUI(); startMainLoop();
     }
 
@@ -1320,7 +1323,7 @@
         WaveSys.applyMapConfig(G.state.currentMapId);
         renderMapSelectorUI();
         if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.remove('hidden');
-        G.dom.msgText.innerText = '已回到主選單！請選擇戰場地圖，點擊「開始防守」隨時開戰！';
+        G.dom.msgText.innerText = '請選擇戰場地圖，點擊「開始防守」進入第 1 波備戰。';
         Renderer.initBoard(); Renderer.renderBoard(); updateHUD(); updateSpeedButtonUI();
     }
 
@@ -1331,7 +1334,7 @@
         Backend.resetRunTelemetry(st.currentMapId, mapSpec.name);
         if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.add('hidden');
         st.waveState = 'PREP'; st.waveTimerMs = CONFIG.INITIAL_PREP_MS || 6000;
-        G.dom.msgText.innerText = `【${mapSpec.name}】備戰開始！按住下方元素卡拖入棋盤綠色空地即可指定位置召喚！`;
+        G.dom.msgText.innerText = `【${mapSpec.name}】第 1 波備戰開始，拖曳下方元素卡至空地佈置防線。`;
         setPauseState(false, { silent: true });
     }
 
@@ -1341,7 +1344,7 @@
         st.isEndlessMode = true;
         if (G.dom.victoryOverlayEl) G.dom.victoryOverlayEl.classList.add('hidden');
         st.waveState = 'INTERMISSION'; st.waveTimerMs = CONFIG.WAVE_INTERMISSION_MS || 4000;
-        G.dom.msgText.innerText = '🔥 無盡模式開啟！已解除波數上限，繼續挑戰更高紀錄吧！';
+        G.dom.msgText.innerText = '無盡挑戰模式已開啟，波數上限解除。';
         setPauseState(false, { silent: true });
     }
 
@@ -1360,6 +1363,7 @@
 
         st.entangleCdMs = Math.max(0, st.entangleCdMs - dtMs);
         st.frenzyCdMs = Math.max(0, st.frenzyCdMs - dtMs);
+        st.dewOverchargeMs = Math.max(0, (st.dewOverchargeMs || 0) - dtMs);
         const wasFrenzy = st.frenzyActiveMs > 0;
         st.frenzyActiveMs = Math.max(0, st.frenzyActiveMs - dtMs);
         if (wasFrenzy && st.frenzyActiveMs === 0) {
@@ -1390,7 +1394,7 @@
             Backend.trackFeel('Progression:Complete', st.currentGold, { wave: st.currentWave, mapId: st.currentMapId });
             if (st.currentWave % blessingInterval === 0 && !st.blessingGrantedWaves.has(st.currentWave) && TreeSys.triggerBlessingSelection(st.currentWave)) return;
             st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
-            G.dom.msgText.innerText = `🎉 第 ${st.currentWave} 波防禦成功！下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後出發！`;
+            G.dom.msgText.innerText = `第 ${st.currentWave} 波防禦完成，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後開始。`;
             updateWavePhaseUI();
         }
 
@@ -1455,7 +1459,7 @@
         t.targetMode = cycle[(cycle.indexOf(t.targetMode || 'first') + 1) % cycle.length];
         updateTowerInspector();
         const cfg = getTowersDict()[t.type] || { name: t.type };
-        G.dom.msgText.innerText = `🎯 已將【${cfg.name}】索敵優先級切換為：${labels[t.targetMode]}`;
+        G.dom.msgText.innerText = `已將【${cfg.name}】索敵優先級切換為：${labels[t.targetMode]}。`;
     }
 
     function sellSelectedTower() {
@@ -1467,7 +1471,7 @@
         st.currentGold += refund; st.board[sellIdx] = null;
         st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
         Backend.trackFeel('Economy:SellTower', refund, { towerType: t.type, tier: t.tier, refund });
-        G.dom.msgText.innerText = `💰 已出售【${cfg.name} ${Renderer.getTierStars(t.tier)}】！退還 +${refund} 💰。`;
+        G.dom.msgText.innerText = `已出售【${cfg.name} ${Renderer.getTierStars(t.tier)}】，退還 +${refund} 💰。`;
         Renderer.renderBoard([sellIdx]); updateHUD();
     }
 
@@ -1540,8 +1544,8 @@
         if (G.dom.victoryCopyReportBtn) {
             G.dom.victoryCopyReportBtn.addEventListener('click', async () => {
                 const res = await Backend.copyBattleReportToClipboard(G, 'victory');
-                G.dom.victoryCopyReportBtn.innerText = '✅ 已複製本局數據戰報！';
-                setDomText(G.dom.victoryRatingStatusEl, '戰報已複製至剪貼簿，可直接貼上分享！');
+                G.dom.victoryCopyReportBtn.innerText = '已複製本局數據戰報';
+                setDomText(G.dom.victoryRatingStatusEl, '戰報已複製至剪貼簿，可直接貼上分享。');
                 return res;
             });
         }
@@ -1549,8 +1553,8 @@
         if (G.dom.gameoverCopyReportBtn) {
             G.dom.gameoverCopyReportBtn.addEventListener('click', async () => {
                 const res = await Backend.copyBattleReportToClipboard(G, 'gameover');
-                G.dom.gameoverCopyReportBtn.innerText = '✅ 已複製本局數據戰報！';
-                setDomText(G.dom.gameoverRatingStatusEl, '戰報已複製至剪貼簿，可直接貼上分享！');
+                G.dom.gameoverCopyReportBtn.innerText = '已複製本局數據戰報';
+                setDomText(G.dom.gameoverRatingStatusEl, '戰報已複製至剪貼簿，可直接貼上分享。');
                 return res;
             });
         }

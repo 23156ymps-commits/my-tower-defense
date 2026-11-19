@@ -21,61 +21,79 @@
     let selectedTreeNodeId = 'fire_bud';
     const unlockedSet = loadUnlockedSet();
 
-    // SVG 世界樹演化圖譜畫布與節點座標拓撲（820 × 310，自底向上生長）
+    // SVG 世界樹演化圖譜畫布與節點座標拓撲（820 × 330，自底向上呈現：原核 → 3 基礎 1★ → 3 轉職 1★ → 6 二星 → 12 三星冠枝）
     const TREE_VIEW_W = 820;
-    const TREE_VIEW_H = 310;
+    const TREE_VIEW_H = 330;
 
     const WORLD_TREE_LAYOUT = {
-        // Row 3 (Bottom): 世界樹原核
-        world_core: { x: 410, y: 278, tier: 0, family: 'core', label: '世界樹原核' },
+        // Row 4 (Bottom): 世界樹原核
+        world_core: { x: 410, y: 298, tier: 0, family: 'core', label: '世界樹原核' },
 
-        // Row 2: 3 根芽 (T1)
-        fire_bud: { x: 142, y: 214, tier: 1, family: 'fire', label: '火芽' },
-        ice_bud: { x: 410, y: 214, tier: 1, family: 'ice', label: '冰芽' },
-        thunder_bud: { x: 678, y: 214, tier: 1, family: 'thunder', label: '雷芽' },
+        // Row 3: 3 基礎根芽 (1★)
+        fire_bud: { x: 142, y: 244, tier: 1, family: 'fire', label: '火芽 1★' },
+        ice_bud: { x: 410, y: 244, tier: 1, family: 'ice', label: '冰芽 1★' },
+        thunder_bud: { x: 678, y: 244, tier: 1, family: 'thunder', label: '雷芽 1★' },
 
-        // Row 1: 6 主幹 (T2)
-        fire_trunk: { x: 74, y: 128, tier: 2, family: 'fire', label: '炎核' },
-        steam_trunk: { x: 208, y: 128, tier: 2, family: 'steam', label: '蒸氣' },
-        ice_trunk: { x: 342, y: 128, tier: 2, family: 'ice', label: '霜晶' },
-        magnet_trunk: { x: 478, y: 128, tier: 2, family: 'magnet', label: '磁環' },
-        thunder_trunk: { x: 612, y: 128, tier: 2, family: 'thunder', label: '雷紋' },
-        plasma_trunk: { x: 746, y: 128, tier: 2, family: 'plasma', label: '電漿' },
+        // Row 2: 3 異系轉職物種 (1★)
+        steam_bud: { x: 208, y: 178, tier: 1, family: 'steam', isTransfer: true, label: '蒸氣 1★' },
+        magnet_bud: { x: 478, y: 178, tier: 1, family: 'magnet', isTransfer: true, label: '磁環 1★' },
+        plasma_bud: { x: 746, y: 178, tier: 1, family: 'plasma', isTransfer: true, label: '電漿 1★' },
 
-        // Row 0 (Top): 12 冠枝 (T3)
-        fire_A: { x: 40, y: 40, tier: 3, family: 'fire', branch: 'A', label: 'A 熔核' },
-        fire_B: { x: 108, y: 40, tier: 3, family: 'fire', branch: 'B', label: 'B 焚世' },
-        steam_A: { x: 174, y: 40, tier: 3, family: 'steam', branch: 'A', label: 'A 蒸壓' },
-        steam_B: { x: 242, y: 40, tier: 3, family: 'steam', branch: 'B', label: 'B 霜霧' },
-        ice_A: { x: 308, y: 40, tier: 3, family: 'ice', branch: 'A', label: 'A 永凍' },
-        ice_B: { x: 376, y: 40, tier: 3, family: 'ice', branch: 'B', label: 'B 冰錐' },
-        magnet_A: { x: 444, y: 40, tier: 3, family: 'magnet', branch: 'A', label: 'A 黑洞' },
-        magnet_B: { x: 512, y: 40, tier: 3, family: 'magnet', branch: 'B', label: 'B 電磁' },
-        thunder_A: { x: 578, y: 40, tier: 3, family: 'thunder', branch: 'A', label: 'A 連鎖' },
-        thunder_B: { x: 646, y: 40, tier: 3, family: 'thunder', branch: 'B', label: 'B 審判' },
-        plasma_A: { x: 712, y: 40, tier: 3, family: 'plasma', branch: 'A', label: 'A 死光' },
-        plasma_B: { x: 780, y: 40, tier: 3, family: 'plasma', branch: 'B', label: 'B 折射' }
+        // Row 1: 6 進階主幹 (2★)
+        fire_trunk: { x: 74, y: 108, tier: 2, family: 'fire', label: '炎核 2★' },
+        steam_trunk: { x: 208, y: 108, tier: 2, family: 'steam', label: '高階蒸氣' },
+        ice_trunk: { x: 342, y: 108, tier: 2, family: 'ice', label: '霜晶 2★' },
+        magnet_trunk: { x: 478, y: 108, tier: 2, family: 'magnet', label: '高階磁環' },
+        thunder_trunk: { x: 612, y: 108, tier: 2, family: 'thunder', label: '雷紋 2★' },
+        plasma_trunk: { x: 746, y: 108, tier: 2, family: 'plasma', label: '高階電漿' },
+
+        // Row 0 (Top): 12 終極冠枝 (3★ A / B)
+        fire_A: { x: 40, y: 38, tier: 3, family: 'fire', branch: 'A', label: 'A 熔核' },
+        fire_B: { x: 108, y: 38, tier: 3, family: 'fire', branch: 'B', label: 'B 焚世' },
+        steam_A: { x: 174, y: 38, tier: 3, family: 'steam', branch: 'A', label: 'A 蒸壓' },
+        steam_B: { x: 242, y: 38, tier: 3, family: 'steam', branch: 'B', label: 'B 霜霧' },
+        ice_A: { x: 308, y: 38, tier: 3, family: 'ice', branch: 'A', label: 'A 永凍' },
+        ice_B: { x: 376, y: 38, tier: 3, family: 'ice', branch: 'B', label: 'B 冰錐' },
+        magnet_A: { x: 444, y: 38, tier: 3, family: 'magnet', branch: 'A', label: 'A 黑洞' },
+        magnet_B: { x: 512, y: 38, tier: 3, family: 'magnet', branch: 'B', label: 'B 電磁' },
+        thunder_A: { x: 578, y: 38, tier: 3, family: 'thunder', branch: 'A', label: 'A 連鎖' },
+        thunder_B: { x: 646, y: 38, tier: 3, family: 'thunder', branch: 'B', label: 'B 審判' },
+        plasma_A: { x: 712, y: 38, tier: 3, family: 'plasma', branch: 'A', label: 'A 死光' },
+        plasma_B: { x: 780, y: 38, tier: 3, family: 'plasma', branch: 'B', label: 'B 折射' }
     };
 
-    // 樹枝連線定義：primary（主生脈）與 directed（同血脈定向催熟副脈）
+    // 樹枝連線定義：core / sym (1★ 異系轉職) / primary (同物種升星與冠枝) / directed (基礎芽元素灌注轉職 1★ 升 2★)
     const WORLD_TREE_EDGES = [
-        // 原核 -> 3 根芽
+        // 原核 -> 3 基礎根芽 (1★)
         { from: 'world_core', to: 'fire_bud', family: 'fire', kind: 'core' },
         { from: 'world_core', to: 'ice_bud', family: 'ice', kind: 'core' },
         { from: 'world_core', to: 'thunder_bud', family: 'thunder', kind: 'core' },
 
-        // 3 根芽 -> 3 純血主幹 + 3 共生主幹（含火雷遠距弧線）
-        { from: 'fire_bud', to: 'fire_trunk', family: 'fire', kind: 'primary' },
-        { from: 'fire_bud', to: 'steam_trunk', family: 'steam', kind: 'sym' },
-        { from: 'ice_bud', to: 'steam_trunk', family: 'steam', kind: 'sym' },
-        { from: 'ice_bud', to: 'ice_trunk', family: 'ice', kind: 'primary' },
-        { from: 'ice_bud', to: 'magnet_trunk', family: 'magnet', kind: 'sym' },
-        { from: 'thunder_bud', to: 'magnet_trunk', family: 'magnet', kind: 'sym' },
-        { from: 'thunder_bud', to: 'thunder_trunk', family: 'thunder', kind: 'primary' },
-        { from: 'fire_bud', to: 'plasma_trunk', family: 'plasma', kind: 'sym', arcOffsetY: 54 },
-        { from: 'thunder_bud', to: 'plasma_trunk', family: 'plasma', kind: 'sym' },
+        // 3 基礎根芽 (1★) 交叉轉職 -> 3 轉職新物種 (1★)
+        { from: 'fire_bud', to: 'steam_bud', family: 'steam', kind: 'sym' },
+        { from: 'ice_bud', to: 'steam_bud', family: 'steam', kind: 'sym' },
+        { from: 'ice_bud', to: 'magnet_bud', family: 'magnet', kind: 'sym' },
+        { from: 'thunder_bud', to: 'magnet_bud', family: 'magnet', kind: 'sym' },
+        { from: 'fire_bud', to: 'plasma_bud', family: 'plasma', kind: 'sym', arcOffsetY: 36 },
+        { from: 'thunder_bud', to: 'plasma_bud', family: 'plasma', kind: 'sym' },
 
-        // 6 主幹 -> 12 冠枝 (A / B)
+        // 6 大物種 1★ -> 2★ 同物種升星
+        { from: 'fire_bud', to: 'fire_trunk', family: 'fire', kind: 'primary' },
+        { from: 'steam_bud', to: 'steam_trunk', family: 'steam', kind: 'primary' },
+        { from: 'ice_bud', to: 'ice_trunk', family: 'ice', kind: 'primary' },
+        { from: 'magnet_bud', to: 'magnet_trunk', family: 'magnet', kind: 'primary' },
+        { from: 'thunder_bud', to: 'thunder_trunk', family: 'thunder', kind: 'primary' },
+        { from: 'plasma_bud', to: 'plasma_trunk', family: 'plasma', kind: 'primary' },
+
+        // 基礎 1★ 芽快捷灌注轉職 1★ -> 2★（虛線輔助脈絡）
+        { from: 'fire_bud', to: 'steam_trunk', family: 'fire', kind: 'directed' },
+        { from: 'ice_bud', to: 'steam_trunk', family: 'ice', kind: 'directed' },
+        { from: 'ice_bud', to: 'magnet_trunk', family: 'ice', kind: 'directed' },
+        { from: 'thunder_bud', to: 'magnet_trunk', family: 'thunder', kind: 'directed' },
+        { from: 'fire_bud', to: 'plasma_trunk', family: 'fire', kind: 'directed', arcOffsetY: -20 },
+        { from: 'thunder_bud', to: 'plasma_trunk', family: 'thunder', kind: 'directed' },
+
+        // 6 大物種 2★ -> 12 冠枝 3★ (A / B)
         { from: 'fire_trunk', to: 'fire_A', family: 'fire', kind: 'primary' },
         { from: 'fire_trunk', to: 'fire_B', family: 'fire', kind: 'primary' },
         { from: 'steam_trunk', to: 'steam_A', family: 'steam', kind: 'primary' },
@@ -87,15 +105,7 @@
         { from: 'thunder_trunk', to: 'thunder_A', family: 'thunder', kind: 'primary' },
         { from: 'thunder_trunk', to: 'thunder_B', family: 'thunder', kind: 'primary' },
         { from: 'plasma_trunk', to: 'plasma_A', family: 'plasma', kind: 'primary' },
-        { from: 'plasma_trunk', to: 'plasma_B', family: 'plasma', kind: 'primary' },
-
-        // 純血主幹 -> 共生冠枝同血脈定向催熟連線
-        { from: 'fire_trunk', to: 'steam_A', family: 'fire', kind: 'directed' },
-        { from: 'ice_trunk', to: 'steam_B', family: 'ice', kind: 'directed' },
-        { from: 'ice_trunk', to: 'magnet_A', family: 'ice', kind: 'directed' },
-        { from: 'thunder_trunk', to: 'magnet_B', family: 'thunder', kind: 'directed' },
-        { from: 'fire_trunk', to: 'plasma_A', family: 'fire', kind: 'directed', arcOffsetY: -22 },
-        { from: 'thunder_trunk', to: 'plasma_B', family: 'thunder', kind: 'directed' }
+        { from: 'plasma_trunk', to: 'plasma_B', family: 'plasma', kind: 'primary' }
     ];
 
     const FAMILY_STROKE_COLORS = {
@@ -187,18 +197,19 @@
     }
 
     /**
-     * 掃描目前棋盤上的 T2 塔，判斷哪些 T3 冠枝已被「部分滿足」或「雙素材就緒」
+     * 掃描目前棋盤上的 1★ 與 2★ 塔，判斷哪些轉職 1★／進階 2★／終極 3★ 已被「部分滿足」或「雙素材就緒」
      */
     function scanBoardCraftableState() {
-        const boardT2Counts = {};
-        const craftableT3Set = new Set();
-        const readyNowT3Set = new Set();
-        const presentT2Set = new Set();
+        const boardNodeCounts = {};
+        const craftableNodeSet = new Set();
+        const readyNowNodeSet = new Set();
+        const presentNodeSet = new Set();
 
         const st = G && G.state;
         const EvoSys = GameApp.systems && GameApp.systems.evolution;
         const evoData = (GameApp.data && GameApp.data.evolutions) || {};
-        const rules = evoData.T2_TO_T3_RULES || {};
+        const t1Rules = evoData.T1_RECIPES || evoData.T1_TO_T2_RECIPES || {};
+        const t2Rules = evoData.T2_TO_T3_RULES || {};
 
         if (st && Array.isArray(st.board) && !st.isGameOver && st.waveState !== 'WAITING_START') {
             for (let i = 0; i < st.board.length; i++) {
@@ -207,31 +218,51 @@
                 const canonicalId = (EvoSys && typeof EvoSys.normalizeNodeId === 'function')
                     ? EvoSys.normalizeNodeId(tower)
                     : tower.type;
-                if (tower.tier === 2) {
-                    boardT2Counts[canonicalId] = (boardT2Counts[canonicalId] || 0) + 1;
-                    presentT2Set.add(canonicalId);
-                }
+                boardNodeCounts[canonicalId] = (boardNodeCounts[canonicalId] || 0) + 1;
+                presentNodeSet.add(canonicalId);
             }
         }
 
-        Object.keys(rules).forEach((ruleKey) => {
-            const rule = rules[ruleKey];
+        Object.keys(t1Rules).forEach((ruleKey) => {
+            const rule = t1Rules[ruleKey];
+            if (!rule || !rule.resultType) return;
+            const [ingA, ingB] = ruleKey.split('+');
+            const cntA = boardNodeCounts[ingA] || 0;
+            const cntB = boardNodeCounts[ingB] || 0;
+            const isFullReady = ingA === ingB ? cntA >= 2 : (cntA >= 1 && cntB >= 1);
+            if (isFullReady) {
+                craftableNodeSet.add(rule.resultType);
+                readyNowNodeSet.add(rule.resultType);
+            }
+        });
+
+        Object.keys(t2Rules).forEach((ruleKey) => {
+            const rule = t2Rules[ruleKey];
             if (!rule || !Array.isArray(rule.options)) return;
             const [ingA, ingB] = ruleKey.split('+');
-            const cntA = boardT2Counts[ingA] || 0;
-            const cntB = boardT2Counts[ingB] || 0;
+            const cntA = boardNodeCounts[ingA] || 0;
+            const cntB = boardNodeCounts[ingB] || 0;
             const hasPartial = cntA > 0 || cntB > 0;
             const isFullReady = ingA === ingB ? cntA >= 2 : (cntA >= 1 && cntB >= 1);
 
             if (hasPartial) {
                 rule.options.forEach((optId) => {
-                    craftableT3Set.add(optId);
-                    if (isFullReady) readyNowT3Set.add(optId);
+                    craftableNodeSet.add(optId);
+                    if (isFullReady) readyNowNodeSet.add(optId);
                 });
             }
         });
 
-        return { boardT2Counts, presentT2Set, craftableT3Set, readyNowT3Set };
+        return {
+            boardNodeCounts,
+            presentNodeSet,
+            craftableNodeSet,
+            readyNowNodeSet,
+            boardT2Counts: boardNodeCounts,
+            presentT2Set: presentNodeSet,
+            craftableT3Set: craftableNodeSet,
+            readyNowT3Set: readyNowNodeSet
+        };
     }
 
     /**
@@ -270,10 +301,10 @@
                 <div class="wt-detail-body">
                     <div class="wt-detail-top">
                         <span class="wt-detail-title">世界樹原核</span>
-                        <span class="wt-detail-tag num">已喚醒枝脈：${totalUnlocked} / 21</span>
+                        <span class="wt-detail-tag num">已喚醒枝脈：${totalUnlocked} / 24</span>
                     </div>
-                    <div class="wt-detail-row"><strong>進化脈絡：</strong>根芽 (1x) ➔ 主幹 (2x 純血 / 異系共生) ➔ 冠枝 (4x 分岔或同血脈定向催熟)</div>
-                    <div class="wt-detail-row"><strong>戰術指引：</strong>點擊上方任一節點可檢視合成路徑、機制與搭配；場上已有對應 T2 主幹時，可進化冠枝將以琥珀金框提示。</div>
+                    <div class="wt-detail-row"><strong>轉職與升星脈絡：</strong>基礎 1★ 異系轉職 ➔ 轉職 1★ 新物種；同物種 1★ + 1★（或基礎芽灌注轉職 1★）➔ 2★ 主幹 ➔ 3★ 冠枝分岔</div>
+                    <div class="wt-detail-row"><strong>戰術指引：</strong>點擊上方任一節點可檢視合成路徑與數值；場上素材就緒或可進化方向將以琥珀金框提示。</div>
                 </div>
             `;
             return;
@@ -282,20 +313,20 @@
         const tCfg = towersDict[nodeId] || {};
         const custom = (entries.towers && entries.towers[nodeId]) || codexData.buildFallbackTowerCard(nodeId, tCfg);
         const unlocked = isEntryUnlocked(`tower:${nodeId}`, Boolean(custom.defaultUnlocked));
-        const isReadyNow = scanState.readyNowT3Set.has(nodeId);
-        const isCraftable = scanState.craftableT3Set.has(nodeId);
+        const isReadyNow = scanState.readyNowNodeSet.has(nodeId);
+        const isCraftable = scanState.craftableNodeSet.has(nodeId);
         const tierNum = nodeMeta.tier || Number(tCfg.nodeTier) || 1;
-        const costMult = tierNum === 1 ? '1x' : (tierNum === 2 ? '2x' : '4x');
+        const costMult = tCfg.costShare ? `${tCfg.costShare}x` : (tierNum === 1 ? '1x' : (tierNum === 2 ? '2x' : '4x'));
         const starStr = tierNum === 1 ? '★' : (tierNum === 2 ? '★★' : '★★★');
 
         detailEl.className = `wt-detail-card family-${nodeMeta.family}${unlocked ? '' : ' is-locked'}${isCraftable ? ' is-craftable' : ''}`;
 
         const statusBadge = unlocked
-            ? '<span class="codex-status-badge unlocked">✅ 已解鎖</span>'
-            : '<span class="codex-status-badge locked">🔒 未解鎖</span>';
+            ? '<span class="codex-status-badge unlocked">已解鎖</span>'
+            : '<span class="codex-status-badge locked">未解鎖</span>';
         const craftBadge = isReadyNow
-            ? '<span class="wt-detail-craft-badge ready">雙素材就緒·可直接融合</span>'
-            : (isCraftable ? '<span class="wt-detail-craft-badge">場上已有 T2 素材·可進化方向</span>' : '');
+            ? '<span class="wt-detail-craft-badge ready">素材就緒 · 可直接融合</span>'
+            : (isCraftable ? '<span class="wt-detail-craft-badge">場上已有素材 · 可進化方向</span>' : '');
 
         const portraitWrap = document.createElement('div');
         portraitWrap.className = 'wt-detail-portrait';
@@ -358,15 +389,15 @@
         treeShellEl.innerHTML = '';
 
         const scanState = scanBoardCraftableState();
-        const craftableNames = Array.from(scanState.craftableT3Set)
+        const craftableNames = Array.from(scanState.craftableNodeSet)
             .map(id => WORLD_TREE_LAYOUT[id] ? WORLD_TREE_LAYOUT[id].label : id);
 
         const bannerEl = document.createElement('div');
-        bannerEl.className = `wt-tactical-banner${scanState.craftableT3Set.size > 0 ? ' has-matches' : ''}`;
-        if (scanState.craftableT3Set.size > 0) {
-            bannerEl.innerHTML = `<span class="wt-banner-dot"></span><span class="num">場上 T2 素材偵測：可朝 <strong>${craftableNames.join('、')}</strong> 方向進化（琥珀金框標示）</span>`;
+        bannerEl.className = `wt-tactical-banner${scanState.craftableNodeSet.size > 0 ? ' has-matches' : ''}`;
+        if (scanState.craftableNodeSet.size > 0) {
+            bannerEl.innerHTML = `<span class="wt-banner-dot"></span><span class="num">場上素材偵測：可朝 <strong>${craftableNames.join('、')}</strong> 方向融合（琥珀金框標示）</span>`;
         } else {
-            bannerEl.innerText = '點擊世界樹任一節點可檢視合成路徑與數值；戰局中場上出現 T2 主幹時將自動高亮可進化冠枝。';
+            bannerEl.innerText = '點擊世界樹任一節點可檢視轉職／升星路徑與數值；場上持有素材時將自動高亮可融合目標。';
         }
         treeShellEl.appendChild(bannerEl);
 
@@ -381,8 +412,8 @@
         svgEl.setAttribute('preserveAspectRatio', 'none');
         svgEl.setAttribute('aria-hidden', 'true');
 
-        // 繪製三層階級微弱橫向參考線（T3 / T2 / T1）
-        [40, 128, 214].forEach((rowY) => {
+        // 繪製四層階級微弱橫向參考線（3★ 冠枝 / 2★ 主幹 / 1★ 轉職 / 1★ 基礎）
+        [38, 108, 178, 244].forEach((rowY) => {
             const guide = document.createElementNS(svgNS, 'line');
             guide.setAttribute('x1', '16');
             guide.setAttribute('x2', String(TREE_VIEW_W - 16));
@@ -392,11 +423,11 @@
             svgEl.appendChild(guide);
         });
 
-        // 先繪製暗色枝脈與定向虛線，再繪製已點亮／場上可進化枝脈以確保層級清晰
+        // 先繪製暗色枝脈與灌注虛線，再繪製已點亮／場上可進化枝脈以確保層級清晰
         const orderedEdges = WORLD_TREE_EDGES.slice().sort((a, b) => {
             const score = (e) => {
-                if (scanState.craftableT3Set.has(e.to)) return 3;
-                if (isEntryUnlocked(`tower:${e.to}`, e.to.endsWith('_bud'))) return 2;
+                if (scanState.craftableNodeSet.has(e.to)) return 3;
+                if (isEntryUnlocked(`tower:${e.to}`, ['fire_bud', 'ice_bud', 'thunder_bud'].includes(e.to))) return 2;
                 return e.kind === 'directed' ? 0 : 1;
             };
             return score(a) - score(b);
@@ -404,16 +435,17 @@
 
         orderedEdges.forEach((edge) => {
             const toMeta = WORLD_TREE_LAYOUT[edge.to];
-            const toUnlocked = toMeta && (toMeta.tier === 1 || isEntryUnlocked(`tower:${edge.to}`, false));
-            const isCraftEdge = scanState.craftableT3Set.has(edge.to)
-                && (scanState.presentT2Set.has(edge.from) || edge.from === 'world_core');
+            const isBaseBud = ['fire_bud', 'ice_bud', 'thunder_bud'].includes(edge.to);
+            const toUnlocked = toMeta && (isBaseBud || isEntryUnlocked(`tower:${edge.to}`, false));
+            const isCraftEdge = scanState.craftableNodeSet.has(edge.to)
+                && (scanState.presentNodeSet.has(edge.from) || edge.from === 'world_core');
             const isSelectedEdge = edge.to === selectedTreeNodeId || edge.from === selectedTreeNodeId;
 
             const pathEl = document.createElementNS(svgNS, 'path');
             pathEl.setAttribute('d', buildTreeEdgePathD(edge));
             let strokeColor = '#46544C';
-            let strokeWidth = edge.kind === 'directed' ? 1.4 : 1.8;
-            let opacity = edge.kind === 'directed' ? '0.52' : '0.88';
+            let strokeWidth = edge.kind === 'directed' ? 1.3 : 1.8;
+            let opacity = edge.kind === 'directed' ? '0.45' : '0.88';
 
             if (isCraftEdge) {
                 strokeColor = '#D97724';
@@ -421,11 +453,11 @@
                 opacity = '1';
             } else if (toUnlocked && edge.kind !== 'directed') {
                 strokeColor = FAMILY_STROKE_COLORS[edge.family] || '#B8C2BC';
-                strokeWidth = 2.3;
+                strokeWidth = 2.2;
                 opacity = '0.95';
             } else if (isSelectedEdge && edge.kind === 'directed') {
                 strokeColor = '#D97724';
-                strokeWidth = 2.0;
+                strokeWidth = 1.9;
                 opacity = '0.9';
             }
 
@@ -443,10 +475,11 @@
 
         // 建立左側階級標籤
         const tierMarks = [
-            { y: 40, text: 'T3 冠枝' },
-            { y: 128, text: 'T2 主幹' },
-            { y: 214, text: 'T1 根芽' },
-            { y: 278, text: '原核' }
+            { y: 38, text: '3★ 冠枝' },
+            { y: 108, text: '2★ 主幹' },
+            { y: 178, text: '1★ 轉職' },
+            { y: 244, text: '1★ 基礎' },
+            { y: 298, text: '原核' }
         ];
         tierMarks.forEach((tm) => {
             const badge = document.createElement('span');
@@ -486,25 +519,27 @@
             }
 
             const entryInfo = codexEntries[nodeId] || {};
-            const unlocked = isEntryUnlocked(`tower:${nodeId}`, Boolean(entryInfo.defaultUnlocked) || meta.tier === 1);
-            const isCraftable = scanState.craftableT3Set.has(nodeId);
-            const isReadyNow = scanState.readyNowT3Set.has(nodeId);
-            const isPresentT2 = scanState.presentT2Set.has(nodeId);
+            const isBaseBud = ['fire_bud', 'ice_bud', 'thunder_bud'].includes(nodeId);
+            const unlocked = isEntryUnlocked(`tower:${nodeId}`, Boolean(entryInfo.defaultUnlocked) || isBaseBud);
+            const isCraftable = scanState.craftableNodeSet.has(nodeId);
+            const isReadyNow = scanState.readyNowNodeSet.has(nodeId);
+            const isPresentOnBoard = scanState.presentNodeSet.has(nodeId);
 
             btn.className = [
                 'wt-node',
                 `wt-tier-${meta.tier}`,
+                meta.isTransfer ? 'wt-transfer-bud' : '',
                 `wt-family-${meta.family}`,
                 unlocked ? 'is-unlocked' : 'is-locked',
                 isCraftable ? 'wt-craftable' : '',
                 isReadyNow ? 'wt-ready-now' : '',
-                isPresentT2 ? 'wt-on-board' : '',
+                isPresentOnBoard ? 'wt-on-board' : '',
                 selectedTreeNodeId === nodeId ? 'is-selected' : ''
             ].filter(Boolean).join(' ');
 
             const canvasWrap = document.createElement('span');
             canvasWrap.className = 'wt-node-icon-box';
-            const cSize = meta.tier === 3 ? 28 : 32;
+            const cSize = meta.tier === 3 ? 26 : 30;
             const canvasEl = document.createElement('canvas');
             canvasEl.width = cSize;
             canvasEl.height = cSize;
@@ -518,10 +553,10 @@
                 qSpan.innerText = '?';
                 canvasWrap.appendChild(qSpan);
             }
-            if (isPresentT2) {
+            if (isPresentOnBoard && !isBaseBud) {
                 const bTag = document.createElement('span');
                 bTag.className = 'wt-board-pip num';
-                bTag.innerText = String(scanState.boardT2Counts[nodeId] || 1);
+                bTag.innerText = String(scanState.boardNodeCounts[nodeId] || 1);
                 bTag.title = '當前棋盤持有數量';
                 canvasWrap.appendChild(bTag);
             }
@@ -552,9 +587,10 @@
         stageEl.appendChild(nodesLayer);
         treeShellEl.appendChild(stageEl);
 
-        // 預設預選場上第一個可進化冠枝，讓玩家一打開即可看到戰術建議
-        if (scanState.craftableT3Set.size > 0 && !scanState.craftableT3Set.has(selectedTreeNodeId)) {
-            selectedTreeNodeId = Array.from(scanState.craftableT3Set)[0];
+        // 預設預選場上素材已就緒或可進化的目標節點，讓玩家一打開即可看到戰術建議
+        const autoPickSet = scanState.readyNowNodeSet.size > 0 ? scanState.readyNowNodeSet : scanState.craftableNodeSet;
+        if (autoPickSet.size > 0 && !autoPickSet.has(selectedTreeNodeId)) {
+            selectedTreeNodeId = Array.from(autoPickSet)[0];
             nodesLayer.querySelectorAll('.wt-node').forEach(el => el.classList.toggle('is-selected', el.dataset.nodeId === selectedTreeNodeId));
         }
 

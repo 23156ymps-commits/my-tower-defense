@@ -70,7 +70,8 @@
                 sourceTower: null
             },
             vuln: {},
-            slow: {}
+            slow: {},
+            resonanceElements: {}
         };
     }
 
@@ -565,6 +566,7 @@
             remainingMs: Number(spec.durationMs) || 3000,
             maxDurationMs: Number(spec.durationMs) || 3000,
             tickAccMs: 0,
+            dmgCarry: 0,
             sourceTower: spec.sourceTower || null
         };
         G.state.groundHazards.push(hazard);
@@ -633,7 +635,10 @@
 
             while (hz.tickAccMs >= 250) {
                 hz.tickAccMs -= 250;
-                const tickDmg = Math.max(1, Math.round((hz.dps || 28) * 0.25));
+                const rawTick = (hz.dps || 28) * 0.25 + (hz.dmgCarry || 0);
+                const tickDmg = Math.max(1, Math.floor(rawTick));
+                hz.dmgCarry = Math.max(0, rawTick - tickDmg);
+                const dmgIcon = hz.type === 'scorch_trail' ? '🔥' : '💨';
                 const victims = st.monsters.filter(m =>
                     m.hp > 0 && m.isTargetable !== false && Math.hypot(m.pixelX - hz.x, m.pixelY - hz.y) <= hz.radiusPx
                 );
@@ -646,7 +651,7 @@
                         AttackSys.recordTowerDamage(hz.sourceTower, Math.min(before, tickDmg));
                     }
                     if (GameApp.renderer) {
-                        GameApp.renderer.spawnDamageNumber(tickDmg, false, m.pixelX, m.pixelY, '💨');
+                        GameApp.renderer.spawnDamageNumber(tickDmg, false, m.pixelX, m.pixelY, dmgIcon);
                     }
                     if (m.hp <= 0) {
                         handleMonsterKilled(m, hz.sourceTower, tickDmg, { isDotKill: true });
@@ -678,13 +683,22 @@
             syncLegacySlowFields(m);
         }
 
-        // 2. 易傷來源表倒數
+        // 2. 易傷來源表與元素共鳴倒數
         Object.keys(st.vuln).forEach((k) => {
             const v = st.vuln[k];
             if (!v) return;
             v.durationMs = Math.max(0, v.durationMs - dtMs);
             if (v.durationMs === 0) delete st.vuln[k];
         });
+        if (st.resonanceElements) {
+            Object.keys(st.resonanceElements).forEach((elKey) => {
+                st.resonanceElements[elKey] = Math.max(0, st.resonanceElements[elKey] - dtMs);
+                if (st.resonanceElements[elKey] === 0) delete st.resonanceElements[elKey];
+            });
+        }
+        if ((m._scorchBrandIcdMs || 0) > 0) {
+            m._scorchBrandIcdMs = Math.max(0, m._scorchBrandIcdMs - dtMs);
+        }
 
         // 3. 破甲與纏繞倒數
         if (m.armorShredTimer > 0 && (m.armorShredTimer = Math.max(0, m.armorShredTimer - dtMs)) === 0) m.armorShredRate = 0;

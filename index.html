@@ -24,13 +24,17 @@
                     <span id="wave-display" class="num">Wave 1 / 10</span>
                     <span id="wave-phase-tag" class="wave-phase-tag num">等待開始</span>
                 </div>
-                <div class="hud-item hud-best" title="本圖最高紀錄">最高 <span id="best-wave-display" class="num">Wave 1</span></div>
+                <div class="hud-item hud-best" title="本圖最高紀錄">最高 <span id="best-wave-display" class="num">Wave 1</span>
+                </div>
             </div>
             <div class="hud-actions">
-                <button id="speed-btn" class="hud-ctrl-btn speed-btn num" type="button" title="切換遊戲倍速 [Tab/S]">1x</button>
-                <button id="pause-btn" class="hud-ctrl-btn hud-pause-btn" type="button" disabled title="暫停或繼續 [Space]">暫停</button>
+                <button id="speed-btn" class="hud-ctrl-btn speed-btn num" type="button"
+                    title="切換遊戲倍速 [Tab/S]">1x</button>
+                <button id="pause-btn" class="hud-ctrl-btn hud-pause-btn" type="button" disabled
+                    title="暫停或繼續 [Space]">暫停</button>
                 <button id="sound-btn" class="hud-ctrl-btn hud-sound-btn" type="button" title="切換音效">音效</button>
-                <button id="help-btn" class="hud-ctrl-btn hud-help-btn" type="button" aria-expanded="false" title="開啟戰術手冊與屬性地形速查">？</button>
+                <button id="help-btn" class="hud-ctrl-btn hud-help-btn" type="button" aria-expanded="false"
+                    title="開啟戰術手冊與屬性地形速查">？</button>
             </div>
         </div>
 
@@ -62,7 +66,7 @@
             </div>
 
             <div id="pause-banner" class="pause-banner hidden" role="status" aria-live="polite">
-                <span class="pause-banner-text">⏸️ 遊戲已暫停 — 點擊繼續或按 [Space] 恢復</span>
+                <span class="pause-banner-text">遊戲已暫停 — 點擊繼續或按 [Space] 恢復</span>
                 <div class="pause-banner-actions">
                     <button id="pause-resume-btn" class="pause-banner-btn pause-resume-btn" type="button">繼續</button>
                     <button id="pause-menu-btn" class="pause-banner-btn pause-menu-btn" type="button">切換地圖</button>
@@ -70,97 +74,156 @@
             </div>
         </div>
 
-        <!-- 15x10 戰場舞台容器（80% 視覺重心） -->
-        <div id="board-stage">
-            <div id="grid-board"></div>
-            <div id="range-layer" aria-hidden="true">
-                <div id="range-circle"></div>
-            </div>
-            <canvas id="fx-canvas" aria-hidden="true"></canvas>
-            <div id="monster-layer" aria-hidden="true"></div>
-            <div id="floating-layer" aria-hidden="true"></div>
-            <!-- 特殊地形與防禦塔原位輕量浮動名牌 -->
-            <div id="terrain-tooltip" class="terrain-tooltip hidden" role="status" aria-live="polite"></div>
-            <div id="tower-tooltip" class="tower-tooltip hidden" role="status" aria-live="polite"></div>
-            <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite">
-                <div class="boss-banner-top">
-                    <span id="boss-banner-title">終極魔王</span>
-                    <span id="boss-banner-hp-text" class="num">0 / 0</span>
-                </div>
-                <div class="boss-banner-hp-track">
-                    <div id="boss-banner-hp-fill" class="boss-banner-hp-fill"></div>
-                </div>
-            </div>
-            <!-- 0.15x 子彈時間 T2 -> T3 進化分岔選擇與確認輪盤 -->
-            <div id="evo-confirm-overlay" class="evo-confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="evo-confirm-title">
-                <div class="evo-confirm-panel">
-                    <div class="evo-confirm-header">
-                        <span id="evo-confirm-title" class="evo-confirm-title">世界樹冠枝開花選擇</span>
-                        <span class="evo-bullet-tag num">0.15x 子彈時間</span>
+            <!-- 桌面寬螢幕兩側石板資訊欄 + 中央 15x10 戰場舞台 -->
+            <div class="battlefield-row">
+                <aside id="side-panel-left" class="side-panel side-panel-left" aria-label="元素相剋與地形加成速查">
+                    <div class="side-panel-section">
+                        <h2 class="side-panel-title">元素相剋速查</h2>
+                        <ul class="side-panel-list">
+                            <li class="side-panel-row"><span>🔥 火 ▸ 蔓藤 / 史萊姆</span><span
+                                    class="side-val num">175%</span></li>
+                            <li class="side-panel-row"><span>❄️ 冰 ▸ 熔岩 / 獵犬</span><span class="side-val num">175%</span>
+                            </li>
+                            <li class="side-panel-row"><span>⚡ 雷 ▸ 飛艇 / 魔像</span><span class="side-val num">175%</span>
+                            </li>
+                            <li class="side-panel-row"><span>✨ 轉職 ▸ 親和弱點</span><span class="side-val num">135%</span>
+                            </li>
+                        </ul>
                     </div>
-                    <div id="evo-confirm-options" class="evo-confirm-options"></div>
-                    <div class="evo-confirm-footer">
-                        <button id="evo-cancel-btn" class="evo-cancel-btn" type="button">取消退回原位 [Esc]</button>
+                    <div class="side-panel-section">
+                        <h2 class="side-panel-title">戰術地形加成</h2>
+                        <ul class="side-panel-list">
+                            <li class="side-panel-row side-terrain-row"><span class="terrain-swatch swatch-highground"
+                                    aria-hidden="true"></span><span>制高點</span><span class="side-val num">射程 +30%</span>
+                            </li>
+                            <li class="side-panel-row side-terrain-row"><span class="terrain-swatch swatch-mana"
+                                    aria-hidden="true"></span><span>元素靈脈</span><span class="side-val num">攻速 +25%</span>
+                            </li>
+                            <li class="side-panel-row side-terrain-row"><span class="terrain-swatch swatch-tree"
+                                    aria-hidden="true"></span><span>世界樹庇護</span><span class="side-val num">傷 +20%</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="side-panel-section">
+                        <h2 class="side-panel-title">轉職與升星</h2>
+                        <ul class="side-panel-list">
+                            <li class="side-panel-row"><span>異系 1★ + 1★</span><span class="side-val num">轉職 1★</span>
+                            </li>
+                            <li class="side-panel-row"><span>同種 / 灌注 1★</span><span class="side-val num">升星 2★</span>
+                            </li>
+                            <li class="side-panel-row"><span>同種 2★ + 2★</span><span class="side-val num">冠枝 3★</span>
+                            </li>
+                        </ul>
+                    </div>
+                </aside>
+
+                <!-- 15x10 戰場舞台容器（80% 視覺重心） -->
+                <div id="board-stage">
+                    <div id="grid-board"></div>
+                    <div id="range-layer" aria-hidden="true">
+                        <div id="range-circle"></div>
+                    </div>
+                    <canvas id="fx-canvas" aria-hidden="true"></canvas>
+                    <div id="monster-layer" aria-hidden="true"></div>
+                    <div id="floating-layer" aria-hidden="true"></div>
+                    <!-- 特殊地形與防禦塔原位輕量浮動名牌 -->
+                    <div id="terrain-tooltip" class="terrain-tooltip hidden" role="status" aria-live="polite"></div>
+                    <div id="tower-tooltip" class="tower-tooltip hidden" role="status" aria-live="polite"></div>
+                    <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite">
+                        <div class="boss-banner-top">
+                            <span id="boss-banner-title">終極魔王</span>
+                            <span id="boss-banner-hp-text" class="num">0 / 0</span>
+                        </div>
+                        <div class="boss-banner-hp-track">
+                            <div id="boss-banner-hp-fill" class="boss-banner-hp-fill"></div>
+                        </div>
+                    </div>
+                    <!-- 0.15x 子彈時間 T2 -> T3 進化分岔選擇與確認輪盤 -->
+                    <div id="evo-confirm-overlay" class="evo-confirm-overlay hidden" role="dialog" aria-modal="true"
+                        aria-labelledby="evo-confirm-title">
+                        <div class="evo-confirm-panel">
+                            <div class="evo-confirm-header">
+                                <span id="evo-confirm-title" class="evo-confirm-title">世界樹冠枝開花選擇</span>
+                                <span class="evo-bullet-tag num">0.15x 子彈時間</span>
+                            </div>
+                            <div id="evo-confirm-options" class="evo-confirm-options"></div>
+                            <div class="evo-confirm-footer">
+                                <button id="evo-cancel-btn" class="evo-cancel-btn" type="button">取消退回原位 [Esc]</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <aside id="side-panel-right" class="side-panel side-panel-right" aria-label="本波與下波出怪詳情">
+                    <div class="side-panel-section">
+                        <h2 id="side-current-header" class="side-panel-title num">本波情報 · Wave 1</h2>
+                        <ul id="side-current-list" class="forecast-list"></ul>
+                    </div>
+                    <div class="side-panel-section">
+                        <h2 id="side-next-header" class="side-panel-title num">下波預告 · Wave 2</h2>
+                        <ul id="side-next-list" class="forecast-list"></ul>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- 固定式防禦塔檢查列（上排：名稱＋血脈成長路徑；下排：單體/群傷DPS、累計傷害、索敵模式、出售） -->
+            <div id="tower-inspector" aria-live="polite">
+                <div id="inspector-empty" class="inspector-empty">
+                    點選場上防禦塔或敵軍以檢視屬性與切換索敵
+                </div>
+                <div id="inspector-active" class="inspector-active hidden">
+                    <div class="inspector-top-row">
+                        <span id="inspector-name" class="inspector-badge">🔥 火芽 ★</span>
+                        <span id="inspector-lineage" class="inspector-lineage">🔥 火芽</span>
+                        <span id="inspector-terrain" class="inspector-terrain hidden"></span>
+                    </div>
+                    <div class="inspector-bottom-row">
+                        <div class="inspector-metrics">
+                            <span id="inspector-dps" class="inspector-stat num">單體 DPS 21</span>
+                            <span id="inspector-aoe-dps" class="inspector-stat inspector-aoe num hidden">預估群傷 DPS
+                                0</span>
+                            <span id="inspector-total-dmg" class="inspector-stat num">累計傷害 0</span>
+                            <span id="inspector-range" class="inspector-stat num">射程 2.3</span>
+                        </div>
+                        <div class="inspector-actions">
+                            <button id="inspector-target-btn" class="inspector-btn target-btn"
+                                type="button">索敵：最前</button>
+                            <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7
+                                💰)</button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 固定式防禦塔檢查列（上排：名稱＋血脈成長路徑；下排：單體/群傷DPS、累計傷害、索敵模式、出售） -->
-        <div id="tower-inspector" aria-live="polite">
-            <div id="inspector-empty" class="inspector-empty">
-                拖曳或點擊下方元素卡＋空地即可建塔；點選場上防禦塔／怪物可檢視屬性
-            </div>
-            <div id="inspector-active" class="inspector-active hidden">
-                <div class="inspector-top-row">
-                    <span id="inspector-name" class="inspector-badge">🔥 火芽 ★</span>
-                    <span id="inspector-lineage" class="inspector-lineage">🔥 火芽</span>
-                    <span id="inspector-terrain" class="inspector-terrain hidden"></span>
+            <!-- 精簡底部操作區：左側元素召喚卡 ＋ 右側世界樹主動技能與快捷功能列 -->
+            <div class="bottom-action-deck">
+                <!-- 屬性等寬拖拉式指定召喚控制區（由 Object.keys 動態掃描生成） -->
+                <div id="element-spawner-container"></div>
+
+                <!-- 主動技能、圖鑑與開波等寬工具列 -->
+                <div class="debug-controls">
+                    <button id="skill-entangle-btn" class="skill-btn skill-entangle" type="button"
+                        title="消耗 40 靈露：全場敵人定身 2.5 秒且易傷 +20%（冷卻 8 秒）">
+                        <span class="skill-cd-mask"></span>
+                        <span class="skill-dew-bar"></span>
+                        <span class="skill-label">根鬚纏繞 (<span class="num">40</span> 靈露)</span>
+                        <span class="skill-sub num">還差 20 靈露</span>
+                    </button>
+                    <button id="skill-frenzy-btn" class="skill-btn skill-frenzy" type="button"
+                        title="消耗 60 靈露：全場防禦塔攻速 +35% 持續 5 秒（冷卻 12 秒）">
+                        <span class="skill-cd-mask"></span>
+                        <span class="skill-dew-bar"></span>
+                        <span class="skill-label">自然狂熱 (<span class="num">60</span> 靈露)</span>
+                        <span class="skill-sub num">還差 40 靈露</span>
+                    </button>
+                    <button id="codex-btn" class="codex-btn" type="button">世界樹圖譜</button>
+                    <button id="next-wave-btn" class="wave-btn" type="button" disabled>立即開波</button>
+                    <button id="add-gold-btn" class="debug-btn debug-only" type="button">+500 💰</button>
+                    <button id="clear-gold-btn" class="debug-btn-danger debug-only" type="button">清空金幣</button>
                 </div>
-                <div class="inspector-bottom-row">
-                    <div class="inspector-metrics">
-                        <span id="inspector-dps" class="inspector-stat num">單體 DPS 21</span>
-                        <span id="inspector-aoe-dps" class="inspector-stat inspector-aoe num hidden">預估群傷 DPS 0</span>
-                        <span id="inspector-total-dmg" class="inspector-stat num">累計傷害 0</span>
-                        <span id="inspector-range" class="inspector-stat num">射程 2.3</span>
-                    </div>
-                    <div class="inspector-actions">
-                        <button id="inspector-target-btn" class="inspector-btn target-btn" type="button">索敵：最前</button>
-                        <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7 💰)</button>
-                    </div>
-                </div>
             </div>
-        </div>
 
-        <!-- 精簡底部操作區：左側元素召喚卡 ＋ 右側世界樹主動技能與快捷功能列 -->
-        <div class="bottom-action-deck">
-            <!-- 屬性等寬拖拉式指定召喚控制區（由 Object.keys 動態掃描生成） -->
-            <div id="element-spawner-container"></div>
-
-            <!-- 主動技能、圖鑑與開波等寬工具列 -->
-            <div class="debug-controls">
-                <button id="skill-entangle-btn" class="skill-btn skill-entangle" type="button"
-                    title="消耗 40 靈露：全場敵人定身 2.5 秒且易傷 +20%（冷卻 8 秒）">
-                    <span class="skill-cd-mask"></span>
-                    <span class="skill-dew-bar"></span>
-                    <span class="skill-label">根鬚纏繞 (<span class="num">40</span> 靈露)</span>
-                    <span class="skill-sub num">還差 20 靈露</span>
-                </button>
-                <button id="skill-frenzy-btn" class="skill-btn skill-frenzy" type="button"
-                    title="消耗 60 靈露：全場防禦塔攻速 +35% 持續 5 秒（冷卻 12 秒）">
-                    <span class="skill-cd-mask"></span>
-                    <span class="skill-dew-bar"></span>
-                    <span class="skill-label">自然狂熱 (<span class="num">60</span> 靈露)</span>
-                    <span class="skill-sub num">還差 40 靈露</span>
-                </button>
-                <button id="codex-btn" class="codex-btn" type="button">融合圖鑑</button>
-                <button id="next-wave-btn" class="wave-btn" type="button" disabled>立即開波</button>
-                <button id="add-gold-btn" class="debug-btn debug-only" type="button">+500 💰</button>
-                <button id="clear-gold-btn" class="debug-btn-danger debug-only" type="button">清空金幣</button>
-            </div>
-        </div>
-
-        <p id="msg-text">點擊「開始防守」開啟戰局，守護世界樹進入第 1 波備戰。</p>
+            <p id="msg-text">點擊「開始防守」開啟戰局，準備第 1 波防線佈置。</p>
     </main>
 
     <!-- 右上角「？」按需開啟之戰術手冊抽屜彈窗 -->
@@ -216,7 +279,8 @@
                 <h2 class="guide-section-title">防線紀要與快捷鍵</h2>
                 <div class="codex-note">
                     每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波迎戰領主魔王。<br>
-                    熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W]</b> 技能 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消
+                    熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W]</b> 技能 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜
+                    <b>[Esc]</b> 取消
                 </div>
             </div>
 
@@ -243,9 +307,11 @@
             <div class="codex-header-bar">
                 <div>
                     <h1 id="codex-title" class="codex-title">元素世界樹演化圖譜</h1>
-                    <p class="modal-subtitle codex-subtitle">由世界樹原核向上生長：3 根芽 ➔ 6 主幹 ➔ 12 冠枝（按 [T] 隨時開啟並自動暫停）。</p>
+                    <p class="modal-subtitle codex-subtitle">由世界樹原核向上生長：3 基礎芽 ＋ 3 轉職物種 ➔ 6 進階主幹 ➔ 12 終極冠枝（按 [T]
+                        隨時開啟並自動暫停）。</p>
                 </div>
-                <button id="codex-close-btn" class="codex-close-top-btn" type="button" aria-label="關閉圖鑑">關閉 [Esc]</button>
+                <button id="codex-close-btn" class="codex-close-top-btn" type="button" aria-label="關閉圖鑑">關閉
+                    [Esc]</button>
             </div>
             <div class="codex-tabs"></div>
             <div id="codex-tree-shell" class="codex-tree-shell"></div>
@@ -292,7 +358,7 @@
                 <div class="rule-item">
                     <span class="rule-num num">2</span>
                     <div class="rule-content">
-                        <strong>融合進化</strong>：同元素或同星基礎元素皆可融合，每過 3 波可獲世界樹枝枒賜福。
+                        <strong>轉職與升星</strong>：異系 1★ 基礎芽相融轉職為 1★ 新物種；同物種相融升星（1★ ➔ 2★ ➔ 3★ 分岔），每過 3 波可獲世界樹賜福。
                     </div>
                 </div>
                 <div class="rule-item">
@@ -337,9 +403,12 @@
                     <strong id="victory-mvp-text" class="recap-mvp-val">尚無輸出紀錄</strong>
                 </div>
                 <div class="recap-grid">
-                    <div class="recap-cell"><span>總擊殺數</span><strong id="victory-kills-text" class="num">0 隻</strong></div>
-                    <div class="recap-cell"><span>累計獲得金幣</span><strong id="victory-gold-earned-text" class="num">0 💰</strong></div>
-                    <div class="recap-cell"><span>合成融合次數</span><strong id="victory-fusion-text" class="num">0 次</strong></div>
+                    <div class="recap-cell"><span>總擊殺數</span><strong id="victory-kills-text" class="num">0 隻</strong>
+                    </div>
+                    <div class="recap-cell"><span>累計獲得金幣</span><strong id="victory-gold-earned-text" class="num">0
+                            💰</strong></div>
+                    <div class="recap-cell"><span>合成融合次數</span><strong id="victory-fusion-text" class="num">0 次</strong>
+                    </div>
                 </div>
             </div>
 
@@ -353,7 +422,7 @@
                     <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">🖐️ 拖拉操作卡手</button>
                 </div>
                 <div id="victory-rating-status" class="feel-rating-status">點擊上方標籤一鍵回饋本局體感</div>
-                <button id="victory-copy-report-btn" class="copy-report-btn" type="button">📋 複製本局數據戰報</button>
+                <button id="victory-copy-report-btn" class="copy-report-btn" type="button">複製本局數據戰報</button>
             </div>
 
             <div class="modal-actions">
@@ -392,9 +461,12 @@
                     <strong id="gameover-mvp-text" class="recap-mvp-val">尚無輸出紀錄</strong>
                 </div>
                 <div class="recap-grid">
-                    <div class="recap-cell"><span>總擊殺數</span><strong id="final-kills-text" class="num">0 隻</strong></div>
-                    <div class="recap-cell"><span>累計獲得金幣</span><strong id="gameover-gold-earned-text" class="num">0 💰</strong></div>
-                    <div class="recap-cell"><span>合成融合次數</span><strong id="gameover-fusion-text" class="num">0 次</strong></div>
+                    <div class="recap-cell"><span>總擊殺數</span><strong id="final-kills-text" class="num">0 隻</strong>
+                    </div>
+                    <div class="recap-cell"><span>累計獲得金幣</span><strong id="gameover-gold-earned-text" class="num">0
+                            💰</strong></div>
+                    <div class="recap-cell"><span>合成融合次數</span><strong id="gameover-fusion-text" class="num">0
+                            次</strong></div>
                 </div>
                 <div id="gameover-breaker-row" class="recap-breaker hidden">
                     <span>致命突破敵人</span>
@@ -414,7 +486,7 @@
                     <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">🖐️ 拖拉操作卡手</button>
                 </div>
                 <div id="gameover-rating-status" class="feel-rating-status">點擊上方標籤一鍵回饋本局體感</div>
-                <button id="gameover-copy-report-btn" class="copy-report-btn" type="button">📋 複製本局數據戰報</button>
+                <button id="gameover-copy-report-btn" class="copy-report-btn" type="button">複製本局數據戰報</button>
             </div>
 
             <div class="modal-actions">

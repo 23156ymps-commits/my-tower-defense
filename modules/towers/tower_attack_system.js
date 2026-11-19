@@ -253,6 +253,31 @@
         };
     }
 
+    function getTowerHoverTooltipData(index, towerObj) {
+        if (!towerObj) return null;
+        const cfg = getTowerCfg(towerObj.type, towerObj.tier) || {};
+        const baseDmg = getBaseDamageForTower(towerObj, cfg);
+        const TerrainSys = GameApp.systems && GameApp.systems.terrain;
+        const TreeSys = GameApp.systems && GameApp.systems.tree;
+        const terrainBonuses = (TerrainSys && index !== null && index !== undefined)
+            ? TerrainSys.getTerrainBonusesAt(index)
+            : { damageMult: 1.0, terrainType: null };
+        const globalBlessMult = TreeSys ? TreeSys.getGlobalBlessingDamageMult() : 1.0;
+        const effDmg = Math.max(1, Math.round(baseDmg * terrainBonuses.damageMult * globalBlessMult));
+        const intervalSec = (Math.max(120, getTowerAttackInterval(towerObj, index)) / 1000).toFixed(2);
+        const effRange = Number(getTowerEffectiveRangeCells(index, towerObj).toFixed(2)).toString();
+        const stars = GameApp.renderer && typeof GameApp.renderer.getTierStars === 'function'
+            ? GameApp.renderer.getTierStars(towerObj.tier)
+            : '★'.repeat(Math.max(1, Math.min(3, towerObj.tier || 1)));
+        const desc = cfg.tooltipSummary || cfg.roleSummary || (Array.isArray(cfg.badges) ? cfg.badges.join(' · ') : '');
+
+        return {
+            nameLine: `${cfg.icon || '✨'} ${cfg.name || towerObj.type} · ${stars}`,
+            statsLine: `單發 ${effDmg} ｜ 攻速 ${intervalSec}s ｜ 射程 ${effRange}`,
+            descLine: desc
+        };
+    }
+
     function pickSmartSpawnIndex(type = null) {
         const st = G.state, map = G.map;
         const boardSize = CONFIG.BOARD_SIZE || 150;
@@ -335,7 +360,10 @@
         const weaknessMult = Number.isFinite(constants.WEAKNESS_MULTIPLIER) ? constants.WEAKNESS_MULTIPLIER : 1.75;
         const affinityMult = Number.isFinite(constants.HYBRID_AFFINITY_MULTIPLIER) ? constants.HYBRID_AFFINITY_MULTIPLIER : 1.35;
         const weakMult = isWeakness ? weaknessMult : (isAffinity ? affinityMult : 1.0);
-        const raw = baseDmg * thornMult * (options.damageScale ?? 1.0) * (options.terrainMult ?? 1.0) * (options.extraMult ?? 1.0) * weakMult * vulnMult;
+        const resonanceMult = TreeSys && typeof TreeSys.getElementalResonanceMult === 'function'
+            ? TreeSys.getElementalResonanceMult(towerObj, monster)
+            : 1.0;
+        const raw = baseDmg * thornMult * resonanceMult * (options.damageScale ?? 1.0) * (options.terrainMult ?? 1.0) * (options.extraMult ?? 1.0) * weakMult * vulnMult;
         const effArmor = MonsterSys ? MonsterSys.getMonsterEffectiveArmor(monster, options.armorPierce || 0) : (monster.armor || 0);
         const kVal = (constants && constants.ARMOR_HYPERBOLIC_K) || 35;
         return {
@@ -353,12 +381,16 @@
         const cfg = getTowerCfg(towerObj.type, towerObj.tier) || {};
         const fxParams = cfg.effectParams || {};
 
+        const armorPierce = options.armorPierce ?? (fxParams.armorPierce || 0);
+        if (TreeSys && typeof TreeSys.registerResonanceHit === 'function') {
+            TreeSys.registerResonanceHit(towerObj, monster);
+        }
         const terrainMult = options.terrainMult ?? (TerrainSys ? TerrainSys.getTowerTerrainDamageMult(towerIndex) : 1.0);
         const result = calculateDamage(towerObj, monster, {
             damageScale: options.damageScale ?? 1.0,
             terrainMult,
             extraMult: options.extraMult ?? 1.0,
-            armorPierce: options.armorPierce ?? (fxParams.armorPierce || 0)
+            armorPierce
         });
 
         const hpBefore = monster.hp;
@@ -366,7 +398,8 @@
         recordTowerDamage(towerObj, Math.min(hpBefore, result.damage));
 
         // 依選項或攻擊樣式套用破甲／減速
-        if ((cfg.attackStyle === 'burst_armor_break' || options.forceShred) && options.applyShred !== false && MonsterSys) {
+        const willApplyShred = (cfg.attackStyle === 'burst_armor_break' || options.forceShred) && options.applyShred !== false && MonsterSys;
+        if (willApplyShred) {
             MonsterSys.applyArmorShred(
                 monster,
                 options.shredRate ?? fxParams.shredRate ?? 0.25,
@@ -380,11 +413,26 @@
             MonsterSys.applySlowToMonster(monster, slowSpec.rate, slowSpec.durationMs, options.slowSourceId || towerObj.type);
         }
 
+        // 🔥 焦土烙印祝福：火系與蒸氣塔觸發破甲或暴擊時留下 2.5s 燃燒路徑
+        if (TreeSys && typeof TreeSys.trySpawnScorchedBrand === 'function') {
+            const didShredOrCrit = Boolean(willApplyShred || armorPierce > 0 || result.isWeakness || result.isAffinity);
+            TreeSys.trySpawnScorchedBrand(towerObj, monster, didShredOrCrit);
+        }
+
         GameApp.renderer.spawnDamageNumber(result.damage, result.isWeakness, monster.pixelX, monster.pixelY, options.dmgTag || '', result.isAffinity);
 
         // 感電協同觸發：任何防禦塔命中感電怪額外觸發 +12 雷傷（單怪 0.35s 內置冷卻）
         if (monster.hp > 0 && MonsterSys && typeof MonsterSys.tryTriggerShockBonusDamage === 'function') {
             MonsterSys.tryTriggerShockBonusDamage(monster, towerObj);
+        }
+
+        // ❄️ 極寒碎冰祝福：處於減速或凍結狀態且血量低於 15% 時直接碎裂處決
+        if (monster.hp > 0 && TreeSys && typeof TreeSys.shouldGlacialShatter === 'function' && TreeSys.shouldGlacialShatter(towerObj, monster)) {
+            const shatterDmg = monster.hp;
+            monster.hp = 0;
+            recordTowerDamage(towerObj, shatterDmg);
+            GameApp.renderer.spawnDamageNumber(shatterDmg, true, monster.pixelX, monster.pixelY, '碎冰 ');
+            GameApp.renderer.emitParticleBurst(monster.pixelX, monster.pixelY, '#4A9EBF', 8, 85);
         }
 
         // 焚世餘燼樹 (fire_B) <12% 血量處決
@@ -432,20 +480,31 @@
         const firstPos = { left: primaryTarget.pixelX, top: primaryTarget.pixelY };
         Renderer.updateTowerAimVisual(towerIndex, towerObj, towerPos, firstPos);
 
+        const TreeSys = GameApp.systems && GameApp.systems.tree;
+        const stormExtra = (TreeSys && typeof TreeSys.getChainStormExtraBounces === 'function') ? TreeSys.getChainStormExtraBounces() : 0;
+        const stormRadiusPx = (TreeSys && typeof TreeSys.getChainStormRadiusCells === 'function')
+            ? TreeSys.getChainStormRadiusCells() * G.boardMetrics.step
+            : chainRadiusPx;
+        let maxBounces = scales.length;
+
         // 單次攻擊內以 hitSet 嚴格鎖定已命中怪物，禁止彈跳回同一目標
         const hitSet = new Set([primaryTarget.id]);
         applyHitToMonster(towerIndex, towerObj, primaryTarget, { damageScale: scales[0] ?? 1.0 });
+        if (primaryTarget.hp <= 0 && stormExtra > 0) {
+            maxBounces += stormExtra;
+        }
         Renderer.emitCanvasAttackFX(towerObj.type, towerPos, firstPos, { isLv3 });
 
         let prevPos = firstPos;
-        for (let b = 1; b < scales.length; b++) {
+        for (let b = 1; b < maxBounces; b++) {
+            const searchRadius = b >= scales.length ? stormRadiusPx : chainRadiusPx;
             let bestNext = null;
             let bestDist = Infinity;
             for (let i = 0; i < st.monsters.length; i++) {
                 const cand = st.monsters[i];
                 if (cand.hp <= 0 || cand.isTargetable === false || hitSet.has(cand.id)) continue;
                 const d = Math.hypot(cand.pixelX - prevPos.left, cand.pixelY - prevPos.top);
-                if (d <= chainRadiusPx && d < bestDist) {
+                if (d <= searchRadius && d < bestDist) {
                     bestDist = d;
                     bestNext = cand;
                 }
@@ -453,7 +512,11 @@
             if (!bestNext) break;
             hitSet.add(bestNext.id);
             const nextPos = { left: bestNext.pixelX, top: bestNext.pixelY };
-            applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: scales[b] });
+            const scaleVal = b < scales.length ? scales[b] : (scales[scales.length - 1] ?? 0.55);
+            applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: scaleVal });
+            if (bestNext.hp <= 0 && stormExtra > 0) {
+                maxBounces += stormExtra;
+            }
             Renderer.emitCanvasAttackFX(towerObj.type, prevPos, nextPos, { isLv3 });
             prevPos = nextPos;
         }
@@ -708,9 +771,14 @@
             const pulseSlow = TreeSys
                 ? TreeSys.getIceLineageSlowParams(towerObj.type, fxParams.slowRate ?? 0.45, fxParams.slowDurationMs ?? 2200)
                 : { rate: 0.45, durationMs: 2200 };
-            const chainCount = (fxParams.chainExtraTargets ?? 2) + (TreeSys ? TreeSys.getThunderChainBonus(towerObj.type) : 0);
+            const stormExtra = (TreeSys && typeof TreeSys.getChainStormExtraBounces === 'function') ? TreeSys.getChainStormExtraBounces() : 0;
+            const stormRadiusPx = (TreeSys && typeof TreeSys.getChainStormRadiusCells === 'function')
+                ? TreeSys.getChainStormRadiusCells() * G.boardMetrics.step
+                : chainRadiusPx;
+            let maxChain = (fxParams.chainExtraTargets ?? 2) + (TreeSys ? TreeSys.getThunderChainBonus(towerObj.type) : 0);
 
             applyHitToMonster(towerIndex, towerObj, target);
+            if (target.hp <= 0 && stormExtra > 0) maxChain += stormExtra;
             if (target.hp > 0 && MonsterSys) MonsterSys.applySlowToMonster(target, pulseSlow.rate, pulseSlow.durationMs, 'magnet_pulse');
             for (let i = 0; i < G.state.monsters.length; i++) {
                 const m = G.state.monsters[i];
@@ -722,18 +790,20 @@
 
             const visited = new Set([target.id]);
             let prevPos = targetPos;
-            for (let bounce = 0; bounce < chainCount; bounce++) {
+            for (let bounce = 0; bounce < maxChain; bounce++) {
+                const searchRadius = bounce >= (fxParams.chainExtraTargets ?? 2) ? stormRadiusPx : chainRadiusPx;
                 let bestNext = null, bestDist = Infinity;
                 for (let i = 0; i < G.state.monsters.length; i++) {
                     const cand = G.state.monsters[i];
                     if (cand.hp <= 0 || cand.isTargetable === false || visited.has(cand.id)) continue;
                     const d = Math.hypot(cand.pixelX - prevPos.left, cand.pixelY - prevPos.top);
-                    if (d <= chainRadiusPx && d < bestDist) { bestDist = d; bestNext = cand; }
+                    if (d <= searchRadius && d < bestDist) { bestDist = d; bestNext = cand; }
                 }
                 if (!bestNext) break;
                 visited.add(bestNext.id);
                 const nextPos = { left: bestNext.pixelX, top: bestNext.pixelY };
                 applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: fxParams.chainDamageRatio ?? 0.70 });
+                if (bestNext.hp <= 0 && stormExtra > 0) maxChain += stormExtra;
                 if (bestNext.hp > 0 && MonsterSys) MonsterSys.applySlowToMonster(bestNext, pulseSlow.rate, pulseSlow.durationMs, 'magnet_pulse');
                 GameApp.renderer.emitCanvasAttackFX('magnet-arc', prevPos, nextPos);
                 prevPos = nextPos;
@@ -783,27 +853,34 @@
             const TreeSys = GameApp.systems && GameApp.systems.tree;
             const MonsterSys = GameApp.systems && GameApp.systems.monster;
             const chainRadiusPx = (fxParams.chainRadiusCells ?? 2.6) * G.boardMetrics.step;
-            const totalTargets = (fxParams.chainTargets ?? 3) + (TreeSys ? TreeSys.getThunderChainBonus(towerObj.type) : 0);
+            const stormExtra = (TreeSys && typeof TreeSys.getChainStormExtraBounces === 'function') ? TreeSys.getChainStormExtraBounces() : 0;
+            const stormRadiusPx = (TreeSys && typeof TreeSys.getChainStormRadiusCells === 'function')
+                ? TreeSys.getChainStormRadiusCells() * G.boardMetrics.step
+                : chainRadiusPx;
+            let totalTargets = (fxParams.chainTargets ?? 3) + (TreeSys ? TreeSys.getThunderChainBonus(towerObj.type) : 0);
 
             if (MonsterSys) MonsterSys.applyShockToMonster(target, fxParams, towerObj);
             applyHitToMonster(towerIndex, towerObj, target);
+            if (target.hp <= 0 && stormExtra > 0) totalTargets += stormExtra;
             GameApp.renderer.emitCanvasAttackFX('magnet-arc', towerPos, targetPos);
 
             const hitSet = new Set([target.id]);
             let prevPos = targetPos;
             for (let b = 1; b < totalTargets; b++) {
+                const searchRadius = b >= (fxParams.chainTargets ?? 3) ? stormRadiusPx : chainRadiusPx;
                 let bestNext = null, bestDist = Infinity;
                 for (let i = 0; i < G.state.monsters.length; i++) {
                     const cand = G.state.monsters[i];
                     if (cand.hp <= 0 || cand.isTargetable === false || hitSet.has(cand.id)) continue;
                     const d = Math.hypot(cand.pixelX - prevPos.left, cand.pixelY - prevPos.top);
-                    if (d <= chainRadiusPx && d < bestDist) { bestDist = d; bestNext = cand; }
+                    if (d <= searchRadius && d < bestDist) { bestDist = d; bestNext = cand; }
                 }
                 if (!bestNext) break;
                 hitSet.add(bestNext.id);
                 const nextPos = { left: bestNext.pixelX, top: bestNext.pixelY };
                 if (MonsterSys) MonsterSys.applyShockToMonster(bestNext, fxParams, towerObj);
                 applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: fxParams.chainDamageRatio ?? 0.75 });
+                if (bestNext.hp <= 0 && stormExtra > 0) totalTargets += stormExtra;
                 GameApp.renderer.emitCanvasAttackFX('magnet-arc', prevPos, nextPos);
                 prevPos = nextPos;
             }
@@ -940,6 +1017,26 @@
             st.pendingBolts = remainingQueue.concat(st.pendingBolts);
         }
 
+        if (Array.isArray(st.pendingOverchargeShots) && st.pendingOverchargeShots.length > 0) {
+            const prevShots = st.pendingOverchargeShots;
+            const remainShots = [];
+            st.pendingOverchargeShots = [];
+            for (let i = 0; i < prevShots.length; i++) {
+                const shot = prevShots[i];
+                if (shot.sessionId !== st.sessionId || !G.callbacks.isGameplayActive()) continue;
+                shot.remainingMs -= dtMs;
+                if (shot.remainingMs <= 0) {
+                    if (st.board[shot.towerIndex] === shot.towerObj && st.monsters.length > 0) {
+                        if (performTowerAttack(shot.towerIndex, shot.towerObj)) didCombatAct = true;
+                    }
+                } else {
+                    remainShots.push(shot);
+                }
+            }
+            st.pendingOverchargeShots = remainShots.concat(st.pendingOverchargeShots);
+        }
+
+        const TreeSys = GameApp.systems && GameApp.systems.tree;
         if (st.monsters.length > 0 || st.waveState === 'SPAWNING') {
             for (let idx = 0; idx < st.board.length; idx++) {
                 const towerObj = st.board[idx];
@@ -950,6 +1047,15 @@
                 if (towerObj.accMs >= intervalMs && st.monsters.length > 0 && performTowerAttack(idx, towerObj)) {
                     towerObj.accMs -= intervalMs;
                     didCombatAct = true;
+                    if (TreeSys && typeof TreeSys.shouldTriggerDewOvercharge === 'function' && TreeSys.shouldTriggerDewOvercharge()) {
+                        if (!Array.isArray(st.pendingOverchargeShots)) st.pendingOverchargeShots = [];
+                        st.pendingOverchargeShots.push({
+                            towerIndex: idx,
+                            towerObj,
+                            remainingMs: 110,
+                            sessionId: st.sessionId
+                        });
+                    }
                 }
             }
         }
@@ -967,6 +1073,7 @@
         createTowerObj,
         recordTowerDamage,
         getTowerInspectorStats,
+        getTowerHoverTooltipData,
         pickSmartSpawnIndex,
         isMonsterPreferred,
         findBestTargetInRange,

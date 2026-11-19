@@ -77,26 +77,31 @@
     }
 
     /**
-     * 檢查兩座同星塔若不可合成，其具體不相容原因
+     * 檢查兩座塔若不可合成，其具體不相容原因
      */
     function getIncompatibilityReason(fromTower, toTower) {
         const evo = getEvoData();
         const maxTier = evo.MAX_TIER || 3;
         if (!fromTower || !toTower) return '無效的防禦塔';
         if (fromTower.tier >= maxTier || toTower.tier >= maxTier) {
-            return '已達 T3 冠枝最高階級，無法繼續融合';
+            return '已達 3★ 冠枝最高階級，無法繼續融合';
         }
         if (fromTower.tier !== toTower.tier) {
-            return '兩座防禦塔階級不同（須同為 ★ 根芽或同為 ★★ 主幹）';
+            return '兩座防禦塔星級不同（須同為 1★ 或同為 2★）';
+        }
+        if (fromTower.tier === 1 && toTower.tier === 1) {
+            return '僅同物種 1★、異系基礎芽轉職，或同血脈基礎芽灌注轉職 1★ 可融合';
         }
         if (fromTower.tier === 2 && toTower.tier === 2) {
-            return '血脈不相容：該兩座 T2 主幹無共同父系血脈，無法催熟或融合';
+            return '須兩座同物種 2★ 塔才能觸發冠枝分岔進化';
         }
         return '該組合無法進行融合';
     }
 
     /**
-     * 判定兩座防禦塔能否進行 T1→T2 主幹合成 或 T2→T3 冠枝分岔／同血脈定向催熟
+     * 判定兩座防禦塔能否進行：
+     *   - 1★ + 1★：異系轉職成 1★ 新物種 / 同物種升為 2★ / 同血脈基礎芽灌注轉職 1★ 升為 2★（需彈窗確認）
+     *   - 2★ + 2★：同物種升為 3★ 冠枝（0.15x 子彈時間分岔輪盤）
      */
     function getFusionResult(fromTower, toTower) {
         const evo = getEvoData();
@@ -105,32 +110,40 @@
             return null;
         }
         const towersDict = getTowersDict();
-        const newTier = toTower.tier + 1;
 
-        // ==================== T1 + T1 -> T2 主幹（立即合成） ====================
+        // ==================== 1★ + 1★（異系轉職 1★ / 同物種升 2★ / 元素灌注升 2★） ====================
         if (toTower.tier === 1) {
-            const baseA = resolveBaseElement(fromTower);
-            const baseB = resolveBaseElement(toTower);
-            const pairKey = getRecipeKey(baseA, baseB);
-            const t1Recipes = evo.T1_TO_T2_RECIPES || {};
+            const idA = normalizeNodeId(fromTower);
+            const idB = normalizeNodeId(toTower);
+            const pairKey = getRecipeKey(idA, idB);
+            const t1Recipes = evo.T1_RECIPES || evo.T1_TO_T2_RECIPES || {};
             const matched = t1Recipes[pairKey];
             if (matched && towersDict[matched.resultType]) {
                 const resCfg = towersDict[matched.resultType];
+                const resTier = Number.isFinite(matched.resultTier) ? matched.resultTier : (resCfg.nodeTier || 2);
+                const requiresConf = Boolean(matched.requiresConfirmation);
+                const mode = matched.mode || (resTier === 1 ? 'transfer_t1' : 'star_up_t2');
+                let previewLabel = `升星 ▸ ${resCfg.icon} ${resCfg.name} ★★`;
+                if (mode === 'transfer_t1') {
+                    previewLabel = `轉職 ▸ ${resCfg.icon} ${resCfg.name} ★`;
+                } else if (mode === 'infusion_single') {
+                    previewLabel = `元素灌注 ▸ ${resCfg.icon} ${resCfg.name} ★★`;
+                }
                 return {
                     type: matched.resultType,
                     options: [matched.resultType],
-                    tier: 2,
+                    tier: resTier,
                     isCrossElement: Boolean(matched.isCrossElement),
-                    mode: 'instant_t2',
-                    requiresConfirmation: false,
-                    title: `${resCfg.icon} ${resCfg.name}`,
-                    previewLabel: `進化 ▸ ${resCfg.icon} ${resCfg.name}`
+                    mode,
+                    requiresConfirmation: requiresConf,
+                    title: matched.title || `${resCfg.icon} ${resCfg.name}`,
+                    previewLabel
                 };
             }
             return null;
         }
 
-        // ==================== T2 + T2 -> T3 冠枝（0.15x 子彈時間確認輪盤） ====================
+        // ==================== 2★ + 2★ -> 3★ 冠枝（同物種分岔確認輪盤） ====================
         if (toTower.tier === 2) {
             const trunkA = normalizeNodeId(fromTower);
             const trunkB = normalizeNodeId(toTower);
@@ -146,13 +159,13 @@
             return {
                 type: validOptions[0],
                 options: validOptions,
-                tier: newTier,
-                isCrossElement: true,
+                tier: 3,
+                isCrossElement: Boolean(towersDict[validOptions[0]] && towersDict[validOptions[0]].isHybrid),
                 mode: rule.mode || (validOptions.length > 1 ? 'dual_choice' : 'directed_single'),
                 family: rule.family || '',
                 requiresConfirmation: true,
                 title: rule.title || '世界樹冠枝開花',
-                previewLabel: rule.previewLabel || `進化 ▸ ${getShortNodeLabel(validOptions[0])}`
+                previewLabel: rule.previewLabel || `冠枝進化 ▸ ${getShortNodeLabel(validOptions[0])}`
             };
         }
 
@@ -168,31 +181,45 @@
         const targetType = chosenType || fusion.type;
         const evo = getEvoData();
         if (fusion.tier === (evo.MAX_TIER || 3)) {
-            return (evo.LV3_ASCENSION_HINTS && evo.LV3_ASCENSION_HINTS[targetType]) || '【T3 冠枝盛開！】';
+            return (evo.LV3_ASCENSION_HINTS && evo.LV3_ASCENSION_HINTS[targetType]) || '【3★ 冠枝盛開】';
         }
-        if (fusion.isCrossElement) return '【跨元素共生主幹！】';
-        return '【純血主幹進階！】';
+        if (fusion.mode === 'transfer_t1') return '【異系轉職為 1★ 新物種】';
+        if (fusion.mode === 'infusion_single') return '【元素灌注升為 2★】';
+        return '【同物種升為 2★】';
     }
 
-    function buildMergedLineagePath(fromTower, toTower, resultNodeId, resultTier) {
+    function buildMergedLineagePath(fromTower, toTower, resultNodeId, resultTier, mode = '') {
         const fromId = normalizeNodeId(fromTower);
         const toId = normalizeNodeId(toTower);
         const fromShort = getShortNodeLabel(fromId);
         const toShort = getShortNodeLabel(toId);
         const resShort = getShortNodeLabel(resultNodeId);
 
-        if (resultTier === 2) {
-            const step1 = fromId === toId ? fromShort : `${fromShort}+${toShort}`;
-            return [step1, resShort];
+        if (resultTier === 1 || mode === 'transfer_t1') {
+            return [`${fromShort}+${toShort}`, resShort];
         }
 
-        // T3 冠枝：保留根芽起點 -> T2 主幹組合 -> T3 冠枝
+        if (resultTier === 2) {
+            if (mode === 'infusion_single') {
+                return [`${toShort}+${fromShort}`, resShort];
+            }
+            const basePath = Array.isArray(toTower.lineagePath) && toTower.lineagePath.length > 0
+                ? toTower.lineagePath.slice()
+                : [toShort];
+            if (basePath[basePath.length - 1] !== resShort) {
+                basePath.push(resShort);
+            }
+            return basePath;
+        }
+
+        // 3★ 冠枝：保留完整脈絡並接上 3★ 分支
         const toPath = Array.isArray(toTower.lineagePath) && toTower.lineagePath.length > 0
-            ? toTower.lineagePath
-            : (getTowersDict()[toId] && getTowersDict()[toId].defaultLineagePath) || [toShort];
-        const rootStep = toPath[0] || fromShort;
-        const trunkStep = fromId === toId ? toShort : `${toShort}+${fromShort}`;
-        return [rootStep, trunkStep, resShort];
+            ? toTower.lineagePath.slice()
+            : ((getTowersDict()[toId] && getTowersDict()[toId].defaultLineagePath) || [toShort]).slice();
+        if (toPath[toPath.length - 1] !== resShort) {
+            toPath.push(resShort);
+        }
+        return toPath;
     }
 
     /**
@@ -220,7 +247,7 @@
         const fromShare = Number.isFinite(fromTower.costShare) ? fromTower.costShare : Math.pow(2, fromTower.tier - 1);
         const toShare = Number.isFinite(toTower.costShare) ? toTower.costShare : Math.pow(2, toTower.tier - 1);
         const mergedDamage = (fromTower.totalDamage || 0) + (toTower.totalDamage || 0);
-        const lineagePath = buildMergedLineagePath(fromTower, toTower, targetType, fusion.tier);
+        const lineagePath = buildMergedLineagePath(fromTower, toTower, targetType, fusion.tier, fusion.mode);
         st.fusionCount++;
 
         const AttackSys = GameApp.systems && GameApp.systems.towerAttack;

@@ -286,7 +286,7 @@
         if (activeDrag.btnEl) activeDrag.btnEl.classList.add('dragging-card');
 
         if (G.dom.msgText && tCfg) {
-            G.dom.msgText.innerText = `🎯 拖曳【${tCfg.icon} ${tCfg.name}】至棋盤綠色空地放開即可召喚（花費 ${cost} 💰）`;
+            G.dom.msgText.innerText = `拖曳【${tCfg.icon} ${tCfg.name}】至棋盤可建格放開召喚（花費 ${cost} 💰）。`;
         }
     }
 
@@ -344,7 +344,7 @@
             activeDrag.ghostEl = createGhostElement(activeDrag.towerType, activeDrag.tier);
             const tCfg = getTowersDict()[activeDrag.towerType];
             if (G.dom.msgText && tCfg) {
-                G.dom.msgText.innerText = `抓起【${tCfg.name} ${GameApp.renderer.getTierStars(activeDrag.tier)}】— 拖至空地移位或同星塔合成`;
+                G.dom.msgText.innerText = `移動【${tCfg.name} ${GameApp.renderer.getTierStars(activeDrag.tier)}】：放至空地移位，或拖向相容防禦塔融合。`;
             }
             G.callbacks.updateTowerInspector();
         }
@@ -392,8 +392,8 @@
                         const isPath = G.map.pathCellIndices.has(targetIndex);
                         const hasTower = G.state.board[targetIndex] !== null;
                         G.dom.msgText.innerText = isPath
-                            ? '⚠️ 怪物跑道禁止建塔，已取消召喚（未扣金幣）。'
-                            : (hasTower ? '⚠️ 商店召喚禁止覆蓋或直接與場上防禦塔合成，請放至空白草地（未扣金幣）。' : '⚠️ 該地形禁止建塔，已取消召喚（未扣金幣）。');
+                            ? '怪物路徑不可建塔，已取消召喚（未扣金幣）。'
+                            : (hasTower ? '商店召喚不可直接覆蓋場上防禦塔，請放置於空白地塊（未扣金幣）。' : '該地形不可建塔，已取消召喚（未扣金幣）。');
                     } else {
                         G.dom.msgText.innerText = '已取消拖曳召喚（未扣金幣）。';
                     }

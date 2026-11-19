@@ -41,45 +41,30 @@
         return tCfg.elementTag === lineageTag || towerType === lineageTag;
     }
 
+    function resolveTowerFamily(towerType) {
+        const tCfg = getTowersDict()[towerType];
+        if (tCfg) return tCfg.family || tCfg.elementTag || towerType;
+        return String(towerType || '').replace(/_(bud|trunk|A|B)$/, '');
+    }
+
     function getIceLineageSlowParams(towerType, baseRate, baseDurationMs) {
-        const tc = getTreeConfig();
-        if (!towerHasLineage(towerType, 'ice') || !hasBlessing('winter_bloodline')) {
-            return { rate: baseRate, durationMs: baseDurationMs };
-        }
-        return {
-            rate: Math.min(tc.BLESSING_WINTER_SLOW_CAP || 0.75, baseRate + (tc.BLESSING_WINTER_SLOW_BONUS || 0.12)),
-            durationMs: baseDurationMs > 0
-                ? baseDurationMs + (tc.BLESSING_WINTER_DURATION_BONUS_MS || 500)
-                : (tc.BLESSING_WINTER_STEAM_CHILL_MS || 2000)
-        };
+        return { rate: baseRate, durationMs: baseDurationMs };
     }
 
-    function getThunderChainBonus(towerType) {
-        const tc = getTreeConfig();
-        return (towerHasLineage(towerType, 'thunder') && hasBlessing('thunder_conduction'))
-            ? (tc.BLESSING_THUNDER_EXTRA_TARGETS || 1)
-            : 0;
+    function getThunderChainBonus() {
+        return 0;
     }
 
-    function getTowerBlessingSpeedMult(towerType) {
-        const tc = getTreeConfig();
-        if (hasBlessing('thunder_conduction') && towerHasLineage(towerType, 'thunder')) {
-            return 1 + (tc.BLESSING_THUNDER_SPEED_BONUS || 0.15);
-        }
+    function getTowerBlessingSpeedMult() {
         return 1.0;
     }
 
     function getGlobalBlessingDamageMult() {
-        const tc = getTreeConfig();
-        return hasBlessing('thorn_bulwark') ? (1 + (tc.BLESSING_THORN_GLOBAL_DMG || 0.12)) : 1.0;
+        return 1.0;
     }
 
-    function getNearTreeVulnerabilityBonus(monster) {
-        if (!hasBlessing('thorn_bulwark') || !G || !G.map || !G.map.waypoints.length) return 0;
-        const tc = getTreeConfig();
-        const treeWp = G.map.waypoints[G.map.waypoints.length - 1];
-        const dist = Math.hypot((Number.isFinite(monster.gridX) ? monster.gridX : 0) - treeWp.x, (Number.isFinite(monster.gridY) ? monster.gridY : 0) - treeWp.y);
-        return dist <= (tc.BLESSING_THORN_TREE_RADIUS_CELLS || 2.5) ? (tc.BLESSING_THORN_NEAR_TREE_DMG || 0.10) : 0;
+    function getNearTreeVulnerabilityBonus() {
+        return 0;
     }
 
     function computeKillDewGain(monster) {
@@ -89,43 +74,126 @@
         const mCfg = monsterDb[monster.typeKey] || {};
         const isSpec = Boolean(mCfg.isSpecialMechanic);
 
-        let dew = monster.isBoss
+        return monster.isBoss
             ? (tc.DEW_GAIN_BOSS || 30)
             : (isSpec ? (tc.DEW_GAIN_SPECIAL || 8) : (tc.DEW_GAIN_NORMAL || 4));
-        if (hasBlessing('life_nectar')) {
-            dew = Math.round(dew * (1 + (tc.BLESSING_DEW_GAIN_BONUS || 0.25)));
-        }
-        return dew;
     }
 
-    function tryTriggerEmberExplosion(originX, originY, killerTowerObj, killingDamage) {
-        if (!hasBlessing('searing_embers') || !killerTowerObj || !towerHasLineage(killerTowerObj.type, 'fire') || killingDamage <= 0) {
-            return;
+    /**
+     * 🔮 元素共鳴：記錄攻擊元素並檢查目標身上是否同時有 >= 2 種不同元素攻擊，若是回傳 1.25x
+     */
+    function registerResonanceHit(towerObj, monster) {
+        if (!towerObj || !monster || monster.hp <= 0) return;
+        const MonsterSys = GameApp.systems && GameApp.systems.monster;
+        const status = MonsterSys && typeof MonsterSys.ensureMonsterStatus === 'function'
+            ? MonsterSys.ensureMonsterStatus(monster)
+            : monster.status;
+        if (!status) return;
+        if (!status.resonanceElements) status.resonanceElements = {};
+        const tc = getTreeConfig();
+        const elemKey = resolveTowerFamily(towerObj.type);
+        status.resonanceElements[elemKey] = tc.BLESSING_RESONANCE_WINDOW_MS || 2500;
+    }
+
+    function getElementalResonanceMult(towerObj, monster) {
+        if (!hasBlessing('elemental_resonance') || !monster || !monster.status || !monster.status.resonanceElements) {
+            return 1.0;
         }
         const tc = getTreeConfig();
-        const Renderer = GameApp.renderer;
-        const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
-        const MonsterSys = GameApp.systems && GameApp.systems.monster;
-
-        const emberDmg = Math.max(1, Math.round(killingDamage * (tc.BLESSING_EMBER_DAMAGE_RATIO || 0.25)));
-        const emberRadiusPx = (tc.BLESSING_EMBER_RADIUS_CELLS || 1.0) * G.boardMetrics.step;
-        Renderer.emitRingFX(originX, originY, emberRadiusPx, '#f97316', 0.28, 260);
-        Renderer.emitParticleBurst(originX, originY, '#fb923c', 10, 95);
-
-        const victims = G.state.monsters.filter(m =>
-            m.hp > 0 && m.isTargetable !== false && Math.hypot(m.pixelX - originX, m.pixelY - originY) <= emberRadiusPx
-        );
-        for (let i = 0; i < victims.length; i++) {
-            const v = victims[i];
-            if (v.hp <= 0) continue;
-            const hpBefore = v.hp;
-            v.hp = Math.max(0, hpBefore - emberDmg);
-            if (AttackSys) AttackSys.recordTowerDamage(killerTowerObj, Math.min(hpBefore, emberDmg));
-            Renderer.spawnDamageNumber(emberDmg, false, v.pixelX, v.pixelY, '🔥');
-            if (v.hp <= 0 && MonsterSys) {
-                MonsterSys.handleMonsterKilled(v, killerTowerObj, emberDmg, { isEmberSplash: true });
+        const elemMap = monster.status.resonanceElements;
+        let activeCount = 0;
+        const keys = Object.keys(elemMap);
+        for (let i = 0; i < keys.length; i++) {
+            if (elemMap[keys[i]] > 0) activeCount++;
+        }
+        if (towerObj) {
+            const incoming = resolveTowerFamily(towerObj.type);
+            if (!elemMap[incoming] || elemMap[incoming] <= 0) {
+                activeCount++;
             }
         }
+        return activeCount >= 2 ? (1 + (tc.BLESSING_RESONANCE_DMG_BONUS || 0.25)) : 1.0;
+    }
+
+    /**
+     * ⚡ 連鎖風暴：連鎖閃電或彈射擊殺敵人時，額外多彈跳 2 次
+     */
+    function getChainStormExtraBounces() {
+        if (!hasBlessing('chain_storm')) return 0;
+        const tc = getTreeConfig();
+        return tc.BLESSING_CHAIN_STORM_EXTRA_BOUNCES || 2;
+    }
+
+    function getChainStormRadiusCells() {
+        const tc = getTreeConfig();
+        return tc.BLESSING_CHAIN_STORM_RADIUS_CELLS || 2.6;
+    }
+
+    /**
+     * ❄️ 極寒碎冰：減速或凍結目標血量低於 15% 時，受到冰系／蒸氣／磁環攻擊直接碎裂處決
+     */
+    function shouldGlacialShatter(towerObj, monster) {
+        if (!hasBlessing('glacial_shatter') || !towerObj || !monster || monster.hp <= 0) return false;
+        const family = resolveTowerFamily(towerObj.type);
+        if (family !== 'ice' && family !== 'steam' && family !== 'magnet') return false;
+        const MonsterSys = GameApp.systems && GameApp.systems.monster;
+        const isSlowedOrFrozen = MonsterSys
+            ? (MonsterSys.isMonsterSlowed(monster) || MonsterSys.isMonsterFrozen(monster))
+            : ((monster.slowTimer || 0) > 0);
+        if (!isSlowedOrFrozen) return false;
+        const tc = getTreeConfig();
+        const threshold = tc.BLESSING_GLACIAL_SHATTER_HP_PCT || 0.15;
+        return (monster.hp / Math.max(1, monster.maxHp)) < threshold;
+    }
+
+    /**
+     * 🔥 焦土烙印：火系與蒸氣塔觸發破甲或暴擊時，在目標腳下留下 2.5 秒燃燒路徑 (22 點/秒)
+     */
+    function trySpawnScorchedBrand(towerObj, monster, didShredOrCrit) {
+        if (!hasBlessing('scorched_brand') || !towerObj || !monster || !didShredOrCrit) return false;
+        const family = resolveTowerFamily(towerObj.type);
+        if (family !== 'fire' && family !== 'steam') return false;
+        if ((monster._scorchBrandIcdMs || 0) > 0) return false;
+
+        const MonsterSys = GameApp.systems && GameApp.systems.monster;
+        if (!MonsterSys || typeof MonsterSys.spawnGroundHazard !== 'function' || !G || !G.boardMetrics) return false;
+
+        const tc = getTreeConfig();
+        monster._scorchBrandIcdMs = 350;
+        if (Array.isArray(G.state.groundHazards) && G.state.groundHazards.length >= 28) {
+            const oldIdx = G.state.groundHazards.findIndex(h => h.type === 'scorch_trail');
+            if (oldIdx !== -1) G.state.groundHazards.splice(oldIdx, 1);
+        }
+        MonsterSys.spawnGroundHazard({
+            type: 'scorch_trail',
+            x: monster.pixelX,
+            y: monster.pixelY,
+            radiusPx: (tc.BLESSING_SCORCH_RADIUS_CELLS || 0.75) * G.boardMetrics.step,
+            dps: tc.BLESSING_SCORCH_DPS || 22,
+            durationMs: tc.BLESSING_SCORCH_DURATION_MS || 2500,
+            sourceTower: towerObj
+        });
+        return true;
+    }
+
+    /**
+     * 💧 靈露超載：施放世界樹主動技能後 3 秒內，全場防禦塔 40% 機率雙重射擊
+     */
+    function activateDewOverchargeIfUnlocked() {
+        if (!G || !G.state || !hasBlessing('dew_overcharge')) return false;
+        const tc = getTreeConfig();
+        G.state.dewOverchargeMs = tc.BLESSING_DEW_OVERCHARGE_DUR_MS || 3000;
+        return true;
+    }
+
+    function shouldTriggerDewOvercharge() {
+        if (!G || !G.state || G.state.dewOverchargeMs <= 0 || !hasBlessing('dew_overcharge')) return false;
+        const tc = getTreeConfig();
+        return Math.random() < (tc.BLESSING_DEW_OVERCHARGE_CHANCE || 0.40);
+    }
+
+    function tryTriggerEmberExplosion() {
+        return;
     }
 
     /**
@@ -161,7 +229,10 @@
         Renderer.emitRingFX(tp.left, tp.top, G.boardMetrics.step * 3.2, '#4E9A68', 0.18, 480);
 
         GameApp.audio.playMagic('entangle');
-        G.dom.msgText.innerText = '施放「根鬚纏繞」：全場敵人定身 2.5 秒且易傷 +20%。';
+        const overcharged = activateDewOverchargeIfUnlocked();
+        G.dom.msgText.innerText = overcharged
+            ? '施放「根鬚纏繞」：全場敵人定身 2.5 秒且易傷 +20%，並觸發 3 秒靈露超載。'
+            : '施放「根鬚纏繞」：全場敵人定身 2.5 秒且易傷 +20%。';
         if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
             GameApp.backend.recordPlayerAction();
             GameApp.backend.trackFeel('Tree:SkillCast:entangle', st.currentWave, { skillId: 'entangle', wave: st.currentWave });
@@ -201,7 +272,10 @@
             if (G.towerElements[idx]) G.towerElements[idx].classList.add('frenzy-active');
         }
         GameApp.audio.playMagic('frenzy');
-        G.dom.msgText.innerText = '施放「自然狂熱」：全場防禦塔攻速提升 +35%，持續 5.0 秒。';
+        const overcharged = activateDewOverchargeIfUnlocked();
+        G.dom.msgText.innerText = overcharged
+            ? '施放「自然狂熱」：全場攻速 +35% 持續 5.0 秒，並觸發 3 秒靈露超載。'
+            : '施放「自然狂熱」：全場防禦塔攻速提升 +35%，持續 5.0 秒。';
         if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
             GameApp.backend.recordPlayerAction();
             GameApp.backend.trackFeel('Tree:SkillCast:frenzy', st.currentWave, { skillId: 'frenzy', wave: st.currentWave });
@@ -274,8 +348,6 @@
 
         if (blessingId === 'abundant_seed') {
             st.seedPityCount = 0;
-        } else if (blessingId === 'life_nectar') {
-            st.baseHp = Math.min(tc.INITIAL_BASE_HP || 20, st.baseHp + (tc.BLESSING_LIFE_HEAL || 4));
         }
 
         if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
@@ -289,7 +361,7 @@
 
         st.waveState = 'INTERMISSION';
         st.waveTimerMs = intermissionMs;
-        G.dom.msgText.innerText = `🌳 已獲得祝福【${picked.icon} ${picked.name}】！下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後到來！`;
+        G.dom.msgText.innerText = `已獲得祝福【${picked.icon} ${picked.name}】，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後到來。`;
         GameApp.audio.playMagic('blessing');
         G.callbacks.updateHUD();
         G.callbacks.startMainLoop();
@@ -299,12 +371,21 @@
         bind,
         hasBlessing,
         towerHasLineage,
+        resolveTowerFamily,
         getIceLineageSlowParams,
         getThunderChainBonus,
         getTowerBlessingSpeedMult,
         getGlobalBlessingDamageMult,
         getNearTreeVulnerabilityBonus,
         computeKillDewGain,
+        registerResonanceHit,
+        getElementalResonanceMult,
+        getChainStormExtraBounces,
+        getChainStormRadiusCells,
+        shouldGlacialShatter,
+        trySpawnScorchedBrand,
+        activateDewOverchargeIfUnlocked,
+        shouldTriggerDewOvercharge,
         tryTriggerEmberExplosion,
         castEntangleSkill,
         castFrenzySkill,

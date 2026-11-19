@@ -26,19 +26,16 @@
         DEW_GAIN_BOSS: 30,
         BLESSING_INTERVAL_WAVES: 3,
         BLESSING_SEED_INTERVAL: 5,
-        BLESSING_WINTER_SLOW_BONUS: 0.12,
-        BLESSING_WINTER_SLOW_CAP: 0.75,
-        BLESSING_WINTER_DURATION_BONUS_MS: 500,
-        BLESSING_WINTER_STEAM_CHILL_MS: 2000,
-        BLESSING_EMBER_RADIUS_CELLS: 1.0,
-        BLESSING_EMBER_DAMAGE_RATIO: 0.25,
-        BLESSING_LIFE_HEAL: 4,
-        BLESSING_DEW_GAIN_BONUS: 0.25,
-        BLESSING_THUNDER_SPEED_BONUS: 0.15,
-        BLESSING_THUNDER_EXTRA_TARGETS: 1,
-        BLESSING_THORN_GLOBAL_DMG: 0.12,
-        BLESSING_THORN_TREE_RADIUS_CELLS: 2.5,
-        BLESSING_THORN_NEAR_TREE_DMG: 0.10
+        BLESSING_RESONANCE_DMG_BONUS: 0.25,
+        BLESSING_RESONANCE_WINDOW_MS: 2500,
+        BLESSING_CHAIN_STORM_EXTRA_BOUNCES: 2,
+        BLESSING_CHAIN_STORM_RADIUS_CELLS: 2.6,
+        BLESSING_GLACIAL_SHATTER_HP_PCT: 0.15,
+        BLESSING_SCORCH_DURATION_MS: 2500,
+        BLESSING_SCORCH_DPS: 22,
+        BLESSING_SCORCH_RADIUS_CELLS: 0.75,
+        BLESSING_DEW_OVERCHARGE_DUR_MS: 3000,
+        BLESSING_DEW_OVERCHARGE_CHANCE: 0.40
     };
 
     const ACTIVE_SKILLS = {
@@ -62,43 +59,43 @@
         }
     };
 
-    // 世界樹枝枒祝福卡牌池（Key-Value 結構，供 Object.keys 動態掃描抽卡）
+    // 世界樹枝枒祝福卡牌池（6 張機制質變卡，Key-Value 結構供 Object.keys 動態掃描抽卡）
     const BLESSINGS_MAP = {
         abundant_seed: {
             id: 'abundant_seed',
             icon: '🌱',
             name: '豐饒種子',
-            desc: '每累計召喚 5 座塔，第 5 座直接進階為 ★★（Lv.2），召喚區顯示保底進度。'
+            desc: '每累計召喚 5 次防禦塔，第 5 座必定直接為 ★★ 階級（商店卡片右上角顯示「下次必出 ★★」預告）。'
         },
-        winter_bloodline: {
-            id: 'winter_bloodline',
-            icon: '❄️',
-            name: '凜冬血脈',
-            desc: '冰／蒸氣／磁暴塔緩速效果額外 +12%（最高 75%），緩速時間 +0.5 秒。'
+        elemental_resonance: {
+            id: 'elemental_resonance',
+            icon: '🔮',
+            name: '元素共鳴',
+            desc: '場上只要同時有 2 種以上不同元素在攻擊同一名敵人，該敵人受到的所有傷害額外 +25%。'
         },
-        searing_embers: {
-            id: 'searing_embers',
-            icon: '🔥',
-            name: '熾熱餘燼',
-            desc: '火／蒸氣／電漿塔擊殺敵人時，引發 1.0 格餘燼爆裂，造成致命一擊 25% 傷害。'
-        },
-        life_nectar: {
-            id: 'life_nectar',
-            icon: '💧',
-            name: '生命甘露',
-            desc: `🌳 世界樹立即回復 ${TREE_CONFIG.BLESSING_LIFE_HEAL} 點生命（不超過 ${TREE_CONFIG.INITIAL_BASE_HP}），且今後擊殺獲得靈露能量 +${Math.round(TREE_CONFIG.BLESSING_DEW_GAIN_BONUS * 100)}%。`
-        },
-        thunder_conduction: {
-            id: 'thunder_conduction',
+        chain_storm: {
+            id: 'chain_storm',
             icon: '⚡',
-            name: '雷鳴超導',
-            desc: '雷／磁暴／電漿塔攻速提升 15%，且閃電／磁暴連鎖目標數額外 +1。'
+            name: '連鎖風暴',
+            desc: '連鎖閃電或彈射攻擊只要擊殺敵人，立刻免費向周圍 2.6 格內額外多彈跳 2 次。'
         },
-        thorn_bulwark: {
-            id: 'thorn_bulwark',
-            icon: '🌿',
-            name: '荊棘壁壘',
-            desc: '全場防禦塔基礎傷害 +12%，且距離世界樹 2.5 格內的敵人再受額外 +10% 傷害。'
+        glacial_shatter: {
+            id: 'glacial_shatter',
+            icon: '❄️',
+            name: '極寒碎冰',
+            desc: '處於減速或凍結狀態的敵人血量低於 15% 時，受到任何冰系／蒸氣／磁環攻擊直接碎裂處決。'
+        },
+        scorched_brand: {
+            id: 'scorched_brand',
+            icon: '🔥',
+            name: '焦土烙印',
+            desc: '火系與蒸氣塔每次觸發破甲或暴擊時，在目標腳下留下持續 2.5 秒的燃燒路徑，每秒造成 22 點火焰傷害。'
+        },
+        dew_overcharge: {
+            id: 'dew_overcharge',
+            icon: '💧',
+            name: '靈露超載',
+            desc: '施放任一世界樹主動技能後的 3 秒內，全場防禦塔有 40% 機率連續發動雙重射擊。'
         }
     };
 
@@ -127,19 +124,16 @@
         SKILL_FRENZY_SPEED_BONUS: ACTIVE_SKILLS.frenzy.speedBonus,
         BLESSING_INTERVAL_WAVES: TREE_CONFIG.BLESSING_INTERVAL_WAVES,
         BLESSING_SEED_INTERVAL: TREE_CONFIG.BLESSING_SEED_INTERVAL,
-        BLESSING_WINTER_SLOW_BONUS: TREE_CONFIG.BLESSING_WINTER_SLOW_BONUS,
-        BLESSING_WINTER_SLOW_CAP: TREE_CONFIG.BLESSING_WINTER_SLOW_CAP,
-        BLESSING_WINTER_DURATION_BONUS_MS: TREE_CONFIG.BLESSING_WINTER_DURATION_BONUS_MS,
-        BLESSING_WINTER_STEAM_CHILL_MS: TREE_CONFIG.BLESSING_WINTER_STEAM_CHILL_MS,
-        BLESSING_EMBER_RADIUS_CELLS: TREE_CONFIG.BLESSING_EMBER_RADIUS_CELLS,
-        BLESSING_EMBER_DAMAGE_RATIO: TREE_CONFIG.BLESSING_EMBER_DAMAGE_RATIO,
-        BLESSING_LIFE_HEAL: TREE_CONFIG.BLESSING_LIFE_HEAL,
-        BLESSING_DEW_GAIN_BONUS: TREE_CONFIG.BLESSING_DEW_GAIN_BONUS,
-        BLESSING_THUNDER_SPEED_BONUS: TREE_CONFIG.BLESSING_THUNDER_SPEED_BONUS,
-        BLESSING_THUNDER_EXTRA_TARGETS: TREE_CONFIG.BLESSING_THUNDER_EXTRA_TARGETS,
-        BLESSING_THORN_GLOBAL_DMG: TREE_CONFIG.BLESSING_THORN_GLOBAL_DMG,
-        BLESSING_THORN_TREE_RADIUS_CELLS: TREE_CONFIG.BLESSING_THORN_TREE_RADIUS_CELLS,
-        BLESSING_THORN_NEAR_TREE_DMG: TREE_CONFIG.BLESSING_THORN_NEAR_TREE_DMG
+        BLESSING_RESONANCE_DMG_BONUS: TREE_CONFIG.BLESSING_RESONANCE_DMG_BONUS,
+        BLESSING_RESONANCE_WINDOW_MS: TREE_CONFIG.BLESSING_RESONANCE_WINDOW_MS,
+        BLESSING_CHAIN_STORM_EXTRA_BOUNCES: TREE_CONFIG.BLESSING_CHAIN_STORM_EXTRA_BOUNCES,
+        BLESSING_CHAIN_STORM_RADIUS_CELLS: TREE_CONFIG.BLESSING_CHAIN_STORM_RADIUS_CELLS,
+        BLESSING_GLACIAL_SHATTER_HP_PCT: TREE_CONFIG.BLESSING_GLACIAL_SHATTER_HP_PCT,
+        BLESSING_SCORCH_DURATION_MS: TREE_CONFIG.BLESSING_SCORCH_DURATION_MS,
+        BLESSING_SCORCH_DPS: TREE_CONFIG.BLESSING_SCORCH_DPS,
+        BLESSING_SCORCH_RADIUS_CELLS: TREE_CONFIG.BLESSING_SCORCH_RADIUS_CELLS,
+        BLESSING_DEW_OVERCHARGE_DUR_MS: TREE_CONFIG.BLESSING_DEW_OVERCHARGE_DUR_MS,
+        BLESSING_DEW_OVERCHARGE_CHANCE: TREE_CONFIG.BLESSING_DEW_OVERCHARGE_CHANCE
     });
 
     GameApp.data = GameApp.data || {};

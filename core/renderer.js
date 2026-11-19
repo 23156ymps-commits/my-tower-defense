@@ -807,17 +807,18 @@
         if (!fxCtx || !fxCanvasEl) return;
         fxCtx.clearRect(0, 0, m.stageW, m.stageH);
 
-        // 地面持續傷害區域（如 steam_A 焦熱蒸壓樹的 3s 滾燙蒸氣池）
+        // 地面持續傷害區域（如 steam_A 滾燙蒸氣池 與 scorched_brand 焦土烙印燃燒路徑）
         if (Array.isArray(st.groundHazards)) {
             for (let i = 0; i < st.groundHazards.length; i++) {
                 const hz = st.groundHazards[i];
                 const alpha = Math.max(0.15, Math.min(0.85, (hz.remainingMs || 0) / (hz.maxDurationMs || 3000)));
+                const isScorch = hz.type === 'scorch_trail';
                 fxCtx.save();
-                fillCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx, tk.accentCta, alpha * 0.22);
-                fxCtx.globalAlpha = alpha * 0.78;
-                fxCtx.strokeStyle = tk.elFire;
-                fxCtx.lineWidth = 1.6;
-                fxCtx.setLineDash([5, 3]);
+                fillCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx, isScorch ? tk.elFire : tk.accentCta, alpha * (isScorch ? 0.28 : 0.22));
+                fxCtx.globalAlpha = alpha * 0.82;
+                fxCtx.strokeStyle = isScorch ? tk.accentCta : tk.elFire;
+                fxCtx.lineWidth = isScorch ? 1.4 : 1.6;
+                fxCtx.setLineDash(isScorch ? [3, 3] : [5, 3]);
                 fxCtx.beginPath();
                 fxCtx.arc(hz.x, hz.y, hz.radiusPx, 0, Math.PI * 2);
                 fxCtx.stroke();
@@ -1231,21 +1232,32 @@
         G.callbacks.updateTowerInspector();
     }
 
+    function positionBoardTooltip(tipEl, coords, isInvalid = false) {
+        if (!tipEl || !coords) return;
+        const center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
+        const isTopRow = coords.y <= 1;
+        tipEl.classList.toggle('tooltip-below', isTopRow);
+        tipEl.classList.toggle('tooltip-invalid', Boolean(isInvalid));
+        tipEl.classList.remove('hidden');
+
+        const tipW = tipEl.offsetWidth || 184;
+        const halfW = Math.ceil(tipW / 2) + 6;
+        const stageW = m.stageW || 600;
+        const clampedX = Math.max(halfW, Math.min(Math.max(halfW, stageW - halfW), center.left));
+        const topPx = isTopRow ? (center.top + m.cellH * 0.56) : (center.top - m.cellH * 0.56);
+
+        tipEl.style.left = `${clampedX}px`;
+        tipEl.style.top = `${topPx}px`;
+    }
+
     function showDragEvolutionPreview(fromIndex, toIndex, labelText, isValid = true) {
         if (!G || !G.state) return;
         G.state.dragTether = { fromIndex, toIndex, labelText: labelText || '', isValid: Boolean(isValid) };
         const towerTipEl = G.dom.towerTooltipEl || (typeof document !== 'undefined' ? document.getElementById('tower-tooltip') : null);
         if (towerTipEl && labelText && Number.isFinite(toIndex)) {
-            const coords = indexToCoords(toIndex), center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
-            const clampedX = Math.max(92, Math.min((m.stageW || 600) - 92, center.left));
-            const isTopRow = coords.y === 0;
-            const topPx = isTopRow ? (center.top + m.cellH * 0.75) : (center.top - m.cellH * 0.75);
+            towerTipEl.classList.remove('is-detail-card');
             towerTipEl.innerText = labelText;
-            towerTipEl.style.left = `${clampedX}px`;
-            towerTipEl.style.top = `${topPx}px`;
-            towerTipEl.classList.toggle('tooltip-below', isTopRow);
-            towerTipEl.classList.toggle('tooltip-invalid', !isValid);
-            towerTipEl.classList.remove('hidden');
+            positionBoardTooltip(towerTipEl, indexToCoords(toIndex), !isValid);
         }
         updateAndRenderCanvasFX(0);
     }
@@ -1255,7 +1267,7 @@
         const hadTether = Boolean(G.state.dragTether);
         G.state.dragTether = null;
         if (G.dom && G.dom.towerTooltipEl) {
-            G.dom.towerTooltipEl.classList.remove('tooltip-invalid');
+            G.dom.towerTooltipEl.classList.remove('tooltip-invalid', 'is-detail-card');
         }
         if (hadTether) updateAndRenderCanvasFX(0);
     }
@@ -1281,19 +1293,33 @@
 
         const idx = st.hoveredIndex;
         const towerObj = st.board[idx];
-        const tCfg = getTowersDict()[towerObj.type] || { icon: '✨', name: towerObj.type };
-        const stars = getTierStars(towerObj.tier);
-        const label = tCfg.displayBadge || `${tCfg.icon} ${tCfg.name}`;
-        towerTipEl.innerText = `${label} · Lv.${towerObj.tier} ${stars}`;
+        const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
+        const tipData = (AttackSys && typeof AttackSys.getTowerHoverTooltipData === 'function')
+            ? AttackSys.getTowerHoverTooltipData(idx, towerObj)
+            : null;
 
-        const coords = indexToCoords(idx), center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
-        const clampedX = Math.max(76, Math.min((m.stageW || 600) - 76, center.left));
-        const isTopRow = coords.y === 0;
-        const topPx = isTopRow ? (center.top + m.cellH * 0.72) : (center.top - m.cellH * 0.72);
-        towerTipEl.style.left = `${clampedX}px`;
-        towerTipEl.style.top = `${topPx}px`;
-        towerTipEl.classList.toggle('tooltip-below', isTopRow);
-        towerTipEl.classList.remove('hidden');
+        if (tipData) {
+            towerTipEl.classList.add('is-detail-card');
+            towerTipEl.innerHTML = '';
+            const line1 = document.createElement('div');
+            line1.className = 'tt-header';
+            line1.innerText = tipData.nameLine;
+            const line2 = document.createElement('div');
+            line2.className = 'tt-stats num';
+            line2.innerText = tipData.statsLine;
+            const line3 = document.createElement('div');
+            line3.className = 'tt-desc';
+            line3.innerText = tipData.descLine;
+            towerTipEl.appendChild(line1);
+            towerTipEl.appendChild(line2);
+            towerTipEl.appendChild(line3);
+        } else {
+            const tCfg = getTowersDict()[towerObj.type] || { icon: '✨', name: towerObj.type };
+            towerTipEl.classList.remove('is-detail-card');
+            towerTipEl.innerText = `${tCfg.icon} ${tCfg.name} · ${getTierStars(towerObj.tier)}`;
+        }
+
+        positionBoardTooltip(towerTipEl, indexToCoords(idx), false);
     }
 
     function updateTerrainTooltip() {
