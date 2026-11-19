@@ -5,7 +5,7 @@
     --bg-surface: #2C3530;
     --border-subtle: #46544C;
     --text-primary: #F4F1EA;
-    --text-secondary: #B8C2BC;
+    --text-secondary: #CBD5CF;
     --accent-cta: #D97724;
     --el-fire: #C94A38;
     --el-ice: #4A9EBF;
@@ -13,7 +13,7 @@
 
     --grid-gap: 4px;
     --board-pad: 4px;
-    --cell-size: clamp(20px, min(calc((100vw - 48px) / 15), calc((100dvh - 284px) / 10)), 46px);
+    --cell-size: clamp(22px, min(calc((100vw - 48px) / 15), calc((100dvh - 246px) / 10)), 48px);
     --board-width: calc(15 * var(--cell-size) + 14 * var(--grid-gap) + 2 * var(--board-pad) + 4px);
 }
 
@@ -153,27 +153,28 @@ body.map-lava {
 .hud-actions {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     flex-shrink: 0;
 }
 
 .hud-ctrl-btn {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 14px;
+    min-height: 40px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 13px;
     font-weight: 600;
-    line-height: 1.4;
+    line-height: 1.25;
     cursor: pointer;
     white-space: nowrap;
     background-color: var(--bg-grid-elevated);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
-    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+    transition: background-color 0.1s ease, border-color 0.1s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.hud-ctrl-btn:hover:not(:disabled) { background-color: #36413B; }
-.hud-ctrl-btn:active:not(:disabled) { transform: scale(0.98); }
-.hud-ctrl-btn:disabled { color: var(--text-secondary); cursor: not-allowed; }
+.hud-ctrl-btn:hover:not(:disabled) { background-color: #38443D; transform: scale(1.03); }
+.hud-ctrl-btn:active:not(:disabled) { transform: scale(0.95); }
+.hud-ctrl-btn:disabled { color: var(--text-secondary); opacity: 0.48; cursor: not-allowed; }
 
 .hud-sound-btn.muted { color: var(--text-secondary); }
 .hud-pause-btn.is-paused {
@@ -193,16 +194,41 @@ body.map-lava {
     color: var(--el-lightning);
 }
 
-/* ==================== 2B. 備戰期自動展開／開波收折之出怪預告條 ==================== */
-.wave-forecast-bar {
+/* ==================== 2B. 備戰期展開／開波自動收折預告條 ＋ HUD 下方輕量暫停條 ==================== */
+.hud-sub-slot {
     position: relative;
     width: 100%;
     margin-bottom: 4px;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+}
+
+.wave-forecast-bar {
+    position: relative;
+    width: 100%;
     background-color: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
     padding: 4px 8px;
     z-index: 30;
+    transition: width 0.15s ease;
+}
+
+.wave-forecast-bar.is-combat-collapsed:not(.drawer-open) {
+    width: fit-content;
+    max-width: 100%;
+    align-self: flex-start;
+    padding: 3px 8px;
+}
+
+.wave-forecast-bar.is-combat-collapsed:not(.drawer-open) .info-legend-inline {
+    display: none;
+}
+
+.wave-forecast-bar.hidden-by-pause {
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .forecast-bar-main {
@@ -419,40 +445,64 @@ body.map-lava {
 }
 .tower-tooltip.hidden { display: none; }
 
+/* 輕量級暫停提示條：固定於頂部 HUD 下方，完全不遮擋下方 15x10 戰場 */
 .pause-banner {
     position: absolute;
     inset: 0;
-    z-index: 25;
+    z-index: 35;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     gap: 8px;
-    background: rgba(27, 33, 30, 0.88);
-    pointer-events: none;
-    text-align: center;
-    padding: 16px;
+    padding: 2px 10px;
+    border-radius: 8px;
+    background-color: #362B1D;
+    border: 1px solid var(--accent-cta);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .pause-banner.hidden { display: none; }
 
-.pause-banner-title {
-    font-size: 24px;
+.pause-banner-text {
+    font-size: 13px;
     font-weight: 700;
-    line-height: 1.3;
-    color: var(--text-primary);
+    color: var(--el-lightning);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
-.pause-banner-sub {
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.4;
-    color: var(--text-secondary);
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    padding: 8px 16px;
+.pause-banner-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
 }
+
+.pause-banner-btn {
+    padding: 2px 10px;
+    min-height: 24px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.1s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pause-resume-btn {
+    background-color: var(--accent-cta);
+    border: 1px solid var(--accent-cta);
+    color: #1B211E;
+}
+.pause-resume-btn:hover { background-color: #E28533; transform: scale(1.03); }
+.pause-menu-btn {
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+}
+.pause-menu-btn:hover { background-color: #38443D; transform: scale(1.03); }
+.pause-banner-btn:active { transform: scale(0.95); }
 
 #board-stage.tree-hit-shake { animation: treeHitShake 0.25s ease-out; }
 @keyframes treeHitShake {
@@ -502,25 +552,25 @@ body.map-lava .cell:nth-child(even) { background-color: #2C2523; }
     background-color: #2E3933;
 }
 
-/* 平坦降噪特殊地形 */
+/* 高辨識度特殊戰術地形 */
 .cell.terrain-highground {
-    background-color: #2E2B20;
-    border: 1px solid rgba(224, 180, 60, 0.55);
+    background-color: #393320;
+    border: 1px solid rgba(242, 208, 96, 0.88);
 }
 
 .cell.terrain-mana_vein {
-    background-color: #213038;
-    border: 1px solid rgba(74, 158, 191, 0.55);
+    background-color: #213844;
+    border: 1px solid rgba(118, 200, 232, 0.88);
 }
 
 .cell.terrain-world_tree {
-    background-color: #213329;
-    border: 1px solid rgba(78, 154, 104, 0.55);
+    background-color: #223D2E;
+    border: 1px solid rgba(116, 196, 144, 0.88);
 }
 
 .cell.terrain-obstacle, .cell.obstacle-cell {
     background-color: #202422;
-    border: 1px solid #46544C;
+    border: 1px solid #596960;
     cursor: not-allowed;
 }
 
@@ -548,16 +598,16 @@ body.map-lava .cell:nth-child(even) { background-color: #2C2523; }
     box-shadow: inset 0 0 8px rgba(201, 74, 56, 0.45);
 }
 
-/* 平坦低噪路徑與起終點 */
+/* 清晰高對比路徑與起終點 */
 .cell.path-cell {
-    background-color: #373D38;
-    border: 1px solid #46544C;
+    background-color: #424B45;
+    border: 1px solid #677A6F;
     cursor: default;
 }
 
 body.map-lava .cell.path-cell {
-    background-color: #3A2A26;
-    border-color: #5C4039;
+    background-color: #48332D;
+    border-color: #825A4F;
 }
 
 .cell.path-cell .path-arrow, .cell-marker {
@@ -566,8 +616,8 @@ body.map-lava .cell.path-cell {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-secondary);
-    opacity: 0.65;
+    color: #ECF2ED;
+    opacity: 0.92;
     pointer-events: none;
     z-index: 0;
 }
@@ -754,12 +804,12 @@ body.map-lava .cell.path-cell {
 .floating-dmg.weakness { color: var(--el-lightning); font-size: 14px; }
 @keyframes floatUp { 0% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, -24px); opacity: 0; } }
 
-/* ==================== 5. 檢查列、等寬召喚卡與底部操作網格 ==================== */
+/* ==================== 5. 檢查列、精簡兩區對齊底部操作列 ==================== */
 #tower-inspector {
     margin-top: 4px;
     width: 100%;
-    min-height: 32px;
-    padding: 4px 12px;
+    min-height: 46px;
+    padding: 2px 10px;
     background-color: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
@@ -786,7 +836,7 @@ body.map-lava .cell.path-cell {
 .inspector-stat, .inspector-terrain {
     font-size: 12px;
     font-weight: 600;
-    padding: 0 8px;
+    padding: 2px 8px;
     border-radius: 4px;
     white-space: nowrap;
     background-color: var(--bg-grid-elevated);
@@ -797,24 +847,34 @@ body.map-lava .cell.path-cell {
 
 .inspector-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .inspector-btn {
-    padding: 4px 8px;
+    min-height: 40px;
+    padding: 4px 12px;
     font-size: 12px;
     font-weight: 600;
-    border-radius: 4px;
+    border-radius: 6px;
     border: 1px solid var(--border-subtle);
     cursor: pointer;
     white-space: nowrap;
     background-color: var(--bg-grid-elevated);
     color: var(--text-primary);
-    transition: background-color 0.15s, transform 0.1s;
+    transition: background-color 0.1s ease, border-color 0.1s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.inspector-btn:hover { background-color: #36413B; }
-.inspector-btn:active { transform: scale(0.98); }
+.inspector-btn:hover { background-color: #38443D; transform: scale(1.03); }
+.inspector-btn:active { transform: scale(0.95); }
 .inspector-btn.sell-btn { border-color: var(--accent-cta); color: var(--el-lightning); }
+
+/* 底部整合操作區：左側 3 欄召喚卡 ＋ 右側 2×2 技能與功能列 */
+.bottom-action-deck {
+    margin-top: 4px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    align-items: stretch;
+    gap: 8px;
+}
 
 /* 3 欄等寬「圖片 ＋ 名字 ＋ 價錢」垂直三段式召喚卡 */
 #element-spawner-container {
-    margin-top: 4px;
     width: 100%;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -824,10 +884,10 @@ body.map-lava .cell.path-cell {
 .spawn-card-btn {
     width: 100%;
     min-width: 0;
-    padding: 6px 10px;
+    padding: 5px 8px;
     font-size: 13px;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.25;
     color: var(--text-primary);
     background-color: var(--bg-surface);
     border: 1px solid var(--border-subtle);
@@ -839,12 +899,20 @@ body.map-lava .cell.path-cell {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    transition: background-color 0.15s, border-color 0.15s, transform 0.1s, opacity 0.15s;
+    gap: 2px;
+    transition: background-color 0.09s ease, border-color 0.09s ease, box-shadow 0.1s ease, opacity 0.1s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.spawn-card-btn:hover:not(.btn-disabled) { background-color: #36413B; }
-.spawn-card-btn:active:not(.btn-disabled), .spawn-card-btn.dragging-card { cursor: grabbing; transform: scale(0.98); border-color: var(--accent-cta); }
+.spawn-card-btn:hover:not(.btn-disabled) {
+    background-color: #38443D;
+    transform: scale(1.03);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+.spawn-card-btn:active:not(.btn-disabled), .spawn-card-btn.dragging-card {
+    cursor: grabbing;
+    transform: scale(0.95);
+    border-color: var(--accent-cta);
+}
 .spawn-card-btn.insufficient-gold { border-color: var(--el-fire) !important; background-color: #3D211E !important; }
 
 .spawn-card-portrait {
@@ -919,12 +987,12 @@ body.map-lava .cell.path-cell {
 .shake-anim { animation: shake 0.3s ease-in-out; }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(-4px); } 50% { transform: translateX(4px); } }
 
-/* 4 欄等寬技能與功能列 */
+/* 2×2 等高技能與功能列（與左側召喚卡並排，單行對齊不折行） */
 .debug-controls {
-    margin-top: 4px;
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: minmax(40px, 1fr);
     gap: 8px;
 }
 
@@ -933,22 +1001,31 @@ body.map-lava .cell.path-cell {
     min-width: 0;
     min-height: 40px;
     padding: 4px 8px;
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.3;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
     color: var(--text-primary);
     background-color: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+    transition: background-color 0.09s ease, border-color 0.09s ease, box-shadow 0.1s ease, opacity 0.1s ease, filter 0.1s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.debug-controls button:hover:not(:disabled) { background-color: #36413B; }
-.debug-controls button:active:not(:disabled) { transform: scale(0.98); }
-.debug-controls button:disabled:not(.skill-btn) { color: var(--text-secondary); background-color: var(--bg-grid-elevated); cursor: not-allowed; }
+.debug-controls button:hover:not(:disabled) {
+    background-color: #38443D;
+    transform: scale(1.03);
+}
+.debug-controls button:active:not(:disabled) { transform: scale(0.95); }
+.debug-controls button:disabled:not(.skill-btn) {
+    color: var(--text-secondary);
+    background-color: var(--bg-grid-elevated);
+    opacity: 0.48;
+    cursor: not-allowed;
+}
 
-/* 主動技能：進度條遮罩＋清晰倒數／需求（禁止降低整顆 opacity） */
+/* 主動技能：未就緒／冷卻中嚴格去飽和灰階＋半透明；就緒時才點亮高對比主色 */
 .skill-btn {
     position: relative;
     overflow: hidden;
@@ -956,7 +1033,7 @@ body.map-lava .cell.path-cell {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0;
+    gap: 1px;
 }
 
 .skill-btn .skill-label, .skill-btn .skill-sub {
@@ -968,8 +1045,8 @@ body.map-lava .cell.path-cell {
     max-width: 100%;
     min-width: 0;
 }
-.skill-btn .skill-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
-.skill-btn .skill-sub { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.skill-btn .skill-label { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+.skill-btn .skill-sub { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
 
 .skill-cd-mask {
     position: absolute;
@@ -995,16 +1072,50 @@ body.map-lava .cell.path-cell {
     transition: width 0.15s ease;
 }
 
-.skill-entangle { border-color: #4E9A68 !important; }
-.skill-frenzy { border-color: var(--el-lightning) !important; }
-.skill-btn.skill-active { border-color: var(--accent-cta) !important; background-color: #353024; }
-.skill-btn.skill-low-dew:disabled { cursor: not-allowed; background-color: var(--bg-grid-elevated); border-color: var(--border-subtle) !important; }
-.skill-btn.skill-low-dew .skill-sub { color: #9BD3E8; }
-.skill-btn.skill-cooling:disabled { cursor: not-allowed; background-color: var(--bg-grid-elevated); border-color: var(--accent-cta) !important; }
-.skill-btn.skill-cooling .skill-sub { color: var(--el-lightning); }
+/* 技能已達標且冷卻完畢：點亮高對比主色與光暈 */
+.skill-entangle:not(:disabled) {
+    border-color: #5CC884 !important;
+    background-color: #213A2C;
+    box-shadow: 0 0 8px rgba(92, 200, 132, 0.28);
+}
+.skill-entangle:not(:disabled) .skill-sub { color: #A8E5BE; }
+
+.skill-frenzy:not(:disabled) {
+    border-color: var(--el-lightning) !important;
+    background-color: #3A301B;
+    box-shadow: 0 0 8px rgba(224, 180, 60, 0.28);
+}
+.skill-frenzy:not(:disabled) .skill-sub { color: #F7DC88; }
+
+.skill-btn.skill-active {
+    border-color: var(--accent-cta) !important;
+    background-color: #3D2E1B;
+    opacity: 1;
+    filter: none;
+}
+
+/* 靈露不足或冷卻中：嚴禁亮色誤導，統一去飽和灰階＋半透明 */
+.skill-btn:disabled,
+.skill-btn.skill-low-dew:disabled,
+.skill-btn.skill-cooling:disabled {
+    opacity: 0.45;
+    filter: grayscale(0.8);
+    cursor: not-allowed;
+    background-color: var(--bg-grid-elevated);
+    border-color: var(--border-subtle) !important;
+    box-shadow: none;
+}
+.skill-btn.skill-low-dew .skill-sub,
+.skill-btn.skill-cooling .skill-sub {
+    color: #B4BEB8;
+}
+.skill-btn:disabled .skill-dew-bar {
+    background-color: #6B7770;
+}
 
 .codex-btn { border-color: var(--border-subtle); }
 .wave-btn { border-color: var(--el-ice) !important; }
+.wave-btn:not(:disabled) { color: #E8F6FA; background-color: #223842; }
 .debug-btn, .debug-btn-danger { background-color: var(--bg-grid-elevated); }
 .debug-only { display: none; }
 
@@ -1247,6 +1358,10 @@ body.map-lava .cell.path-cell {
     max-width: 36em;
     color: var(--text-secondary);
     min-width: 0;
+    text-wrap: pretty;
+}
+.codex-note, .modal-subtitle, .blessing-choice-desc {
+    text-wrap: pretty;
 }
 .codex-note {
     font-size: 12px;
@@ -1488,6 +1603,7 @@ body.map-lava .cell.path-cell {
     .inspector-actions { justify-content: center; }
     .inspector-btn { flex: 1; }
 
+    .bottom-action-deck { grid-template-columns: 1fr; gap: 8px; }
     #element-spawner-container { gap: 8px; }
     .spawn-card-btn { min-height: 44px; padding: 8px; }
     .debug-controls { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -1498,8 +1614,24 @@ body.map-lava .cell.path-cell {
 
 @media (min-width: 768px) and (max-height: 660px) {
     :root {
-        --cell-size: clamp(20px, min(calc((100vw - 64px) / 15), calc((100dvh - 236px) / 10)), 38px);
+        --grid-gap: 3px;
+        --board-pad: 3px;
+        --cell-size: clamp(20px, min(calc((100vw - 64px) / 15), calc((100dvh - 238px) / 10)), 38px);
     }
 
-    body { padding: 4px 12px; }
+    body { padding: 2px 12px; }
+    #hud-container { padding: 1px 8px; margin-bottom: 3px; }
+    .hud-stats { gap: 6px; }
+    .hud-item { font-size: 12.5px; }
+    .hud-best { display: none; }
+    .dew-bar-track { width: 26px; }
+    .hud-ctrl-btn { padding: 2px 7px; font-size: 12px; }
+    .hud-sub-slot { margin-bottom: 2px; }
+    .wave-forecast-bar { padding: 1px 8px; }
+    #tower-inspector { margin-top: 2px; min-height: 44px; padding: 1px 8px; }
+    .bottom-action-deck { margin-top: 3px; gap: 8px; }
+    .spawn-card-btn { padding: 4px 6px; gap: 2px; }
+    .debug-controls { gap: 8px; }
+    .debug-controls button { padding: 2px 6px; font-size: 12.5px; }
+    #msg-text { margin-top: 2px; min-height: 15px; line-height: 1.25; }
 }

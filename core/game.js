@@ -45,7 +45,7 @@
         ['codexBtn', 'codex-btn'], ['codexOverlayEl', 'codex-overlay'], ['codexCloseBtn', 'codex-close-btn'],
         ['blessingOverlayEl', 'blessing-overlay'], ['blessingWaveSubtitleEl', 'blessing-wave-subtitle'], ['blessingChoicesEl', 'blessing-choices'],
         ['skillEntangleBtn', 'skill-entangle-btn'], ['skillFrenzyBtn', 'skill-frenzy-btn'], ['pauseBtn', 'pause-btn'], ['soundBtn', 'sound-btn'],
-        ['pauseBannerEl', 'pause-banner'],
+        ['pauseBannerEl', 'pause-banner'], ['pauseResumeBtn', 'pause-resume-btn'], ['pauseMenuBtn', 'pause-menu-btn'],
         ['addGoldBtn', 'add-gold-btn'], ['clearGoldBtn', 'clear-gold-btn'], ['nextWaveBtn', 'next-wave-btn'], ['speedBtn', 'speed-btn'],
         ['goldDisplay', 'gold-display'], ['baseHpDisplay', 'base-hp-display'], ['dewDisplay', 'dew-display'], ['dewBarFillEl', 'dew-bar-fill'],
         ['waveDisplay', 'wave-display'], ['wavePhaseTagEl', 'wave-phase-tag'], ['bestWaveDisplay', 'best-wave-display'], ['msgText', 'msg-text'],
@@ -62,7 +62,7 @@
         ['gameoverBreakerRowEl', 'gameover-breaker-row'], ['gameoverBreakerTextEl', 'gameover-breaker-text'],
         ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn'], ['gameoverMenuBtn', 'gameover-menu-btn'],
         ['gameoverRatingStatusEl', 'gameover-rating-status'], ['gameoverCopyReportBtn', 'gameover-copy-report-btn'],
-        ['helpBtn', 'help-btn'], ['guideOverlayEl', 'guide-overlay'], ['guideCloseBtn', 'guide-close-btn'],
+        ['helpBtn', 'help-btn'], ['guideOverlayEl', 'guide-overlay'], ['guideCloseBtn', 'guide-close-btn'], ['guideMenuBtn', 'guide-menu-btn'],
         ['terrainTooltipEl', 'terrain-tooltip'], ['towerTooltipEl', 'tower-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
         ['forecastToggleBtn', 'forecast-toggle-btn'], ['forecastBarTitleEl', 'forecast-bar-title'],
         ['forecastToggleIndicatorEl', 'forecast-toggle-indicator'], ['forecastInlineSummaryEl', 'forecast-inline-summary'],
@@ -289,7 +289,7 @@
     function populateBattleRecap(mode) {
         const st = G.state, dom = G.dom, mapSpec = WaveSys.getCurrentMapSpec();
         const { mvp, pct, text: mvpText } = getMvpData();
-        const maxHp = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.tree_CONFIG_HP) || CONFIG.INITIAL_BASE_HP || 20;
+        const maxHp = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.INITIAL_BASE_HP) || CONFIG.INITIAL_BASE_HP || 20;
 
         if (mvp) {
             Backend.trackFeel(`MVP:DamageShare:${mvp.type}`, pct, { mvpType: mvp.type, sharePct: pct });
@@ -432,6 +432,9 @@
         }
         if (dom.pauseBannerEl) {
             dom.pauseBannerEl.classList.toggle('hidden', !showPaused);
+        }
+        if (dom.waveForecastBarEl) {
+            dom.waveForecastBarEl.classList.toggle('hidden-by-pause', showPaused);
         }
     }
 
@@ -1074,6 +1077,7 @@
         }
         st.isPaused = nextPaused;
         if (st.isPaused) {
+            st.forecastDrawerOpen = false;
             if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
             Renderer.clearTouchDragVisuals(); st.draggedIndex = null; st.hoveredIndex = null; Renderer.updateRangeIndicator();
             if (!silent) {
@@ -1141,9 +1145,16 @@
     function openGuide() {
         if (!G.dom.guideOverlayEl || isGuideOpen()) return;
         Backend.recordPlayerAction();
-        const st = G.state, activeMatch = isMatchPhaseActive();
-        st.pausedBeforeGuide = st.isPaused;
+        const st = G.state;
+        const wasCodexOpen = isCodexOpen();
+        if (wasCodexOpen && G.dom.codexOverlayEl) {
+            G.dom.codexOverlayEl.classList.add('hidden');
+        }
+        const activeMatch = isMatchPhaseActive();
+        st.pausedBeforeGuide = wasCodexOpen ? st.pausedBeforeCodex : st.isPaused;
+        st.pausedBeforeCodex = false;
         if (activeMatch) st.isPaused = true;
+        if (G.dom.guideMenuBtn) G.dom.guideMenuBtn.classList.toggle('hidden', !activeMatch);
         G.dom.guideOverlayEl.classList.remove('hidden');
         if (G.dom.helpBtn) G.dom.helpBtn.setAttribute('aria-expanded', 'true');
         if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
@@ -1203,9 +1214,10 @@
     [
         ['inspectorTargetBtn', cycleSelectedTowerTargetMode], ['inspectorSellBtn', sellSelectedTower], ['nextWaveBtn', triggerEarlyNextWave],
         ['skillEntangleBtn', () => TreeSys.castEntangleSkill()], ['skillFrenzyBtn', () => TreeSys.castFrenzySkill()],
-        ['pauseBtn', toggleCombatPause], ['soundBtn', () => SoundEngine.toggleMute()],
+        ['pauseBtn', toggleCombatPause], ['pauseResumeBtn', () => { if (G.state.isPaused) setPauseState(false); }],
+        ['pauseMenuBtn', returnToMainMenu], ['soundBtn', () => SoundEngine.toggleMute()],
         ['codexBtn', () => CodexSys.openCodex()], ['codexCloseBtn', () => CodexSys.closeCodex()],
-        ['helpBtn', openGuide], ['guideCloseBtn', closeGuide],
+        ['helpBtn', openGuide], ['guideCloseBtn', closeGuide], ['guideMenuBtn', () => { closeGuide(); returnToMainMenu(); }],
         ['forecastToggleBtn', toggleForecastDrawer], ['speedBtn', cycleGameSpeed], ['startGameBtn', startGame],
         ['victoryRestartBtn', restartGame], ['victoryMenuBtn', returnToMainMenu], ['endlessBtn', continueEndlessMode],
         ['restartBtn', restartGame], ['gameoverMenuBtn', returnToMainMenu],

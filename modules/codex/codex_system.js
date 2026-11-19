@@ -327,8 +327,16 @@
 
     function openCodex() {
         if (!G || !G.dom || !G.dom.codexOverlayEl || isCodexOpen()) return;
-        const st = G.state, activeMatch = G.callbacks.isMatchPhaseActive();
-        st.pausedBeforeCodex = st.isPaused;
+        const st = G.state;
+        const guideEl = G.dom.guideOverlayEl;
+        const wasGuideOpen = Boolean(guideEl && !guideEl.classList.contains('hidden'));
+        if (wasGuideOpen) {
+            guideEl.classList.add('hidden');
+            if (G.dom.helpBtn) G.dom.helpBtn.setAttribute('aria-expanded', 'false');
+        }
+        const activeMatch = G.callbacks.isMatchPhaseActive();
+        st.pausedBeforeCodex = wasGuideOpen ? st.pausedBeforeGuide : st.isPaused;
+        st.pausedBeforeGuide = false;
         if (activeMatch) st.isPaused = true;
         renderCodexModal(currentCategory || 'fusion');
         G.dom.codexOverlayEl.classList.remove('hidden');
