@@ -91,23 +91,43 @@
                     <div id="boss-banner-hp-fill" class="boss-banner-hp-fill"></div>
                 </div>
             </div>
+            <!-- 0.15x 子彈時間 T2 -> T3 進化分岔選擇與確認輪盤 -->
+            <div id="evo-confirm-overlay" class="evo-confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="evo-confirm-title">
+                <div class="evo-confirm-panel">
+                    <div class="evo-confirm-header">
+                        <span id="evo-confirm-title" class="evo-confirm-title">世界樹冠枝開花選擇</span>
+                        <span class="evo-bullet-tag num">0.15x 子彈時間</span>
+                    </div>
+                    <div id="evo-confirm-options" class="evo-confirm-options"></div>
+                    <div class="evo-confirm-footer">
+                        <button id="evo-cancel-btn" class="evo-cancel-btn" type="button">取消退回原位 [Esc]</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- 固定式防禦塔檢查列 -->
+        <!-- 固定式防禦塔檢查列（上排：名稱＋血脈成長路徑；下排：單體/群傷DPS、累計傷害、索敵模式、出售） -->
         <div id="tower-inspector" aria-live="polite">
             <div id="inspector-empty" class="inspector-empty">
-                按住下方元素卡拖入棋盤空地可指定格召喚；點選場上防禦塔可檢視 DPS、切換索敵或出售
+                拖曳或點擊下方元素卡＋空地即可建塔；點選場上防禦塔／怪物可檢視屬性
             </div>
             <div id="inspector-active" class="inspector-active hidden">
-                <div class="inspector-metrics">
-                    <span id="inspector-name" class="inspector-badge">🔥 火塔 ★</span>
-                    <span id="inspector-dps" class="inspector-stat num">DPS 18</span>
-                    <span id="inspector-range" class="inspector-stat num">射程 1.8</span>
+                <div class="inspector-top-row">
+                    <span id="inspector-name" class="inspector-badge">🔥 火芽 ★</span>
+                    <span id="inspector-lineage" class="inspector-lineage">🔥 火芽</span>
                     <span id="inspector-terrain" class="inspector-terrain hidden"></span>
                 </div>
-                <div class="inspector-actions">
-                    <button id="inspector-target-btn" class="inspector-btn target-btn" type="button">索敵：最前</button>
-                    <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7 💰)</button>
+                <div class="inspector-bottom-row">
+                    <div class="inspector-metrics">
+                        <span id="inspector-dps" class="inspector-stat num">單體 DPS 21</span>
+                        <span id="inspector-aoe-dps" class="inspector-stat inspector-aoe num hidden">預估群傷 DPS 0</span>
+                        <span id="inspector-total-dmg" class="inspector-stat num">累計傷害 0</span>
+                        <span id="inspector-range" class="inspector-stat num">射程 2.3</span>
+                    </div>
+                    <div class="inspector-actions">
+                        <button id="inspector-target-btn" class="inspector-btn target-btn" type="button">索敵：最前</button>
+                        <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7 💰)</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -154,15 +174,19 @@
                 <ul class="panel-list">
                     <li class="panel-row">
                         <span class="panel-key">🔥 火塔 ▸ 蔓藤巨魔 / 史萊姆</span>
-                        <span class="panel-val num">200% 暴擊 · 破甲 30%</span>
+                        <span class="panel-val num">175% 暴擊 · 破甲 30%</span>
                     </li>
                     <li class="panel-row">
                         <span class="panel-key">❄️ 冰塔 ▸ 熔岩傀儡 / 疾風獵犬</span>
-                        <span class="panel-val num">200% 暴擊 · 緩速 45%</span>
+                        <span class="panel-val num">175% 暴擊 · 緩速 45%</span>
                     </li>
                     <li class="panel-row">
                         <span class="panel-key">⚡ 雷塔 ▸ 機械飛艇 / 重裝魔像</span>
-                        <span class="panel-val num">200% 暴擊 · 雙連閃電</span>
+                        <span class="panel-val num">175% 暴擊 · 連鎖彈跳</span>
+                    </li>
+                    <li class="panel-row">
+                        <span class="panel-key">✨ 跨元素融合塔 ▸ 任一親和弱點</span>
+                        <span class="panel-val num">135% 親和增傷</span>
                     </li>
                 </ul>
             </div>
@@ -221,7 +245,7 @@
             <div class="codex-tabs"></div>
             <div class="codex-list"></div>
             <div class="codex-note">
-                同種融合塔 ★★＋★★ 可升為 ★★★；三星基礎塔亦解鎖強大質變。
+                同種融合塔 ★★＋★★ 可升為 ★★★；跨元素融合塔打中任一親和元素弱點享 135% 增傷。
             </div>
             <button id="codex-close-btn" class="primary-cta-btn" type="button">關閉圖鑑</button>
         </div>

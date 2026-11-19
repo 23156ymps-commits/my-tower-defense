@@ -5,7 +5,7 @@
  * 【讀取資料】：無（本檔為純數值設定表，供 economy_system.js 讀取）。
  * 【常見修改入口】：
  *   1. 修改開局預設金幣：調整 ECONOMY_DATA.INITIAL_GOLD（預設 40）。
- *   2. 修改召喚塔起跳價、每次遞增與上限：調整 BASE_COST (10)、COST_STEP (10)、COST_MAX (60)。
+ *   2. 修改召喚塔階梯定價曲線與上限：調整 SUMMON_COST_STEPS 與 COST_MAX (65)。
  * ============================================================================
  */
 (function (global) {
@@ -17,8 +17,9 @@
     const ECONOMY_DATA = {
         INITIAL_GOLD: 40,                   // 基礎開局金幣
         BASE_COST: 10,                      // 各基礎元素首次召喚價格
-        COST_STEP: 10,                      // 同元素每多召喚一次遞增金額
-        COST_MAX: 60,                       // 單一元素召喚價格封頂上限
+        COST_STEP: 8,                       // 無階梯陣列時之備用線性步長
+        COST_MAX: 65,                       // 單一元素召喚價格暫時封頂上限 (65 金幣)
+        SUMMON_COST_STEPS: [10, 18, 26, 35, 45, 55, 65], // 平滑友善階梯定價曲線
         SELL_REFUND_RATE: 0.70,             // 出售防禦塔退還累計投入金幣比例 (70%)
         COMBAT_MOVE_COST: 5,                // 戰鬥出怪/清場期間移塔戰術調度費 (5 金幣)
         EARLY_WAVE_BONUS: {                 // 備戰期／波次間提前開波獎金公式參數

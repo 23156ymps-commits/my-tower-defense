@@ -22,6 +22,8 @@
     let activeDrag = null;
     let globalListenersBound = false;
     let lastPointerDownTs = 0;
+    let lastPointerEventTs = 0;
+    let lastShopDragCompleteTs = 0;
 
     function bind(ctx) {
         G = ctx;
@@ -174,17 +176,36 @@
         if (activeDrag.dragSource === 'board') {
             const srcTower = G.state.board[activeDrag.sourceIndex];
             if (!srcTower) return;
+            const EvoSys = GameApp.systems && GameApp.systems.evolution;
             if (cellIndex !== null && G.cellElements[cellIndex] && cellIndex !== activeDrag.sourceIndex) {
                 const valid = isBoardDropValidAt(activeDrag.sourceIndex, cellIndex);
                 const cellEl = G.cellElements[cellIndex];
                 cellEl.classList.add(valid ? 'drag-valid-build' : 'drag-invalid');
                 if (valid) cellEl.classList.add('drag-over');
 
+                const dstTower = G.state.board[cellIndex];
+                if (dstTower && typeof Renderer.showDragEvolutionPreview === 'function') {
+                    const fusion = EvoSys && typeof EvoSys.getFusionResult === 'function' ? EvoSys.getFusionResult(srcTower, dstTower) : null;
+                    if (fusion) {
+                        Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, fusion.previewLabel || '可融合進化', true);
+                    } else {
+                        const reason = EvoSys && typeof EvoSys.getIncompatibilityReason === 'function'
+                            ? EvoSys.getIncompatibilityReason(srcTower, dstTower)
+                            : '血脈不相容';
+                        Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, `⚠️ ${reason}`, false);
+                    }
+                } else if (typeof Renderer.clearDragEvolutionPreview === 'function') {
+                    Renderer.clearDragEvolutionPreview();
+                }
+
                 const coords = indexToCoords(cellIndex);
                 const center = Renderer.getCellCenter(coords.x, coords.y);
                 const radiusPx = AttackSys ? AttackSys.getTowerRangePx(srcTower, valid ? cellIndex : activeDrag.sourceIndex) : (2.0 * G.boardMetrics.step);
                 Renderer.showDragRangePreview(center.left, center.top, radiusPx, srcTower.type);
             } else {
+                if (typeof Renderer.clearDragEvolutionPreview === 'function') {
+                    Renderer.clearDragEvolutionPreview();
+                }
                 const coords = indexToCoords(activeDrag.sourceIndex);
                 const center = Renderer.getCellCenter(coords.x, coords.y);
                 const radiusPx = AttackSys ? AttackSys.getTowerRangePx(srcTower, activeDrag.sourceIndex) : (2.0 * G.boardMetrics.step);
@@ -221,20 +242,11 @@
             return false;
         }
 
-        cancelActiveDrag({ silent: true });
+        cancelActiveDrag({ silent: true, resetTimestamps: true });
 
         const TreeSys = GameApp.systems && GameApp.systems.tree;
         const seedInterval = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.BLESSING_SEED_INTERVAL) || 5;
         const nextTier = (TreeSys && TreeSys.hasBlessing('abundant_seed') && (G.state.seedPityCount + 1) >= seedInterval) ? 2 : 1;
-
-        G.state.selectedIndex = null;
-        G.state.buildTargetIndex = null;
-        G.state.hoveredIndex = null;
-        GameApp.renderer.renderBoard([]);
-
-        const ghostEl = createGhostElement(towerType, nextTier);
-        positionGhostElement(ghostEl, clientX, clientY);
-        if (btnEl) btnEl.classList.add('dragging-card');
 
         activeDrag = {
             dragSource: 'shop',
@@ -246,17 +258,36 @@
             startY: clientY,
             currentX: clientX,
             currentY: clientY,
-            isDragging: true,
+            isDragging: false,
+            handled: false,
             movedDistance: 0,
             hoveredCellIndex: null,
-            ghostEl
+            ghostEl: null
         };
+        return true;
+    }
 
-        if (G.dom.msgText) {
+    function activateShopDragVisuals(clientX, clientY) {
+        if (!activeDrag || activeDrag.dragSource !== 'shop' || activeDrag.isDragging || !G) return;
+        const towersDict = getTowersDict();
+        const tCfg = towersDict[activeDrag.towerType];
+        const EconSys = GameApp.systems && GameApp.systems.economy;
+        const cost = EconSys ? EconSys.getSummonCost(activeDrag.towerType) : 10;
+
+        activeDrag.isDragging = true;
+        G.state.selectedIndex = null;
+        G.state.buildTargetIndex = null;
+        G.state.pendingSpawnType = null;
+        G.state.hoveredIndex = null;
+        GameApp.renderer.renderBoard([]);
+
+        activeDrag.ghostEl = createGhostElement(activeDrag.towerType, activeDrag.tier);
+        positionGhostElement(activeDrag.ghostEl, clientX, clientY);
+        if (activeDrag.btnEl) activeDrag.btnEl.classList.add('dragging-card');
+
+        if (G.dom.msgText && tCfg) {
             G.dom.msgText.innerText = `🎯 拖曳【${tCfg.icon} ${tCfg.name}】至棋盤綠色空地放開即可召喚（花費 ${cost} 💰）`;
         }
-        updateDragVisualFeedback(clientX, clientY);
-        return true;
     }
 
     /**
@@ -282,6 +313,7 @@
             currentX: clientX,
             currentY: clientY,
             isDragging: false,
+            handled: false,
             movedDistance: 0,
             hoveredCellIndex: sourceIndex,
             ghostEl: null
@@ -290,16 +322,23 @@
     }
 
     function handleMovePoint(clientX, clientY) {
-        if (!activeDrag || !G) return;
+        if (!activeDrag || activeDrag.handled || !G) return;
         activeDrag.currentX = clientX;
         activeDrag.currentY = clientY;
         activeDrag.movedDistance = Math.hypot(clientX - activeDrag.startX, clientY - activeDrag.startY);
+
+        if (activeDrag.dragSource === 'shop' && !activeDrag.isDragging) {
+            if (activeDrag.movedDistance > 10 || resolveCellIndexAtPoint(clientX, clientY) !== null) {
+                activateShopDragVisuals(clientX, clientY);
+            }
+        }
 
         if (activeDrag.dragSource === 'board' && !activeDrag.isDragging && activeDrag.movedDistance > 6) {
             activeDrag.isDragging = true;
             G.state.draggedIndex = activeDrag.sourceIndex;
             G.state.selectedIndex = null;
             G.state.buildTargetIndex = null;
+            G.state.pendingSpawnType = null;
             G.state.hoveredIndex = null;
             if (activeDrag.towerEl) activeDrag.towerEl.classList.add('dragging');
             activeDrag.ghostEl = createGhostElement(activeDrag.towerType, activeDrag.tier);
@@ -316,17 +355,28 @@
     }
 
     function finishActiveDrag(clientX, clientY) {
-        if (!activeDrag || !G) return;
+        if (!activeDrag || activeDrag.handled || !G) return;
         const drag = activeDrag;
+        drag.handled = true;
+
         const finalX = Number.isFinite(clientX) ? clientX : drag.currentX;
         const finalY = Number.isFinite(clientY) ? clientY : drag.currentY;
+        const dropDistance = Math.hypot(finalX - drag.startX, finalY - drag.startY);
         const targetIndex = resolveCellIndexAtPoint(finalX, finalY);
 
         if (drag.dragSource === 'shop') {
+            const wasDragGesture = Boolean(drag.isDragging || dropDistance > 10 || targetIndex !== null);
             const towerType = drag.towerType;
-            const validDrop = isShopDropValidAt(targetIndex);
+            const validDrop = wasDragGesture && isShopDropValidAt(targetIndex);
             cancelActiveDrag({ silent: true });
-            G.state.lastTouchDragEndTime = performance.now();
+
+            if (!wasDragGesture) {
+                // 未達拖曳門檻且放開在卡片本體上：視為點擊事件，交由 click listener 處理雙模式建塔
+                return;
+            }
+
+            lastShopDragCompleteTs = performance.now();
+            G.state.lastTouchDragEndTime = lastShopDragCompleteTs;
 
             if (validDrop) {
                 G.callbacks.spawnTowerAtCell(towerType, targetIndex);
@@ -343,7 +393,7 @@
                         const hasTower = G.state.board[targetIndex] !== null;
                         G.dom.msgText.innerText = isPath
                             ? '⚠️ 怪物跑道禁止建塔，已取消召喚（未扣金幣）。'
-                            : (hasTower ? '⚠️ 該格已有防禦塔，請拖曳至空白草地召喚（未扣金幣）。' : '⚠️ 該地形禁止建塔，已取消召喚（未扣金幣）。');
+                            : (hasTower ? '⚠️ 商店召喚禁止覆蓋或直接與場上防禦塔合成，請放至空白草地（未扣金幣）。' : '⚠️ 該地形禁止建塔，已取消召喚（未扣金幣）。');
                     } else {
                         G.dom.msgText.innerText = '已取消拖曳召喚（未扣金幣）。';
                     }
@@ -379,6 +429,9 @@
     }
 
     function cancelActiveDrag(options = {}) {
+        if (options && options.resetTimestamps) {
+            lastShopDragCompleteTs = 0;
+        }
         if (!activeDrag) return;
         const drag = activeDrag;
         activeDrag = null;
@@ -389,6 +442,9 @@
         if (G && G.state) G.state.draggedIndex = null;
 
         if (GameApp.renderer) {
+            if (typeof GameApp.renderer.clearDragEvolutionPreview === 'function') {
+                GameApp.renderer.clearDragEvolutionPreview();
+            }
             GameApp.renderer.clearCellDragHighlights();
             if (!options.silent) GameApp.renderer.updateRangeIndicator();
             else if (G && G.dom && G.dom.rangeCircleEl) G.dom.rangeCircleEl.className = '';
@@ -396,39 +452,58 @@
     }
 
     /**
-     * 綁定下方商店召喚卡片的拖拉召喚事件（支援 Pointer / Mouse / Touch）
+     * 綁定下方商店召喚卡片的拖拉召喚與點擊雙模式事件（支援 Pointer / Mouse / Touch，含防重複落點鎖）
      */
-    function bindShopCardElement(btnEl, towerType) {
+    function bindShopCardElement(btnEl, towerType, onCardClick = null) {
         if (!btnEl) return;
         btnEl.style.touchAction = 'none';
         btnEl.setAttribute('draggable', 'false');
         btnEl.addEventListener('dragstart', e => e.preventDefault());
+        btnEl.addEventListener('drop', e => e.preventDefault());
 
         btnEl.addEventListener('pointerdown', (e) => {
             if (e.button !== undefined && e.button !== 0) return;
-            lastPointerDownTs = Date.now();
+            const now = Date.now();
+            lastPointerDownTs = now;
+            lastPointerEventTs = now;
             if (e.pointerType === 'touch') G.callbacks.activateTouchMode();
-            e.preventDefault();
             GameApp.audio.ensureContext();
-            startShopDrag(towerType, btnEl, e.clientX, e.clientY, e.pointerId);
+            startShopDrag(towerType, btnEl, e.clientX, e.clientY, e.pointerId !== undefined ? e.pointerId : null);
         });
 
         btnEl.addEventListener('mousedown', (e) => {
-            if (Date.now() - lastPointerDownTs < 80 || (e.button !== undefined && e.button !== 0)) return;
-            e.preventDefault();
+            const now = Date.now();
+            if (now - lastPointerDownTs < 250 || now - lastPointerEventTs < 250 || (e.button !== undefined && e.button !== 0)) return;
+            if (activeDrag) return;
             GameApp.audio.ensureContext();
             startShopDrag(towerType, btnEl, e.clientX, e.clientY, null);
         });
 
         btnEl.addEventListener('touchstart', (e) => {
-            if (Date.now() - lastPointerDownTs < 80 || e.touches.length !== 1) return;
+            const now = Date.now();
+            if (now - lastPointerDownTs < 250 || now - lastPointerEventTs < 250 || e.touches.length !== 1) return;
+            if (activeDrag) return;
             G.callbacks.activateTouchMode();
             const t = e.touches[0];
             GameApp.audio.ensureContext();
-            if (startShopDrag(towerType, btnEl, t.clientX, t.clientY, null)) {
+            startShopDrag(towerType, btnEl, t.clientX, t.clientY, null);
+        }, { passive: true });
+
+        btnEl.addEventListener('click', (e) => {
+            if (performance.now() - lastShopDragCompleteTs < 180) {
                 e.preventDefault();
+                e.stopPropagation();
+                return;
             }
-        }, { passive: false });
+            if (activeDrag && activeDrag.dragSource === 'shop' && !activeDrag.isDragging && !activeDrag.handled) {
+                cancelActiveDrag({ silent: true });
+            }
+            if (activeDrag && activeDrag.isDragging) return;
+            GameApp.audio.ensureContext();
+            if (typeof onCardClick === 'function') {
+                onCardClick(towerType, btnEl);
+            }
+        });
     }
 
     /**
@@ -439,21 +514,28 @@
         towerEl.style.touchAction = 'none';
         towerEl.setAttribute('draggable', 'false');
         towerEl.addEventListener('dragstart', e => e.preventDefault());
+        towerEl.addEventListener('drop', e => e.preventDefault());
 
         towerEl.addEventListener('pointerdown', (e) => {
             if (e.button !== undefined && e.button !== 0) return;
-            lastPointerDownTs = Date.now();
+            const now = Date.now();
+            lastPointerDownTs = now;
+            lastPointerEventTs = now;
             if (e.pointerType === 'touch') G.callbacks.activateTouchMode();
-            startBoardDrag(index, towerEl, towerObj, e.clientX, e.clientY, e.pointerId);
+            startBoardDrag(index, towerEl, towerObj, e.clientX, e.clientY, e.pointerId !== undefined ? e.pointerId : null);
         });
 
         towerEl.addEventListener('mousedown', (e) => {
-            if (Date.now() - lastPointerDownTs < 80 || (e.button !== undefined && e.button !== 0)) return;
+            const now = Date.now();
+            if (now - lastPointerDownTs < 250 || now - lastPointerEventTs < 250 || (e.button !== undefined && e.button !== 0)) return;
+            if (activeDrag) return;
             startBoardDrag(index, towerEl, towerObj, e.clientX, e.clientY, null);
         });
 
         towerEl.addEventListener('touchstart', (e) => {
-            if (Date.now() - lastPointerDownTs < 80 || e.touches.length !== 1) return;
+            const now = Date.now();
+            if (now - lastPointerDownTs < 250 || now - lastPointerEventTs < 250 || e.touches.length !== 1) return;
+            if (activeDrag) return;
             G.callbacks.activateTouchMode();
             const t = e.touches[0];
             startBoardDrag(index, towerEl, towerObj, t.clientX, t.clientY, null);
@@ -469,6 +551,10 @@
             cellEl.classList.add(valid ? 'drag-over' : 'drag-invalid');
         });
         cellEl.addEventListener('dragleave', () => cellEl.classList.remove('drag-over', 'drag-valid-build', 'drag-invalid'));
+        cellEl.addEventListener('drop', (e) => {
+            e.preventDefault();
+            cellEl.classList.remove('drag-over', 'drag-valid-build', 'drag-invalid');
+        });
     }
 
     function bindGlobalPointerListeners() {
@@ -476,19 +562,22 @@
         globalListenersBound = true;
 
         document.addEventListener('pointermove', (e) => {
-            if (!activeDrag) return;
+            lastPointerEventTs = Date.now();
+            if (!activeDrag || activeDrag.handled) return;
             if (activeDrag.pointerId !== null && e.pointerId !== undefined && e.pointerId !== activeDrag.pointerId) return;
             if (activeDrag.isDragging && e.cancelable) e.preventDefault();
             handleMovePoint(e.clientX, e.clientY);
         }, { passive: false });
 
         document.addEventListener('pointerup', (e) => {
-            if (!activeDrag) return;
+            lastPointerEventTs = Date.now();
+            if (!activeDrag || activeDrag.handled) return;
             if (activeDrag.pointerId !== null && e.pointerId !== undefined && e.pointerId !== activeDrag.pointerId) return;
             finishActiveDrag(e.clientX, e.clientY);
         });
 
         document.addEventListener('pointercancel', () => {
+            lastPointerEventTs = Date.now();
             if (!activeDrag) return;
             const src = activeDrag.dragSource;
             cancelActiveDrag();
@@ -497,26 +586,30 @@
             }
         });
 
-        // 傳統 Mouse / Touch 備援（供不發送 PointerEvent 的測試環境或舊裝置使用）
+        // 傳統 Mouse / Touch 備援（嚴格排斥剛處理過 PointerEvent 的事件，杜絕雙重落點觸發）
         document.addEventListener('mousemove', (e) => {
-            if (!activeDrag || activeDrag.pointerId !== null) return;
+            if (Date.now() - lastPointerEventTs < 250) return;
+            if (!activeDrag || activeDrag.handled || activeDrag.pointerId !== null) return;
             handleMovePoint(e.clientX, e.clientY);
         });
 
         document.addEventListener('mouseup', (e) => {
-            if (!activeDrag || activeDrag.pointerId !== null) return;
+            if (Date.now() - lastPointerEventTs < 250) return;
+            if (!activeDrag || activeDrag.handled || activeDrag.pointerId !== null) return;
             finishActiveDrag(e.clientX, e.clientY);
         });
 
         document.addEventListener('touchmove', (e) => {
-            if (!activeDrag || e.touches.length !== 1) return;
+            if (Date.now() - lastPointerEventTs < 250) return;
+            if (!activeDrag || activeDrag.handled || activeDrag.pointerId !== null || e.touches.length !== 1) return;
             if (activeDrag.isDragging && e.cancelable) e.preventDefault();
             const t = e.touches[0];
             handleMovePoint(t.clientX, t.clientY);
         }, { passive: false });
 
         document.addEventListener('touchend', (e) => {
-            if (!activeDrag || activeDrag.pointerId !== null) return;
+            if (Date.now() - lastPointerEventTs < 250) return;
+            if (!activeDrag || activeDrag.handled || activeDrag.pointerId !== null) return;
             const t = e.changedTouches && e.changedTouches[0];
             finishActiveDrag(t ? t.clientX : activeDrag.currentX, t ? t.clientY : activeDrag.currentY);
         });

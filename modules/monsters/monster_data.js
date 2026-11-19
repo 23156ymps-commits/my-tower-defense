@@ -156,11 +156,11 @@
         }
     };
 
-    // 魔王輪替序列（Wave 5 弱冰 -> Wave 10 弱火腐朽古樹王 -> Wave 15 弱雷）
+    // 魔王輪替序列（Wave 5 熔岩巨獸王 -> Wave 10 腐朽古樹王 -> Wave 15 天穹堡壘艦）
     const BOSS_ROSTER = [
-        { typeKey: 'lava', name: '熔岩巨獸王', icon: '🌋', weakness: 'ice', armorBase: 12, hpBase: 1950 },
-        { typeKey: 'wood', name: '腐朽古樹王', icon: '👹', weakness: 'fire', armorBase: 15, hpBase: 4200 },
-        { typeKey: 'air', name: '風暴領主王', icon: '🛸', weakness: 'thunder', armorBase: 17, hpBase: 5600 }
+        { wave: 5, typeKey: 'lava', name: '熔岩巨獸王', icon: '🌋', weakness: 'ice', armorBase: 16, hpBase: 2800 },
+        { wave: 10, typeKey: 'wood', name: '腐朽古樹王', icon: '👹', weakness: 'fire', armorBase: 22, hpBase: 9000 },
+        { wave: 15, typeKey: 'air', name: '天穹堡壘艦', icon: '🛸', weakness: 'thunder', armorBase: 26, hpBase: 22000 }
     ];
 
     const SPECIAL_MECHANIC_MONSTERS = new Set(

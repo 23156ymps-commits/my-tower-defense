@@ -27,18 +27,41 @@
         return base + bonus;
     }
 
+    function resolveShopTypeKey(type) {
+        if (GameApp.data && GameApp.data.towers && typeof GameApp.data.towers.getBaseShopKey === 'function') {
+            return GameApp.data.towers.getBaseShopKey(type);
+        }
+        const raw = String(type || '');
+        if (raw.startsWith('fire')) return 'fire';
+        if (raw.startsWith('ice')) return 'ice';
+        if (raw.startsWith('thunder')) return 'thunder';
+        return raw;
+    }
+
     /**
-     * 計算指定元素下一次召喚所需金幣（若新增未知元素未設覆寫，自動套用全局保底預設價格）
+     * 計算指定元素下一次召喚所需金幣（支援 fire / fire_bud 雙向正規化查表）
      */
     function getSummonCost(type, spawnCountsOverride = null) {
         const d = getData();
-        const overrides = (d.ELEMENT_PRICE_OVERRIDES && d.ELEMENT_PRICE_OVERRIDES[type]) || {};
-        const baseCost = Number.isFinite(overrides.baseCost) ? overrides.baseCost : (d.BASE_COST ?? 10);
-        const step = Number.isFinite(overrides.costStep) ? overrides.costStep : (d.COST_STEP ?? 10);
-        const maxCost = Number.isFinite(overrides.costMax) ? overrides.costMax : (d.COST_MAX ?? 60);
-
+        const shopKey = resolveShopTypeKey(type);
+        const overrides = (d.ELEMENT_PRICE_OVERRIDES && (d.ELEMENT_PRICE_OVERRIDES[type] || d.ELEMENT_PRICE_OVERRIDES[shopKey])) || {};
+        const maxCost = Number.isFinite(overrides.costMax) ? overrides.costMax : (d.COST_MAX ?? 65);
         const counts = spawnCountsOverride || (G && G.state && G.state.spawnCounts) || {};
-        const count = Number(counts[type]) || 0;
+        const rawCount = counts[type] !== undefined ? counts[type] : counts[shopKey];
+        const count = Math.max(0, Math.floor(Number(rawCount) || 0));
+
+        const steps = Array.isArray(overrides.costSteps)
+            ? overrides.costSteps
+            : (!Number.isFinite(overrides.baseCost) && Array.isArray(d.SUMMON_COST_STEPS) ? d.SUMMON_COST_STEPS : null);
+        if (steps && steps.length > 0) {
+            const rawStepCost = Number(steps[Math.min(count, steps.length - 1)]);
+            if (Number.isFinite(rawStepCost)) {
+                return Math.min(maxCost, Math.max(0, rawStepCost));
+            }
+        }
+
+        const baseCost = Number.isFinite(overrides.baseCost) ? overrides.baseCost : (d.BASE_COST ?? 10);
+        const step = Number.isFinite(overrides.costStep) ? overrides.costStep : (d.COST_STEP ?? 8);
         return Math.min(maxCost, baseCost + count * step);
     }
 
@@ -51,10 +74,14 @@
     function deductSummonCost(type) {
         if (!G || !G.state) return { ok: false, cost: 0 };
         const st = G.state;
+        const shopKey = resolveShopTypeKey(type);
         const cost = getSummonCost(type, st.spawnCounts);
         if (st.currentGold < cost) return { ok: false, cost };
         st.currentGold -= cost;
-        st.spawnCounts[type] = (st.spawnCounts[type] || 0) + 1;
+        const nextCount = (Number(st.spawnCounts[shopKey] ?? st.spawnCounts[type]) || 0) + 1;
+        st.spawnCounts[shopKey] = nextCount;
+        st.spawnCounts[type] = nextCount;
+        st.spawnCounts[`${shopKey}_bud`] = nextCount;
         return { ok: true, cost };
     }
 

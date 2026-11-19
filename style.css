@@ -5,7 +5,7 @@
     --bg-surface: #2C3530;
     --border-subtle: #46544C;
     --text-primary: #F4F1EA;
-    --text-secondary: #CBD5CF;
+    --text-secondary: #B8C2BC;
     --accent-cta: #D97724;
     --el-fire: #C94A38;
     --el-ice: #4A9EBF;
@@ -286,20 +286,34 @@ body.map-lava {
 
 .forecast-detail-drawer {
     display: none;
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    right: 0;
-    background-color: rgba(44, 53, 48, 0.96);
+    position: static;
+    margin-top: 6px;
+    background-color: rgba(44, 53, 48, 0.98);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
-    padding: 12px;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    padding: 10px 12px;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    z-index: 40;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.42);
 }
 
 .wave-forecast-bar.drawer-open .forecast-detail-drawer {
     display: grid;
+}
+
+@media (min-width: 980px) {
+    .forecast-detail-drawer {
+        position: absolute;
+        top: 0;
+        left: calc(100% + 10px);
+        right: auto;
+        margin-top: 0;
+        width: clamp(192px, calc((100vw - 100%) / 2 - 20px), 290px);
+        max-height: calc(100dvh - 100px);
+        overflow-y: auto;
+        grid-template-columns: 1fr;
+    }
 }
 
 .forecast-detail-col {
@@ -552,6 +566,15 @@ body.map-lava .cell:nth-child(even) { background-color: #2C2523; }
     background-color: #2E3933;
 }
 
+.cell.pending-spawn-valid {
+    border: 1.5px solid #5CC884 !important;
+    box-shadow: inset 0 0 8px rgba(92, 200, 132, 0.35);
+}
+.cell.pending-spawn-valid:hover {
+    background-color: #284632 !important;
+    border: 2px solid #7CE3A2 !important;
+}
+
 /* 高辨識度特殊戰術地形 */
 .cell.terrain-highground {
     background-color: #393320;
@@ -730,6 +753,10 @@ body.map-lava .cell.path-cell {
     justify-content: center;
     will-change: left, top;
 }
+#board-stage.is-paused .monster-unit {
+    pointer-events: auto;
+    cursor: help;
+}
 .monster-unit.mini-slime { width: calc(var(--cell-size) * 0.72); height: calc(var(--cell-size) * 0.72); }
 .monster-unit.boss { width: calc(var(--cell-size) * 1.12); height: calc(var(--cell-size) * 1.12); z-index: 12; }
 
@@ -801,15 +828,224 @@ body.map-lava .cell.path-cell {
     animation: floatUp 0.72s ease-out forwards;
 }
 .floating-dmg.normal { color: var(--text-primary); }
+.floating-dmg.affinity { color: #9BD3E8; font-size: 13px; }
 .floating-dmg.weakness { color: var(--el-lightning); font-size: 14px; }
 @keyframes floatUp { 0% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, -24px); opacity: 0; } }
+
+.floating-notice {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 26;
+    animation: floatNoticeUp 1.45s ease-out forwards;
+}
+.floating-notice.pity-seed {
+    background-color: rgba(33, 52, 39, 0.96);
+    border: 1px solid var(--el-lightning);
+    color: #F7DC88;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+@keyframes floatNoticeUp {
+    0% { transform: translate(-50%, 0) scale(0.92); opacity: 0; }
+    16% { transform: translate(-50%, -8px) scale(1.04); opacity: 1; }
+    80% { transform: translate(-50%, -22px) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -32px) scale(0.98); opacity: 0; }
+}
+
+/* 怪物頭頂 Debuff 微縮標示與進化確認輪盤 */
+.m-debuff-strip {
+    position: absolute;
+    bottom: calc(100% + 9px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    pointer-events: none;
+    z-index: 6;
+}
+.m-debuff-tag {
+    padding: 0 3px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+}
+.m-debuff-tag.debuff-burn { border-color: var(--el-fire); color: var(--text-primary); }
+.m-debuff-tag.debuff-ice { border-color: var(--el-ice); color: var(--text-primary); }
+.m-debuff-tag.debuff-shock { border-color: var(--el-lightning); color: var(--el-lightning); }
+.m-debuff-tag.debuff-wound { border-color: var(--el-fire); color: var(--el-fire); }
+.monster.frozen .m-body {
+    border-color: var(--el-ice) !important;
+    outline: 2px solid var(--el-ice);
+}
+
+.tower-tooltip.tooltip-invalid {
+    border-color: var(--el-fire);
+    color: var(--text-primary);
+}
+
+/* 0.15x 子彈時間 T2 -> T3 進化分岔輪盤（溫潤深岩灰實體面板，無毛玻璃/無霓虹） */
+.evo-confirm-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 38;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background-color: rgba(27, 33, 30, 0.72);
+}
+.evo-confirm-overlay.hidden { display: none; }
+
+.evo-confirm-panel {
+    width: min(560px, 100%);
+    padding: 12px 14px;
+    border-radius: 10px;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.evo-confirm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.evo-confirm-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.evo-bullet-tag {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--el-lightning);
+    color: var(--el-lightning);
+}
+
+.evo-confirm-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+.evo-confirm-options.single-branch {
+    grid-template-columns: 1fr;
+}
+
+.evo-branch-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.1s ease, border-color 0.1s ease, transform 0.1s ease;
+}
+.evo-branch-card:hover {
+    background-color: var(--bg-surface);
+    border-color: var(--accent-cta);
+    transform: translateY(-1px);
+}
+.evo-branch-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.evo-branch-portrait {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+}
+.evo-branch-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.evo-branch-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.evo-branch-lineage {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+.evo-badge-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.evo-badge-chip {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+}
+.evo-branch-cta {
+    margin-top: 2px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    background-color: var(--accent-cta);
+    color: #1B211E;
+}
+
+.evo-confirm-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+.evo-cancel-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.evo-cancel-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--el-fire);
+}
 
 /* ==================== 5. 檢查列、精簡兩區對齊底部操作列 ==================== */
 #tower-inspector {
     margin-top: 4px;
     width: 100%;
-    min-height: 46px;
-    padding: 2px 10px;
+    min-height: 48px;
+    padding: 3px 10px;
     background-color: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
@@ -829,27 +1065,59 @@ body.map-lava .cell.path-cell {
     min-width: 0;
 }
 
-.inspector-active { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
-.inspector-active.hidden, .inspector-empty.hidden, .inspector-terrain.hidden, .seed-pity-badge.hidden { display: none; }
-.inspector-metrics { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
-.inspector-badge { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.inspector-stat, .inspector-terrain {
-    font-size: 12px;
+.inspector-active {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+}
+.inspector-active.hidden, .inspector-empty.hidden, .inspector-aoe.hidden, .inspector-terrain.hidden, .seed-pity-badge.hidden, .inspector-lineage.hidden { display: none; }
+.inspector-top-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.inspector-bottom-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+.inspector-lineage {
+    font-size: 11.5px;
     font-weight: 600;
-    padding: 2px 8px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+.inspector-metrics { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; }
+.inspector-badge { font-size: 13px; font-weight: 700; color: var(--text-primary); white-space: nowrap; flex-shrink: 0; }
+.inspector-stat, .inspector-terrain {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 1px 6px;
     border-radius: 4px;
     white-space: nowrap;
     background-color: var(--bg-grid-elevated);
     border: 1px solid var(--border-subtle);
 }
 .inspector-stat { color: var(--text-primary); }
-.inspector-terrain { color: #A8D5B5; border-color: #4E9A68; }
+.inspector-stat.inspector-aoe { color: var(--el-lightning); border-color: var(--el-lightning); }
+.inspector-terrain { color: var(--text-secondary); border-color: #4E9A68; }
 
-.inspector-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.inspector-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .inspector-btn {
-    min-height: 40px;
-    padding: 4px 12px;
-    font-size: 12px;
+    min-height: 26px;
+    padding: 2px 10px;
+    font-size: 11.5px;
     font-weight: 600;
     border-radius: 6px;
     border: 1px solid var(--border-subtle);
@@ -857,10 +1125,11 @@ body.map-lava .cell.path-cell {
     white-space: nowrap;
     background-color: var(--bg-grid-elevated);
     color: var(--text-primary);
-    transition: background-color 0.1s ease, border-color 0.1s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: background-color 0.1s ease, border-color 0.1s ease, opacity 0.1s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.inspector-btn:hover { background-color: #38443D; transform: scale(1.03); }
-.inspector-btn:active { transform: scale(0.95); }
+.inspector-btn:hover:not(:disabled) { background-color: #38443D; transform: scale(1.03); }
+.inspector-btn:active:not(:disabled) { transform: scale(0.95); }
+.inspector-btn:disabled { opacity: 0.48; filter: grayscale(0.6); cursor: not-allowed; }
 .inspector-btn.sell-btn { border-color: var(--accent-cta); color: var(--el-lightning); }
 
 /* 底部整合操作區：左側 3 欄召喚卡 ＋ 右側 2×2 技能與功能列 */
@@ -882,6 +1151,8 @@ body.map-lava .cell.path-cell {
 }
 
 .spawn-card-btn {
+    position: relative;
+    overflow: visible;
     width: 100%;
     min-width: 0;
     padding: 5px 8px;
@@ -901,6 +1172,35 @@ body.map-lava .cell.path-cell {
     justify-content: center;
     gap: 2px;
     transition: background-color 0.09s ease, border-color 0.09s ease, box-shadow 0.1s ease, opacity 0.1s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.spawn-pity-tag {
+    position: absolute;
+    top: -8px;
+    right: -4px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background-color: var(--el-lightning);
+    color: #1B211E;
+    border: 1px solid var(--border-subtle);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.25;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 4;
+}
+.spawn-pity-tag.hidden { display: none; }
+
+.spawn-card-btn.is-pity-next:not(.btn-disabled) {
+    border-color: var(--el-lightning) !important;
+    box-shadow: 0 0 10px rgba(224, 180, 60, 0.32);
+}
+
+.spawn-card-btn.is-pending-spawn:not(.btn-disabled) {
+    border-color: #5CC884 !important;
+    background-color: #253B2E;
+    box-shadow: 0 0 0 2px rgba(92, 200, 132, 0.45), 0 4px 10px rgba(92, 200, 132, 0.24);
 }
 
 .spawn-card-btn:hover:not(.btn-disabled) {
@@ -1629,6 +1929,10 @@ body.map-lava .cell.path-cell {
     .hud-sub-slot { margin-bottom: 2px; }
     .wave-forecast-bar { padding: 1px 8px; }
     #tower-inspector { margin-top: 2px; min-height: 44px; padding: 1px 8px; }
+    .inspector-metrics { gap: 4px; }
+    .inspector-badge { font-size: 12.5px; }
+    .inspector-stat, .inspector-terrain { padding: 2px 5px; font-size: 11px; }
+    .inspector-btn { padding: 2px 8px; font-size: 11.5px; }
     .bottom-action-deck { margin-top: 3px; gap: 8px; }
     .spawn-card-btn { padding: 4px 6px; gap: 2px; }
     .debug-controls { gap: 8px; }

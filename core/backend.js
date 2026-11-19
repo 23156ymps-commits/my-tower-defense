@@ -258,7 +258,7 @@
                             id: type,
                             name: tCfg.name || `新元素塔(${type})`,
                             icon: tCfg.icon || '✨',
-                            color: tCfg.color || '#a855f7',
+                            color: tCfg.color || '#D97724',
                             range: Number(tCfg.range) || 2.5,
                             attackIntervalMs: 1000,
                             attackStyle: tCfg.attackStyle || 'burst_armor_break',

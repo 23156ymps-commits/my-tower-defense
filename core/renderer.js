@@ -76,7 +76,19 @@
     }
 
     // ==================== 2.5D 雙層砲塔與 3D 向量怪物參數化 SVG 生成 ====================
+    function resolveTowerVisualFamily(type) {
+        const raw = String(type || 'fire_bud');
+        const tCfg = getTowersDict()[raw] || {};
+        const branchCode = tCfg.branchCode || (raw.endsWith('_A') ? 'A' : (raw.endsWith('_B') ? 'B' : null));
+        const fam = tCfg.family || tCfg.elementTag || raw.replace(/_(bud|trunk|A|B)$/, '');
+        const family = ['fire', 'ice', 'thunder', 'steam', 'magnet', 'plasma'].includes(fam) ? fam : 'fire';
+        return { family, branchCode, nodeTier: tCfg.nodeTier || 1 };
+    }
+
     function getTowerPaletteForType(type, tk) {
+        const tCfg = getTowersDict()[type];
+        if (tCfg && tCfg.palette) return tCfg.palette;
+        const { family } = resolveTowerVisualFamily(type);
         const defaults = {
             fire: { rune: tk.elFire, glow: '#F4DFC8' },
             ice: { rune: tk.elIce, glow: '#D6EEF7' },
@@ -85,59 +97,69 @@
             magnet: { rune: tk.elIce, glow: tk.elLightning },
             plasma: { rune: tk.elFire, glow: tk.elLightning }
         };
-        if (defaults[type]) return defaults[type];
-        const tCfg = getTowersDict()[type];
-        if (tCfg && tCfg.palette) return tCfg.palette;
+        if (defaults[family]) return defaults[family];
         const mainColor = (tCfg && tCfg.color) || tk.accentCta;
         return { rune: mainColor, glow: tk.textPrimary };
     }
 
+    function buildBranchCrownSvgOverlay(branchCode, pal, tk) {
+        if (branchCode === 'A') {
+            // A 分支：重炮／領域／黑洞／聚變寬冠（厚實雙肩護甲翼＋寬口聚能環）
+            return `<polygon points="9,34 18,22 20,43 11,42" fill="${pal.rune}" stroke="#1B211E" stroke-width="1.5"/><polygon points="55,34 46,22 44,43 53,42" fill="${pal.rune}" stroke="#1B211E" stroke-width="1.5"/><ellipse cx="32" cy="11" rx="9.5" ry="3.4" fill="${tk.bgCanvas}" stroke="${tk.elLightning}" stroke-width="1.6"/><circle cx="15" cy="33" r="2.2" fill="${tk.elLightning}"/><circle cx="49" cy="33" r="2.2" fill="${tk.elLightning}"/>`;
+        }
+        if (branchCode === 'B') {
+            // B 分支：狙擊／灼燒／穿刺／折射尖冠（高聳尖刺矛冠＋斜向稜鏡翼）
+            return `<polygon points="32,1 37,16 32,13 27,16" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.4"/><polygon points="13,20 22,27 17,33" fill="${pal.glow}" stroke="#1B211E" stroke-width="1.3"/><polygon points="51,20 42,27 47,33" fill="${pal.glow}" stroke="#1B211E" stroke-width="1.3"/>`;
+        }
+        return '';
+    }
+
     const TOWER_HEAD_TEMPLATES = {
-        fire: (tier, tk) => {
+        fire: (tier, tk, branchCode) => {
             const fins = tier >= 3 ? `<polygon points="14,40 22,25 24,42" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/><polygon points="50,40 42,25 40,42" fill="#8C2F23" stroke="#2B1410" stroke-width="1.5"/>` : '';
             const pods = tier >= 2 ? `<rect x="16.5" y="30" width="5" height="11" rx="2" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><rect x="42.5" y="30" width="5" height="11" rx="2" fill="#9E5214" stroke="#2B1410" stroke-width="1.5"/>` : '';
-            return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/>${fins}<polygon points="27,7 37,7 39,30 25,30" fill="#6E281E" stroke="#2B1410" stroke-width="1.5"/><rect x="29" y="9" width="3" height="19" rx="1" fill="${tk.elFire}" fill-opacity="0.7"/><polygon points="24.5,6 39.5,6 37.5,12 26.5,12" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><ellipse cx="32" cy="7" rx="4.5" ry="2.2" fill="${tk.elLightning}"/><polygon points="22,26 42,26 45,38 38,46 26,46 19,38" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/>${pods}<polygon points="22,26 36,26 32,35 20,37" fill="rgba(244,241,234,0.22)"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5}" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><circle cx="31" cy="34.5" r="${tier >= 3 ? 2.8 : 2.1}" fill="${tk.textPrimary}"/>`;
+            const barrel = branchCode === 'B'
+                ? `<polygon points="29,3 35,3 37,29 27,29" fill="#6E281E" stroke="#2B1410" stroke-width="1.5"/>`
+                : `<polygon points="25,7 39,7 41,30 23,30" fill="#6E281E" stroke="#2B1410" stroke-width="1.5"/>`;
+            return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/>${fins}${barrel}<rect x="29" y="9" width="3" height="19" rx="1" fill="${tk.elFire}" fill-opacity="0.7"/><polygon points="24.5,6 39.5,6 37.5,12 26.5,12" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><ellipse cx="32" cy="7" rx="4.5" ry="2.2" fill="${tk.elLightning}"/><polygon points="22,26 42,26 45,38 38,46 26,46 19,38" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/>${pods}<polygon points="22,26 36,26 32,35 20,37" fill="rgba(244,241,234,0.22)"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5}" fill="${tk.accentCta}" stroke="#2B1410" stroke-width="1.5"/><circle cx="31" cy="34.5" r="${tier >= 3 ? 2.8 : 2.1}" fill="${tk.textPrimary}"/>`;
         },
-        ice: (tier, tk) => {
+        ice: (tier, tk, branchCode) => {
             const shards = tier >= 2 ? `<polygon points="18,16 24,28 19,38 14,32" fill="${tk.elIce}" stroke="#143240" stroke-width="1.5"/><polygon points="46,16 40,28 45,38 50,32" fill="#2E6F8A" stroke="#143240" stroke-width="1.5"/>` : '';
             const crest = tier >= 3 ? `<polygon points="16,40 21,36 22,44" fill="${tk.elLightning}"/><polygon points="48,40 43,36 42,44" fill="${tk.elLightning}"/>` : '';
-            return `<ellipse cx="33" cy="36" rx="12" ry="11" fill="rgba(0,0,0,0.30)"/>${shards}<polygon points="32,4 39,28 32,34 25,28" fill="${tk.elIce}" stroke="#143240" stroke-width="1.5"/><polygon points="32,4 32,34 25,28" fill="rgba(244,241,234,0.36)"/>${crest}<polygon points="21,28 43,28 46,39 32,47 18,39" fill="#2B6780" stroke="#143240" stroke-width="1.5"/><polygon points="21,28 34,28 31,41 19,38" fill="rgba(244,241,234,0.18)"/><polygon points="32,29 38,36 32,43 26,36" fill="${tier >= 3 ? tk.textPrimary : '#A6D7EA'}" stroke="#143240" stroke-width="1.5"/>`;
+            const lance = branchCode === 'B'
+                ? `<polygon points="32,1 37,28 32,34 27,28" fill="${tk.textPrimary}" stroke="#143240" stroke-width="1.5"/>`
+                : `<polygon points="32,4 39,28 32,34 25,28" fill="${tk.elIce}" stroke="#143240" stroke-width="1.5"/>`;
+            return `<ellipse cx="33" cy="36" rx="12" ry="11" fill="rgba(0,0,0,0.30)"/>${shards}${lance}<polygon points="32,4 32,34 25,28" fill="rgba(244,241,234,0.36)"/>${crest}<polygon points="21,28 43,28 46,39 32,47 18,39" fill="#2B6780" stroke="#143240" stroke-width="1.5"/><polygon points="21,28 34,28 31,41 19,38" fill="rgba(244,241,234,0.18)"/><polygon points="32,29 38,36 32,43 26,36" fill="${tier >= 3 ? tk.textPrimary : '#A6D7EA'}" stroke="#143240" stroke-width="1.5"/>`;
         },
-        thunder: (tier, tk) => {
-            const orb = tier >= 3 ? `<circle cx="32" cy="40" r="4.2" fill="${tk.elLightning}" stroke="#2B2410" stroke-width="1.5"/>` : '';
-            return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="20,9 25,9 26,30 20,30" fill="#5A4B22" stroke="#241F10" stroke-width="1.5"/><polygon points="39,9 44,9 44,30 38,30" fill="#463A1A" stroke="#241F10" stroke-width="1.5"/><circle cx="22.5" cy="9" r="3.4" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><circle cx="41.5" cy="9" r="3.4" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><polyline points="23,9 29,6 33,12 41,9" fill="none" stroke="${tk.elLightning}" stroke-width="${tier >= 3 ? 2.2 : 1.6}" stroke-linecap="round" stroke-linejoin="round"/><polygon points="32,12 35,28 29,28" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><polygon points="19,28 45,28 47,40 39,47 25,47 17,40" fill="#3D341E" stroke="#241F10" stroke-width="1.5"/><polygon points="19,28 34,28 30,43 18,39" fill="rgba(244,241,234,0.16)"/><rect x="23" y="30" width="18" height="4" rx="2" fill="${tk.accentCta}"/><rect x="25" y="36" width="14" height="3.5" rx="1.5" fill="${tier >= 2 ? tk.elLightning : tk.accentCta}"/>${orb}`;
+        thunder: (tier, tk, branchCode) => {
+            const orb = tier >= 3 ? `<circle cx="32" cy="40" r="${branchCode === 'A' ? 5.2 : 4.2}" fill="${tk.elLightning}" stroke="#2B2410" stroke-width="1.5"/>` : '';
+            const spear = branchCode === 'B'
+                ? `<polygon points="32,2 36,28 28,28" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/>`
+                : `<polygon points="32,12 35,28 29,28" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/>`;
+            return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="20,9 25,9 26,30 20,30" fill="#5A4B22" stroke="#241F10" stroke-width="1.5"/><polygon points="39,9 44,9 44,30 38,30" fill="#463A1A" stroke="#241F10" stroke-width="1.5"/><circle cx="22.5" cy="9" r="3.4" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><circle cx="41.5" cy="9" r="3.4" fill="${tk.elLightning}" stroke="#241F10" stroke-width="1.5"/><polyline points="23,9 29,6 33,12 41,9" fill="none" stroke="${tk.elLightning}" stroke-width="${tier >= 3 ? 2.2 : 1.6}" stroke-linecap="round" stroke-linejoin="round"/>${spear}<polygon points="19,28 45,28 47,40 39,47 25,47 17,40" fill="#3D341E" stroke="#241F10" stroke-width="1.5"/><polygon points="19,28 34,28 30,43 18,39" fill="rgba(244,241,234,0.16)"/><rect x="23" y="30" width="18" height="4" rx="2" fill="${tk.accentCta}"/><rect x="25" y="36" width="14" height="3.5" rx="1.5" fill="${tier >= 2 ? tk.elLightning : tk.accentCta}"/>${orb}`;
         },
         steam: (tier, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><rect x="23" y="7" width="8" height="22" rx="2" fill="#8C3326" stroke="#1E1814" stroke-width="1.5"/><rect x="33" y="7" width="8" height="22" rx="2" fill="#2D6A82" stroke="#1E1814" stroke-width="1.5"/><rect x="21" y="6" width="22" height="5" rx="2" fill="${tk.textSecondary}" stroke="#1E1814" stroke-width="1.5"/><circle cx="27" cy="8.5" r="2.1" fill="${tk.elFire}"/><circle cx="37" cy="8.5" r="2.1" fill="${tk.elIce}"/><polygon points="18,27 32,27 32,47 23,46 16,38" fill="${tk.elFire}" stroke="#1E1814" stroke-width="1.5"/><polygon points="32,27 46,27 48,38 41,46 32,47" fill="${tk.elIce}" stroke="#1E1814" stroke-width="1.5"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5.2}" fill="${tk.textPrimary}" stroke="#1E1814" stroke-width="1.5"/><circle cx="32" cy="36" r="2.6" fill="${tier >= 3 ? tk.elLightning : tk.accentCta}"/>`,
         magnet: (tier, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.30)"/><polygon points="18,6 25,6 26,33 17,37" fill="${tk.elIce}" stroke="#142C36" stroke-width="1.5"/><polygon points="46,6 39,6 38,33 47,37" fill="#9E7E26" stroke="#241F10" stroke-width="1.5"/><polygon points="20,8 23,8 23,28 20,28" fill="rgba(244,241,234,0.45)"/><polygon points="41,8 44,8 44,28 41,28" fill="rgba(244,241,234,0.35)"/><circle cx="32" cy="16" r="5" fill="${tk.elIce}" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="32" cy="16" r="2" fill="${tk.textPrimary}"/><polygon points="21,30 43,30 47,39 39,47 25,47 17,39" fill="${tk.bgSurface}" stroke="${tk.elIce}" stroke-width="1.5"/><circle cx="32" cy="38" r="${tier >= 3 ? 6 : 5}" fill="${tk.elLightning}" stroke="#142C36" stroke-width="1.5"/>`,
         plasma: (tier, tk) => `<ellipse cx="33" cy="36" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="14,34 25,21 26,41 18,43" fill="${tk.elFire}" stroke="#2B1410" stroke-width="1.5"/><polygon points="50,34 39,21 38,41 46,43" fill="#8C2F23" stroke="#2B1410" stroke-width="1.5"/><polygon points="32,5 37,27 27,27" fill="${tk.elLightning}" stroke="#2B1410" stroke-width="1.5"/><polygon points="32,8 34,26 30,26" fill="rgba(244,241,234,0.6)"/><ellipse cx="32" cy="20" rx="8" ry="3.2" fill="none" stroke="${tk.accentCta}" stroke-width="1.5"/><polygon points="22,27 42,27 44,39 32,48 20,39" fill="#7D2B1F" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="32" cy="36" r="${tier >= 3 ? 6.2 : 5}" fill="${tk.accentCta}" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="31.5" cy="35" r="2.2" fill="${tk.textPrimary}"/>`
     };
 
-    /**
-     * 參數化自動生成新角色砲塔頭（當後台或 tower_data.js 動態新增未知 ID 角色時自動渲染）
-     */
-    function buildParametricTowerHeadSvg(type, tier, tk) {
-        const tCfg = getTowersDict()[type] || {};
-        const primary = tCfg.color || tk.accentCta;
-        const accent = (tCfg.palette && tCfg.palette.glow) || tk.elLightning;
-        const wings = tier >= 2
-            ? `<polygon points="15,36 22,24 23,41" fill="${primary}" stroke="#1B211E" stroke-width="1.5"/><polygon points="49,36 42,24 41,41" fill="${primary}" stroke="#1B211E" stroke-width="1.5"/>`
-            : '';
-        const crown = tier >= 3
-            ? `<circle cx="32" cy="14" r="4" fill="${accent}" stroke="#1B211E" stroke-width="1.5"/>`
-            : '';
-        return `<ellipse cx="33" cy="36" rx="13" ry="11" fill="rgba(0,0,0,0.30)"/>${wings}<polygon points="27,7 37,7 39,29 25,29" fill="${primary}" stroke="#1B211E" stroke-width="1.5"/>${crown}<polygon points="21,27 43,27 46,39 38,47 26,47 18,39" fill="${primary}" stroke="#1B211E" stroke-width="1.5"/><circle cx="32" cy="36" r="${tier >= 3 ? 6 : 4.8}" fill="${accent}" stroke="#1B211E" stroke-width="1.5"/>`;
-    }
-
     function createTowerSvgParts(type, tier = 1) {
         const tk = getThemeTokens();
         const pal = getTowerPaletteForType(type, tk);
-        const crownTrim = tier >= 3 ? `<polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="none" stroke="${tk.elLightning}" stroke-width="1.5"/>` : '';
-        const gemCoords = tier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
-        const cornerGems = gemCoords.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="${tier >= 2 ? 2.1 : 1.4}" fill="${tier >= 2 ? pal.glow : tk.textSecondary}"/>`).join('');
+        const { family, branchCode, nodeTier } = resolveTowerVisualFamily(type);
+        const effTier = Math.max(tier || 1, nodeTier || 1);
+        const crownTrim = effTier >= 3
+            ? (branchCode === 'B'
+                ? `<polygon points="32,9 51,22 47,46 17,46 13,22" fill="none" stroke="${tk.elLightning}" stroke-width="1.6"/>`
+                : `<polygon points="16,13 48,13 54,24 54,37 46,46 18,46 10,37 10,24" fill="none" stroke="${tk.elLightning}" stroke-width="1.8"/>`)
+            : '';
+        const gemCoords = effTier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
+        const cornerGems = gemCoords.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="${effTier >= 2 ? 2.1 : 1.4}" fill="${effTier >= 2 ? pal.glow : tk.textSecondary}"/>`).join('');
 
-        const baseSvgHtml = `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="23" ry="8" fill="rgba(0,0,0,0.40)"/><polygon points="15,22 49,22 55,33 55,44 47,53 17,53 9,44 9,33" fill="${tk.bgGridElevated}" stroke="${tk.bgCanvas}" stroke-width="2"/><polygon points="9,44 17,53 17,43 11,35" fill="rgba(244,241,234,0.08)"/><polygon points="55,44 47,53 47,43 53,35" fill="rgba(0,0,0,0.25)"/><polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="#3B453F" stroke="${tk.borderSubtle}" stroke-width="1.5"/><polyline points="14,24 19,15 45,15 50,24" fill="none" stroke="rgba(244,241,234,0.28)" stroke-width="1.5"/>${crownTrim}<circle cx="32" cy="30" r="14" fill="${tk.bgCanvas}" stroke="${tk.bgCanvas}" stroke-width="1.5"/><circle cx="32" cy="30" r="11.5" fill="none" stroke="${pal.rune}" stroke-width="${tier >= 3 ? 2 : 1.5}" stroke-opacity="${tier === 1 ? 0.72 : 0.95}"/>${cornerGems}</svg>`;
-        const headBuilder = TOWER_HEAD_TEMPLATES[type] || ((t, tokens) => buildParametricTowerHeadSvg(type, t, tokens));
-        return { baseSvgHtml, headSvgHtml: `<svg class="tower-head-svg" viewBox="0 0 64 64" aria-hidden="true">${headBuilder(tier, tk)}</svg>` };
+        const baseSvgHtml = `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="23" ry="8" fill="rgba(0,0,0,0.40)"/><polygon points="15,22 49,22 55,33 55,44 47,53 17,53 9,44 9,33" fill="${tk.bgGridElevated}" stroke="${tk.bgCanvas}" stroke-width="2"/><polygon points="9,44 17,53 17,43 11,35" fill="rgba(244,241,234,0.08)"/><polygon points="55,44 47,53 47,43 53,35" fill="rgba(0,0,0,0.25)"/><polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="#3B453F" stroke="${tk.borderSubtle}" stroke-width="1.5"/><polyline points="14,24 19,15 45,15 50,24" fill="none" stroke="rgba(244,241,234,0.28)" stroke-width="1.5"/>${crownTrim}<circle cx="32" cy="30" r="14" fill="${tk.bgCanvas}" stroke="${tk.bgCanvas}" stroke-width="1.5"/><circle cx="32" cy="30" r="11.5" fill="none" stroke="${pal.rune}" stroke-width="${effTier >= 3 ? 2 : 1.5}" stroke-opacity="${effTier === 1 ? 0.72 : 0.95}"/>${cornerGems}</svg>`;
+        const headBuilder = TOWER_HEAD_TEMPLATES[type] || TOWER_HEAD_TEMPLATES[family] || ((t, tokens) => buildParametricTowerHeadSvg(type, t, tokens));
+        const branchOverlay = effTier >= 3 ? buildBranchCrownSvgOverlay(branchCode, pal, tk) : '';
+        return { baseSvgHtml, headSvgHtml: `<svg class="tower-head-svg" viewBox="0 0 64 64" aria-hidden="true">${headBuilder(effTier, tk, branchCode)}${branchOverlay}</svg>` };
     }
 
     const BOSS_SVG_BY_TYPE = {
@@ -215,19 +237,21 @@
 
     function drawTowerPortrait2D(ctx, type, tier, tk) {
         const pal = getTowerPaletteForType(type, tk);
+        const { family, branchCode, nodeTier } = resolveTowerVisualFamily(type);
+        const effTier = Math.max(tier || 1, nodeTier || 1);
         // 2.5D 八角石座底盤
         ellipse2D(ctx, 32, 53, 23, 8, 'rgba(0,0,0,0.42)');
         poly2D(ctx, [[15, 22], [49, 22], [55, 33], [55, 44], [47, 53], [17, 53], [9, 44], [9, 33]], tk.bgGridElevated, tk.bgCanvas, 2);
-        poly2D(ctx, [[18, 14], [46, 14], [52, 24], [52, 36], [45, 45], [19, 45], [12, 36], [12, 24]], '#3B453F', tier >= 3 ? tk.elLightning : tk.borderSubtle, 1.5);
+        poly2D(ctx, [[18, 14], [46, 14], [52, 24], [52, 36], [45, 45], [19, 45], [12, 36], [12, 24]], '#3B453F', effTier >= 3 ? tk.elLightning : tk.borderSubtle, 1.5);
         circle2D(ctx, 32, 30, 14, tk.bgCanvas, tk.bgCanvas, 1.5);
-        circle2D(ctx, 32, 30, 11.5, null, pal.rune, tier >= 3 ? 2 : 1.5);
+        circle2D(ctx, 32, 30, 11.5, null, pal.rune, effTier >= 3 ? 2 : 1.5);
 
-        const gemCoords = tier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
-        gemCoords.forEach(([gx, gy]) => circle2D(ctx, gx, gy, tier >= 2 ? 2.1 : 1.5, tier >= 2 ? pal.glow : tk.textSecondary));
+        const gemCoords = effTier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
+        gemCoords.forEach(([gx, gy]) => circle2D(ctx, gx, gy, effTier >= 2 ? 2.1 : 1.5, effTier >= 2 ? pal.glow : tk.textSecondary));
 
         // 砲塔上層結構（與戰場 SVG 100% 視覺一致）
-        if (type === 'fire') {
-            if (tier >= 3) {
+        if (family === 'fire') {
+            if (effTier >= 3) {
                 poly2D(ctx, [[14, 40], [22, 25], [24, 42]], tk.elFire, '#2B1410', 1.5);
                 poly2D(ctx, [[50, 40], [42, 25], [40, 42]], '#8C2F23', '#2B1410', 1.5);
             }
@@ -235,15 +259,15 @@
             poly2D(ctx, [[24.5, 6], [39.5, 6], [37.5, 12], [26.5, 12]], tk.accentCta, '#2B1410', 1.5);
             ellipse2D(ctx, 32, 7, 4.5, 2.2, tk.elLightning);
             poly2D(ctx, [[22, 26], [42, 26], [45, 38], [38, 46], [26, 46], [19, 38]], tk.elFire, '#2B1410', 1.5);
-            circle2D(ctx, 32, 36, tier >= 3 ? 6.2 : 5, tk.accentCta, '#2B1410', 1.5);
+            circle2D(ctx, 32, 36, effTier >= 3 ? 6.2 : 5, tk.accentCta, '#2B1410', 1.5);
             circle2D(ctx, 31, 34.5, 2.2, tk.textPrimary);
-        } else if (type === 'ice') {
+        } else if (family === 'ice') {
             poly2D(ctx, [[18, 16], [24, 28], [19, 38], [14, 32]], tk.elIce, '#143240', 1.5);
             poly2D(ctx, [[46, 16], [40, 28], [45, 38], [50, 32]], '#2E6F8A', '#143240', 1.5);
             poly2D(ctx, [[32, 4], [39, 28], [32, 34], [25, 28]], tk.elIce, '#143240', 1.5);
             poly2D(ctx, [[21, 28], [43, 28], [46, 39], [32, 47], [18, 39]], '#2B6780', '#143240', 1.5);
             poly2D(ctx, [[32, 29], [38, 36], [32, 43], [26, 36]], '#A6D7EA', '#143240', 1.5);
-        } else if (type === 'thunder') {
+        } else if (family === 'thunder') {
             poly2D(ctx, [[20, 9], [25, 9], [26, 30], [20, 30]], '#5A4B22', '#241F10', 1.5);
             poly2D(ctx, [[39, 9], [44, 9], [44, 30], [38, 30]], '#463A1A', '#241F10', 1.5);
             circle2D(ctx, 22.5, 9, 3.4, tk.elLightning, '#241F10', 1.5);
@@ -252,7 +276,7 @@
             poly2D(ctx, [[19, 28], [45, 28], [47, 40], [39, 47], [25, 47], [17, 40]], '#3D341E', '#241F10', 1.5);
             rect2D(ctx, 23, 30, 18, 4, tk.accentCta);
             rect2D(ctx, 25, 36, 14, 3.5, tk.elLightning);
-        } else if (type === 'steam') {
+        } else if (family === 'steam') {
             rect2D(ctx, 23, 7, 8, 22, '#8C3326', '#1E1814', 1.5);
             rect2D(ctx, 33, 7, 8, 22, '#2D6A82', '#1E1814', 1.5);
             rect2D(ctx, 21, 6, 22, 5, tk.textSecondary, '#1E1814', 1.5);
@@ -260,13 +284,13 @@
             poly2D(ctx, [[32, 27], [46, 27], [48, 38], [41, 46], [32, 47]], tk.elIce, '#1E1814', 1.5);
             circle2D(ctx, 32, 36, 5.5, tk.textPrimary, '#1E1814', 1.5);
             circle2D(ctx, 32, 36, 2.6, tk.accentCta);
-        } else if (type === 'magnet') {
+        } else if (family === 'magnet') {
             poly2D(ctx, [[18, 6], [25, 6], [26, 33], [17, 37]], tk.elIce, '#142C36', 1.5);
             poly2D(ctx, [[46, 6], [39, 6], [38, 33], [47, 37]], '#9E7E26', '#241F10', 1.5);
             circle2D(ctx, 32, 16, 5, tk.elIce, tk.elLightning, 1.5);
             poly2D(ctx, [[21, 30], [43, 30], [47, 39], [39, 47], [25, 47], [17, 39]], tk.bgSurface, tk.elIce, 1.5);
             circle2D(ctx, 32, 38, 5.2, tk.elLightning, '#142C36', 1.5);
-        } else if (type === 'plasma') {
+        } else if (family === 'plasma') {
             poly2D(ctx, [[14, 34], [25, 21], [26, 41], [18, 43]], tk.elFire, '#2B1410', 1.5);
             poly2D(ctx, [[50, 34], [39, 21], [38, 41], [46, 43]], '#8C2F23', '#2B1410', 1.5);
             poly2D(ctx, [[32, 5], [37, 27], [27, 27]], tk.elLightning, '#2B1410', 1.5);
@@ -282,6 +306,17 @@
             poly2D(ctx, [[27, 7], [37, 7], [39, 29], [25, 29]], primary, '#1B211E', 1.5);
             poly2D(ctx, [[21, 27], [43, 27], [46, 39], [38, 47], [26, 47], [18, 39]], primary, '#1B211E', 1.5);
             circle2D(ctx, 32, 36, 5.2, accent, '#1B211E', 1.5);
+        }
+
+        // T3 冠枝專屬 A 寬冠 vs B 尖冠 2.5D 幾何覆層
+        if (effTier >= 3 && branchCode === 'A') {
+            poly2D(ctx, [[9, 34], [18, 22], [20, 43], [11, 42]], pal.rune, '#1B211E', 1.4);
+            poly2D(ctx, [[55, 34], [46, 22], [44, 43], [53, 42]], pal.rune, '#1B211E', 1.4);
+            ellipse2D(ctx, 32, 11, 9, 3.2, tk.bgCanvas, tk.elLightning, 1.5);
+        } else if (effTier >= 3 && branchCode === 'B') {
+            poly2D(ctx, [[32, 2], [37, 16], [32, 13], [27, 16]], tk.elLightning, '#1B211E', 1.4);
+            poly2D(ctx, [[13, 20], [22, 27], [17, 33]], pal.glow, '#1B211E', 1.3);
+            poly2D(ctx, [[51, 20], [42, 27], [47, 33]], pal.glow, '#1B211E', 1.3);
         }
     }
 
@@ -512,18 +547,38 @@
         G.fxEntities.rings.push({ x, y, maxRadius, color, fillAlpha, ageMs: 0, durationMs });
     }
 
-    function spawnDamageNumber(amount, isWeakness, px, py, tagPrefix = '') {
+    function spawnDamageNumber(amount, isWeakness, px, py, tagPrefix = '', isAffinity = false) {
         const layer = G.dom.floatingLayerEl;
         if (!layer) return;
         const dmgEl = document.createElement('div');
-        dmgEl.classList.add('floating-dmg', isWeakness ? 'weakness' : 'normal');
-        dmgEl.innerText = isWeakness ? `WEAK! -${amount}` : `${tagPrefix}-${amount}`;
+        const toneClass = isWeakness ? 'weakness' : (isAffinity ? 'affinity' : 'normal');
+        dmgEl.classList.add('floating-dmg', toneClass);
+        dmgEl.innerText = isWeakness ? `WEAK! -${amount}` : (isAffinity ? `親和 -${amount}` : `${tagPrefix}-${amount}`);
         dmgEl.style.left = `${px + (Math.random() - 0.5) * 18}px`;
         dmgEl.style.top = `${py - 18 + (Math.random() - 0.5) * 8}px`;
         const durationMs = Math.round(720 / Math.max(1, clampNumber(G.state.gameSpeed, 1, 5, 1) * 0.75));
         dmgEl.style.animationDuration = `${durationMs}ms`;
         layer.appendChild(dmgEl);
         G.callbacks.scheduleTimeout(() => dmgEl.remove(), durationMs);
+    }
+
+    function spawnFloatingNotice(text, px, py, toneClass = 'pity-seed') {
+        const layer = G && G.dom && G.dom.floatingLayerEl;
+        if (!layer || !text) return;
+        const noteEl = document.createElement('div');
+        noteEl.classList.add('floating-notice', toneClass || 'pity-seed');
+        noteEl.innerText = text;
+        const stageW = (G.boardMetrics && G.boardMetrics.stageW) || 560;
+        const clampedLeft = Math.max(92, Math.min(stageW - 92, Number(px) || stageW / 2));
+        const safeTop = Math.max(22, (Number(py) || 40) - 18);
+        noteEl.style.left = `${clampedLeft}px`;
+        noteEl.style.top = `${safeTop}px`;
+        layer.appendChild(noteEl);
+        if (G.callbacks && typeof G.callbacks.scheduleTimeout === 'function') {
+            G.callbacks.scheduleTimeout(() => noteEl.remove(), 1450);
+        } else {
+            setTimeout(() => noteEl.remove(), 1450);
+        }
     }
 
     function emitCanvasAttackFX(fxType, fromPos, toPos, options = {}) {
@@ -639,6 +694,45 @@
         if (!fxCtx || !fxCanvasEl) return;
         fxCtx.clearRect(0, 0, m.stageW, m.stageH);
 
+        // 地面持續傷害區域（如 steam_A 焦熱蒸壓樹的 3s 滾燙蒸氣池）
+        if (Array.isArray(st.groundHazards)) {
+            for (let i = 0; i < st.groundHazards.length; i++) {
+                const hz = st.groundHazards[i];
+                const alpha = Math.max(0.15, Math.min(0.85, (hz.remainingMs || 0) / (hz.maxDurationMs || 3000)));
+                fxCtx.save();
+                fillCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx, tk.accentCta, alpha * 0.22);
+                fxCtx.globalAlpha = alpha * 0.78;
+                fxCtx.strokeStyle = tk.elFire;
+                fxCtx.lineWidth = 1.6;
+                fxCtx.setLineDash([5, 3]);
+                fxCtx.beginPath();
+                fxCtx.arc(hz.x, hz.y, hz.radiusPx, 0, Math.PI * 2);
+                fxCtx.stroke();
+                fxCtx.restore();
+            }
+        }
+
+        // 拖曳合成懸停／子彈時間進化確認期間的金色血脈連線
+        const tether = st.dragTether || (st.pendingEvolution
+            ? { fromIndex: st.pendingEvolution.fromIndex, toIndex: st.pendingEvolution.toIndex, isValid: true }
+            : null);
+        if (tether && Number.isFinite(tether.fromIndex) && Number.isFinite(tether.toIndex)) {
+            const cFrom = indexToCoords(tether.fromIndex), cTo = indexToCoords(tether.toIndex);
+            const pFrom = getCellCenter(cFrom.x, cFrom.y), pTo = getCellCenter(cTo.x, cTo.y);
+            const lineColor = tether.isValid === false ? tk.elFire : tk.elLightning;
+            fxCtx.save();
+            fxCtx.strokeStyle = lineColor;
+            fxCtx.lineWidth = 2.4;
+            fxCtx.setLineDash([6, 4]);
+            fxCtx.beginPath();
+            fxCtx.moveTo(pFrom.left, pFrom.top);
+            fxCtx.lineTo(pTo.left, pTo.top);
+            fxCtx.stroke();
+            fillCircle2D(fxCtx, pFrom.left, pFrom.top, 4.5, lineColor, 0.9);
+            fillCircle2D(fxCtx, pTo.left, pTo.top, 5.5, lineColor, 0.95);
+            fxCtx.restore();
+        }
+
         for (let i = 0; i < fx.rings.length; i++) {
             const r = fx.rings[i], p = Math.min(1, r.ageMs / r.durationMs), rad = Math.max(4, r.maxRadius * (0.35 + 0.65 * p)), alpha = 1 - p;
             fxCtx.save();
@@ -722,17 +816,30 @@
     function createMonsterDom(monster) {
         const el = document.createElement('div');
         el.classList.add('monster-unit');
+        el.dataset.monsterId = String(monster.id);
         if (monster.isElite) el.classList.add('elite');
         if (monster.isBoss) el.classList.add('boss');
         if (monster.isSplitChild) el.classList.add('mini-slime');
+        el.addEventListener('click', (e) => {
+            if (G && G.state && G.state.isPaused && G.callbacks && typeof G.callbacks.inspectMonsterById === 'function') {
+                e.stopPropagation();
+                G.callbacks.inspectMonsterById(monster.id);
+            }
+        });
 
         const armorHtml = monster.armor > 0 ? `<span class="m-armor-badge num">甲 ${monster.armor}</span>` : '';
         const weakCfg = getTowersDict()[monster.weakness];
         const weakShort = weakCfg ? `${weakCfg.icon}${weakCfg.name.charAt(0)}` : (monster.weakness || '');
         const bossHtml = monster.isBoss ? `<span class="m-boss-badge weak-${monster.weakness}">王·弱${weakShort}</span>` : '';
-        el.innerHTML = `<span class="m-slow-badge">❄️</span>${armorHtml}<span class="m-icon">${createMonsterSvgHtml(monster)}</span><div class="m-hp-bar"><div class="m-hp-fill"></div></div>${bossHtml}`;
+        el.innerHTML = `<div class="m-debuff-strip" aria-hidden="true"></div><span class="m-slow-badge">❄️</span>${armorHtml}<span class="m-icon">${createMonsterSvgHtml(monster)}</span><div class="m-hp-bar"><div class="m-hp-fill"></div></div>${bossHtml}`;
         G.dom.monsterLayerEl.appendChild(el);
-        const rec = { el, hpFillEl: el.querySelector('.m-hp-fill'), armorBadgeEl: el.querySelector('.m-armor-badge') };
+        const rec = {
+            el,
+            hpFillEl: el.querySelector('.m-hp-fill'),
+            armorBadgeEl: el.querySelector('.m-armor-badge'),
+            debuffStripEl: el.querySelector('.m-debuff-strip'),
+            lastDebuffHtml: ''
+        };
         G.monsterDomMap.set(monster.id, rec);
         return rec;
     }
@@ -740,6 +847,31 @@
     function removeMonsterDom(monsterId) {
         const rec = G.monsterDomMap.get(monsterId);
         if (rec) { rec.el.remove(); G.monsterDomMap.delete(monsterId); }
+    }
+
+    function buildMonsterDebuffMicroHtml(m, MonsterSys) {
+        const st = m.status;
+        if (!st) return '';
+        const tags = [];
+        if (st.burn && st.burn.stacks > 0 && st.burn.durationMs > 0) {
+            tags.push(`<span class="m-debuff-tag debuff-burn num">🔥${st.burn.stacks}</span>`);
+        }
+        const frozen = MonsterSys && typeof MonsterSys.isMonsterFrozen === 'function' && MonsterSys.isMonsterFrozen(m);
+        const slowed = MonsterSys && typeof MonsterSys.isMonsterSlowed === 'function' ? MonsterSys.isMonsterSlowed(m) : (m.slowTimer > 0);
+        if (frozen) {
+            tags.push('<span class="m-debuff-tag debuff-ice">❄️凍</span>');
+        } else if (slowed) {
+            tags.push('<span class="m-debuff-tag debuff-ice">❄️</span>');
+        }
+        if (st.shock && st.shock.durationMs > 0) {
+            tags.push('<span class="m-debuff-tag debuff-shock">⚡</span>');
+        }
+        const hasGrievous = st.grievousWound && st.grievousWound.durationMs > 0;
+        const hasVuln = MonsterSys && typeof MonsterSys.getMonsterVulnerabilityMultiplier === 'function' && MonsterSys.getMonsterVulnerabilityMultiplier(m) > 1.01;
+        if (hasGrievous || hasVuln) {
+            tags.push('<span class="m-debuff-tag debuff-wound">💔</span>');
+        }
+        return tags.join('');
     }
 
     function renderMonsterLayer() {
@@ -757,8 +889,18 @@
             const rec = G.monsterDomMap.get(m.id) || createMonsterDom(m);
             rec.el.style.left = `${m.pixelX}px`;
             rec.el.style.top = `${m.pixelY}px`;
-            rec.el.classList.toggle('slowed', m.slowTimer > 0);
+            const isSlowed = MonsterSys && typeof MonsterSys.isMonsterSlowed === 'function' ? MonsterSys.isMonsterSlowed(m) : (m.slowTimer > 0);
+            const isFrozen = MonsterSys && typeof MonsterSys.isMonsterFrozen === 'function' ? MonsterSys.isMonsterFrozen(m) : false;
+            rec.el.classList.toggle('slowed', isSlowed || isFrozen);
+            rec.el.classList.toggle('frozen', isFrozen);
             rec.el.classList.toggle('rooted', (m.rootTimer || 0) > 0);
+            if (rec.debuffStripEl) {
+                const debuffHtml = buildMonsterDebuffMicroHtml(m, MonsterSys);
+                if (rec.lastDebuffHtml !== debuffHtml) {
+                    rec.debuffStripEl.innerHTML = debuffHtml;
+                    rec.lastDebuffHtml = debuffHtml;
+                }
+            }
             if (m.armor > 0 && rec.armorBadgeEl) {
                 const isShredded = m.armorShredTimer > 0;
                 rec.armorBadgeEl.classList.toggle('shredded', isShredded);
@@ -805,8 +947,9 @@
 
     function createTowerElement(towerObj, index) {
         const st = G.state;
+        const { family, branchCode } = resolveTowerVisualFamily(towerObj.type);
         const tower = document.createElement('div');
-        tower.classList.add('tower', `type-${towerObj.type}`, `lv-${towerObj.tier}`);
+        tower.classList.add('tower', `type-${family}`, `node-${towerObj.type}`, `lv-${towerObj.tier}`);
         tower.dataset.towerIndex = String(index);
         if (st.frenzyActiveMs > 0) tower.classList.add('frenzy-active');
 
@@ -815,7 +958,8 @@
         const headRotator = document.createElement('div'); headRotator.classList.add('tower-head-rotator'); headRotator.style.transform = `rotate(${towerObj.aimAngleDeg || 0}deg)`;
         const headRecoil = document.createElement('div'); headRecoil.classList.add('tower-head-recoil'); headRecoil.innerHTML = headSvgHtml;
         headRotator.appendChild(headRecoil);
-        const name = document.createElement('div'); name.classList.add('tower-name'); name.innerText = getTierStars(towerObj.tier);
+        const name = document.createElement('div'); name.classList.add('tower-name');
+        name.innerText = branchCode ? `${branchCode}${getTierStars(towerObj.tier)}` : getTierStars(towerObj.tier);
 
         tower._rotator = headRotator;
         tower._recoilEl = headRecoil;
@@ -855,7 +999,7 @@
         const boardSize = CONFIG.BOARD_SIZE || 150;
         const terrainsDict = getTerrainsDict();
         boardEl.innerHTML = ''; G.cellElements.length = 0; G.towerElements.fill(null);
-        st.lastRenderedSelected = null; st.lastRenderedBuildTarget = null;
+        st.lastRenderedSelected = null; st.lastRenderedBuildTarget = null; st.lastRenderedPendingSpawn = null;
 
         for (let index = 0; index < boardSize; index++) {
             const cell = document.createElement('div');
@@ -897,16 +1041,18 @@
                 }
             }
             const onHoverEnterOrMove = () => {
-                if (!st.isTouchMode && st.hoveredIndex !== index) {
-                    st.hoveredIndex = index;
+                const curSt = G.state;
+                if (!curSt.isTouchMode && curSt.hoveredIndex !== index) {
+                    curSt.hoveredIndex = index;
                     updateRangeIndicator();
                 }
             };
             cell.addEventListener('mouseenter', onHoverEnterOrMove);
             cell.addEventListener('mousemove', onHoverEnterOrMove);
             cell.addEventListener('mouseleave', () => {
-                if (!st.isTouchMode && st.hoveredIndex === index) {
-                    st.hoveredIndex = null;
+                const curSt = G.state;
+                if (!curSt.isTouchMode && curSt.hoveredIndex === index) {
+                    curSt.hoveredIndex = null;
                     updateRangeIndicator();
                 }
             });
@@ -914,7 +1060,8 @@
                 GameApp.systems.drag.bindBoardCellElement(cell, index);
             }
             cell.addEventListener('click', () => {
-                if (performance.now() - (st.lastTouchDragEndTime || 0) >= 220) {
+                const curSt = G.state;
+                if (performance.now() - (curSt.lastTouchDragEndTime || 0) >= 220) {
                     G.callbacks.handleCellClick(index);
                 }
             });
@@ -936,6 +1083,19 @@
         if (st.buildTargetIndex !== null && cells[st.buildTargetIndex]) cells[st.buildTargetIndex].classList.add('build-target');
         st.lastRenderedBuildTarget = st.buildTargetIndex;
 
+        const TerrainSys = GameApp.systems && GameApp.systems.terrain;
+        const hasPendingSpawn = Boolean(st.pendingSpawnType);
+        if (hasPendingSpawn !== Boolean(st.lastRenderedPendingSpawn) || !Array.isArray(dirtyIndices) || hasPendingSpawn) {
+            for (let idx = 0; idx < boardSize; idx++) {
+                if (!cells[idx]) continue;
+                const canPlaceHere = hasPendingSpawn
+                    && st.board[idx] === null
+                    && (TerrainSys ? TerrainSys.canBuildAt(idx) : !G.map.pathCellIndices.has(idx));
+                cells[idx].classList.toggle('pending-spawn-valid', canPlaceHere);
+            }
+            st.lastRenderedPendingSpawn = st.pendingSpawnType || null;
+        }
+
         if (Array.isArray(dirtyIndices)) {
             const visited = new Set();
             for (let i = 0; i < dirtyIndices.length; i++) {
@@ -950,6 +1110,35 @@
         G.callbacks.updateTowerInspector();
     }
 
+    function showDragEvolutionPreview(fromIndex, toIndex, labelText, isValid = true) {
+        if (!G || !G.state) return;
+        G.state.dragTether = { fromIndex, toIndex, labelText: labelText || '', isValid: Boolean(isValid) };
+        const towerTipEl = G.dom.towerTooltipEl || (typeof document !== 'undefined' ? document.getElementById('tower-tooltip') : null);
+        if (towerTipEl && labelText && Number.isFinite(toIndex)) {
+            const coords = indexToCoords(toIndex), center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
+            const clampedX = Math.max(92, Math.min((m.stageW || 600) - 92, center.left));
+            const isTopRow = coords.y === 0;
+            const topPx = isTopRow ? (center.top + m.cellH * 0.75) : (center.top - m.cellH * 0.75);
+            towerTipEl.innerText = labelText;
+            towerTipEl.style.left = `${clampedX}px`;
+            towerTipEl.style.top = `${topPx}px`;
+            towerTipEl.classList.toggle('tooltip-below', isTopRow);
+            towerTipEl.classList.toggle('tooltip-invalid', !isValid);
+            towerTipEl.classList.remove('hidden');
+        }
+        updateAndRenderCanvasFX(0);
+    }
+
+    function clearDragEvolutionPreview() {
+        if (!G || !G.state) return;
+        const hadTether = Boolean(G.state.dragTether);
+        G.state.dragTether = null;
+        if (G.dom && G.dom.towerTooltipEl) {
+            G.dom.towerTooltipEl.classList.remove('tooltip-invalid');
+        }
+        if (hadTether) updateAndRenderCanvasFX(0);
+    }
+
     function updateTowerHoverTooltip() {
         if (!G || !G.dom) return;
         const towerTipEl = G.dom.towerTooltipEl || (typeof document !== 'undefined' ? document.getElementById('tower-tooltip') : null);
@@ -957,6 +1146,10 @@
         G.dom.towerTooltipEl = towerTipEl;
 
         const st = G.state;
+        if (st.dragTether && st.dragTether.labelText) {
+            return;
+        }
+        towerTipEl.classList.remove('tooltip-invalid');
         const isDraggingNow = GameApp.systems && GameApp.systems.drag && GameApp.systems.drag.isDragging();
         if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'
             || st.waveState === 'BLESSING_SELECT' || isDraggingNow || st.isTouchMode
@@ -969,7 +1162,8 @@
         const towerObj = st.board[idx];
         const tCfg = getTowersDict()[towerObj.type] || { icon: '✨', name: towerObj.type };
         const stars = getTierStars(towerObj.tier);
-        towerTipEl.innerText = `${tCfg.icon} ${tCfg.name} · Lv.${towerObj.tier} ${stars}`;
+        const label = tCfg.displayBadge || `${tCfg.icon} ${tCfg.name}`;
+        towerTipEl.innerText = `${label} · Lv.${towerObj.tier} ${stars}`;
 
         const coords = indexToCoords(idx), center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
         const clampedX = Math.max(76, Math.min((m.stageW || 600) - 76, center.left));
@@ -1021,11 +1215,12 @@
         updateTowerHoverTooltip();
         const el = G && G.dom && G.dom.rangeCircleEl;
         if (!el) return;
+        const { family } = resolveTowerVisualFamily(towerType);
         el.style.left = `${leftPx}px`;
         el.style.top = `${topPx}px`;
         el.style.width = `${radiusPx * 2}px`;
         el.style.height = `${radiusPx * 2}px`;
-        el.className = `visible range-${towerType || 'fire'}`;
+        el.className = `visible range-${family || 'fire'}`;
     }
 
     function updateRangeIndicator() {
@@ -1046,9 +1241,10 @@
         const towerObj = st.board[targetIdx], coords = indexToCoords(targetIdx), center = getCellCenter(coords.x, coords.y);
         const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
         const radiusPx = AttackSys ? AttackSys.getTowerRangePx(towerObj, targetIdx) : (2.0 * G.boardMetrics.step);
+        const { family } = resolveTowerVisualFamily(towerObj.type);
         el.style.left = `${center.left}px`; el.style.top = `${center.top}px`;
         el.style.width = `${radiusPx * 2}px`; el.style.height = `${radiusPx * 2}px`;
-        el.className = `visible range-${towerObj.type}`;
+        el.className = `visible range-${family || 'fire'}`;
     }
 
     function updateWorldTreeVisualState() {
@@ -1082,6 +1278,8 @@
         createTowerSvgParts,
         createMonsterSvgHtml,
         drawPortrait,
+        showDragEvolutionPreview,
+        clearDragEvolutionPreview,
         updateTowerHoverTooltip,
         resizeFxCanvas,
         measureBoardMetrics,
@@ -1091,6 +1289,7 @@
         emitHitFlash,
         emitRingFX,
         spawnDamageNumber,
+        spawnFloatingNotice,
         emitCanvasAttackFX,
         updateAndRenderCanvasFX,
         updateTowerAimVisual,

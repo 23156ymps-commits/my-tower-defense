@@ -147,7 +147,7 @@
         const terrainsDict = (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
 
         if (category === 'fusion') {
-            const hybridKeys = Object.keys(towersDict).filter(k => Boolean(towersDict[k] && towersDict[k].isHybrid));
+            const hybridKeys = Object.keys(towersDict).filter(k => Boolean(towersDict[k] && !towersDict[k].isAlias && towersDict[k].isHybrid));
             hybridKeys.forEach((key) => {
                 const tCfg = towersDict[key];
                 const custom = (entries.towers && entries.towers[key]) || codexData.buildFallbackTowerCard(key, tCfg);
@@ -161,7 +161,7 @@
                         const [a, b] = foundPair.split('+');
                         const ta = towersDict[a], tb = towersDict[b];
                         if (ta && tb) {
-                            recipeHtml = `${ta.icon} ${ta.name.replace('塔', '')} + ${tb.icon} ${tb.name.replace('塔', '')} = <strong>${tCfg.name}</strong>`;
+                            recipeHtml = `${ta.icon} ${ta.name} + ${tb.icon} ${tb.name} = <strong>${tCfg.name}</strong>`;
                         }
                     }
                 }
@@ -178,7 +178,7 @@
                 listEl.appendChild(createCodexCardElement({
                     portraitCat: 'tower',
                     itemKey: key,
-                    tier: 2,
+                    tier: Number(tCfg.tier) || 2,
                     unlocked,
                     cardClass: custom.cardClass || 'codex-steam',
                     headerHtml,
@@ -189,7 +189,7 @@
         }
 
         if (category === 'towers') {
-            const baseKeys = Object.keys(towersDict).filter(k => Boolean(towersDict[k] && !towersDict[k].isHybrid));
+            const baseKeys = Object.keys(towersDict).filter(k => Boolean(towersDict[k] && !towersDict[k].isAlias && !towersDict[k].isHybrid));
             baseKeys.forEach((key) => {
                 const tCfg = towersDict[key];
                 const card = (entries.towers && entries.towers[key]) || codexData.buildFallbackTowerCard(key, tCfg);
@@ -205,7 +205,7 @@
                 listEl.appendChild(createCodexCardElement({
                     portraitCat: 'tower',
                     itemKey: key,
-                    tier: 1,
+                    tier: Number(tCfg.tier) || 1,
                     unlocked,
                     cardClass: card.cardClass || 'codex-steam',
                     headerHtml,
