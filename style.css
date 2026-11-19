@@ -2932,14 +2932,16 @@ body.map-frost .cell.path-cell {
     }
 
     body { padding: 4px 12px; }
-    #hud-container { padding: 4px 8px; margin-bottom: 4px; gap: 6px; }
-    .hud-stats { gap: 6px; flex: 1; min-width: 0; }
+    #hud-container { padding: 4px 8px; margin-bottom: 4px; gap: 4px; }
+    .hud-stats { gap: 4px; flex: 1; min-width: 0; }
     .hud-item { font-size: 12px; }
     .hud-best { display: none; }
     .dew-bar-track { width: 20px; }
+    .wave-phase-tag { padding: 0 4px; }
     .hud-actions { gap: 4px; }
-    .hud-ctrl-btn { min-height: 36px; min-width: 28px; padding: 4px 6px; font-size: 12px; }
-    .hud-lang-btn { min-width: auto; padding: 4px 8px; }
+    .hud-ctrl-btn { min-height: 34px; min-width: 26px; padding: 4px 5px; font-size: 12px; }
+    .hud-lang-btn { min-width: auto; padding: 4px 6px; }
+    .lang-globe-icon { width: 12px; height: 12px; }
     .hud-sub-slot { margin-bottom: 4px; }
     .wave-forecast-bar { padding: 4px 8px; }
     #tower-inspector { margin-top: 4px; min-height: 44px; padding: 4px 8px; }
