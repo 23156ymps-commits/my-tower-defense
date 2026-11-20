@@ -37,8 +37,17 @@ html, body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
 }
+
+html, body, .modal-card, .side-panel, .wt-tree-viewport {
+    scrollbar-width: thin;
+    scrollbar-color: #46544C #1B211E;
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #1B211E; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #46544C; border-radius: 4px; border: 2px solid #1B211E; }
+::-webkit-scrollbar-thumb:hover { background: #D97724; }
 
 body {
     padding: 8px 16px;
@@ -69,6 +78,7 @@ body.map-frost {
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin: auto 0;
     width: 100%;
     max-width: 100%;
     min-width: 0;
@@ -195,7 +205,8 @@ body.map-frost {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 12px;
+    gap: clamp(6px, 0.9vw, 12px);
+    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
 }
@@ -209,8 +220,18 @@ body.map-frost {
     align-items: center;
     gap: 4px;
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
     min-width: 0;
+    flex-shrink: 0;
 }
+
+.hud-wave {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.hud-best { flex-shrink: 0; }
 
 .hud-hp { color: #A8D5B5; }
 .hud-hp.hp-warning { color: var(--el-lightning); }
@@ -238,6 +259,8 @@ body.map-frost {
 }
 
 .wave-phase-tag {
+    position: static;
+    flex-shrink: 0;
     font-size: 12px;
     font-weight: 600;
     padding: 0 8px;
@@ -1523,14 +1546,24 @@ body.map-frost .cell.path-cell {
 }
 
 .spawn-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     font-size: 12px;
     font-weight: 700;
     color: var(--text-primary);
-    white-space: nowrap;
+    pointer-events: none;
+}
+
+.spawn-card-name {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
-    pointer-events: none;
+    white-space: nowrap;
 }
 
 .spawn-card-role {
@@ -1546,6 +1579,7 @@ body.map-frost .cell.path-cell {
 .spawn-card-role .role-short { display: none; }
 
 .btn-cost-val {
+    flex-shrink: 0;
     font-size: 12px;
     font-weight: 700;
     color: var(--el-lightning);
@@ -1737,15 +1771,54 @@ body.map-frost .cell.path-cell {
 .modal-card {
     width: 100%;
     max-width: 440px;
-    max-height: 92dvh;
+    max-height: 94dvh;
     overflow-y: auto;
     background-color: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
-    padding: 24px;
+    padding: 18px 20px;
     text-align: center;
     color: var(--text-primary);
 }
+
+.start-top-bar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.guide-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+    text-align: left;
+}
+.guide-header-bar h1 {
+    margin: 0 !important;
+}
+.modal-x-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.modal-x-btn:hover { background-color: #38443D; border-color: var(--accent-cta); color: var(--el-lightning); }
+.modal-x-btn:active { transform: scale(0.96); }
 
 .start-card { max-width: min(600px, 94vw); }
 .guide-card { max-width: 520px; }
@@ -1784,18 +1857,18 @@ body.map-frost .cell.path-cell {
 .codex-close-top-btn:active { transform: scale(0.98); }
 
 .modal-card h1, .modal-card .start-title, .modal-card .codex-title, .modal-card .blessing-title, .modal-card .victory-title, .modal-card .gameover-title {
-    margin: 0 0 8px 0;
-    font-size: 24px;
+    margin: 0 0 6px 0;
+    font-size: 22px;
     font-weight: 700;
     line-height: 1.3;
     color: var(--text-primary);
 }
 .modal-card .gameover-title { color: #EE9B8F; }
 .modal-card .victory-title { color: var(--el-lightning); }
-.modal-subtitle { margin: 0 0 16px 0; font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
+.modal-subtitle { margin: 0 0 10px 0; font-size: 14px; line-height: 1.45; color: var(--text-secondary); }
 
 .guide-section {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     text-align: left;
 }
 .guide-section-title {
@@ -1807,7 +1880,7 @@ body.map-frost .cell.path-cell {
 }
 
 /* 三地圖等高卡片網格 */
-.map-selector-section { margin-bottom: 16px; text-align: left; }
+.map-selector-section { margin-bottom: 10px; text-align: left; }
 .map-selector-header { font-size: 18px; font-weight: 600; line-height: 1.35; color: var(--text-primary); margin: 0 0 8px 0; }
 .map-selector-grid {
     display: grid;
@@ -2347,11 +2420,11 @@ body.map-frost .cell.path-cell {
 .codex-plasma { border-left: 4px solid var(--el-fire); }
 .codex-recipe { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
 .codex-desc, .rule-content {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
-    line-height: 1.7;
-    letter-spacing: 0.02em;
-    max-width: 36em;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    max-width: 38em;
     color: var(--text-secondary);
     min-width: 0;
     text-wrap: pretty;
@@ -2390,32 +2463,32 @@ body.map-frost .cell.path-cell {
 .modal-stats {
     border-top: 1px solid var(--border-subtle);
     border-bottom: 1px solid var(--border-subtle);
-    padding: 12px 0;
-    margin-bottom: 12px;
+    padding: 8px 0;
+    margin-bottom: 8px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 5px;
 }
-.stat-row { display: flex; justify-content: space-between; font-size: 14px; line-height: 1.4; color: var(--text-secondary); }
+.stat-row { display: flex; justify-content: space-between; font-size: 13px; line-height: 1.35; color: var(--text-secondary); }
 .stat-row strong { color: var(--text-primary); }
 
 .battle-recap {
     background-color: var(--bg-grid-elevated);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 16px;
+    padding: 10px;
+    margin-bottom: 10px;
     text-align: left;
 }
-.recap-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; text-align: center; }
+.recap-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; text-align: center; }
 .recap-mvp-box {
     background-color: var(--bg-canvas);
     border-radius: 4px;
-    padding: 8px 12px;
-    margin-bottom: 8px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     min-width: 0;
 }
 .recap-mvp-label { font-size: 12px; color: var(--text-secondary); }
@@ -2461,24 +2534,24 @@ body.map-frost .cell.path-cell {
 .feel-feedback-box {
     border-top: 1px solid var(--border-subtle);
     border-bottom: 1px solid var(--border-subtle);
-    padding: 12px 0;
-    margin-bottom: 12px;
+    padding: 8px 0;
+    margin-bottom: 10px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 .feel-rating-header {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-primary);
 }
 .feel-rating-bar {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 6px;
 }
 .feel-rating-btn {
-    padding: 8px;
+    padding: 6px 8px;
     font-size: 12px;
     font-weight: 600;
     border-radius: 8px;
@@ -2516,10 +2589,10 @@ body.map-frost .cell.path-cell {
 .copy-report-btn:hover { background-color: #23343C; border-style: solid; }
 .copy-report-btn:active { transform: scale(0.98); }
 
-.modal-actions { display: flex; flex-direction: column; gap: 8px; }
+.modal-actions { display: flex; flex-direction: column; gap: 6px; }
 .primary-cta-btn, .secondary-cta-btn, .menu-return-btn {
     width: 100%;
-    min-height: 44px;
+    min-height: 40px;
     padding: 8px 16px;
     font-size: 14px;
     font-weight: 700;
@@ -2553,12 +2626,15 @@ body.map-frost .cell.path-cell {
 /* ==================== 7. 裝置斷點（桌面免捲軸 vs. 手機安全邊距與 >=44px 觸控） ==================== */
 @media (min-width: 768px) {
     html, body {
-        height: 100dvh;
-        overflow: hidden;
+        min-height: 100dvh;
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+        justify-content: flex-start;
     }
 
     .modal-card h1, .modal-card .start-title, .modal-card .codex-title, .modal-card .blessing-title, .modal-card .victory-title, .modal-card .gameover-title {
-        font-size: 28px;
+        font-size: 24px;
     }
 }
 
@@ -2824,7 +2900,7 @@ body.map-frost .cell.path-cell {
 }
 
 .contracts-drawer {
-    margin-bottom: 16px;
+    margin-bottom: 10px;
     border-top: 1px solid var(--border-subtle);
     border-bottom: 1px solid var(--border-subtle);
     text-align: left;
@@ -2924,22 +3000,21 @@ body.map-frost .cell.path-cell {
     .mobile-monster-card { display: none !important; }
 }
 
-@media (min-width: 768px) and (max-height: 660px) {
+@media (min-width: 768px) and (max-height: 780px) {
     :root {
         --grid-gap: 4px;
         --board-pad: 4px;
-        --cell-size: clamp(20px, min(calc((100vw - 64px) / 15), calc((100dvh - 236px) / 10)), 38px);
+        --cell-size: clamp(20px, min(calc((100vw - 64px) / 15), calc((100dvh - 252px) / 10)), 40px);
     }
 
     body { padding: 4px 12px; }
-    #hud-container { padding: 4px 8px; margin-bottom: 4px; gap: 4px; }
-    .hud-stats { gap: 4px; flex: 1; min-width: 0; }
-    .hud-item { font-size: 12px; }
-    .hud-best { display: none; }
-    .dew-bar-track { width: 20px; }
-    .wave-phase-tag { padding: 0 4px; }
+    #hud-container { padding: 4px 8px; margin-bottom: 4px; gap: 6px; }
+    .hud-stats { gap: 6px; flex: 1 1 auto; min-width: 0; }
+    .hud-item { font-size: 13px; }
+    .dew-bar-track { width: 28px; }
+    .wave-phase-tag { padding: 0 6px; }
     .hud-actions { gap: 4px; }
-    .hud-ctrl-btn { min-height: 34px; min-width: 26px; padding: 4px 5px; font-size: 12px; }
+    .hud-ctrl-btn { min-height: 34px; min-width: 28px; padding: 4px 6px; font-size: 12px; }
     .hud-lang-btn { min-width: auto; padding: 4px 6px; }
     .lang-globe-icon { width: 12px; height: 12px; }
     .hud-sub-slot { margin-bottom: 4px; }
@@ -2954,12 +3029,16 @@ body.map-frost .cell.path-cell {
     .spawn-card-portrait, .spawn-portrait-canvas { width: 28px; height: 28px; }
     .spawn-card-head { font-size: 12px; }
     .spawn-card-role { font-size: 12px; }
-    .debug-controls { gap: 8px; }
+    .debug-controls { gap: 6px; }
     .debug-controls button { padding: 4px 8px; font-size: 12px; }
     #msg-text { margin-top: 4px; min-height: 16px; line-height: 1.3; }
     .codex-card { padding: 12px; }
     .tree-viewport { height: 300px; }
     .wt-detail-card { padding: 8px 12px; min-height: 76px; }
+}
+
+@media (min-width: 768px) and (max-height: 620px) {
+    .hud-best { display: none; }
 }
 
 /* EN 雙語模式緊湊字級微調，防止英語詞彙溢出或撐爆按鈕 */
@@ -2968,8 +3047,10 @@ html[lang="en"] .hud-actions { gap: 4px; }
 html[lang="en"] .hud-item { font-size: 12px; }
 html[lang="en"] .hud-ctrl-btn { padding: 4px 6px; font-size: 12px; }
 html[lang="en"] .hud-lang-btn { min-width: auto; padding: 4px 8px; }
-html[lang="en"] .spawn-card-head { font-size: 12px; }
-html[lang="en"] .spawn-card-role { font-size: 12px; }
+html[lang="en"] .spawn-card-btn { padding: 4px 5px; }
+html[lang="en"] .spawn-card-head { font-size: 11px; gap: 3px; }
+html[lang="en"] .spawn-card-role { font-size: 11px; }
+html[lang="en"] .btn-cost-val { font-size: 11px; }
 html[lang="en"] .skill-btn .skill-label { font-size: 12px; }
 html[lang="en"] .debug-controls button { font-size: 12px; padding: 4px 6px; }
 html[lang="en"] .inspector-stat,

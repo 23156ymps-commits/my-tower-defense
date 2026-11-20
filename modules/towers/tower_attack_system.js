@@ -148,6 +148,7 @@
                 uid: towerObj.uid,
                 type: towerObj.type,
                 tier: towerObj.tier,
+                isCrowned: Boolean(towerObj.isCrowned),
                 name: cfg ? cfg.name : towerObj.type,
                 icon: cfg ? cfg.icon : '',
                 totalDamage: towerObj.totalDamage
@@ -216,7 +217,14 @@
 
         const terrainBonuses = TerrainSys ? TerrainSys.getTerrainBonusesAt(index) : { damageMult: 1.0, terrainType: null };
         const globalBlessMult = TreeSys ? TreeSys.getGlobalBlessingDamageMult() : 1.0;
-        const unitDmg = baseDmg * terrainBonuses.damageMult * globalBlessMult;
+        const mapSpec = G && G.map && G.map.spec;
+        const family = cfg.family || towerObj.type;
+        const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
+        const isIceLineage = family === 'ice' || family === 'steam' || family === 'magnet' || lineageTags.includes('ice');
+        const mapIceMult = (mapSpec && Number.isFinite(mapSpec.iceDamageBonus) && isIceLineage)
+            ? (1 + mapSpec.iceDamageBonus)
+            : 1.0;
+        const unitDmg = baseDmg * terrainBonuses.damageMult * globalBlessMult * mapIceMult;
         let singleDps = Math.round((unitDmg * singleHitFactor) / intervalSec);
         if (style === 'fire_B_ember') {
             singleDps += Math.round((fxParams.burnFlatDps || 8) * 2);
@@ -263,7 +271,8 @@
             aoeDps,
             aoeLabel,
             rangeStr: Number(getTowerEffectiveRangeCells(index, towerObj).toFixed(2)).toString(),
-            terrainType: terrainBonuses.terrainType
+            terrainType: terrainBonuses.terrainType,
+            damageMult: terrainBonuses.damageMult
         };
     }
 
@@ -277,7 +286,14 @@
             ? TerrainSys.getTerrainBonusesAt(index)
             : { damageMult: 1.0, terrainType: null };
         const globalBlessMult = TreeSys ? TreeSys.getGlobalBlessingDamageMult() : 1.0;
-        const effDmg = Math.max(1, Math.round(baseDmg * terrainBonuses.damageMult * globalBlessMult));
+        const mapSpec = G && G.map && G.map.spec;
+        const family = cfg.family || towerObj.type;
+        const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
+        const isIceLineage = family === 'ice' || family === 'steam' || family === 'magnet' || lineageTags.includes('ice');
+        const mapIceMult = (mapSpec && Number.isFinite(mapSpec.iceDamageBonus) && isIceLineage)
+            ? (1 + mapSpec.iceDamageBonus)
+            : 1.0;
+        const effDmg = Math.max(1, Math.round(baseDmg * terrainBonuses.damageMult * globalBlessMult * mapIceMult));
         const intervalSec = (Math.max(120, getTowerAttackInterval(towerObj, index)) / 1000).toFixed(2);
         const effRange = Number(getTowerEffectiveRangeCells(index, towerObj).toFixed(2)).toString();
         const stars = GameApp.renderer && typeof GameApp.renderer.getTierStars === 'function'

@@ -124,7 +124,7 @@
             name: '❄️ 永凍裂谷',
             diffLabel: '專家挑戰',
             diffClass: 'diff-hard',
-            desc: '36 格雙岔匯流 · 寒霜靈脈冰傷 +20%',
+            desc: '36 格雙岔匯流 · 初始 +15 💰 · 寒霜靈脈冰傷 +20%',
             startGoldBonus: 15,
             killGoldMult: 1.20,
             iceDamageBonus: 0.20,

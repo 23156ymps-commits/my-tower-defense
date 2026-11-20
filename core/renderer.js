@@ -721,8 +721,9 @@
         const dmgEl = document.createElement('div');
         const toneClass = isWeakness ? 'weakness' : (isAffinity ? 'affinity' : 'normal');
         dmgEl.classList.add('floating-dmg', toneClass);
+        const weakLabel = (GameApp.i18n && typeof GameApp.i18n.pick === 'function') ? GameApp.i18n.pick('弱點!', 'WEAK!') : '弱點!';
         const affinityLabel = (GameApp.i18n && typeof GameApp.i18n.pick === 'function') ? GameApp.i18n.pick('親和', 'Affinity') : '親和';
-        dmgEl.innerText = isWeakness ? `WEAK! -${amount}` : (isAffinity ? `${affinityLabel} -${amount}` : `${tagPrefix}-${amount}`);
+        dmgEl.innerText = isWeakness ? `${weakLabel} -${amount}` : (isAffinity ? `${affinityLabel} -${amount}` : `${tagPrefix}-${amount}`);
         dmgEl.style.left = `${px + (Math.random() - 0.5) * 18}px`;
         dmgEl.style.top = `${py - 18 + (Math.random() - 0.5) * 8}px`;
         const durationMs = Math.round(720 / Math.max(1, clampNumber(G.state.gameSpeed, 1, 5, 1) * 0.75));
@@ -1495,7 +1496,17 @@
             hideTerrainTooltip();
             return;
         }
-        tipEl.innerText = `${tCfg.name} · ${tCfg.shortTag}`;
+        if (terrainKey === 'world_tree') {
+            const TerrainSys = GameApp.systems && GameApp.systems.terrain;
+            const bonusMult = TerrainSys ? TerrainSys.getTerrainBonusesAt(idx).damageMult : 1.0;
+            const bonusPct = Math.max(0, Math.round((bonusMult - 1) * 100));
+            const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+            tipEl.innerText = isEn
+                ? `${tCfg.name} · DMG +${bonusPct}%`
+                : `${tCfg.name} · 當前傷 +${bonusPct}%`;
+        } else {
+            tipEl.innerText = `${tCfg.name} · ${tCfg.shortTag}`;
+        }
         if (st.isTouchMode) {
             tipEl.classList.add('touch-top-edge');
             tipEl.style.left = '';

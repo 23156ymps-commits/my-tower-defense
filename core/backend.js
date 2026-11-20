@@ -779,23 +779,30 @@
 
     function generateBattleReportText(runtime, outcomeMode = 'victory') {
         try {
+            const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
             const st = (runtime && runtime.state) || {};
             const routesData = (GameApp.data && GameApp.data.routes && GameApp.data.routes.MAPS_CONFIG) || {};
-            const mapSpec = routesData[st.currentMapId] || { name: runTelemetry.mapName || '🌲 晨光森林' };
+            const mapSpec = routesData[st.currentMapId] || { name: runTelemetry.mapName || (isEn ? '🌲 Sunlit Woods' : '🌲 晨光森林') };
             const victoryWave = CONFIG.VICTORY_WAVE || 10;
-            const waveStr = outcomeMode === 'victory'
-                ? `通關成功 (Wave ${st.currentWave || victoryWave}/${victoryWave} · 剩餘 ❤️ ${st.baseHp || 0})`
-                : `防線失守 (陣亡於 Wave ${st.currentWave || 1}${st.isEndlessMode ? ' 無盡模式' : `/${victoryWave}`})`;
+            const waveStr = isEn
+                ? (outcomeMode === 'victory'
+                    ? `Victory (Wave ${st.currentWave || victoryWave}/${victoryWave} · Remaining ❤️ ${st.baseHp || 0})`
+                    : `Defeat (Fallen at Wave ${st.currentWave || 1}${st.isEndlessMode ? ' Endless' : `/${victoryWave}`})`)
+                : (outcomeMode === 'victory'
+                    ? `通關成功 (Wave ${st.currentWave || victoryWave}/${victoryWave} · 剩餘 ❤️ ${st.baseHp || 0})`
+                    : `防線失守 (陣亡於 Wave ${st.currentWave || 1}${st.isEndlessMode ? ' 無盡模式' : `/${victoryWave}`})`);
 
             // 漏怪明細
-            let leakStr = '0 漏怪（完美防線）';
+            const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
+            let leakStr = isEn ? '0 Leaks (Perfect Defense)' : '0 漏怪（完美防線）';
             if (runTelemetry.leaks.length > 0) {
                 const leakCounts = {};
                 runTelemetry.leaks.forEach((lk) => {
-                    const key = `W${lk.wave}:${lk.monsterName}`;
+                    const mName = (lk.monsterType && monsterDb[lk.monsterType] && monsterDb[lk.monsterType].name) || lk.monsterName;
+                    const key = `W${lk.wave}:${mName}`;
                     leakCounts[key] = (leakCounts[key] || 0) + 1;
                 });
-                leakStr = Object.entries(leakCounts).map(([k, v]) => `${k}×${v}`).join('、');
+                leakStr = Object.entries(leakCounts).map(([k, v]) => `${k}×${v}`).join(isEn ? ', ' : '、');
             } else if (st.lastBreakerName) {
                 leakStr = `W${st.currentWave || 1}:${st.lastBreakerName}`;
             }
@@ -803,7 +810,7 @@
             // MVP 輸出與佔比
             const mvpText = (GameApp.game && typeof GameApp.game.getMvpSummaryText === 'function')
                 ? GameApp.game.getMvpSummaryText()
-                : '尚無輸出紀錄';
+                : (isEn ? 'No damage dealt yet' : '尚無輸出紀錄');
 
             // 召喚與融合摘要
             const towersDict = (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
@@ -811,20 +818,37 @@
                 const tName = (towersDict[k] && towersDict[k].name) || k;
                 return `${tName}×${cnt}`;
             });
-            const summonStr = summonParts.length > 0 ? summonParts.join(' / ') : '無';
+            const summonStr = summonParts.length > 0 ? summonParts.join(' / ') : (isEn ? 'None' : '無');
 
             // 佈陣熱區
             const zp = runTelemetry.zonePlacements;
             const totalPlaced = (zp.front || 0) + (zp.middle || 0) + (zp.back || 0);
             const pct = (n) => (totalPlaced > 0 ? `${Math.round((n / totalPlaced) * 100)}%` : '0%');
-            const zoneStr = `前段 ${pct(zp.front)}｜中段 ${pct(zp.middle)}｜後段 ${pct(zp.back)}（特殊地形格 ${zp.special_terrain || 0} 次）`;
+            const zoneStr = isEn
+                ? `Front ${pct(zp.front)} | Mid ${pct(zp.middle)} | Back ${pct(zp.back)} (Special Tiles: ${zp.special_terrain || 0})`
+                : `前段 ${pct(zp.front)}｜中段 ${pct(zp.middle)}｜後段 ${pct(zp.back)}（特殊地形格 ${zp.special_terrain || 0} 次）`;
 
             const idlePct = getAverageIdleRatio();
             const fastSpdPct = getFastSpeedRatio();
-            const ratingStr = runTelemetry.subjectiveRating || '尚未點選快評';
-            const blessingStr = runTelemetry.blessingsPicked.length > 0 ? runTelemetry.blessingsPicked.join('、') : '無';
+            const ratingStr = runTelemetry.subjectiveRating || (isEn ? 'Not rated' : '尚未點選快評');
+            const blessingStr = runTelemetry.blessingsPicked.length > 0
+                ? runTelemetry.blessingsPicked.join(isEn ? ', ' : '、')
+                : (isEn ? 'None' : '無');
 
-            const lines = [
+            const lines = isEn ? [
+                '[Elemental Frontline: Merge TD — Battle Telemetry Report]',
+                `🗺️ Battlefield: ${mapSpec.name}`,
+                `🏁 Outcome: ${waveStr}`,
+                `🚨 Leaks: ${leakStr}`,
+                `🏆 MVP Tower: ${mvpText}`,
+                `⏱️ Pace: Avg Idle ${idlePct}% | 2x/3x Usage ${fastSpdPct}% | Early Starts ${runTelemetry.earlyStartCount}`,
+                `🖐️ Drag Cancels: Shop ${runTelemetry.dragCancel.shop} | Board Move ${runTelemetry.dragCancel.board}`,
+                `🔥 Summons: ${summonStr} (Merges ${st.fusionCount || 0} | Sells ${runTelemetry.sellCount})`,
+                `📍 Placement Zones: ${zoneStr}`,
+                `🌳 World Tree: Entangle ${runTelemetry.skillCasts.entangle || 0}, Frenzy ${runTelemetry.skillCasts.frenzy || 0} | Blessings: ${blessingStr}`,
+                `💰 Economy: End Gold ${st.currentGold || 0} 💰 (Total Earned ${(st.totalGoldEarned || 0).toLocaleString()} 💰 · Kills ${st.killsCount || 0})`,
+                `💬 Quick Rating: ${ratingStr}`
+            ] : [
                 '【元素陣線：合成塔防 — 單局試玩黑盒子戰報】',
                 `🗺️ 戰場地圖：${mapSpec.name}`,
                 `🏁 戰局結果：${waveStr}`,
@@ -840,7 +864,9 @@
             ];
             return lines.join('\n');
         } catch (_) {
-            return '【元素陣線：單局數據戰報】資料整理完成';
+            return (GameApp.i18n && GameApp.i18n.isEnglish())
+                ? '[Elemental Frontline] Battle Report ready.'
+                : '【元素陣線：單局數據戰報】資料整理完成';
         }
     }
 
@@ -937,6 +963,8 @@
                 }
             }
         } catch (_) {}
+        const clearedMapCount = Object.keys(records).filter(id => records[id] && (records[id].bestStars || 0) > 0).length;
+        career.totalClears = Math.max(career.totalClears, clearedMapCount);
         return career;
     }
 

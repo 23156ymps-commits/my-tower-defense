@@ -49,7 +49,7 @@
         ['evoConfirmOptionsEl', 'evo-confirm-options'], ['evoCancelBtn', 'evo-cancel-btn'],
         ['codexBtn', 'codex-btn'], ['codexOverlayEl', 'codex-overlay'], ['codexCloseBtn', 'codex-close-btn'],
         ['blessingOverlayEl', 'blessing-overlay'], ['blessingWaveSubtitleEl', 'blessing-wave-subtitle'], ['blessingChoicesEl', 'blessing-choices'],
-        ['skillEntangleBtn', 'skill-entangle-btn'], ['skillFrenzyBtn', 'skill-frenzy-btn'], ['pauseBtn', 'pause-btn'], ['soundBtn', 'sound-btn'], ['langBtn', 'lang-btn'], ['langMenuEl', 'lang-menu'],
+        ['skillEntangleBtn', 'skill-entangle-btn'], ['skillFrenzyBtn', 'skill-frenzy-btn'], ['pauseBtn', 'pause-btn'], ['soundBtn', 'sound-btn'], ['langBtn', 'lang-btn'], ['langMenuEl', 'lang-menu'], ['startLangBtn', 'start-lang-btn'], ['startLangMenuEl', 'start-lang-menu'],
         ['pauseBannerEl', 'pause-banner'], ['pauseResumeBtn', 'pause-resume-btn'], ['pauseMenuBtn', 'pause-menu-btn'],
         ['addGoldBtn', 'add-gold-btn'], ['clearGoldBtn', 'clear-gold-btn'], ['nextWaveBtn', 'next-wave-btn'], ['speedBtn', 'speed-btn'],
         ['goldDisplay', 'gold-display'], ['baseHpDisplay', 'base-hp-display'], ['dewDisplay', 'dew-display'], ['dewBarFillEl', 'dew-bar-fill'],
@@ -67,7 +67,7 @@
         ['gameoverBreakerRowEl', 'gameover-breaker-row'], ['gameoverBreakerTextEl', 'gameover-breaker-text'],
         ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn'], ['gameoverMenuBtn', 'gameover-menu-btn'],
         ['gameoverRatingStatusEl', 'gameover-rating-status'], ['gameoverCopyReportBtn', 'gameover-copy-report-btn'],
-        ['helpBtn', 'help-btn'], ['guideOverlayEl', 'guide-overlay'], ['guideCloseBtn', 'guide-close-btn'], ['guideMenuBtn', 'guide-menu-btn'],
+        ['helpBtn', 'help-btn'], ['guideOverlayEl', 'guide-overlay'], ['guideXBtn', 'guide-x-btn'], ['guideCloseBtn', 'guide-close-btn'], ['guideMenuBtn', 'guide-menu-btn'],
         ['terrainTooltipEl', 'terrain-tooltip'], ['towerTooltipEl', 'tower-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
         ['forecastToggleBtn', 'forecast-toggle-btn'], ['forecastBarTitleEl', 'forecast-bar-title'],
         ['forecastToggleIndicatorEl', 'forecast-toggle-indicator'], ['forecastInlineSummaryEl', 'forecast-inline-summary'],
@@ -352,6 +352,7 @@
             mvp = {
                 type: bestBoardTower.type,
                 tier: bestBoardTower.tier,
+                isCrowned: Boolean(bestBoardTower.isCrowned),
                 name: cfg ? cfg.name : bestBoardTower.type,
                 icon: cfg ? cfg.icon : '',
                 totalDamage: bestBoardTower.totalDamage
@@ -363,7 +364,12 @@
         const pct = st.totalTeamDamage > 0 ? Math.round((mvp.totalDamage / st.totalTeamDamage) * 100) : 0;
         const liveCfg = towersDict[mvp.type] || {};
         const mvpName = liveCfg.name || mvp.name;
-        const text = `${mvp.icon ? mvp.icon + ' ' : ''}${mvpName} ${Renderer.getTierStars(mvp.tier)} — ${mvp.totalDamage.toLocaleString()} ${L('傷害', 'DMG')} (${pct}%)`;
+        let tierBadge = Renderer.getTierStars(mvp.tier);
+        if (mvp.isCrowned) {
+            const branchMatch = String(mvp.type || '').match(/_([AB])$/);
+            tierBadge = `${branchMatch ? branchMatch[1] : 'T4'}👑`;
+        }
+        const text = `${mvp.icon ? mvp.icon + ' ' : ''}${mvpName} ${tierBadge} — ${mvp.totalDamage.toLocaleString()} ${L('傷害', 'DMG')} (${pct}%)`;
         return { mvp, pct, text };
     }
 
@@ -462,7 +468,7 @@
         if (GameApp.i18n && typeof GameApp.i18n.getWeaknessLabel === 'function') {
             return GameApp.i18n.getWeaknessLabel(weakKey);
         }
-        const map = { fire: L('火', 'Fire'), ice: L('冰', 'Ice'), thunder: L('雷', 'Bolt') };
+        const map = { fire: L('火', 'Fire'), ice: L('冰', 'Ice'), thunder: L('雷', 'Thunder') };
         return map[weakKey] || weakKey || L('無', 'None');
     }
 
@@ -478,7 +484,8 @@
         if ((m.rootTimer || 0) > 0) status.push(`${L('纏繞', 'Root')} ${(m.rootTimer / 1000).toFixed(1)}s`);
         if (m.slowTimer > 0) status.push(`${L('緩速', 'Slow')} ${Math.round((m.slowRate || 0) * 100)}%`);
         if (m.armorShredTimer > 0) status.push(`${L('破甲', 'Shred')} ${Math.round((m.armorShredRate || 0.3) * 100)}%`);
-        return `${m.icon || '👾'} ${m.name}｜HP ${m.hp}/${m.maxHp}｜${L('護甲', 'ARM')} ${armorStr}｜${L('弱點', 'Weak')} ${weakStr}${status.length ? `｜${status.join(' · ')}` : ''}`;
+        const sep = L('｜', ' | ');
+        return `${m.icon || '👾'} ${m.name}${sep}HP ${m.hp}/${m.maxHp}${sep}${L('護甲', 'ARM')} ${armorStr}${sep}${L('弱點', 'Weak')} ${weakStr}${status.length ? `${sep}${status.join(' · ')}` : ''}`;
     }
 
     function findMonsterNearCell(index) {
@@ -750,6 +757,22 @@
         }
     }
 
+    function getTerrainShortTagForCell(index, tInfo, damageMultOverride = null) {
+        if (!tInfo || !tInfo.shortTag) return '';
+        if (tInfo.id === 'world_tree') {
+            const mult = Number.isFinite(damageMultOverride)
+                ? damageMultOverride
+                : (TerrainSys && index !== null && index !== undefined ? TerrainSys.getTerrainBonusesAt(index).damageMult : 1.0);
+            const bonusPct = Math.max(0, Math.round((mult - 1) * 100));
+            return L(`🌿 庇護傷 +${bonusPct}%`, `🌿 Sanctuary +${bonusPct}%`);
+        }
+        const rawTag = String(tInfo.shortTag || '');
+        if (tInfo.icon && !rawTag.startsWith(tInfo.icon)) {
+            return `${tInfo.icon} ${rawTag}`;
+        }
+        return rawTag;
+    }
+
     function updateTowerInspector() {
         const dom = G.dom, st = G.state;
         if (!dom.inspectorEmptyEl || !dom.inspectorActiveEl) return;
@@ -788,15 +811,16 @@
         if (dom.inspectorAoeDpsEl) {
             const hasAoe = Number.isFinite(stats.aoeDps) && stats.aoeDps > 0 && Boolean(stats.aoeLabel);
             dom.inspectorAoeDpsEl.classList.toggle('hidden', !hasAoe);
-            if (hasAoe) setDomText(dom.inspectorAoeDpsEl, `${L('預估群傷 DPS', 'AoE DPS')} ${stats.aoeDps}`);
+            if (hasAoe) setDomText(dom.inspectorAoeDpsEl, `${stats.aoeLabel} ${stats.aoeDps}`);
         }
         if (dom.inspectorTotalDmgEl) {
             setDomText(dom.inspectorTotalDmgEl, `${L('累計傷害', 'Total Dmg')} ${Math.round(towerObj.totalDamage || 0).toLocaleString()}`);
         }
         setDomText(dom.inspectorRangeEl, `${L('射程', 'Rng')} ${stats.rangeStr}`);
         if (dom.inspectorTerrainEl) {
-            dom.inspectorTerrainEl.classList.toggle('hidden', !tInfo || !tInfo.shortTag);
-            dom.inspectorTerrainEl.innerText = (tInfo && tInfo.shortTag) ? tInfo.shortTag : '';
+            const terrainTag = getTerrainShortTagForCell(st.selectedIndex, tInfo, stats.damageMult);
+            dom.inspectorTerrainEl.classList.toggle('hidden', !terrainTag);
+            dom.inspectorTerrainEl.innerText = terrainTag;
         }
         if (dom.inspectorAwakenBtn) {
             const canShowAwaken = Boolean(st.isEndlessMode && towerObj.tier >= 3 && !towerObj.isCrowned);
@@ -836,7 +860,8 @@
         const armorLabel = boss.armorShredTimer > 0 ? `🔥 ${Math.round(MonsterSys.getMonsterEffectiveArmor(boss))}/${boss.armor}` : `${L('甲', 'ARM')} ${boss.armor}`;
         dom.bossStatusBarEl.classList.remove('hidden', 'weak-fire', 'weak-ice', 'weak-thunder');
         if (weakCfg) dom.bossStatusBarEl.classList.add(`weak-${boss.weakness}`);
-        setDomText(dom.bossBannerTitleEl, `${boss.name}｜${L('弱', 'Weak')} ${weakShort}｜${armorLabel}`);
+        const bossSep = L('｜', ' | ');
+        setDomText(dom.bossBannerTitleEl, `${boss.name}${bossSep}${L('弱', 'Weak')} ${weakShort}${bossSep}${armorLabel}`);
         setDomText(dom.bossBannerHpTextEl, `${boss.hp} / ${boss.maxHp}`);
         if (dom.bossBannerHpFillEl) dom.bossBannerHpFillEl.style.width = `${Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100))}%`;
     }
@@ -934,8 +959,14 @@
                 badge.classList.remove('hidden');
                 badge.classList.toggle('pity-ready', pityReady);
                 badge.innerText = pityReady
-                    ? `✨ 豐饒種子已充能（${G.state.seedPityCount}/${seedInterval}）：下次召喚必出 ★★！`
-                    : `豐饒種子保底進度：${G.state.seedPityCount}/${seedInterval}`;
+                    ? L(
+                        `✨ 豐饒種子已充能（${G.state.seedPityCount}/${seedInterval}）：下次召喚必出 ★★！`,
+                        `✨ Abundant Seed Ready (${G.state.seedPityCount}/${seedInterval}): Next summon sprouts ★★!`
+                    )
+                    : L(
+                        `豐饒種子保底進度：${G.state.seedPityCount}/${seedInterval}`,
+                        `Abundant Seed Pity: ${G.state.seedPityCount}/${seedInterval}`
+                    );
             }
         }
 
@@ -1017,7 +1048,7 @@
             items.push(`<li class="forecast-item"><span>${mCfg.name} <span class="num">×${cnt}</span></span><span class="forecast-weak weak-${mCfg.weakness}">${weakTag}</span></li>`);
         });
         if (plan.eliteCount > 0) {
-            items.push(`<li class="forecast-meta num">${L(`含 ${plan.eliteCount} 隻護甲菁英（甲 ${plan.eliteArmor}）`, `Includes ${plan.eliteCount} Armored Elites (ARM ${plan.eliteArmor})`)}</li>`);
+            items.push(`<li class="forecast-meta num">${L(`含 ${plan.eliteCount} 隻護甲菁英（甲 ${plan.eliteArmor}）`, `Includes ${plan.eliteCount} ${plan.eliteCount === 1 ? 'Armored Elite' : 'Armored Elites'} (ARM ${plan.eliteArmor})`)}</li>`);
         }
         if (plan.bossMeta) {
             const bWeak = towersDict[plan.bossMeta.weakness];
@@ -1054,7 +1085,7 @@
             } else {
                 const nextPlan = !isFinalClear ? WaveSys.buildWaveQueue(nextWave) : null;
                 dom.forecastInlineSummaryEl.innerText = nextPlan
-                    ? `${L('下波', 'Next')} W${nextWave}：${summarizePlanInline(nextPlan)}`
+                    ? `${L('下波', 'Next')} W${nextWave}${L('：', ': ')}${summarizePlanInline(nextPlan)}`
                     : L('最終魔王決戰進行中', 'Final Boss Battle in Progress');
             }
         }
@@ -1077,13 +1108,22 @@
         updateWaveForecastUI();
     }
 
+    function formatCompactGold(amount) {
+        const val = Math.max(0, Math.floor(Number(amount) || 0));
+        if (val >= 10000) {
+            return `${(val / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+        }
+        return String(val);
+    }
+
     function updateHUD() {
         const dom = G.dom, st = G.state;
         const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
         const maxHp = st.maxBaseHp || treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
-        setDomText(dom.goldDisplay, st.currentGold);
+        setDomText(dom.goldDisplay, formatCompactGold(st.currentGold));
+        if (dom.goldDisplay) dom.goldDisplay.title = String(st.currentGold);
         setDomText(dom.baseHpDisplay, `${st.baseHp}/${maxHp}`);
-        setDomText(dom.waveDisplay, st.isEndlessMode ? `Wave ${st.currentWave} (無盡)` : `Wave ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10}`);
+        setDomText(dom.waveDisplay, st.isEndlessMode ? `Wave ${st.currentWave} (${L('無盡', 'Endless')})` : `Wave ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10}`);
         setDomText(dom.bestWaveDisplay, `Wave ${st.bestWave}`);
         updateWavePhaseUI(); Renderer.updateWorldTreeVisualState(); updateSkillButtonsUI();
         updateSeedPityUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
@@ -1147,7 +1187,7 @@
                 <span class="spawn-card-portrait">
                     <canvas class="spawn-portrait-canvas" width="36" height="36" data-size="36" aria-hidden="true"></canvas>
                 </span>
-                <span class="spawn-card-head">${data.icon} ${data.name} · <span class="btn-cost-val num">${cost} 💰</span></span>
+                <span class="spawn-card-head"><span class="spawn-card-name">${data.icon} ${data.name}</span><span class="btn-cost-val num">${cost} 💰</span></span>
                 <span class="spawn-card-role num"><span class="role-full">${roleLabel}</span><span class="role-short">${shortRoleLabel}</span></span>
             `;
             const canvasEl = btn.querySelector('.spawn-portrait-canvas');
@@ -1246,8 +1286,9 @@
             Renderer.spawnFloatingNotice(L('🌿 豐饒種子觸發！直接獲得 ★★', '🌿 Abundant Seed! Instant ★★'), cellCenter.left, cellCenter.top, 'pity-seed');
         }
 
-        const tagSuffixZh = tInfo && tInfo.shortTag ? `（${tInfo.shortTag}）` : '';
-        const tagSuffixEn = tInfo && tInfo.shortTag ? ` (${tInfo.shortTag})` : '';
+        const dynTerrainTag = getTerrainShortTagForCell(targetIndex, tInfo);
+        const tagSuffixZh = dynTerrainTag ? `（${dynTerrainTag}）` : '';
+        const tagSuffixEn = dynTerrainTag ? ` (${dynTerrainTag})` : '';
         if (seedTriggered) {
             setStatusMsg(
                 `豐饒種子觸發：於 (${coords.x + 1},${coords.y + 1}) 召喚【${cfg.name} ★★】${tagSuffixZh}，花費 ${deduct.cost} 💰。`,
@@ -1357,9 +1398,10 @@
                     st.selectedIndex = index; st.buildTargetIndex = null; st.pendingSpawnType = null;
                     const t = st.board[index], terrain = TerrainSys.getTerrainAt(index);
                     const tInfo = terrain ? terrainsDict[terrain] : null;
+                    const cellTag = getTerrainShortTagForCell(index, tInfo);
                     setStatusMsg(
-                        `暫停檢視：【${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}】${tInfo && tInfo.shortTag ? `｜${tInfo.shortTag}` : ''}（可切換索敵，恢復後可移塔或融合）。`,
-                        `Inspecting (Paused): ${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}${tInfo && tInfo.shortTag ? ` | ${tInfo.shortTag}` : ''} (target mode adjustable).`
+                        `暫停檢視：【${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}】${cellTag ? `｜${cellTag}` : ''}（可切換索敵，恢復後可移塔或融合）。`,
+                        `Inspecting (Paused): ${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}${cellTag ? ` | ${cellTag}` : ''} (target mode adjustable).`
                     );
                 } else {
                     const nearMon = findMonsterNearCell(index);
@@ -1399,9 +1441,10 @@
                 st.selectedIndex = index; st.buildTargetIndex = null;
                 const t = st.board[index], terrain = TerrainSys.getTerrainAt(index);
                 const tInfo = terrain ? terrainsDict[terrain] : null;
+                const cellTag = getTerrainShortTagForCell(index, tInfo);
                 setStatusMsg(
-                    `已退出待放置並選取【${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}】${tInfo && tInfo.shortTag ? `｜地形：${tInfo.shortTag}` : ''}。`,
-                    `Selected ${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}${tInfo && tInfo.shortTag ? ` | ${tInfo.shortTag}` : ''}.`
+                    `已退出待放置並選取【${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}】${cellTag ? `｜地形：${cellTag}` : ''}。`,
+                    `Selected ${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}${cellTag ? ` | ${cellTag}` : ''}.`
                 );
                 Renderer.renderBoard([]);
                 updateHUD();
@@ -1421,9 +1464,10 @@
                 st.selectedIndex = index; st.buildTargetIndex = null;
                 const t = st.board[index], terrain = TerrainSys.getTerrainAt(index);
                 const tInfo = terrain ? terrainsDict[terrain] : null;
+                const cellTag = getTerrainShortTagForCell(index, tInfo);
                 setStatusMsg(
-                    `已選取【${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}】${tInfo && tInfo.shortTag ? `｜地形：${tInfo.shortTag}` : ''}（可切換索敵、出售或拖曳融合/移動）`,
-                    `Selected ${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}${tInfo && tInfo.shortTag ? ` | ${tInfo.shortTag}` : ''}`
+                    `已選取【${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}】${cellTag ? `｜地形：${cellTag}` : ''}（可切換索敵、出售或拖曳融合/移動）`,
+                    `Selected ${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}${cellTag ? ` | ${cellTag}` : ''}`
                 );
             } else if (TerrainSys.canBuildAt(index)) {
                 if (st.isTouchMode) clearMonsterHoverLock();
@@ -1435,9 +1479,10 @@
                     st.buildTargetIndex = index;
                     const c = indexToCoords(index), terrain = TerrainSys.getTerrainAt(index);
                     const tInfo = terrain ? terrainsDict[terrain] : null;
+                    const cellTag = getTerrainShortTagForCell(index, tInfo);
                     setStatusMsg(
-                        `已選取空地 (${c.x + 1},${c.y + 1})${tInfo && tInfo.shortTag ? `（${tInfo.shortTag}）` : ''}，點擊下方元素卡即可建塔。`,
-                        `Selected tile (${c.x + 1},${c.y + 1})${tInfo && tInfo.shortTag ? ` (${tInfo.shortTag})` : ''}. Click an element card below to build.`
+                        `已選取空地 (${c.x + 1},${c.y + 1})${cellTag ? `（${cellTag}）` : ''}，點擊下方元素卡即可建塔。`,
+                        `Selected tile (${c.x + 1},${c.y + 1})${cellTag ? ` (${cellTag})` : ''}. Click an element card below to build.`
                     );
                 }
             } else if (TerrainSys.getTerrainAt(index) === 'obstacle' && typeof TerrainSys.clearObstacleAt === 'function') {
@@ -1461,9 +1506,10 @@
                 SoundEngine.playMerge(2, true);
                 const revInfo = clearRes.revealedTerrain ? terrainsDict[clearRes.revealedTerrain] : null;
                 if (revInfo) {
+                    const revTag = getTerrainShortTagForCell(index, revInfo);
                     setStatusMsg(
-                        `地脈拓荒完成（-${clearRes.cost} 💰）：岩層下發掘出【${revInfo.name} · ${revInfo.shortTag}】！`,
-                        `Boulder cleared (-${clearRes.cost} 💰): Unearthed ${revInfo.name} · ${revInfo.shortTag}!`
+                        `地脈拓荒完成（-${clearRes.cost} 💰）：岩層下發掘出【${revInfo.name} · ${revTag}】！`,
+                        `Boulder cleared (-${clearRes.cost} 💰): Unearthed ${revInfo.name} · ${revTag}!`
                     );
                 } else {
                     setStatusMsg(
@@ -1625,10 +1671,12 @@
                 const cfg = towersDict[optType] || { icon: '✨', name: optType, badges: [], defaultLineagePath: [] };
                 const targetTier = cfg.nodeTier || fusionPreview.tier || 3;
                 const targetStars = Renderer.getTierStars(targetTier);
-                const lineageText = L(
-                    Array.isArray(cfg.defaultLineagePath) ? cfg.defaultLineagePath.join(' ▸ ') : (cfg.lineagePath || ''),
-                    cfg.lineagePath || (Array.isArray(cfg.defaultLineagePath) ? cfg.defaultLineagePath.join(' ▸ ') : '')
-                );
+                const lineageText = (EvoSys && typeof EvoSys.getTowerLineagePathText === 'function')
+                    ? EvoSys.getTowerLineagePathText({ type: optType, tier: targetTier })
+                    : L(
+                        Array.isArray(cfg.defaultLineagePath) ? cfg.defaultLineagePath.join(' ▸ ') : (cfg.lineagePath || ''),
+                        cfg.lineagePath || (Array.isArray(cfg.defaultLineagePath) ? cfg.defaultLineagePath.join(' ▸ ') : '')
+                    );
                 const card = document.createElement('button');
                 card.type = 'button';
                 card.className = 'evo-branch-card';
@@ -2246,12 +2294,14 @@
     }
 
     function setLangMenuOpen(open) {
-        const menuEl = G.dom.langMenuEl;
-        const btnEl = G.dom.langBtn;
-        if (!menuEl) return;
         const isOpen = Boolean(open);
-        menuEl.classList.toggle('hidden', !isOpen);
-        if (btnEl) btnEl.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        [
+            [G.dom.langMenuEl, G.dom.langBtn],
+            [G.dom.startLangMenuEl, G.dom.startLangBtn]
+        ].forEach(([menuEl, btnEl]) => {
+            if (menuEl) menuEl.classList.toggle('hidden', !isOpen);
+            if (btnEl) btnEl.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
     }
 
     [
@@ -2265,8 +2315,14 @@
             const isCurrentlyHidden = !G.dom.langMenuEl || G.dom.langMenuEl.classList.contains('hidden');
             setLangMenuOpen(isCurrentlyHidden);
         }],
+        ['startLangBtn', (e) => {
+            if (e && e.stopPropagation) e.stopPropagation();
+            SoundEngine.ensureContext();
+            const isCurrentlyHidden = !G.dom.startLangMenuEl || G.dom.startLangMenuEl.classList.contains('hidden');
+            setLangMenuOpen(isCurrentlyHidden);
+        }],
         ['codexBtn', () => CodexSys.openCodex()], ['codexCloseBtn', () => CodexSys.closeCodex()],
-        ['helpBtn', openGuide], ['guideCloseBtn', closeGuide], ['guideMenuBtn', () => { closeGuide(); returnToMainMenu(); }],
+        ['helpBtn', openGuide], ['guideXBtn', closeGuide], ['guideCloseBtn', closeGuide], ['guideMenuBtn', () => { closeGuide(); returnToMainMenu(); }],
         ['forecastToggleBtn', toggleForecastDrawer], ['speedBtn', cycleGameSpeed], ['startGameBtn', startGame],
         ['victoryRestartBtn', restartGame], ['victoryMenuBtn', returnToMainMenu], ['endlessBtn', continueEndlessMode],
         ['restartBtn', restartGame], ['gameoverMenuBtn', returnToMainMenu],
@@ -2275,8 +2331,15 @@
         ['clearGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold = 0; setStatusMsg('金幣已歸零。', 'Gold cleared to 0.'); updateHUD(); } }]
     ].forEach(([domKey, fn]) => { if (G.dom[domKey] && typeof fn === 'function') G.dom[domKey].addEventListener('click', fn); });
 
-    if (G.dom.langMenuEl) {
-        G.dom.langMenuEl.querySelectorAll('.lang-option').forEach((opt) => {
+    if (G.dom.guideOverlayEl) {
+        G.dom.guideOverlayEl.addEventListener('click', (e) => {
+            if (e && e.target === G.dom.guideOverlayEl) closeGuide();
+        });
+    }
+
+    [G.dom.langMenuEl, G.dom.startLangMenuEl].forEach((menuEl) => {
+        if (!menuEl) return;
+        menuEl.querySelectorAll('.lang-option').forEach((opt) => {
             opt.addEventListener('click', (e) => {
                 if (e && e.stopPropagation) e.stopPropagation();
                 SoundEngine.ensureContext();
@@ -2286,6 +2349,14 @@
                     GameApp.i18n.setLang(targetLang);
                 }
             });
+        });
+    });
+
+    if (typeof document !== 'undefined') {
+        document.addEventListener('click', (e) => {
+            const target = e && e.target;
+            if (target && target.closest && (target.closest('#lang-dropdown') || target.closest('#start-lang-dropdown'))) return;
+            setLangMenuOpen(false);
         });
     }
 
@@ -2566,6 +2637,27 @@
             }
             if (st.waveState === 'VICTORY') populateBattleRecap('victory');
             if (st.isGameOver || st.waveState === 'GAMEOVER') populateBattleRecap('gameover');
+            if (Array.isArray(st.monsters) && st.monsters.length > 0) {
+                const isEnNow = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                const mDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
+                const bosses = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.BOSS_ROSTER) || [];
+                st.monsters.forEach((m) => {
+                    if (!m) return;
+                    if (m.isBoss) {
+                        const bCfg = bosses.find(b => b.typeKey === m.typeKey) || mDb[m.typeKey];
+                        if (bCfg) {
+                            m.name = bCfg.name || m.name;
+                            m.traitDesc = bCfg.traitDesc || m.traitDesc;
+                        }
+                    } else if (m.isSplitChild) {
+                        m.name = isEnNow ? (m.typeKey === 'slime' ? 'Mini Slime' : 'Ancient Sapling') : (m.typeKey === 'slime' ? '迷你史萊姆' : '古樹幼苗');
+                    } else if (mDb[m.typeKey]) {
+                        const baseM = mDb[m.typeKey];
+                        m.name = m.isElite ? (isEnNow ? `Elite ${baseM.name}` : `菁英${baseM.name}`) : baseM.name;
+                        m.traitDesc = baseM.traitDesc || m.traitDesc;
+                    }
+                });
+            }
             if (st.hoveredMonsterId !== null) updateMonsterHoverCardUI();
 
             // 同步更新底部狀態文字（含暫停、待機或最近一筆雙語訊息）

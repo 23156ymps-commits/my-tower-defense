@@ -21,21 +21,21 @@
     const EN_TOWERS = {
         fire_bud: {
             name: 'Fire Bud', shortName: 'Fire 1★',
-            shopRoleTag: 'Armor Break · 25 DMG · 2.3 Rng',
+            shopRoleTag: 'Shred 25% · 25 DMG',
             roleSummary: 'Single Armor Shred (25%)',
             tooltipSummary: 'Hits shred 25% target armor for 3.0s',
             lineagePath: '🔥 Fire Bud'
         },
         ice_bud: {
             name: 'Ice Bud', shortName: 'Ice 1★',
-            shopRoleTag: 'Slow · 15 DMG · 2.8 Rng',
+            shopRoleTag: 'Slow 40% · 15 DMG',
             roleSummary: 'Slow Control (40%)',
             tooltipSummary: 'Slows target by 40% for 2.0s',
             lineagePath: '❄️ Ice Bud'
         },
         thunder_bud: {
             name: 'Thunder Bud', shortName: 'Thunder 1★',
-            shopRoleTag: 'Chain · 13 DMG · 3.6 Rng',
+            shopRoleTag: 'Chain ×2 · 13 DMG',
             roleSummary: '2-Target Lightning Chain',
             tooltipSummary: 'Arcs to 2 targets; +30% vs Air/Armor',
             lineagePath: '⚡ Thunder Bud'
@@ -130,7 +130,7 @@
         thunder_B: {
             name: 'Sky Judgment', shortName: 'B Judgment',
             roleSummary: 'Every 3rd Hit 2.2x + 40% Pierce',
-            tooltipSummary: 'Every 3rd bolt deals 2.2x dmg, ignores 40% armor',
+            tooltipSummary: 'Every 3rd thunder hit deals 2.2x dmg, ignores 40% armor',
             lineagePath: '⚡ Volt 2★ ▸ B Sky Judgment'
         },
         steam_A: {
@@ -178,7 +178,7 @@
     const WEAKNESS_NAMES = {
         fire: { zh: '火', en: 'Fire' },
         ice: { zh: '冰', en: 'Ice' },
-        thunder: { zh: '雷', en: 'Bolt' }
+        thunder: { zh: '雷', en: 'Thunder' }
     };
 
     const EN_MONSTERS = {
@@ -223,15 +223,15 @@
 
     const EN_MAPS = {
         forest: { name: '🌲 Sunlit Woods', desc: '41-cell winding path · Balanced classic defense' },
-        lava: { name: '🌋 Magma Canyon', desc: '31-cell short canyon · Start +10 💰 · Kill Gold +20%' },
-        frost: { name: '❄️ Permafrost Rift', desc: '36-cell dual-lane converge · Ice Lineage DMG +20%' }
+        lava: { name: '🌋 Magma Canyon', desc: '31-cell short canyon · Start +10 💰 · Kill Gold +15%' },
+        frost: { name: '❄️ Permafrost Rift', desc: '36-cell dual-lane · Start +15 💰 · Ice DMG +20%' }
     };
 
     const EN_TERRAINS = {
-        highground: { name: '⛰️ Highground', shortTag: '⛰️ Highground Range +30%', tooltip: 'Highground: Tower Attack Range +30%' },
-        mana_vein: { name: '✨ Mana Vein', shortTag: '✨ Mana Vein Spd +25%', tooltip: 'Mana Vein: Tower Attack Speed +25%' },
-        world_tree: { name: '🌿 Tree Sanctuary', shortTag: '🌿 Sanctuary Max DMG +20%', tooltip: 'Sanctuary: Up to +20% DMG based on Tree HP' },
-        obstacle: { name: '🪨 Ancient Boulder', shortTag: '🪨 Boulder (45 💰 Clear)', tooltip: 'Ancient Boulder: Click to clear for 45 💰 and unearth terrain' }
+        highground: { name: '⛰️ Highground', shortTag: 'Range +30%', tooltip: 'Highground: Tower Attack Range +30%' },
+        mana_vein: { name: '✨ Mana Vein', shortTag: 'Spd +25%', tooltip: 'Mana Vein: Tower Attack Speed +25%' },
+        world_tree: { name: '🌿 Tree Sanctuary', shortTag: 'DMG +20% max', tooltip: 'Sanctuary: Up to +20% DMG based on Tree HP' },
+        obstacle: { name: '🪨 Ancient Boulder', shortTag: '45 💰 Clear', tooltip: 'Ancient Boulder: Click to clear for 45 💰 and unearth terrain' }
     };
 
     const EN_CODEX_CATS = {
@@ -475,16 +475,32 @@
         if (typeof document === 'undefined') return;
         const isEn = lang === 'en';
         document.documentElement.lang = isEn ? 'en' : 'zh-TW';
+        document.title = isEn ? 'Elemental Frontline: Merge TD' : '元素陣線：合成塔防';
 
         const langBtn = document.getElementById('lang-btn');
         if (langBtn) {
             langBtn.title = isEn ? 'Switch Language / 切換語言' : '切換語言 / Switch Language';
         }
-        document.querySelectorAll('#lang-menu .lang-option').forEach((opt) => {
+        const startLangBtn = document.getElementById('start-lang-btn');
+        if (startLangBtn) {
+            startLangBtn.title = isEn ? 'Switch Language / 切換語言' : '切換語言 / Switch Language';
+        }
+        document.querySelectorAll('.lang-option').forEach((opt) => {
             const active = opt.dataset.lang === (isEn ? 'en' : 'zh-TW');
             opt.classList.toggle('is-active', active);
             opt.setAttribute('aria-checked', active ? 'true' : 'false');
         });
+
+        const sideLeftEl = document.getElementById('side-panel-left');
+        if (sideLeftEl) sideLeftEl.setAttribute('aria-label', isEn ? 'Elemental Counters & Terrain Quick Reference' : '元素相剋與地形加成速查');
+        const sideRightEl = document.getElementById('side-panel-right');
+        if (sideRightEl) sideRightEl.setAttribute('aria-label', isEn ? 'Current and Next Wave Details' : '本波與下波出怪詳情');
+        const codexCloseBtn = document.getElementById('codex-close-btn');
+        if (codexCloseBtn) codexCloseBtn.setAttribute('aria-label', isEn ? 'Close Codex' : '關閉圖鑑');
+        const victoryStarsEl = document.getElementById('victory-stars');
+        if (victoryStarsEl) victoryStarsEl.setAttribute('aria-label', isEn ? 'Clear Stars' : '通關星級');
+        const guideXBtn = document.getElementById('guide-x-btn');
+        if (guideXBtn) guideXBtn.setAttribute('aria-label', isEn ? 'Close Tactical Field Guide' : '關閉戰術手冊');
 
         // 頂部左側 HUD 標籤節點
         const hpItem = document.querySelector('.hud-hp');
@@ -507,7 +523,7 @@
             const spans = legendEl.querySelectorAll('span');
             if (spans[0]) spans[0].innerText = isEn ? '🔥Fire ▸ 🌿Vine' : '🔥火 ▸ 🌿蔓藤';
             if (spans[1]) spans[1].innerText = isEn ? '❄️Ice ▸ 🌋Lava' : '❄️冰 ▸ 🌋熔岩';
-            if (spans[2]) spans[2].innerText = isEn ? '⚡Bolt ▸ 🛸Air' : '⚡雷 ▸ 🛸機械';
+            if (spans[2]) spans[2].innerText = isEn ? '⚡Thunder ▸ 🛸Air' : '⚡雷 ▸ 🛸機械';
         }
 
         // 左右側欄靜態標題
@@ -520,7 +536,7 @@
         if (leftList[0]) {
             const rows = leftList[0].querySelectorAll('.side-panel-row');
             const zh0 = [['🔥 火 ▸ 蔓藤 / 史萊姆', '175%'], ['❄️ 冰 ▸ 熔岩 / 獵犬', '175%'], ['⚡ 雷 ▸ 飛艇 / 魔像', '175%'], ['✨ 轉職 ▸ 親和弱點', '135%']];
-            const en0 = [['🔥 Fire ▸ Vine / Slime', '175%'], ['❄️ Ice ▸ Lava / Hound', '175%'], ['⚡ Bolt ▸ Air / Golem', '175%'], ['✨ Hybrid ▸ Affinity', '135%']];
+            const en0 = [['🔥 Fire ▸ Vine / Slime', '175%'], ['❄️ Ice ▸ Lava / Hound', '175%'], ['⚡ Thunder ▸ Air / Golem', '175%'], ['✨ Hybrid ▸ Affinity', '135%']];
             (isEn ? en0 : zh0).forEach((pair, idx) => {
                 if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
                 rows[idx].children[0].innerText = pair[0];
@@ -594,7 +610,7 @@
             } else if (id === 'frost') {
                 if (nameEl) nameEl.innerText = isEn ? 'Permafrost Rift' : '永凍裂谷';
                 if (badgeEl) badgeEl.innerText = isEn ? 'Dual-Lane' : '雙路分線';
-                if (descEl) descEl.innerText = isEn ? '36-cell dual-lane · Ice DMG +20%' : '36 格雙線匯流 · 冰脈傷害 +20%';
+                if (descEl) descEl.innerText = isEn ? '36-cell dual-lane · Start +15 💰 · Ice DMG +20%' : '36 格雙線匯流 · 初始 +15 💰 · 冰脈傷害 +20%';
             }
         });
 
@@ -645,7 +661,7 @@
         const enGuideRows = [
             ['🔥 Fire ▸ Vine / Slime', '175% Crit · 30% Shred'],
             ['❄️ Ice ▸ Lava / Hound', '175% Crit · 45% Slow'],
-            ['⚡ Bolt ▸ Airship / Golem', '175% Crit · Chain Arc'],
+            ['⚡ Thunder ▸ Airship / Golem', '175% Crit · Chain Arc'],
             ['✨ Hybrid ▸ Affinity Weak', '135% Affinity DMG'],
             ['Highground', 'Range +30%'],
             ['Mana Vein', 'ATK Spd +25%'],

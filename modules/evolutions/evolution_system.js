@@ -67,6 +67,14 @@
         if (!towerObj) return '';
         const nodeId = normalizeNodeId(towerObj);
         const cfg = getTowersDict()[nodeId];
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+        if (Array.isArray(towerObj.lineageIds) && towerObj.lineageIds.length > 0) {
+            return towerObj.lineageIds.map((step) => Array.isArray(step) ? step.map(getShortNodeLabel).join('+') : getShortNodeLabel(step)).join(' ▸ ');
+        }
+        if (isEn) {
+            if (cfg && cfg.lineagePath) return cfg.lineagePath;
+            return getShortNodeLabel(nodeId);
+        }
         if (Array.isArray(towerObj.lineagePath) && towerObj.lineagePath.length > 0) {
             return towerObj.lineagePath.join(' ▸ ');
         }
@@ -232,6 +240,29 @@
         return toPath;
     }
 
+    function buildMergedLineageIds(fromTower, toTower, resultNodeId, resultTier, mode = '') {
+        const fromId = normalizeNodeId(fromTower);
+        const toId = normalizeNodeId(toTower);
+        if (resultTier === 1 || mode === 'transfer_t1') {
+            return [[fromId, toId], resultNodeId];
+        }
+        if (resultTier === 2) {
+            if (mode === 'infusion_single') {
+                return [[toId, fromId], resultNodeId];
+            }
+            const baseIds = Array.isArray(toTower.lineageIds) && toTower.lineageIds.length > 0
+                ? toTower.lineageIds.slice()
+                : [toId];
+            if (baseIds[baseIds.length - 1] !== resultNodeId) baseIds.push(resultNodeId);
+            return baseIds;
+        }
+        const toIds = Array.isArray(toTower.lineageIds) && toTower.lineageIds.length > 0
+            ? toTower.lineageIds.slice()
+            : [toId];
+        if (toIds[toIds.length - 1] !== resultNodeId) toIds.push(resultNodeId);
+        return toIds;
+    }
+
     /**
      * 執行合成轉換並嚴格守恒繼承雙方累計投入金幣（investedGold）、成本權重與累計傷害（totalDamage）
      */
@@ -258,6 +289,7 @@
         const toShare = Number.isFinite(toTower.costShare) ? toTower.costShare : Math.pow(2, toTower.tier - 1);
         const mergedDamage = (fromTower.totalDamage || 0) + (toTower.totalDamage || 0);
         const lineagePath = buildMergedLineagePath(fromTower, toTower, targetType, fusion.tier, fusion.mode);
+        const lineageIds = buildMergedLineageIds(fromTower, toTower, targetType, fusion.tier, fusion.mode);
         st.fusionCount++;
 
         const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
@@ -268,7 +300,8 @@
             targetMode: toTower.targetMode || fromTower.targetMode || 'first',
             totalDamage: mergedDamage,
             costShare: fromShare + toShare,
-            lineagePath
+            lineagePath,
+            lineageIds
         });
         st.board[toIndex] = mergedTower;
         st.board[fromIndex] = null;
@@ -279,6 +312,7 @@
                 uid: mergedTower.uid,
                 type: mergedTower.type,
                 tier: mergedTower.tier,
+                isCrowned: Boolean(mergedTower.isCrowned),
                 name: fusedCfg ? fusedCfg.name : mergedTower.type,
                 icon: fusedCfg ? fusedCfg.icon : '',
                 totalDamage: mergedDamage

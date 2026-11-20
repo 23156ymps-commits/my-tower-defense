@@ -276,7 +276,10 @@
     <!-- 右上角「？」按需開啟之戰術手冊抽屜彈窗 -->
     <div id="guide-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="guide-title">
         <div class="modal-card guide-card">
-            <h1 id="guide-title" class="codex-title">戰術手冊與地形速查</h1>
+            <div class="guide-header-bar">
+                <h1 id="guide-title" class="codex-title">戰術手冊與地形速查</h1>
+                <button id="guide-x-btn" class="modal-x-btn" type="button" aria-label="關閉戰術手冊">×</button>
+            </div>
             <p class="modal-subtitle">掌握屬性相剋與特殊地形加成，穩固世界樹防線。</p>
 
             <div class="guide-section">
@@ -369,6 +372,32 @@
     <!-- 開局封面與雙地圖選擇 -->
     <div id="start-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
         <div class="modal-card start-card">
+            <div class="start-top-bar">
+                <div class="lang-dropdown start-lang-dropdown" id="start-lang-dropdown">
+                    <button id="start-lang-btn" class="hud-ctrl-btn hud-lang-btn" type="button" aria-haspopup="true"
+                        aria-expanded="false" title="切換語言 / Switch Language">
+                        <svg class="lang-globe-icon" viewBox="0 0 16 16" aria-hidden="true">
+                            <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.3" />
+                            <ellipse cx="8" cy="8" rx="2.8" ry="6.2" fill="none" stroke="currentColor"
+                                stroke-width="1.2" />
+                            <line x1="2.2" y1="8" x2="13.8" y2="8" stroke="currentColor" stroke-width="1.2" />
+                        </svg>
+                        <span>Language ▾</span>
+                    </button>
+                    <div id="start-lang-menu" class="lang-menu hidden" role="menu" aria-labelledby="start-lang-btn">
+                        <button type="button" class="lang-option is-active" data-lang="zh-TW" role="menuitemradio"
+                            aria-checked="true">
+                            <span>繁體中文</span>
+                            <span class="lang-check" aria-hidden="true">✓</span>
+                        </button>
+                        <button type="button" class="lang-option" data-lang="en" role="menuitemradio"
+                            aria-checked="false">
+                            <span>English</span>
+                            <span class="lang-check" aria-hidden="true">✓</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
             <h1 id="start-title" class="start-title">元素陣線：合成塔防</h1>
             <p class="modal-subtitle">15×10 古林戰線 · 守護世界樹抵禦 10 波攻勢</p>
             <div id="start-career-banner" class="start-career-banner num">全圖最高 Wave 1 · 累計通關 0 次</div>
@@ -398,7 +427,7 @@
                             <span class="map-card-name">永凍裂谷</span>
                             <span class="map-diff-badge diff-ice">雙路分線</span>
                         </div>
-                        <div class="map-card-desc">36 格雙線匯流 · 冰脈傷害 +20%</div>
+                        <div class="map-card-desc">36 格雙線匯流 · 初始 +15 💰 · 冰脈傷害 +20%</div>
                         <div id="map-record-frost" class="map-card-record num">最高 Wave 1 · 尚未通關</div>
                     </button>
                 </div>

@@ -198,11 +198,12 @@
         const maxShield = cfg.shieldRatio > 0 ? Math.round(maxHp * cfg.shieldRatio) : 0;
         const reward = Math.max(1, Math.round(((cfg.baseReward || 10) + (entry.rewardBonus || 0)) * (entry.isElite ? (wb.ELITE_REWARD_MULT || 2.2) : 1.0)));
 
+        const isEnSpawn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         st.monsters.push(makeMonsterRecord({
             id: st.monsterIdCounter++,
             sessionId: st.sessionId,
             typeKey: entry.typeKey,
-            name: entry.isElite ? `菁英${cfg.name}` : cfg.name,
+            name: entry.isElite ? (isEnSpawn ? `Elite ${cfg.name}` : `菁英${cfg.name}`) : cfg.name,
             icon: cfg.icon || '👾',
             weakness: cfg.weakness || 'fire',
             hp: maxHp,
@@ -553,7 +554,7 @@
             if (typeof GameApp.renderer.spawnFloatingNotice === 'function') {
                 const isEnSt = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
                 const wName = isEnSt
-                    ? (monster.weakness === 'fire' ? '🔥Fire' : (monster.weakness === 'ice' ? '❄️Ice' : '⚡Bolt'))
+                    ? (monster.weakness === 'fire' ? '🔥Fire' : (monster.weakness === 'ice' ? '❄️Ice' : '⚡Thunder'))
                     : (monster.weakness === 'fire' ? '🔥火' : (monster.weakness === 'ice' ? '❄️冰' : '⚡雷'));
                 GameApp.renderer.spawnFloatingNotice(isEnSt ? `🕳️ Weakness Shift: ${wName}` : `🕳️ 弱點切換：${wName}`, monster.pixelX, monster.pixelY, 'pity-seed');
             }
@@ -768,7 +769,7 @@
                 : `【${monster.name}】分裂為 ${splitCnt} 隻${childLabel}。`;
         } else if (killGold > 0 && !options.isEmberSplash && !options.isDotKill) {
             G.dom.msgText.innerText = isEnKill
-                ? `Slain ${monster.name}: +${killGold} 💰${dewGain > 0 ? `, +${dewGain} 💧` : ''}.`
+                ? `Slain ${monster.name}: +${killGold} 💰${dewGain > 0 ? `, +${dewGain} 💧` : ''}`
                 : `擊殺【${monster.name}】，獲得 +${killGold} 💰${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
         }
 
@@ -777,7 +778,7 @@
             const suppressed = isMonsterSlowed(monster) || isMonsterFrozen(monster);
             if (suppressed) {
                 if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
-                    GameApp.renderer.spawnFloatingNotice('❄️ 抑爆成功', monster.pixelX, monster.pixelY, 'pity-seed');
+                    GameApp.renderer.spawnFloatingNotice(isEnKill ? '❄️ Bomb Suppressed' : '❄️ 抑爆成功', monster.pixelX, monster.pixelY, 'pity-seed');
                 }
             } else {
                 const radPx = (monster.bomberSpec.empRadiusCells || 1.4) * G.boardMetrics.step;
@@ -793,7 +794,7 @@
                 }
                 GameApp.renderer.emitRingFX(monster.pixelX, monster.pixelY, radPx, '#C94A38', 0.30, 320);
                 if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
-                    GameApp.renderer.spawnFloatingNotice('🔥 熔核爆裂停火', monster.pixelX, monster.pixelY, 'pity-seed');
+                    GameApp.renderer.spawnFloatingNotice(isEnKill ? '🔥 Molten EMP Burst' : '🔥 熔核爆裂停火', monster.pixelX, monster.pixelY, 'pity-seed');
                 }
             }
         }
@@ -1057,7 +1058,7 @@
                             id: G.state.monsterIdCounter++,
                             sessionId: G.state.sessionId,
                             typeKey: 'wood',
-                            name: '古樹幼苗',
+                            name: (GameApp.i18n && GameApp.i18n.isEnglish()) ? 'Ancient Sapling' : '古樹幼苗',
                             icon: '🌿',
                             weakness: 'fire',
                             hp: escortHp,
