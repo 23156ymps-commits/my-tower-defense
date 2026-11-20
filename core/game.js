@@ -946,7 +946,23 @@
         if (dom.nextWaveBtn) {
             const canSkip = isGameplayActive() && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION');
             dom.nextWaveBtn.disabled = !canSkip;
-            dom.nextWaveBtn.innerText = canSkip ? `${st.waveState === 'PREP' ? L('立即開波', 'Start Wave') : L('提前下波', 'Next Wave')} (+${EconSys.getEarlyWaveBonus()} 💰)` : L('立即開波', 'Start Wave');
+            const labelText = canSkip
+                ? (st.waveState === 'PREP' ? L('立即開波', 'Start Wave') : L('提前下波', 'Next Wave'))
+                : L('立即開波', 'Start Wave');
+            const labelEl = dom.nextWaveBtn.querySelector('#next-wave-label');
+            const bonusEl = dom.nextWaveBtn.querySelector('#next-wave-bonus');
+            if (labelEl && bonusEl) {
+                labelEl.innerText = labelText;
+                if (canSkip) {
+                    bonusEl.classList.remove('hidden');
+                    bonusEl.innerText = `(+${EconSys.getEarlyWaveBonus()} 💰)`;
+                } else {
+                    bonusEl.classList.add('hidden');
+                    bonusEl.innerText = '';
+                }
+            } else {
+                dom.nextWaveBtn.innerText = canSkip ? `${labelText} (+${EconSys.getEarlyWaveBonus()} 💰)` : labelText;
+            }
         }
     }
 

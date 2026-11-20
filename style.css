@@ -342,7 +342,8 @@ body.map-frost {
     flex-shrink: 0;
 }
 .hud-hp .ui-ico-heart { color: #EE9B8F; }
-.hud-gold .ui-ico-coin { color: var(--el-lightning); }
+.hud-gold .ui-ico-coin,
+.wave-btn .ui-ico-coin { color: var(--el-lightning); }
 .info-legend-inline > span,
 .side-panel-row > span:first-child {
     display: inline-flex;
@@ -1769,8 +1770,11 @@ body.map-frost .cell.path-cell {
 }
 
 .codex-btn { border-color: var(--border-subtle); }
-.wave-btn { border-color: var(--el-ice) !important; }
+.wave-btn { border-color: var(--el-ice) !important; gap: 4px; }
 .wave-btn:not(:disabled) { color: #E8F6FA; background-color: #223842; }
+.wave-btn-bonus { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.wave-btn-bonus.hidden { display: none; }
+.wave-btn .ui-ico-coin { width: 14px; height: 14px; }
 .debug-btn, .debug-btn-danger { background-color: var(--bg-grid-elevated); }
 .debug-only { display: none; }
 

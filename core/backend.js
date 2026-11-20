@@ -21,7 +21,7 @@
         STORAGE_GA_SESSION_NUM_KEY: 'merge_defense_ga_session_num',
         GAME_ANALYTICS: {
             enabled: true,
-            gameKey: 'bf0c18d1c099e8048df09a953b2df5ee'
+            proxyEndpoint: 'https://green-cake-844e.23156ymps.workers.dev'
         }
     };
 
@@ -94,11 +94,13 @@
 
     const GameAnalyticsTracker = {
         initialized: false,
+        sessionStarted: false,
         enabled: true,
-        gameKey: CLOUD_CONFIG.GAME_ANALYTICS.gameKey,
+        proxyEndpoint: CLOUD_CONFIG.GAME_ANALYTICS.proxyEndpoint,
         disabledOffline: false,
         initPromise: null,
         flushTimer: null,
+        isFlushing: false,
         tsOffsetSec: 0,
         userId: '',
         sessionId: '',
@@ -132,7 +134,7 @@
                 session_id: this.sessionId,
                 session_num: this.sessionNum,
                 client_ts: Math.floor(Date.now() / 1000) + this.tsOffsetSec,
-                sdk_version: 'local_ga_collector',
+                sdk_version: 'rest api v2',
                 os_version: this.env.osVersion,
                 manufacturer: 'unknown',
                 device: 'unknown',
@@ -140,37 +142,159 @@
             };
         },
 
-        async init() {
-            try {
-                const gaCfg = CLOUD_CONFIG.GAME_ANALYTICS || {};
-                this.gameKey = gaCfg.gameKey || '';
-                this.enabled = Boolean(gaCfg.enabled && this.gameKey);
-                this.disabledOffline = isNetworkOffline();
-                this.ensureIdentity();
-                this.initialized = true;
-                return this.enabled;
-            } catch (_) {
-                this.initialized = true;
-                this.enabled = false;
-                return false;
-            }
+        getEndpointUrl(path) {
+            const base = String(this.proxyEndpoint || '').replace(/\/+$/, '');
+            return base ? `${base}${path}` : '';
         },
 
-        enqueue(eventObj) {
+        async init() {
+            if (this.initPromise) return this.initPromise;
+            this.initPromise = (async () => {
+                try {
+                    const gaCfg = CLOUD_CONFIG.GAME_ANALYTICS || {};
+                    this.proxyEndpoint = String(gaCfg.proxyEndpoint || '').replace(/\/+$/, '');
+                    this.enabled = Boolean(gaCfg.enabled && this.proxyEndpoint);
+                    this.disabledOffline = isNetworkOffline();
+                    this.ensureIdentity();
+
+                    if (!this.enabled || this.disabledOffline) {
+                        this.initialized = true;
+                        this.sessionStarted = false;
+                        return false;
+                    }
+
+                    const initUrl = this.getEndpointUrl('/init');
+                    if (!initUrl) {
+                        this.initialized = true;
+                        this.sessionStarted = false;
+                        return false;
+                    }
+
+                    const res = await fetchWithTimeout(
+                        initUrl,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                platform: this.env.platform,
+                                os_version: this.env.osVersion,
+                                sdk_version: 'rest api v2'
+                            })
+                        },
+                        CLOUD_CONFIG.TIMEOUT_MS
+                    );
+
+                    if (!res || !res.ok) {
+                        this.initialized = true;
+                        this.sessionStarted = false;
+                        return false;
+                    }
+
+                    let data = null;
+                    try { data = await res.json(); } catch (_) {}
+
+                    if (data && data.enabled === false) {
+                        this.enabled = false;
+                        this.initialized = true;
+                        this.sessionStarted = false;
+                        return false;
+                    }
+
+                    const serverTs = Number(data && data.server_ts);
+                    if (Number.isFinite(serverTs) && serverTs > 0) {
+                        this.tsOffsetSec = Math.round(serverTs - Math.floor(Date.now() / 1000));
+                    }
+
+                    this.initialized = true;
+                    this.sessionStarted = true;
+
+                    // 開啟 GA session 並補送 init 完成前暫存的事件
+                    this.queue.unshift({
+                        ...this.buildBaseEvent(),
+                        category: 'user'
+                    });
+                    if (this.queue.length > 200) this.queue.length = 200;
+                    this.flush();
+                    return true;
+                } catch (_) {
+                    this.initialized = true;
+                    this.sessionStarted = false;
+                    return false;
+                }
+            })();
+            return this.initPromise;
+        },
+
+        scheduleFlush(delayMs = 800) {
+            try {
+                if (this.flushTimer) return;
+                this.flushTimer = setTimeout(() => {
+                    this.flushTimer = null;
+                    this.flush();
+                }, Math.max(50, delayMs));
+            } catch (_) {}
+        },
+
+        enqueue(eventObj, immediate = false) {
             try {
                 if (!this.enabled || !eventObj) return;
                 this.queue.push(eventObj);
                 if (this.queue.length > 200) this.queue.shift();
+                if (immediate) {
+                    if (this.flushTimer) {
+                        clearTimeout(this.flushTimer);
+                        this.flushTimer = null;
+                    }
+                    this.flush();
+                } else {
+                    this.scheduleFlush(800);
+                }
             } catch (_) {}
         },
 
         async flush() {
+            if (this.isFlushing) return false;
+            this.isFlushing = true;
             try {
-                if (isNetworkOffline()) return false;
-                // 純前端安全模式：不存放私密金鑰亦不直接對 GA 發送未簽章請求（避免 401 紅字），保留本機佇列與 1.5s 超時防護介面
+                if (!this.enabled || !this.proxyEndpoint || isNetworkOffline()) return false;
+                if (!this.sessionStarted) {
+                    if (this.initPromise) {
+                        await this.initPromise;
+                    }
+                    if (!this.sessionStarted) return false;
+                }
+                if (this.queue.length === 0) return true;
+
+                const eventsUrl = this.getEndpointUrl('/events');
+                if (!eventsUrl) return false;
+
+                const batch = this.queue.slice(0, 50).map((ev) => {
+                    if (!ev || typeof ev !== 'object') return ev;
+                    const copy = Object.assign({}, ev);
+                    if (!Number.isFinite(copy.client_ts)) {
+                        copy.client_ts = Math.floor(Date.now() / 1000) + this.tsOffsetSec;
+                    }
+                    return copy;
+                });
+
+                const res = await fetchWithTimeout(
+                    eventsUrl,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(batch)
+                    },
+                    CLOUD_CONFIG.TIMEOUT_MS
+                );
+
+                if (!res || !res.ok) return false;
+                this.queue.splice(0, batch.length);
+                if (this.queue.length > 0) this.scheduleFlush(300);
                 return true;
             } catch (_) {
                 return false;
+            } finally {
+                this.isFlushing = false;
             }
         },
 
@@ -183,19 +307,18 @@
                 }
                 const cleanMap = String(mapId || 'forest').replace(/[^A-Za-z0-9_.-]/g, '_');
                 const wavePad = String(Math.max(1, Number(waveNum) || 1)).padStart(2, '0');
-                const entry = {
+                const gaEvent = {
                     ...this.buildBaseEvent(),
-                    t: Date.now(),
                     category: 'progression',
                     event_id: `${status}:${cleanMap}:Wave_${wavePad}`,
                     attempt_num: 1
                 };
                 if (status !== 'Start' && Number.isFinite(score)) {
-                    entry.score = Math.round(score);
+                    gaEvent.score = Math.round(score);
                 }
-                runTelemetry.progressionLog.push(entry);
+                runTelemetry.progressionLog.push(Object.assign({ t: Date.now() }, gaEvent));
                 if (runTelemetry.progressionLog.length > 100) runTelemetry.progressionLog.shift();
-                this.enqueue(entry);
+                this.enqueue(gaEvent, status === 'Complete' || status === 'Fail');
             } catch (_) {}
         },
 
@@ -206,18 +329,18 @@
                 if (!Array.isArray(runTelemetry.designLog)) {
                     runTelemetry.designLog = [];
                 }
-                const entry = {
+                const gaEvent = {
                     ...this.buildBaseEvent(),
-                    t: Date.now(),
                     category: 'design',
                     event_id: String(eventId)
                 };
                 if (value !== null && value !== undefined && Number.isFinite(Number(value))) {
-                    entry.value = Number(value);
+                    gaEvent.value = Number(value);
                 }
-                runTelemetry.designLog.push(entry);
+                runTelemetry.designLog.push(Object.assign({ t: Date.now() }, gaEvent));
                 if (runTelemetry.designLog.length > 200) runTelemetry.designLog.shift();
-                this.enqueue(entry);
+                const isImmediate = String(eventId).startsWith('Feel:Rating:') || String(eventId).startsWith('MVP:');
+                this.enqueue(gaEvent, isImmediate);
             } catch (_) {}
         }
     };

@@ -573,7 +573,9 @@
 
             // 底部與彈窗固定鈕
             setElText('codex-btn', isEn ? 'World Tree' : '世界樹圖譜');
-            setElText('next-wave-btn', isEn ? 'Start Wave' : '立即開波');
+            const nextWaveLabelEl = document.getElementById('next-wave-label');
+            if (nextWaveLabelEl) nextWaveLabelEl.innerText = isEn ? 'Start Wave' : '立即開波';
+            else setElText('next-wave-btn', isEn ? 'Start Wave' : '立即開波');
             setElText('pause-resume-btn', isEn ? 'Resume' : '繼續');
             setElText('pause-menu-btn', isEn ? 'Change Map' : '切換地圖');
             setElText('evo-confirm-title', isEn ? 'Crown Branch Evolution' : '世界樹冠枝開花選擇');

@@ -20,277 +20,282 @@
                             d="M8 13.7C8 13.7 2.2 10 2.2 5.7A3.2 3.2 0 0 1 8 3.8a3.2 3.2 0 0 1 5.8 1.9C13.8 10 8 13.7 8 13.7Z"
                             fill="currentColor" />
                     </svg><span id="base-hp-display" class="num">20/20</span></div>
-                <div class="hud-item hud-gold" title="當前金幣"><svg class="ui-ico ui-ico-coin" viewBox="0 0 16 16"
-                        aria-hidden="true">
-                        <circle cx="8" cy="8" r="5.8" fill="none" stroke="currentColor" stroke-width="1.6" />
-                        <circle cx="8" cy="8" r="2.4" fill="currentColor" />
-                    </svg><span id="gold-display" class="num">40</span></div>
-                <div class="hud-item hud-dew" title="擊殺敵人累積靈露，用於施放世界樹主動技能">
-                        class="ui-ico ui-ico-dew" viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M8 2.2C8 2.2 3.8 7.1 3.8 10.1a4.2 4.2 0 0 0 8.4 0C12.2 7.1 8 2.2 8 2.2Z"
-                            fill="#4A9EBF" /></svg><span id="hud-dew-label">靈露</span> <span class="dew-bar-track"><span
-                                id="dew-bar-fill" class="dew-bar-fill"></span></span><span id="dew-display"
-                            class="num">20/120</span>
+                <div class="hud-item hud-gold" title="當前金幣"><span aria-hidden="true">💰</span><span id="gold-display"
+                        class="num">40</span></div>
+                    <div class="hud-item hud-dew" title="擊殺敵人累積靈露，用於施放世界樹主動技能"><svg class="ui-ico ui-ico-dew"
+                            viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M8 2.2C8 2.2 3.8 7.1 3.8 10.1a4.2 4.2 0 0 0 8.4 0C12.2 7.1 8 2.2 8 2.2Z"
+                                fill="#4A9EBF" />
+                        </svg><span id="hud-dew-label">靈露</span> <span class="dew-bar-track"><span id="dew-bar-fill"
+                                class="dew-bar-fill"></span></span><span id="dew-display" class="num">20/120</span>
+                    </div>
+                    <div class="hud-item hud-wave">
+                        <span id="wave-display" class="num">Wave 1 / 10</span>
+                        <span id="wave-phase-tag" class="wave-phase-tag num">等待開始</span>
+                    </div>
+                    <div class="hud-item hud-best" title="本圖最高紀錄"><span id="hud-best-label">最高</span> <span
+                            id="best-wave-display" class="num">W1</span>
+                    </div>
                 </div>
-                <div class="hud-item hud-wave">
-                    <span id="wave-display" class="num">Wave 1 / 10</span>
-                    <span id="wave-phase-tag" class="wave-phase-tag num">等待開始</span>
-                </div>
-                <div class="hud-item hud-best" title="本圖最高紀錄"><span id="hud-best-label">最高</span> <span id="best-wave-display" class="num">W1</span>
-                </div>
-            </div>
-            <div class="hud-actions">
-                <button id="speed-btn" class="hud-ctrl-btn speed-btn num" type="button"
-                    title="切換遊戲倍速 [Tab/S]">1x</button>
-                <button id="pause-btn" class="hud-ctrl-btn hud-pause-btn" type="button" disabled
-                    title="暫停或繼續 [Space]">暫停</button>
-                <button id="sound-btn" class="hud-ctrl-btn hud-sound-btn" type="button" title="切換音效">音效</button>
-                <button id="help-btn" class="hud-ctrl-btn hud-help-btn" type="button" aria-expanded="false"
-                aria-label="開啟戰術手冊" title="開啟戰術手冊與屬性地形速查"><svg class="ui-ico ui-ico-help" viewBox="0 0 16 16"
-                    aria-hidden="true">
-                    <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5" />
-                    <path d="M6.3 6.2a1.8 1.8 0 1 1 2.5 1.7c-.6.3-.8.7-.8 1.3v.3M8 11.8v.2" fill="none"
-                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-                </svg></button>
-                <div class="lang-dropdown" id="lang-dropdown">
-                    <button id="lang-btn" class="hud-ctrl-btn hud-lang-btn" type="button" aria-haspopup="true"
-                        aria-expanded="false" title="切換語言 / Switch Language">
-                        <svg class="lang-globe-icon" viewBox="0 0 16 16" aria-hidden="true">
-                            <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.3" />
-                            <ellipse cx="8" cy="8" rx="2.8" ry="6.2" fill="none" stroke="currentColor"
-                                stroke-width="1.2" />
-                            <line x1="2.2" y1="8" x2="13.8" y2="8" stroke="currentColor" stroke-width="1.2" />
-                        </svg>
-                        <span>Language ▾</span>
-                    </button>
-                    <div id="lang-menu" class="lang-menu hidden" role="menu" aria-labelledby="lang-btn">
-                        <button type="button" class="lang-option is-active" data-lang="zh-TW" role="menuitemradio"
-                            aria-checked="true">
-                            <span>繁體中文</span>
-                            <span class="lang-check" aria-hidden="true">✓</span>
+                <div class="hud-actions">
+                    <button id="speed-btn" class="hud-ctrl-btn speed-btn num" type="button"
+                        title="切換遊戲倍速 [Tab/S]">1x</button>
+                    <button id="pause-btn" class="hud-ctrl-btn hud-pause-btn" type="button" disabled
+                        title="暫停或繼續 [Space]">暫停</button>
+                    <button id="sound-btn" class="hud-ctrl-btn hud-sound-btn" type="button" title="切換音效">音效</button>
+                    <button id="help-btn" class="hud-ctrl-btn hud-help-btn" type="button" aria-expanded="false"
+                        aria-label="開啟戰術手冊" title="開啟戰術手冊與屬性地形速查"><svg class="ui-ico ui-ico-help" viewBox="0 0 16 16"
+                            aria-hidden="true">
+                            <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5" />
+                            <path d="M6.3 6.2a1.8 1.8 0 1 1 2.5 1.7c-.6.3-.8.7-.8 1.3v.3M8 11.8v.2" fill="none"
+                                stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        </svg></button>
+                    <div class="lang-dropdown" id="lang-dropdown">
+                        <button id="lang-btn" class="hud-ctrl-btn hud-lang-btn" type="button" aria-haspopup="true"
+                            aria-expanded="false" title="切換語言 / Switch Language">
+                            <svg class="lang-globe-icon" viewBox="0 0 16 16" aria-hidden="true">
+                                <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.3" />
+                                <ellipse cx="8" cy="8" rx="2.8" ry="6.2" fill="none" stroke="currentColor"
+                                    stroke-width="1.2" />
+                                <line x1="2.2" y1="8" x2="13.8" y2="8" stroke="currentColor" stroke-width="1.2" />
+                            </svg>
+                            <span>Language ▾</span>
                         </button>
-                        <button type="button" class="lang-option" data-lang="en" role="menuitemradio"
-                            aria-checked="false">
-                            <span>English</span>
-                            <span class="lang-check" aria-hidden="true">✓</span>
+                        <div id="lang-menu" class="lang-menu hidden" role="menu" aria-labelledby="lang-btn">
+                            <button type="button" class="lang-option is-active" data-lang="zh-TW" role="menuitemradio"
+                                aria-checked="true">
+                                <span>繁體中文</span>
+                                <span class="lang-check" aria-hidden="true">✓</span>
+                            </button>
+                            <button type="button" class="lang-option" data-lang="en" role="menuitemradio"
+                                aria-checked="false">
+                                <span>English</span>
+                                <span class="lang-check" aria-hidden="true">✓</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 頂部 HUD 下方收折標籤列（備戰展開預告、開波自動收折；暫停時顯示不遮擋戰場之輕量提示條） -->
+            <div id="hud-sub-slot" class="hud-sub-slot">
+                <div id="wave-forecast-bar" class="wave-forecast-bar">
+                    <div class="forecast-bar-main">
+                        <button id="forecast-toggle-btn" class="forecast-toggle-btn" type="button"
+                            aria-expanded="false">
+                            <span id="forecast-bar-title" class="num">下波預告 · Wave 1</span>
+                            <span id="forecast-toggle-indicator" class="forecast-chevron">▾</span>
                         </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 頂部 HUD 下方收折標籤列（備戰展開預告、開波自動收折；暫停時顯示不遮擋戰場之輕量提示條） -->
-        <div id="hud-sub-slot" class="hud-sub-slot">
-            <div id="wave-forecast-bar" class="wave-forecast-bar">
-                <div class="forecast-bar-main">
-                    <button id="forecast-toggle-btn" class="forecast-toggle-btn" type="button" aria-expanded="false">
-                        <span id="forecast-bar-title" class="num">下波預告 · Wave 1</span>
-                        <span id="forecast-toggle-indicator" class="forecast-chevron">▾</span>
-                    </button>
-                    <div id="forecast-inline-summary" class="forecast-inline-summary"></div>
-                    <div id="info-legend" class="info-legend-inline">
-                        <span><svg class="ui-ico ui-ico-fire" viewBox="0 0 16 16" aria-hidden="true">
-                                <path
-                                    d="M8.4 1.8c.4 2.4 3.4 4.1 3.4 7.4a3.8 3.8 0 0 1-7.6 0c0-1.9 1-3.3 2.1-4.3.2 1.2 1 1.8 1.6 2-.3-1.8.1-3.5.5-5.1Z"
-                                    fill="#C94A38" />
-                            </svg><span class="legend-text">火 ▸ 蔓藤</span></span>
-                        <span><svg class="ui-ico ui-ico-ice" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M8 1.8v12.4M2.6 4.9l10.8 6.2M13.4 4.9L2.6 11.1" stroke="#4A9EBF"
-                                    stroke-width="1.6" stroke-linecap="round" />
-                            </svg><span class="legend-text">冰 ▸ 熔岩</span></span>
-                        <span><svg class="ui-ico ui-ico-thunder" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M9.4 1.8L3.8 9h4l-1.2 5.2L12.2 7H8.2l1.2-5.2Z" fill="#E0B43C" />
-                            </svg><span class="legend-text">雷 ▸ 機械</span></span>
-                    </div>
-                </div>
-                <div id="forecast-detail-drawer" class="forecast-detail-drawer">
-                    <div class="forecast-detail-col">
-                        <span id="forecast-current-header" class="forecast-col-title num">本波情報 · Wave 1</span>
-                        <ul id="forecast-current-list" class="forecast-list"></ul>
-                    </div>
-                    <div class="forecast-detail-col">
-                        <span id="forecast-next-header" class="forecast-col-title num">下波預告 · Wave 2</span>
-                        <ul id="forecast-next-list" class="forecast-list"></ul>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pause-banner" class="pause-banner hidden" role="status" aria-live="polite">
-                <span class="pause-banner-text">遊戲已暫停 — 點擊繼續或按 [Space] 恢復</span>
-                <div class="pause-banner-actions">
-                    <button id="pause-resume-btn" class="pause-banner-btn pause-resume-btn" type="button">繼續</button>
-                    <button id="pause-menu-btn" class="pause-banner-btn pause-menu-btn" type="button">切換地圖</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 桌面寬螢幕兩側石板資訊欄 + 中央 15x10 戰場舞台 -->
-        <div class="battlefield-row">
-            <aside id="side-panel-left" class="side-panel side-panel-left" aria-label="元素相剋與地形加成速查">
-                <div class="side-panel-section">
-                    <h2 class="side-panel-title">元素相剋速查</h2>
-                    <ul class="side-panel-list">
-                                class="side-panel-row"><span><svg class="ui-ico ui-ico-fire" viewBox="0 0 16 16"
-                                        aria-hidden="true">
-                                        <path
-                                            d="M8.4 1.8c.4 2.4 3.4 4.1 3.4 7.4a3.8 3.8 0 0 1-7.6 0c0-1.9 1-3.3 2.1-4.3.2 1.2 1 1.8 1.6 2-.3-1.8.1-3.5.5-5.1Z"
-                                            fill="#C94A38" />
-                                    </svg><span class="el-counter-text">火 ▸ 蔓藤 / 史萊姆</span></span><span
-                                    class="side-val num">175%</span></li>
-                        <li class="side-panel-row"><span><svg class="ui-ico ui-ico-ice" viewBox="0 0 16 16"
-                                    aria-hidden="true">
+                        <div id="forecast-inline-summary" class="forecast-inline-summary"></div>
+                        <div id="info-legend" class="info-legend-inline">
+                            <span><svg class="ui-ico ui-ico-fire" viewBox="0 0 16 16" aria-hidden="true">
+                                    <path
+                                        d="M8.4 1.8c.4 2.4 3.4 4.1 3.4 7.4a3.8 3.8 0 0 1-7.6 0c0-1.9 1-3.3 2.1-4.3.2 1.2 1 1.8 1.6 2-.3-1.8.1-3.5.5-5.1Z"
+                                        fill="#C94A38" />
+                                </svg><span class="legend-text">火 ▸ 蔓藤</span></span>
+                            <span><svg class="ui-ico ui-ico-ice" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M8 1.8v12.4M2.6 4.9l10.8 6.2M13.4 4.9L2.6 11.1" stroke="#4A9EBF"
                                         stroke-width="1.6" stroke-linecap="round" />
-                                </svg><span class="el-counter-text">冰 ▸ 熔岩 / 獵犬</span></span><span
-                                class="side-val num">175%</span>
-                        </li>
-                        <li class="side-panel-row"><span><svg class="ui-ico ui-ico-thunder" viewBox="0 0 16 16"
-                                    aria-hidden="true">
+                                </svg><span class="legend-text">冰 ▸ 熔岩</span></span>
+                            <span><svg class="ui-ico ui-ico-thunder" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M9.4 1.8L3.8 9h4l-1.2 5.2L12.2 7H8.2l1.2-5.2Z" fill="#E0B43C" />
-                                </svg><span class="el-counter-text">雷 ▸ 飛艇 / 魔像</span></span><span
-                                class="side-val num">175%</span>
-                        </li>
-                        <li class="side-panel-row"><span><span class="el-counter-text">✨ 轉職 ▸ 親和弱點</span></span><span
-                                class="side-val num">135%</span>
-                        </li>
-                    </ul>
-                </div>
-                <div class="side-panel-section">
-                    <h2 class="side-panel-title">戰術地形加成</h2>
-                    <ul class="side-panel-list">
-                        <li class="side-panel-row side-terrain-row"><span class="terrain-swatch swatch-highground"
-                                aria-hidden="true"></span><span>制高點</span><span class="side-val num">射程 +30%</span>
-                        </li>
-                        <li class="side-panel-row side-terrain-row"><span class="terrain-swatch swatch-mana"
-                                aria-hidden="true"></span><span>元素靈脈</span><span class="side-val num">攻速 +25%</span>
-                        </li>
-                        <li class="side-panel-row side-terrain-row"><span class="terrain-swatch swatch-tree"
-                                aria-hidden="true"></span><span>世界樹庇護</span><span class="side-val num">傷 +20%</span>
-                        </li>
-                    </ul>
-                </div>
-                <div class="side-panel-section">
-                    <h2 class="side-panel-title">轉職與升星</h2>
-                    <ul class="side-panel-list">
-                        <li class="side-panel-row"><span>異系 1★ + 1★</span><span class="side-val num">轉職 1★</span>
-                        </li>
-                        <li class="side-panel-row"><span>同種 / 灌注 1★</span><span class="side-val num">升星 2★</span>
-                        </li>
-                        <li class="side-panel-row"><span>同種 2★ + 2★</span><span class="side-val num">冠枝 3★</span>
-                        </li>
-                    </ul>
-                </div>
-            </aside>
-
-            <!-- 15x10 戰場舞台容器（80% 視覺重心） -->
-            <div id="board-stage">
-                <div id="grid-board"></div>
-                <div id="range-layer" aria-hidden="true">
-                    <div id="range-circle"></div>
-                </div>
-                <canvas id="fx-canvas" aria-hidden="true"></canvas>
-                <div id="monster-layer" aria-hidden="true"></div>
-                <div id="floating-layer" aria-hidden="true"></div>
-                <!-- 特殊地形與防禦塔原位輕量浮動名牌 -->
-                <div id="terrain-tooltip" class="terrain-tooltip hidden" role="status" aria-live="polite"></div>
-                <div id="tower-tooltip" class="tower-tooltip hidden" role="status" aria-live="polite"></div>
-                <div id="mobile-monster-card" class="mobile-monster-card hidden" role="status" aria-live="polite"></div>
-                <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite">
-                    <div class="boss-banner-top">
-                        <span id="boss-banner-title">終極魔王</span>
-                        <span id="boss-banner-hp-text" class="num">0 / 0</span>
-                    </div>
-                    <div class="boss-banner-hp-track">
-                        <div id="boss-banner-hp-fill" class="boss-banner-hp-fill"></div>
-                    </div>
-                </div>
-                <!-- 0.15x 子彈時間 T2 -> T3 進化分岔選擇與確認輪盤 -->
-                <div id="evo-confirm-overlay" class="evo-confirm-overlay hidden" role="dialog" aria-modal="true"
-                    aria-labelledby="evo-confirm-title">
-                    <div class="evo-confirm-panel">
-                        <div class="evo-confirm-header">
-                            <span id="evo-confirm-title" class="evo-confirm-title">世界樹冠枝開花選擇</span>
-                            <span id="evo-bullet-tag" class="evo-bullet-tag num">0.15x 子彈時間</span>
+                                </svg><span class="legend-text">雷 ▸ 機械</span></span>
                         </div>
-                        <div id="evo-confirm-options" class="evo-confirm-options"></div>
-                        <div class="evo-confirm-footer">
-                            <button id="evo-cancel-btn" class="evo-cancel-btn" type="button">取消退回原位 [Esc]</button>
+                    </div>
+                    <div id="forecast-detail-drawer" class="forecast-detail-drawer">
+                        <div class="forecast-detail-col">
+                            <span id="forecast-current-header" class="forecast-col-title num">本波情報 · Wave 1</span>
+                            <ul id="forecast-current-list" class="forecast-list"></ul>
+                        </div>
+                        <div class="forecast-detail-col">
+                            <span id="forecast-next-header" class="forecast-col-title num">下波預告 · Wave 2</span>
+                            <ul id="forecast-next-list" class="forecast-list"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="pause-banner" class="pause-banner hidden" role="status" aria-live="polite">
+                    <span class="pause-banner-text">遊戲已暫停 — 點擊繼續或按 [Space] 恢復</span>
+                    <div class="pause-banner-actions">
+                        <button id="pause-resume-btn" class="pause-banner-btn pause-resume-btn"
+                            type="button">繼續</button>
+                        <button id="pause-menu-btn" class="pause-banner-btn pause-menu-btn" type="button">切換地圖</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 桌面寬螢幕兩側石板資訊欄 + 中央 15x10 戰場舞台 -->
+            <div class="battlefield-row">
+                <aside id="side-panel-left" class="side-panel side-panel-left" aria-label="元素相剋與地形加成速查">
+                    <div class="side-panel-section">
+                        <h2 class="side-panel-title">元素相剋速查</h2>
+                        <ul class="side-panel-list">
+                            <li class="side-panel-row"><span><svg class="ui-ico ui-ico-fire" viewBox="0 0 16 16"
+                                            aria-hidden="true">
+                                            <path
+                                                d="M8.4 1.8c.4 2.4 3.4 4.1 3.4 7.4a3.8 3.8 0 0 1-7.6 0c0-1.9 1-3.3 2.1-4.3.2 1.2 1 1.8 1.6 2-.3-1.8.1-3.5.5-5.1Z"
+                                                fill="#C94A38" />
+                                        </svg><span class="el-counter-text">火 ▸ 蔓藤 / 史萊姆</span></span><span
+                                        class="side-val num">175%</span></li>
+                                    <li class="side-panel-row"><span><svg class="ui-ico ui-ico-ice" viewBox="0 0 16 16"
+                                                aria-hidden="true">
+                                                <path d="M8 1.8v12.4M2.6 4.9l10.8 6.2M13.4 4.9L2.6 11.1"
+                                                    stroke="#4A9EBF" stroke-width="1.6" stroke-linecap="round" />
+                                            </svg><span class="el-counter-text">冰 ▸ 熔岩 / 獵犬</span></span><span
+                                            class="side-val num">175%</span>
+                                    </li>
+                                    <li class="side-panel-row"><span><svg class="ui-ico ui-ico-thunder"
+                                                viewBox="0 0 16 16" aria-hidden="true">
+                                                <path d="M9.4 1.8L3.8 9h4l-1.2 5.2L12.2 7H8.2l1.2-5.2Z"
+                                                    fill="#E0B43C" />
+                                            </svg><span class="el-counter-text">雷 ▸ 飛艇 / 魔像</span></span><span
+                                            class="side-val num">175%</span>
+                                    </li>
+                                    <li class="side-panel-row"><span><span class="el-counter-text">✨ 轉職 ▸
+                                                親和弱點</span></span><span class="side-val num">135%</span>
+                                    </li>
+                        </ul>
+                    </div>
+                    <div class="side-panel-section">
+                        <h2 class="side-panel-title">戰術地形加成</h2>
+                        <ul class="side-panel-list">
+                            <li class="side-panel-row side-terrain-row"><span class="terrain-swatch swatch-highground"
+                                    aria-hidden="true"></span><span>制高點</span><span class="side-val num">射程 +30%</span>
+                            </li>
+                            <li class="side-panel-row side-terrain-row"><span class="terrain-swatch swatch-mana"
+                                    aria-hidden="true"></span><span>元素靈脈</span><span class="side-val num">攻速 +25%</span>
+                            </li>
+                            <li class="side-panel-row side-terrain-row"><span class="terrain-swatch swatch-tree"
+                                    aria-hidden="true"></span><span>世界樹庇護</span><span class="side-val num">傷 +20%</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="side-panel-section">
+                        <h2 class="side-panel-title">轉職與升星</h2>
+                        <ul class="side-panel-list">
+                            <li class="side-panel-row"><span>異系 1★ + 1★</span><span class="side-val num">轉職 1★</span>
+                            </li>
+                            <li class="side-panel-row"><span>同種 / 灌注 1★</span><span class="side-val num">升星 2★</span>
+                            </li>
+                            <li class="side-panel-row"><span>同種 2★ + 2★</span><span class="side-val num">冠枝 3★</span>
+                            </li>
+                        </ul>
+                    </div>
+                </aside>
+
+                <!-- 15x10 戰場舞台容器（80% 視覺重心） -->
+                <div id="board-stage">
+                    <div id="grid-board"></div>
+                    <div id="range-layer" aria-hidden="true">
+                        <div id="range-circle"></div>
+                    </div>
+                    <canvas id="fx-canvas" aria-hidden="true"></canvas>
+                    <div id="monster-layer" aria-hidden="true"></div>
+                    <div id="floating-layer" aria-hidden="true"></div>
+                    <!-- 特殊地形與防禦塔原位輕量浮動名牌 -->
+                    <div id="terrain-tooltip" class="terrain-tooltip hidden" role="status" aria-live="polite"></div>
+                    <div id="tower-tooltip" class="tower-tooltip hidden" role="status" aria-live="polite"></div>
+                    <div id="mobile-monster-card" class="mobile-monster-card hidden" role="status" aria-live="polite">
+                    </div>
+                    <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite">
+                        <div class="boss-banner-top">
+                            <span id="boss-banner-title">終極魔王</span>
+                            <span id="boss-banner-hp-text" class="num">0 / 0</span>
+                        </div>
+                        <div class="boss-banner-hp-track">
+                            <div id="boss-banner-hp-fill" class="boss-banner-hp-fill"></div>
+                        </div>
+                    </div>
+                    <!-- 0.15x 子彈時間 T2 -> T3 進化分岔選擇與確認輪盤 -->
+                    <div id="evo-confirm-overlay" class="evo-confirm-overlay hidden" role="dialog" aria-modal="true"
+                        aria-labelledby="evo-confirm-title">
+                        <div class="evo-confirm-panel">
+                            <div class="evo-confirm-header">
+                                <span id="evo-confirm-title" class="evo-confirm-title">世界樹冠枝開花選擇</span>
+                                <span id="evo-bullet-tag" class="evo-bullet-tag num">0.15x 子彈時間</span>
+                            </div>
+                            <div id="evo-confirm-options" class="evo-confirm-options"></div>
+                            <div class="evo-confirm-footer">
+                                <button id="evo-cancel-btn" class="evo-cancel-btn" type="button">取消退回原位 [Esc]</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <aside id="side-panel-right" class="side-panel side-panel-right" aria-label="本波與下波出怪詳情">
+                    <div id="side-monster-card" class="side-panel-section side-monster-card hidden" aria-live="polite">
+                        <div class="smc-title-bar">
+                            <h2 class="side-panel-title">目標敵軍情報</h2>
+                            <span id="side-monster-lock-tag" class="smc-lock-tag num hidden">鎖定檢視</span>
+                        </div>
+                        <div id="side-monster-lock-track" class="smc-lock-track hidden" aria-hidden="true">
+                            <div id="side-monster-lock-fill" class="smc-lock-fill"></div>
+                        </div>
+                        <div class="smc-header">
+                            <canvas id="side-monster-portrait" class="smc-portrait" width="44" height="44"
+                                data-size="44" aria-hidden="true"></canvas>
+                            <div class="smc-title-wrap">
+                                <div id="side-monster-name" class="smc-name"></div>
+                                <div id="side-monster-hp" class="smc-hp num"></div>
+                            </div>
+                        </div>
+                        <div id="side-monster-shield" class="smc-shield num hidden"></div>
+                        <div id="side-monster-stats" class="smc-stats num"></div>
+                        <div id="side-monster-debuffs" class="smc-debuffs num hidden"></div>
+                        <div id="side-monster-trait" class="smc-trait"></div>
+                    </div>
+                    <div id="side-wave-current-section" class="side-panel-section">
+                        <h2 id="side-current-header" class="side-panel-title num">本波情報 · Wave 1</h2>
+                        <ul id="side-current-list" class="forecast-list"></ul>
+                    </div>
+                    <div class="side-panel-section">
+                        <h2 id="side-next-header" class="side-panel-title num">下波預告 · Wave 2</h2>
+                        <ul id="side-next-list" class="forecast-list"></ul>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- 固定式防禦塔檢查列（上排：名稱＋血脈成長路徑；下排：單體/群傷DPS、累計傷害、索敵模式、出售） -->
+            <div id="tower-inspector" aria-live="polite">
+                <div id="inspector-empty" class="inspector-empty">
+                    點選場上防禦塔或敵軍以檢視屬性與切換索敵
+                </div>
+                <div id="inspector-active" class="inspector-active hidden">
+                    <div class="inspector-top-row">
+                        <span id="inspector-name" class="inspector-badge">🔥 火芽 ★</span>
+                        <span id="inspector-lineage" class="inspector-lineage">🔥 火芽</span>
+                        <span id="inspector-terrain" class="inspector-terrain hidden"></span>
+                    </div>
+                    <div class="inspector-bottom-row">
+                        <div class="inspector-metrics">
+                            <span id="inspector-dps" class="inspector-stat num">單體 DPS 21</span>
+                            <span id="inspector-aoe-dps" class="inspector-stat inspector-aoe num hidden">預估群傷 DPS
+                                0</span>
+                            <span id="inspector-total-dmg" class="inspector-stat num">累計傷害 0</span>
+                            <span id="inspector-range" class="inspector-stat num">射程 2.3</span>
+                        </div>
+                        <div class="inspector-actions">
+                            <button id="inspector-awaken-btn" class="inspector-btn awaken-btn num hidden"
+                                type="button">👑
+                                type="button"><svg class="ui-ico ui-ico-crown" viewBox="0 0 16 16" aria-hidden="true">
+                                    <path d="M2.2 12.2L3.3 5.2l3 2.7L8 3.8l1.7 4.1 3-2.7 1.1 7H2.2Z"
+                                        fill="currentColor" />
+                                </svg><span id="inspector-awaken-text">聖冠覺醒 (220 / 60)</span></button>
+                            <button id="inspector-target-btn" class="inspector-btn target-btn"
+                                type="button">索敵：最前</button>
+                            <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7
+                                💰)</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <aside id="side-panel-right" class="side-panel side-panel-right" aria-label="本波與下波出怪詳情">
-                <div id="side-monster-card" class="side-panel-section side-monster-card hidden" aria-live="polite">
-                    <div class="smc-title-bar">
-                        <h2 class="side-panel-title">目標敵軍情報</h2>
-                        <span id="side-monster-lock-tag" class="smc-lock-tag num hidden">鎖定檢視</span>
-                    </div>
-                    <div id="side-monster-lock-track" class="smc-lock-track hidden" aria-hidden="true">
-                        <div id="side-monster-lock-fill" class="smc-lock-fill"></div>
-                    </div>
-                    <div class="smc-header">
-                        <canvas id="side-monster-portrait" class="smc-portrait" width="44" height="44" data-size="44"
-                            aria-hidden="true"></canvas>
-                        <div class="smc-title-wrap">
-                            <div id="side-monster-name" class="smc-name"></div>
-                            <div id="side-monster-hp" class="smc-hp num"></div>
-                        </div>
-                    </div>
-                    <div id="side-monster-shield" class="smc-shield num hidden"></div>
-                    <div id="side-monster-stats" class="smc-stats num"></div>
-                    <div id="side-monster-debuffs" class="smc-debuffs num hidden"></div>
-                    <div id="side-monster-trait" class="smc-trait"></div>
-                </div>
-                <div id="side-wave-current-section" class="side-panel-section">
-                    <h2 id="side-current-header" class="side-panel-title num">本波情報 · Wave 1</h2>
-                    <ul id="side-current-list" class="forecast-list"></ul>
-                </div>
-                <div class="side-panel-section">
-                    <h2 id="side-next-header" class="side-panel-title num">下波預告 · Wave 2</h2>
-                    <ul id="side-next-list" class="forecast-list"></ul>
-                </div>
-            </aside>
-        </div>
+            <!-- 精簡底部操作區：左側元素召喚卡 ＋ 右側世界樹主動技能與快捷功能列 -->
+            <div class="bottom-action-deck">
+                <!-- 屬性等寬拖拉式指定召喚控制區（由 Object.keys 動態掃描生成） -->
+                <div id="element-spawner-container"></div>
 
-        <!-- 固定式防禦塔檢查列（上排：名稱＋血脈成長路徑；下排：單體/群傷DPS、累計傷害、索敵模式、出售） -->
-        <div id="tower-inspector" aria-live="polite">
-            <div id="inspector-empty" class="inspector-empty">
-                點選場上防禦塔或敵軍以檢視屬性與切換索敵
-            </div>
-            <div id="inspector-active" class="inspector-active hidden">
-                <div class="inspector-top-row">
-                    <span id="inspector-name" class="inspector-badge">🔥 火芽 ★</span>
-                    <span id="inspector-lineage" class="inspector-lineage">🔥 火芽</span>
-                    <span id="inspector-terrain" class="inspector-terrain hidden"></span>
-                </div>
-                <div class="inspector-bottom-row">
-                    <div class="inspector-metrics">
-                        <span id="inspector-dps" class="inspector-stat num">單體 DPS 21</span>
-                        <span id="inspector-aoe-dps" class="inspector-stat inspector-aoe num hidden">預估群傷 DPS
-                            0</span>
-                        <span id="inspector-total-dmg" class="inspector-stat num">累計傷害 0</span>
-                        <span id="inspector-range" class="inspector-stat num">射程 2.3</span>
-                    </div>
-                    <div class="inspector-actions">
-                        <button id="inspector-awaken-btn" class="inspector-btn awaken-btn num hidden" type="button">👑
-                        type="button"><svg class="ui-ico ui-ico-crown" viewBox="0 0 16 16" aria-hidden="true">
-                            <path d="M2.2 12.2L3.3 5.2l3 2.7L8 3.8l1.7 4.1 3-2.7 1.1 7H2.2Z" fill="currentColor" />
-                        </svg><span id="inspector-awaken-text">聖冠覺醒 (220 / 60)</span></button>
-                        <button id="inspector-target-btn" class="inspector-btn target-btn" type="button">索敵：最前</button>
-                        <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7
-                            💰)</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 精簡底部操作區：左側元素召喚卡 ＋ 右側世界樹主動技能與快捷功能列 -->
-        <div class="bottom-action-deck">
-            <!-- 屬性等寬拖拉式指定召喚控制區（由 Object.keys 動態掃描生成） -->
-            <div id="element-spawner-container"></div>
-
-            <!-- 主動技能、圖鑑與開波等寬工具列 -->
+                <!-- 主動技能、圖鑑與開波等寬工具列 -->
                 <div class="action-controls">
                     <button id="skill-entangle-btn" class="skill-btn skill-entangle" type="button"
                         title="消耗 40 靈露：全場敵人定身 2.5 秒且易傷 +20%（冷卻 8 秒）">
@@ -307,7 +312,7 @@
                         <span class="skill-sub num">還差 40 靈露</span>
                     </button>
                     <button id="codex-btn" class="codex-btn" type="button">世界樹圖譜</button>
-                    <button id="next-wave-btn" class="wave-btn" type="button" disabled>立即開波</button>
+                    <button id="next-wave-btn" class="wave-btn" type="button" disabled><span id="next-wave-label">立即開波</span><span id="next-wave-bonus" class="wave-btn-bonus num hidden"></span></button>
                     <button id="add-gold-btn" class="debug-btn debug-only" type="button">+500 💰</button>
                     <button id="clear-gold-btn" class="debug-btn-danger debug-only" type="button">清空金幣</button>
                 </div>
@@ -535,120 +540,120 @@
                 <div id="victory-contracts-row" class="recap-contracts num hidden"></div>
             </div>
 
-                <!-- 試玩 5 秒主觀體感快評列 ＋ 單局黑盒子戰報複製（預設收納於右上角切換鈕） -->
-                <div id="victory-feedback-box" class="feel-feedback-box hidden">
-                    <div class="feel-rating-header">5 秒試玩體感快評</div>
-                    <div class="feel-rating-bar">
-                        <button type="button" class="feel-rating-btn" data-rating-tag="🔥 爽快好玩">🔥 爽快好玩</button>
-                        <button type="button" class="feel-rating-btn" data-rating-tag="😴 中間有點無聊">😴 中間有點無聊</button>
-                        <button type="button" class="feel-rating-btn" data-rating-tag="🤯 難度太高卡關">🤯 難度太高卡關</button>
-                        <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">🖐️ 拖拉操作卡手</button>
-                    </div>
-                    <div id="victory-rating-status" class="feel-rating-status">點擊上方標籤一鍵回饋本局體感</div>
-                    <button id="victory-copy-report-btn" class="copy-report-btn" type="button">複製本局數據戰報</button>
+            <!-- 試玩 5 秒主觀體感快評列 ＋ 單局黑盒子戰報複製（預設收納於右上角切換鈕） -->
+            <div id="victory-feedback-box" class="feel-feedback-box hidden">
+                <div class="feel-rating-header">5 秒試玩體感快評</div>
+                <div class="feel-rating-bar">
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🔥 爽快好玩">🔥 爽快好玩</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="😴 中間有點無聊">😴 中間有點無聊</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🤯 難度太高卡關">🤯 難度太高卡關</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">🖐️ 拖拉操作卡手</button>
                 </div>
+                <div id="victory-rating-status" class="feel-rating-status">點擊上方標籤一鍵回饋本局體感</div>
+                <button id="victory-copy-report-btn" class="copy-report-btn" type="button">複製本局數據戰報</button>
+            </div>
 
-                <div class="modal-actions">
-                    <button id="victory-restart-btn" class="primary-cta-btn" type="button">重新開始</button>
-                    <button id="endless-btn" class="secondary-cta-btn" type="button">繼續無盡挑戰</button>
-                    <button id="victory-menu-btn" class="menu-return-btn" type="button">切換地圖 / 主選單</button>
-                </div>
+            <div class="modal-actions">
+                <button id="victory-restart-btn" class="primary-cta-btn" type="button">重新開始</button>
+                <button id="endless-btn" class="secondary-cta-btn" type="button">繼續無盡挑戰</button>
+                <button id="victory-menu-btn" class="menu-return-btn" type="button">切換地圖 / 主選單</button>
             </div>
         </div>
+    </div>
 
-        <!-- Game Over 結算遮罩 -->
-        <div id="game-over-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true"
-            aria-labelledby="game-over-title">
-            <div class="modal-card gameover-card">
-                <div class="outcome-corner-bar">
-                    <button id="gameover-feedback-toggle" class="feedback-toggle-btn" type="button"
-                        aria-expanded="false">戰報與回饋</button>
+    <!-- Game Over 結算遮罩 -->
+    <div id="game-over-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true"
+        aria-labelledby="game-over-title">
+        <div class="modal-card gameover-card">
+            <div class="outcome-corner-bar">
+                <button id="gameover-feedback-toggle" class="feedback-toggle-btn" type="button"
+                    aria-expanded="false">戰報與回饋</button>
+            </div>
+            <h1 id="game-over-title" class="gameover-title">防線失守</h1>
+            <p class="modal-subtitle">世界樹生命枯竭，本局戰役結束。</p>
+            <div class="modal-stats">
+                <div class="stat-row">
+                    <span>戰場地圖</span>
+                    <strong id="gameover-map-text">晨光森林</strong>
                 </div>
-                <h1 id="game-over-title" class="gameover-title">防線失守</h1>
-                <p class="modal-subtitle">世界樹生命枯竭，本局戰役結束。</p>
-                <div class="modal-stats">
-                    <div class="stat-row">
-                        <span>戰場地圖</span>
-                        <strong id="gameover-map-text">晨光森林</strong>
-                    </div>
-                    <div class="stat-row">
-                        <span>抵達波數</span>
-                        <strong id="final-wave-text" class="num">Wave 1 / 10</strong>
-                    </div>
-                    <div class="stat-row">
-                        <span>歷史最高紀錄</span>
-                        <strong id="final-best-text" class="num">Wave 1</strong>
-                    </div>
+                <div class="stat-row">
+                    <span>抵達波數</span>
+                    <strong id="final-wave-text" class="num">Wave 1 / 10</strong>
                 </div>
-
-                <div class="battle-recap">
-                    <div class="recap-title">本局數據戰報</div>
-                    <div class="recap-mvp-box">
-                        <span class="recap-mvp-label">本局 MVP 砲塔</span>
-                        <strong id="gameover-mvp-text" class="recap-mvp-val">尚無輸出紀錄</strong>
-                    </div>
-                    <div class="recap-grid">
-                        <div class="recap-cell"><span>總擊殺數</span><strong id="final-kills-text" class="num">0 隻</strong>
-                        </div>
-                        <div class="recap-cell"><span>累計獲得金幣</span><strong id="gameover-gold-earned-text" class="num">0
-                                💰</strong></div>
-                        <div class="recap-cell"><span>合成融合次數</span><strong id="gameover-fusion-text" class="num">0
-                                次</strong></div>
-                    </div>
-                    <div id="gameover-breaker-row" class="recap-breaker hidden">
-                        <span>致命突破敵人</span>
-                        <strong id="gameover-breaker-text">—</strong>
-                    </div>
-                    <div id="gameover-contracts-row" class="recap-contracts num hidden"></div>
-                </div>
-
-                <div id="new-record-badge" class="new-record-badge hidden">刷新歷史最高波數紀錄</div>
-
-                    <!-- 試玩 5 秒主觀體感快評列 ＋ 單局黑盒子戰報複製（預設收納於右上角切換鈕） -->
-                    <div id="gameover-feedback-box" class="feel-feedback-box hidden">
-                        <div class="feel-rating-header">5 秒試玩體感快評</div>
-                        <div class="feel-rating-bar">
-                            <button type="button" class="feel-rating-btn" data-rating-tag="🔥 爽快好玩">🔥 爽快好玩</button>
-                            <button type="button" class="feel-rating-btn" data-rating-tag="😴 中間有點無聊">😴 中間有點無聊</button>
-                            <button type="button" class="feel-rating-btn" data-rating-tag="🤯 難度太高卡關">🤯 難度太高卡關</button>
-                            <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">🖐️
-                                拖拉操作卡手</button>
-                        </div>
-                        <div id="gameover-rating-status" class="feel-rating-status">點擊上方標籤一鍵回饋本局體感</div>
-                        <button id="gameover-copy-report-btn" class="copy-report-btn" type="button">複製本局數據戰報</button>
-                    </div>
-
-                    <div class="modal-actions">
-                        <button id="restart-btn" class="primary-cta-btn" type="button">重新開始</button>
-                        <button id="gameover-menu-btn" class="menu-return-btn" type="button">切換地圖 / 主選單</button>
-                    </div>
+                <div class="stat-row">
+                    <span>歷史最高紀錄</span>
+                    <strong id="final-best-text" class="num">Wave 1</strong>
                 </div>
             </div>
 
-            <!-- 嚴格排位順序載入全專案腳本（禁止使用 ES Module，確保本機雙擊 index.html 可離線執行） -->
-            <script src="config.js"></script>
-            <script src="core/i18n.js"></script>
-            <script src="core/audio.js"></script>
-            <script src="core/backend.js"></script>
-            <script src="core/renderer.js"></script>
-            <script src="modules/economy/economy_data.js"></script>
-            <script src="modules/economy/economy_system.js"></script>
-            <script src="modules/terrain/terrain_data.js"></script>
-            <script src="modules/terrain/terrain_system.js"></script>
-            <script src="modules/routes/route_data.js"></script>
-            <script src="modules/routes/wave_system.js"></script>
-            <script src="modules/towers/tower_data.js"></script>
-            <script src="modules/towers/tower_attack_system.js"></script>
-            <script src="modules/evolutions/evolution_data.js"></script>
-            <script src="modules/evolutions/evolution_system.js"></script>
-            <script src="modules/monsters/monster_data.js"></script>
-            <script src="modules/monsters/monster_system.js"></script>
-            <script src="modules/tree/tree_data.js"></script>
-            <script src="modules/tree/tree_system.js"></script>
-            <script src="modules/codex/codex_data.js"></script>
-            <script src="modules/codex/codex_system.js"></script>
-            <script src="modules/drag/drag_system.js"></script>
-            <script src="core/game.js"></script>
+            <div class="battle-recap">
+                <div class="recap-title">本局數據戰報</div>
+                <div class="recap-mvp-box">
+                    <span class="recap-mvp-label">本局 MVP 砲塔</span>
+                    <strong id="gameover-mvp-text" class="recap-mvp-val">尚無輸出紀錄</strong>
+                </div>
+                <div class="recap-grid">
+                    <div class="recap-cell"><span>總擊殺數</span><strong id="final-kills-text" class="num">0 隻</strong>
+                    </div>
+                    <div class="recap-cell"><span>累計獲得金幣</span><strong id="gameover-gold-earned-text" class="num">0
+                            💰</strong></div>
+                    <div class="recap-cell"><span>合成融合次數</span><strong id="gameover-fusion-text" class="num">0
+                            次</strong></div>
+                </div>
+                <div id="gameover-breaker-row" class="recap-breaker hidden">
+                    <span>致命突破敵人</span>
+                    <strong id="gameover-breaker-text">—</strong>
+                </div>
+                <div id="gameover-contracts-row" class="recap-contracts num hidden"></div>
+            </div>
+
+            <div id="new-record-badge" class="new-record-badge hidden">刷新歷史最高波數紀錄</div>
+
+            <!-- 試玩 5 秒主觀體感快評列 ＋ 單局黑盒子戰報複製（預設收納於右上角切換鈕） -->
+            <div id="gameover-feedback-box" class="feel-feedback-box hidden">
+                <div class="feel-rating-header">5 秒試玩體感快評</div>
+                <div class="feel-rating-bar">
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🔥 爽快好玩">🔥 爽快好玩</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="😴 中間有點無聊">😴 中間有點無聊</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🤯 難度太高卡關">🤯 難度太高卡關</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">🖐️
+                        拖拉操作卡手</button>
+                </div>
+                <div id="gameover-rating-status" class="feel-rating-status">點擊上方標籤一鍵回饋本局體感</div>
+                <button id="gameover-copy-report-btn" class="copy-report-btn" type="button">複製本局數據戰報</button>
+            </div>
+
+            <div class="modal-actions">
+                <button id="restart-btn" class="primary-cta-btn" type="button">重新開始</button>
+                <button id="gameover-menu-btn" class="menu-return-btn" type="button">切換地圖 / 主選單</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 嚴格排位順序載入全專案腳本（禁止使用 ES Module，確保本機雙擊 index.html 可離線執行） -->
+    <script src="config.js"></script>
+    <script src="core/i18n.js"></script>
+    <script src="core/audio.js"></script>
+    <script src="core/backend.js"></script>
+    <script src="core/renderer.js"></script>
+    <script src="modules/economy/economy_data.js"></script>
+    <script src="modules/economy/economy_system.js"></script>
+    <script src="modules/terrain/terrain_data.js"></script>
+    <script src="modules/terrain/terrain_system.js"></script>
+    <script src="modules/routes/route_data.js"></script>
+    <script src="modules/routes/wave_system.js"></script>
+    <script src="modules/towers/tower_data.js"></script>
+    <script src="modules/towers/tower_attack_system.js"></script>
+    <script src="modules/evolutions/evolution_data.js"></script>
+    <script src="modules/evolutions/evolution_system.js"></script>
+    <script src="modules/monsters/monster_data.js"></script>
+    <script src="modules/monsters/monster_system.js"></script>
+    <script src="modules/tree/tree_data.js"></script>
+    <script src="modules/tree/tree_system.js"></script>
+    <script src="modules/codex/codex_data.js"></script>
+    <script src="modules/codex/codex_system.js"></script>
+    <script src="modules/drag/drag_system.js"></script>
+    <script src="core/game.js"></script>
 </body>
 
 </html>
