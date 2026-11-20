@@ -2263,9 +2263,10 @@
         if (!isGameplayActive() || (st.waveState !== 'PREP' && st.waveState !== 'INTERMISSION')) return;
         Backend.recordPlayerAction();
         const bonus = EconSys.getEarlyWaveBonus();
+        const targetWave = st.waveState === 'PREP' ? 1 : st.currentWave + 1;
         st.currentGold += bonus; st.totalGoldEarned += bonus;
-        Backend.trackFeel('Feel:EarlyStart', bonus, { wave: st.currentWave, bonus });
-        startWave(st.waveState === 'PREP' ? 1 : st.currentWave + 1, bonus);
+        Backend.trackFeel('Feel:EarlyStart', bonus, { wave: st.currentWave, actionWave: targetWave, bonus });
+        startWave(targetWave, bonus);
     }
 
     function cycleGameSpeed() {

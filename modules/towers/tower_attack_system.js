@@ -133,10 +133,13 @@
         };
     }
 
-    function recordTowerDamage(towerObj, damageAmount) {
+    function recordTowerDamage(towerObj, damageAmount, damageCategory = 'single') {
         if (!towerObj || !Number.isFinite(damageAmount) || damageAmount <= 0) return;
         towerObj.totalDamage = (towerObj.totalDamage || 0) + damageAmount;
         G.state.totalTeamDamage += damageAmount;
+        if (GameApp.backend && typeof GameApp.backend.recordDamageByType === 'function') {
+            GameApp.backend.recordDamageByType(damageCategory, damageAmount);
+        }
         const cfg = getTowerCfg(towerObj.type, towerObj.tier);
         if (!G.state.peakTowerSnapshot || towerObj.totalDamage >= G.state.peakTowerSnapshot.totalDamage) {
             G.state.peakTowerSnapshot = {
@@ -474,7 +477,7 @@
         const hpBefore = monster.hp;
         monster.hp = Math.max(0, hpBefore - hpDmg);
         const dealtTotal = shieldAbsorbed + Math.min(hpBefore, hpDmg);
-        recordTowerDamage(towerObj, dealtTotal);
+        recordTowerDamage(towerObj, dealtTotal, options.damageCategory || 'single');
 
         // 依選項或攻擊樣式套用破甲／減速
         const willApplyShred = (cfg.attackStyle === 'burst_armor_break' || options.forceShred) && options.applyShred !== false && MonsterSys;
@@ -576,7 +579,7 @@
         const targets = G.state.monsters.filter(m =>
             m.id !== excludeId && m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= radiusPx
         );
-        const aoeHitOptions = Object.assign({}, hitOptions, { allowStealthed: true });
+        const aoeHitOptions = Object.assign({}, hitOptions, { allowStealthed: true, damageCategory: 'aoe' });
         for (let i = 0; i < targets.length; i++) {
             applyHitToMonster(towerIndex, towerObj, targets[i], aoeHitOptions);
             if (slowParams && slowParams.rate > 0 && targets[i].hp > 0 && MonsterSys) {
@@ -636,7 +639,7 @@
             hitSet.add(bestNext.id);
             const nextPos = { left: bestNext.pixelX, top: bestNext.pixelY };
             const scaleVal = b < scales.length ? scales[b] : (scales[scales.length - 1] ?? 0.55);
-            applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: scaleVal });
+            applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: scaleVal, damageCategory: 'aoe' });
             if (bestNext.hp <= 0 && stormExtra > 0) {
                 maxBounces += stormExtra;
             }
@@ -727,6 +730,7 @@
                     const mWasSlowed = MonsterSys ? MonsterSys.isMonsterSlowed(m) : false;
                     applyHitToMonster(towerIndex, towerObj, m, {
                         damageScale: splashRatio,
+                        damageCategory: 'aoe',
                         forceSlow: true,
                         slowRate: slowSpec.rate,
                         slowDurationMs: slowSpec.durationMs,
@@ -789,6 +793,7 @@
                 const secPos = { left: secondTarget.pixelX, top: secondTarget.pixelY };
                 applyHitToMonster(towerIndex, towerObj, secondTarget, {
                     damageScale: secondRatio,
+                    damageCategory: 'aoe',
                     extraMult: secControlled ? (1 + shatterBonus) : 1.0,
                     forceSlow: true,
                     slowRate: fxParams.slowRate ?? 0.40,
@@ -881,6 +886,7 @@
                 }
                 applyHitToMonster(towerIndex, towerObj, m, {
                     damageScale: m.id === target.id ? 1.0 : 0.75,
+                    damageCategory: m.id === target.id ? 'single' : 'aoe',
                     allowStealthed: true
                 });
             }
@@ -939,7 +945,7 @@
                 if (!bestNext) break;
                 visited.add(bestNext.id);
                 const nextPos = { left: bestNext.pixelX, top: bestNext.pixelY };
-                applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: fxParams.chainDamageRatio ?? 0.70 });
+                applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: fxParams.chainDamageRatio ?? 0.70, damageCategory: 'aoe' });
                 if (bestNext.hp <= 0 && stormExtra > 0) maxChain += stormExtra;
                 if (bestNext.hp > 0 && MonsterSys) {
                     MonsterSys.applySlowToMonster(bestNext, pulseSlow.rate, pulseSlow.durationMs, 'magnet_pulse');
@@ -976,6 +982,7 @@
                 maybeRevealByAoE(m);
                 applyHitToMonster(towerIndex, towerObj, m, {
                     damageScale: m.id === target.id ? 1.0 : 0.80,
+                    damageCategory: m.id === target.id ? 'single' : 'aoe',
                     allowStealthed: true
                 });
                 if (m.hp > 0 && MonsterSys) {
@@ -1023,7 +1030,7 @@
                 hitSet.add(bestNext.id);
                 const nextPos = { left: bestNext.pixelX, top: bestNext.pixelY };
                 if (MonsterSys) MonsterSys.applyShockToMonster(bestNext, fxParams, towerObj);
-                applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: fxParams.chainDamageRatio ?? 0.75 });
+                applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: fxParams.chainDamageRatio ?? 0.75, damageCategory: 'aoe' });
                 if (bestNext.hp <= 0 && stormExtra > 0) totalTargets += stormExtra;
                 GameApp.renderer.emitCanvasAttackFX('magnet-arc', prevPos, nextPos);
                 prevPos = nextPos;
@@ -1109,7 +1116,8 @@
                 const sub = candidates[k].monster;
                 const subPos = { left: sub.pixelX, top: sub.pixelY };
                 applyHitToMonster(towerIndex, towerObj, sub, {
-                    damageScale: refractRatio
+                    damageScale: refractRatio,
+                    damageCategory: 'aoe'
                 });
                 GameApp.renderer.emitCanvasAttackFX('plasma', targetPos, subPos, { stacks: 1 });
             }

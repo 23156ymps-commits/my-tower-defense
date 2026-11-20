@@ -371,11 +371,88 @@
             blessingsPicked: [],
             leaks: [],
             bossKillProgressList: [],
+            damageByType: { single: 0, aoe: 0, dot: 0 },
+            waveActions: {},
             subjectiveRating: '',
             eventsLog: [],
             progressionLog: [],
             designLog: []
         };
+    }
+
+    function recordDamageByType(category = 'single', amount = 0) {
+        try {
+            if (!Number.isFinite(amount) || amount <= 0) return;
+            if (!runTelemetry.damageByType) {
+                runTelemetry.damageByType = { single: 0, aoe: 0, dot: 0 };
+            }
+            const key = (category === 'aoe' || category === 'dot') ? category : 'single';
+            runTelemetry.damageByType[key] = (runTelemetry.damageByType[key] || 0) + amount;
+        } catch (_) {}
+    }
+
+    function getDamageTypeBreakdown() {
+        const d = (runTelemetry && runTelemetry.damageByType) || { single: 0, aoe: 0, dot: 0 };
+        const single = Math.max(0, Number(d.single) || 0);
+        const aoe = Math.max(0, Number(d.aoe) || 0);
+        const dot = Math.max(0, Number(d.dot) || 0);
+        const total = single + aoe + dot;
+        if (total <= 0) {
+            return { single: 0, aoe: 0, dot: 0, total: 0, singlePct: 0, aoePct: 0, dotPct: 0 };
+        }
+        const singlePct = Math.round((single / total) * 100);
+        const aoePct = Math.round((aoe / total) * 100);
+        const dotPct = Math.max(0, 100 - singlePct - aoePct);
+        return { single, aoe, dot, total, singlePct, aoePct, dotPct };
+    }
+
+    function getTopDamageTiles(runtime, limit = 3) {
+        try {
+            const st = (runtime && runtime.state) || (GameApp.runtime && GameApp.runtime.state) || {};
+            const board = Array.isArray(st.board) ? st.board : [];
+            const { indexToCoords } = GameApp.helpers || {};
+            const towersDict = (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
+            const list = [];
+            for (let idx = 0; idx < board.length; idx++) {
+                const t = board[idx];
+                if (!t || !Number.isFinite(t.totalDamage) || t.totalDamage <= 0) continue;
+                const coords = typeof indexToCoords === 'function'
+                    ? indexToCoords(idx)
+                    : { x: idx % (CONFIG.BOARD_COLS || 15), y: Math.floor(idx / (CONFIG.BOARD_COLS || 15)) };
+                const cfg = towersDict[t.type] || {};
+                list.push({
+                    cellIndex: idx,
+                    x: coords.x,
+                    y: coords.y,
+                    type: t.type,
+                    name: cfg.name || t.type,
+                    tier: t.isCrowned ? 4 : (Number(t.tier) || 1),
+                    isCrowned: Boolean(t.isCrowned),
+                    totalDamage: Math.round(t.totalDamage)
+                });
+            }
+            list.sort((a, b) => b.totalDamage - a.totalDamage);
+            return list.slice(0, Math.max(1, limit));
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function getHighestTierOnBoard(runtime) {
+        try {
+            const st = (runtime && runtime.state) || (GameApp.runtime && GameApp.runtime.state) || {};
+            const board = Array.isArray(st.board) ? st.board : [];
+            let maxTier = 0;
+            for (let i = 0; i < board.length; i++) {
+                const t = board[i];
+                if (!t) continue;
+                const effTier = t.isCrowned ? 4 : (Number(t.tier) || 1);
+                if (effTier > maxTier) maxTier = effTier;
+            }
+            return maxTier;
+        } catch (_) {
+            return 0;
+        }
     }
 
     let runTelemetry = createEmptyRunTelemetry();
@@ -497,6 +574,18 @@
                 runTelemetry.subjectiveRating = label;
             }
 
+            if (eventKey.startsWith('Tower:Summon')
+                || eventKey.startsWith('Fusion:Create')
+                || eventKey.startsWith('Tree:SkillCast')
+                || eventKey === 'Feel:EarlyStart') {
+                if (!runTelemetry.waveActions || typeof runTelemetry.waveActions !== 'object') {
+                    runTelemetry.waveActions = {};
+                }
+                const liveWave = GameApp.runtime && GameApp.runtime.state && GameApp.runtime.state.currentWave;
+                const waveIdx = Math.max(1, Number((meta && (meta.actionWave || meta.wave)) || liveWave || 1) || 1);
+                runTelemetry.waveActions[waveIdx] = (runTelemetry.waveActions[waveIdx] || 0) + 1;
+            }
+
             GameAnalyticsTracker.trackDesign(eventKey, value);
         } catch (_) {
             // 離線或阻擋器環境無聲保護
@@ -524,6 +613,8 @@
 
     function finalizeRunFeel(outcomeMode = 'victory', meta = null) {
         try {
+            const rt = GameApp.runtime || {};
+            const st = rt.state || {};
             const idleRatio = getAverageIdleRatio();
             const fastSpeedRatio = getFastSpeedRatio();
             const dragCancelShop = runTelemetry.dragCancel.shop || 0;
@@ -540,6 +631,40 @@
             trackFeel('Feel:Run:EarlyStart', earlyStarts, baseMeta);
             trackFeel('Feel:Run:CodexOpen', codexOpens, baseMeta);
             trackFeel('Feel:Run:Pause', pauses, baseMeta);
+
+            // 1. 輸出流派佔比 (Build:DamageType)
+            const dmgMix = getDamageTypeBreakdown();
+            trackFeel('Build:DamageType:Single', dmgMix.singlePct, Object.assign({ damage: Math.round(dmgMix.single) }, baseMeta));
+            trackFeel('Build:DamageType:AoE', dmgMix.aoePct, Object.assign({ damage: Math.round(dmgMix.aoe) }, baseMeta));
+            trackFeel('Build:DamageType:DoT', dmgMix.dotPct, Object.assign({ damage: Math.round(dmgMix.dot) }, baseMeta));
+
+            // 2. 黃金格座標熱區 (Map:TopTiles)
+            const mapId = String((meta && meta.mapId) || st.currentMapId || runTelemetry.mapId || 'forest').replace(/[^A-Za-z0-9_.-]/g, '_');
+            const topTiles = getTopDamageTiles(rt, 3);
+            topTiles.forEach((tile, idx) => {
+                trackFeel(`Map:TopTiles:${mapId}:Rank${idx + 1}:x${tile.x}_y${tile.y}`, tile.totalDamage, Object.assign({
+                    rank: idx + 1,
+                    x: tile.x,
+                    y: tile.y,
+                    towerType: tile.type
+                }, baseMeta));
+            });
+
+            // 3. 分波操作活躍度 (Wave:Actions)
+            const reachedWave = Math.max(1, Number((meta && meta.wave) || st.currentWave || 1) || 1);
+            const waveActs = runTelemetry.waveActions || {};
+            for (let w = 1; w <= reachedWave; w++) {
+                const wavePad = String(w).padStart(2, '0');
+                const cnt = Number(waveActs[w]) || 0;
+                trackFeel(`Wave:Actions:Wave_${wavePad}`, cnt, Object.assign({ wave: w }, baseMeta));
+            }
+
+            // 4. 全場總經濟與最高合成階級 (Run:EconomySummary)
+            const totalGoldEarned = Math.round(Number(st.totalGoldEarned) || 0);
+            const maxTier = getHighestTierOnBoard(rt);
+            trackFeel('Run:EconomySummary:TotalGold', totalGoldEarned, baseMeta);
+            trackFeel('Run:EconomySummary:MaxTier', maxTier, baseMeta);
+
             GameAnalyticsTracker.flush();
         } catch (_) {}
     }
@@ -602,12 +727,39 @@
                 ? runTelemetry.blessingsPicked.join(isEn ? ', ' : '、')
                 : (isEn ? 'None' : '無');
 
+            // 新增 4 項下一版設計決策情報摘要
+            const dmgMix = getDamageTypeBreakdown();
+            const dmgMixStr = isEn
+                ? `Single ${dmgMix.singlePct}% | Chain/Splash AoE ${dmgMix.aoePct}% | Burn/Status ${dmgMix.dotPct}%`
+                : `單體直傷 ${dmgMix.singlePct}%｜連鎖/濺射群傷 ${dmgMix.aoePct}%｜持續灼燒/狀態 ${dmgMix.dotPct}%`;
+
+            const topTiles = getTopDamageTiles(runtime, 3);
+            const topTilesStr = topTiles.length > 0
+                ? topTiles.map((t, i) => `#${i + 1} (${t.x},${t.y}) ${t.name} ${t.totalDamage.toLocaleString()}`).join(isEn ? ' | ' : '｜')
+                : (isEn ? 'No tower damage recorded' : '尚無防禦塔輸出紀錄');
+
+            const reachedWave = Math.max(1, Number(st.currentWave) || 1);
+            const waveActs = runTelemetry.waveActions || {};
+            const waveActParts = [];
+            for (let w = 1; w <= reachedWave; w++) {
+                waveActParts.push(`W${w}:${Number(waveActs[w]) || 0}`);
+            }
+            const waveActionsStr = waveActParts.join(isEn ? ' | ' : '｜');
+
+            const maxTier = getHighestTierOnBoard(runtime);
+            const tierLabelZh = maxTier === 4 ? 'T4 聖冠覺醒' : (maxTier === 3 ? '3★ 冠枝' : (maxTier === 2 ? '2★ 主幹' : (maxTier === 1 ? '1★ 根芽' : '無')));
+            const tierLabelEn = maxTier === 4 ? 'T4 Crown Awakened' : (maxTier === 3 ? '3★ Crown' : (maxTier === 2 ? '2★ Trunk' : (maxTier === 1 ? '1★ Bud' : 'None')));
+
             const lines = isEn ? [
                 '[Elemental Frontline: Merge TD — Battle Telemetry Report]',
                 `🗺️ Battlefield: ${mapSpec.name}`,
                 `🏁 Outcome: ${waveStr}`,
                 `🚨 Leaks: ${leakStr}`,
                 `🏆 MVP Tower: ${mvpText}`,
+                `⚔️ Damage Mix: ${dmgMixStr}`,
+                `📌 Top 3 Tiles (x,y): ${topTilesStr}`,
+                `🎮 Wave Actions: ${waveActionsStr}`,
+                `🏛️ Economy & Peak: Total Earned ${(st.totalGoldEarned || 0).toLocaleString()} 💰 | Highest Tier on Board ${tierLabelEn}`,
                 `⏱️ Pace: Avg Idle ${idlePct}% | 2x/3x Usage ${fastSpdPct}% | Early Starts ${runTelemetry.earlyStartCount}`,
                 `🖐️ Drag Cancels: Shop ${runTelemetry.dragCancel.shop} | Board Move ${runTelemetry.dragCancel.board}`,
                 `🔥 Summons: ${summonStr} (Merges ${st.fusionCount || 0} | Sells ${runTelemetry.sellCount})`,
@@ -621,6 +773,10 @@
                 `🏁 戰局結果：${waveStr}`,
                 `🚨 漏怪明細：${leakStr}`,
                 `🏆 本局 MVP：${mvpText}`,
+                `⚔️ 輸出流派：${dmgMixStr}`,
+                `📌 黃金格 Top3 (x,y)：${topTilesStr}`,
+                `🎮 分波操作數：${waveActionsStr}`,
+                `🏛️ 經濟與成型：累計獲得 ${(st.totalGoldEarned || 0).toLocaleString()} 💰 ｜ 場上最高階級 ${tierLabelZh}`,
                 `⏱️ 體感節奏：平均發呆率 ${idlePct}% ｜ 2x/3x 倍速佔比 ${fastSpdPct}% ｜ 提前開波 ${runTelemetry.earlyStartCount} 次`,
                 `🖐️ 拖拉取消：商店召喚取消 ${runTelemetry.dragCancel.shop} 次 ／ 棋盤移塔取消 ${runTelemetry.dragCancel.board} 次`,
                 `🔥 召喚統計：${summonStr}（合成融合 ${st.fusionCount || 0} 次 ／ 賣塔 ${runTelemetry.sellCount} 次）`,
@@ -785,6 +941,10 @@
         CLOUD_CONFIG,
         GameAnalyticsTracker,
         trackFeel,
+        recordDamageByType,
+        getDamageTypeBreakdown,
+        getTopDamageTiles,
+        getHighestTierOnBoard,
         resetRunTelemetry,
         recordPlayerAction,
         tickFeelMetrics,

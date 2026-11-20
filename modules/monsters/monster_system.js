@@ -640,7 +640,7 @@
         const creditTower = sh.sourceTower || attackerTower;
         const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
         if (AttackSys && creditTower) {
-            AttackSys.recordTowerDamage(creditTower, Math.min(hpBefore, bonusDmg));
+            AttackSys.recordTowerDamage(creditTower, Math.min(hpBefore, bonusDmg), 'dot');
         }
         if (GameApp.renderer && typeof GameApp.renderer.spawnDamageNumber === 'function') {
             GameApp.renderer.spawnDamageNumber(bonusDmg, false, monster.pixelX, monster.pixelY, '⚡');
@@ -848,7 +848,7 @@
                     const before = m.hp;
                     m.hp = Math.max(0, before - tickDmg);
                     if (AttackSys && hz.sourceTower) {
-                        AttackSys.recordTowerDamage(hz.sourceTower, Math.min(before, tickDmg));
+                        AttackSys.recordTowerDamage(hz.sourceTower, Math.min(before, tickDmg), 'dot');
                     }
                     if (GameApp.renderer) {
                         GameApp.renderer.spawnDamageNumber(tickDmg, false, m.pixelX, m.pixelY, dmgIcon);
@@ -974,7 +974,7 @@
                 const hpBefore = m.hp;
                 m.hp = Math.max(0, hpBefore - tickDmg);
                 if (AttackSys && b.sourceTower) {
-                    AttackSys.recordTowerDamage(b.sourceTower, Math.min(hpBefore, tickDmg));
+                    AttackSys.recordTowerDamage(b.sourceTower, Math.min(hpBefore, tickDmg), 'dot');
                 }
                 if (GameApp.renderer) {
                     GameApp.renderer.spawnDamageNumber(tickDmg, false, m.pixelX, m.pixelY, '🔥');
@@ -1005,7 +1005,7 @@
                 const hpBefore = m.hp;
                 m.hp = Math.max(0, hpBefore - tickDmg);
                 if (AttackSys && cb.sourceTower) {
-                    AttackSys.recordTowerDamage(cb.sourceTower, Math.min(hpBefore, tickDmg));
+                    AttackSys.recordTowerDamage(cb.sourceTower, Math.min(hpBefore, tickDmg), 'dot');
                 }
                 if (GameApp.renderer) {
                     GameApp.renderer.spawnDamageNumber(tickDmg, true, m.pixelX, m.pixelY, '👑');
