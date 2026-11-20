@@ -1134,7 +1134,7 @@
         if (dom.goldDisplay) dom.goldDisplay.title = String(st.currentGold);
         setDomText(dom.baseHpDisplay, `${st.baseHp}/${maxHp}`);
         setDomText(dom.waveDisplay, st.isEndlessMode ? `Wave ${st.currentWave} (${L('無盡', 'Endless')})` : `Wave ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10}`);
-        setDomText(dom.bestWaveDisplay, `Wave ${st.bestWave}`);
+        setDomText(dom.bestWaveDisplay, `W${st.bestWave}`);
         updateWavePhaseUI(); Renderer.updateWorldTreeVisualState(); updateSkillButtonsUI();
         updateSeedPityUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
         updateWaveForecastUI(); updateMonsterHoverCardUI();
@@ -1734,6 +1734,10 @@
         if (dom.evoConfirmOverlayEl) {
             dom.evoConfirmOverlayEl.classList.remove('hidden');
         }
+        if (st.rafId !== null) {
+            cancelAnimationFrame(st.rafId);
+            st.rafId = null;
+        }
         if (isInfusion) {
             setStatusMsg(
                 `${fusionPreview.previewLabel}：點擊「確認灌注升星」或按 [Enter] 完成升星，按 [Esc] 取消。`,
@@ -1785,7 +1789,7 @@
                     TreeSys.triggerBlessingSelection(queuedWave);
                 }
             }
-            if (isGameplayActive() && st.rafId === null) startMainLoop();
+            if (isGameplayActive()) startMainLoop();
             return true;
         }
         Renderer.renderBoard([]);
@@ -1797,7 +1801,7 @@
                 TreeSys.triggerBlessingSelection(queuedWave);
             }
         }
-        if (isGameplayActive() && st.rafId === null) startMainLoop();
+        if (isGameplayActive()) startMainLoop();
         return false;
     }
 
@@ -1820,7 +1824,7 @@
                 TreeSys.triggerBlessingSelection(queuedWave);
             }
         }
-        if (isGameplayActive() && st.rafId === null) startMainLoop();
+        if (isGameplayActive()) startMainLoop();
         return true;
     }
 
@@ -2026,6 +2030,7 @@
 
     function gameTick(timestamp) {
         const st = G.state, tickSessionId = st.sessionId;
+        st.rafId = null;
         if (st.baseHp <= 0 && !st.isGameOver) { triggerGameOver(); return; }
         if (!isGameplayActive()) return;
         if (st.lastFrameTime === null) st.lastFrameTime = timestamp;
@@ -2327,14 +2332,15 @@
         }
     }
 
-    function setLangMenuOpen(open) {
+    function setLangMenuOpen(open, targetWhich = 'all') {
         const isOpen = Boolean(open);
         [
-            [G.dom.langMenuEl, G.dom.langBtn],
-            [G.dom.startLangMenuEl, G.dom.startLangBtn]
-        ].forEach(([menuEl, btnEl]) => {
-            if (menuEl) menuEl.classList.toggle('hidden', !isOpen);
-            if (btnEl) btnEl.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            ['hud', G.dom.langMenuEl, G.dom.langBtn],
+            ['start', G.dom.startLangMenuEl, G.dom.startLangBtn]
+        ].forEach(([key, menuEl, btnEl]) => {
+            const showThis = isOpen && (targetWhich === 'all' || targetWhich === key);
+            if (menuEl) menuEl.classList.toggle('hidden', !showThis);
+            if (btnEl) btnEl.setAttribute('aria-expanded', showThis ? 'true' : 'false');
         });
     }
 
@@ -2347,13 +2353,13 @@
             if (e && e.stopPropagation) e.stopPropagation();
             SoundEngine.ensureContext();
             const isCurrentlyHidden = !G.dom.langMenuEl || G.dom.langMenuEl.classList.contains('hidden');
-            setLangMenuOpen(isCurrentlyHidden);
+            setLangMenuOpen(isCurrentlyHidden, 'hud');
         }],
         ['startLangBtn', (e) => {
             if (e && e.stopPropagation) e.stopPropagation();
             SoundEngine.ensureContext();
             const isCurrentlyHidden = !G.dom.startLangMenuEl || G.dom.startLangMenuEl.classList.contains('hidden');
-            setLangMenuOpen(isCurrentlyHidden);
+            setLangMenuOpen(isCurrentlyHidden, 'start');
         }],
         ['codexBtn', () => CodexSys.openCodex()], ['codexCloseBtn', () => CodexSys.closeCodex()],
         ['helpBtn', openGuide], ['guideXBtn', closeGuide], ['guideCloseBtn', closeGuide], ['guideMenuBtn', () => { closeGuide(); returnToMainMenu(); }],
@@ -2373,16 +2379,16 @@
 
     [G.dom.langMenuEl, G.dom.startLangMenuEl].forEach((menuEl) => {
         if (!menuEl) return;
-        menuEl.querySelectorAll('.lang-option').forEach((opt) => {
-            opt.addEventListener('click', (e) => {
-                if (e && e.stopPropagation) e.stopPropagation();
-                SoundEngine.ensureContext();
-                const targetLang = opt.dataset.lang;
-                setLangMenuOpen(false);
-                if (GameApp.i18n && (targetLang === 'en' || targetLang === 'zh-TW')) {
-                    GameApp.i18n.setLang(targetLang);
-                }
-            });
+        menuEl.addEventListener('click', (e) => {
+            const opt = e && e.target && e.target.closest ? e.target.closest('.lang-option') : null;
+            if (!opt) return;
+            if (e.stopPropagation) e.stopPropagation();
+            SoundEngine.ensureContext();
+            const targetLang = opt.dataset.lang;
+            setLangMenuOpen(false, 'all');
+            if (GameApp.i18n && (targetLang === 'en' || targetLang === 'zh-TW')) {
+                GameApp.i18n.setLang(targetLang);
+            }
         });
     });
 
@@ -2452,8 +2458,10 @@
         document.addEventListener('pointerdown', (e) => {
             SoundEngine.ensureContext();
             const tgt = e.target;
-            if (G.dom.langMenuEl && !G.dom.langMenuEl.classList.contains('hidden')) {
-                if (!tgt || !tgt.closest || !tgt.closest('#lang-dropdown')) {
+            const hudLangOpen = G.dom.langMenuEl && !G.dom.langMenuEl.classList.contains('hidden');
+            const startLangOpen = G.dom.startLangMenuEl && !G.dom.startLangMenuEl.classList.contains('hidden');
+            if (hudLangOpen || startLangOpen) {
+                if (!tgt || !tgt.closest || (!tgt.closest('#lang-dropdown') && !tgt.closest('#start-lang-dropdown'))) {
                     setLangMenuOpen(false);
                 }
             }
@@ -2504,7 +2512,9 @@
                 return;
             }
             if (key === 'Escape') {
-                if (G.dom.langMenuEl && !G.dom.langMenuEl.classList.contains('hidden')) { e.preventDefault(); setLangMenuOpen(false); return; }
+                const hudLangOpen = G.dom.langMenuEl && !G.dom.langMenuEl.classList.contains('hidden');
+                const startLangOpen = G.dom.startLangMenuEl && !G.dom.startLangMenuEl.classList.contains('hidden');
+                if (hudLangOpen || startLangOpen) { e.preventDefault(); setLangMenuOpen(false); return; }
                 if (DragSys.isDragging()) { e.preventDefault(); DragSys.cancelActiveDrag(); }
                 else if (isCodexOpen()) { e.preventDefault(); CodexSys.closeCodex(); }
                 else if (isGuideOpen()) { e.preventDefault(); closeGuide(); }
@@ -2623,26 +2633,6 @@
     if (GameApp.i18n) {
         GameApp.i18n.onChange(() => {
             const st = G.state;
-            const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
-            const bossRoster = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.BOSS_ROSTER) || [];
-            if (Array.isArray(st.monsters)) {
-                st.monsters.forEach((m) => {
-                    if (!m) return;
-                    if (m.isBoss) {
-                        const bCfg = bossRoster.find(b => b.wave === st.currentWave) || bossRoster.find(b => b.mechanic === m.bossMechanic);
-                        if (bCfg) {
-                            m.name = bCfg.name;
-                            m.traitDesc = bCfg.traitDesc;
-                        }
-                    } else if (m.isSplitChild) {
-                        m.name = L('分裂小史萊姆', 'Mini Slime');
-                        m.traitDesc = L('分裂出的小型史萊姆', 'Split mini slime');
-                    } else if (monsterDb[m.typeKey]) {
-                        m.name = monsterDb[m.typeKey].name;
-                        m.traitDesc = monsterDb[m.typeKey].traitDesc;
-                    }
-                });
-            }
             renderSpawnerButtons();
             Renderer.initBoard();
             Renderer.renderBoard();

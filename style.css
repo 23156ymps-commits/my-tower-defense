@@ -203,12 +203,12 @@ body.map-frost {
 
 .hud-stats {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    gap: clamp(6px, 0.9vw, 12px);
+    gap: 2px clamp(6px, 0.8vw, 10px);
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .hud-item {
@@ -240,7 +240,7 @@ body.map-frost {
 .hud-dew { color: #9BD3E8; }
 
 .dew-bar-track {
-    width: 48px;
+    width: 32px;
     height: 8px;
     border-radius: 4px;
     background-color: var(--bg-canvas);
@@ -283,16 +283,16 @@ body.map-frost {
 .hud-actions {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
     flex-shrink: 0;
 }
 
 .hud-ctrl-btn {
-    min-height: 40px;
+    min-height: 36px;
     min-width: 0;
-    padding: 4px 12px;
+    padding: 4px 9px;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     line-height: 1.25;
     cursor: pointer;
@@ -1811,6 +1811,8 @@ body.map-frost .cell.path-cell {
 }
 
 .start-top-bar {
+    position: relative;
+    z-index: 30;
     display: flex;
     justify-content: flex-end;
     align-items: center;

@@ -75,7 +75,7 @@
         },
         thunder_trunk: {
             name: 'Volt Trunk', shortName: 'Volt 2★',
-            roleSummary: '3-Target Chain Bolt',
+            roleSummary: '3-Target Thunder Chain',
             tooltipSummary: '3-target lightning chain (65%/45%)',
             lineagePath: '⚡ Thunder 1★ ▸ Volt 2★'
         },
@@ -154,7 +154,7 @@
         magnet_B: {
             name: 'Volt Overload', shortName: 'B Overload',
             roleSummary: '3-Bounce + 3.5s Shock Synergy',
-            tooltipSummary: '3 bounces + 3.5s Shock (+12 bolt on ally hit)',
+            tooltipSummary: '3 bounces + 3.5s Shock (+12 Thunder on ally hit)',
             lineagePath: '💠 Hi-Magnet 2★ ▸ B Volt Overload'
         },
         plasma_A: {
