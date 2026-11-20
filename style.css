@@ -188,12 +188,12 @@ body.map-frost {
     width: var(--board-width);
     max-width: 100%;
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 4px 8px;
     margin-bottom: 4px;
-    padding: 4px 12px;
+    padding: 4px 10px;
     background-color: var(--bg-surface);
     border-radius: 8px;
     border: 1px solid var(--border-subtle);
@@ -205,8 +205,8 @@ body.map-frost {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 2px clamp(6px, 0.8vw, 10px);
-    flex: 1 1 0%;
+    gap: 2px clamp(5px, 0.7vw, 9px);
+    flex: 1 1 auto;
     min-width: 0;
     overflow: visible;
 }
@@ -287,8 +287,9 @@ body.map-frost {
 .hud-actions {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     flex-shrink: 0;
+    margin-left: auto;
 }
 
 .hud-ctrl-btn {
@@ -3082,15 +3083,15 @@ body.map-frost .cell.path-cell {
     }
 
     body { padding: 4px 12px; }
-    #hud-container { padding: 4px 8px; margin-bottom: 4px; gap: 6px; }
-    .hud-stats { gap: 2px 6px; flex: 1 1 0%; min-width: 0; }
+    #hud-container { padding: 4px 8px; margin-bottom: 4px; gap: 4px 6px; }
+    .hud-stats { gap: 2px 5px; flex: 1 1 auto; min-width: 0; }
     .hud-item { font-size: 12px; gap: 3px; }
     .hud-best { font-size: 11px; }
-    .dew-bar-track { width: 24px; }
+    .dew-bar-track { width: 22px; }
     .wave-phase-tag { padding: 0 5px; }
-    .hud-actions { gap: 4px; }
-    .hud-ctrl-btn { min-height: 32px; min-width: 28px; padding: 3px 6px; font-size: 12px; }
-    .hud-lang-btn { min-width: auto; padding: 4px 6px; }
+    .hud-actions { gap: 3px; margin-left: auto; }
+    .hud-ctrl-btn { min-height: 30px; min-width: 26px; padding: 3px 6px; font-size: 12px; }
+    .hud-lang-btn { min-width: auto; padding: 3px 6px; }
     .lang-globe-icon { width: 12px; height: 12px; }
     .hud-sub-slot { margin-bottom: 4px; }
     .wave-forecast-bar { padding: 4px 8px; }
@@ -3112,16 +3113,17 @@ body.map-frost .cell.path-cell {
     .wt-detail-card { padding: 8px 12px; min-height: 76px; }
 }
 
-@media (min-width: 768px) and (max-height: 620px) {
-    .hud-best { display: none; }
-}
-
 /* EN 雙語模式緊湊字級微調，防止英語詞彙溢出或撐爆按鈕 */
-html[lang="en"] .hud-stats { gap: 6px; }
-html[lang="en"] .hud-actions { gap: 4px; }
-html[lang="en"] .hud-item { font-size: 12px; }
-html[lang="en"] .hud-ctrl-btn { padding: 4px 6px; font-size: 12px; }
-html[lang="en"] .hud-lang-btn { min-width: auto; padding: 4px 8px; }
+html[lang="en"] #hud-container { padding: 4px 8px; gap: 4px 6px; }
+html[lang="en"] .hud-stats { gap: 2px 5px; }
+html[lang="en"] .hud-actions { gap: 3px; }
+html[lang="en"] .hud-item { font-size: 12px; gap: 3px; }
+html[lang="en"] .hud-best { font-size: 11px; }
+html[lang="en"] .dew-bar-track { width: 22px; }
+html[lang="en"] .wave-phase-tag { padding: 0 5px; font-size: 11px; }
+html[lang="en"] .hud-ctrl-btn { padding: 3px 6px; font-size: 12px; }
+html[lang="en"] .hud-help-btn { min-width: 28px; }
+html[lang="en"] .hud-lang-btn { min-width: auto; padding: 3px 6px; gap: 3px; }
 html[lang="en"] .spawn-card-btn { padding: 4px 5px; }
 html[lang="en"] .spawn-card-head { font-size: 11px; gap: 3px; }
 html[lang="en"] .spawn-card-role { font-size: 11px; }

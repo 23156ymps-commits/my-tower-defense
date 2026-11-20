@@ -175,10 +175,13 @@
             lineagePath: '☄️ Hi-Plasma 2★ ▸ B Prism Refractor'
         }
     };
-    // 兼容 fire / ice / thunder 舊鍵別名（供怪物弱點標籤與相剋查詢同步顯示英文）
+    // 兼容 fire / ice / thunder / steam / magnet / plasma 舊鍵別名（供怪物弱點標籤與相剋查詢同步顯示英文）
     EN_TOWERS.fire = EN_TOWERS.fire_bud;
     EN_TOWERS.ice = EN_TOWERS.ice_bud;
     EN_TOWERS.thunder = EN_TOWERS.thunder_bud;
+    EN_TOWERS.steam = EN_TOWERS.steam_bud;
+    EN_TOWERS.magnet = EN_TOWERS.magnet_bud;
+    EN_TOWERS.plasma = EN_TOWERS.plasma_bud;
 
     const WEAKNESS_NAMES = {
         fire: { zh: '火', en: 'Fire' },
@@ -233,6 +236,8 @@
     };
 
     const EN_TERRAINS = {
+        grass: { name: 'Grassland', shortTag: '', tooltip: '🌱 Grassland: Buildable tile for towers' },
+        path: { name: 'Enemy Path', shortTag: '🛤️ Enemy March Route', tooltip: '🛤️ Enemy Path: Cannot build towers here' },
         highground: { name: '⛰️ Highground', shortTag: 'Range +30%', tooltip: 'Highground: Tower Attack Range +30%' },
         mana_vein: { name: '✨ Mana Vein', shortTag: 'Spd +25%', tooltip: 'Mana Vein: Tower Attack Speed +25%' },
         world_tree: { name: '🌿 Tree Sanctuary', shortTag: 'DMG +20% max', tooltip: 'Sanctuary: Up to +20% DMG based on Tree HP' },
@@ -521,6 +526,14 @@
                 helpBtnEl.setAttribute('aria-label', isEn ? 'Open Tactical Field Guide' : '開啟戰術手冊');
             }
             setElText('hud-best-label', isEn ? 'Best' : '最高');
+            const bestItem = document.querySelector('.hud-best');
+            if (bestItem) bestItem.title = isEn ? 'Map Best Record' : '本圖最高紀錄';
+            const speedBtnEl = document.getElementById('speed-btn');
+            if (speedBtnEl) speedBtnEl.title = isEn ? 'Toggle Game Speed [Tab/S]' : '切換遊戲倍速 [Tab/S]';
+            const pauseBtnEl = document.getElementById('pause-btn');
+            if (pauseBtnEl) pauseBtnEl.title = isEn ? 'Pause or Resume [Space]' : '暫停或繼續 [Space]';
+            const soundBtnEl = document.getElementById('sound-btn');
+            if (soundBtnEl) soundBtnEl.title = isEn ? 'Toggle Audio' : '切換音效';
 
             // 預告條右側簡易圖例
             const legendEl = document.getElementById('info-legend');
@@ -584,12 +597,20 @@
             setElText('codex-title', isEn ? 'Elemental World Tree Codex' : '元素世界樹演化圖譜');
             setElText('codex-close-btn', isEn ? 'Close [Esc]' : '關閉 [Esc]');
             setElText('blessing-title', isEn ? 'World Tree Blessings' : '世界樹枝枒祝福');
+            setElText('blessing-wave-subtitle', isEn
+                ? 'Wave cleared! Choose one World Tree Blessing (unique per run).'
+                : '防線捷報，請擇一項世界樹賜福（每局唯一，不重複出現）。');
+            setElText('boss-banner-title', isEn ? 'Final Boss' : '終極魔王');
+            setElText('side-monster-lock-tag', isEn ? 'Locked' : '鎖定檢視');
             setElText('start-title', isEn ? 'Elemental Frontline: Merge TD' : '元素陣線：合成塔防');
             setElText('start-game-btn', isEn ? 'Start Defense' : '開始防守');
             setElText('guide-title', isEn ? 'Tactical Field Guide' : '戰術手冊與地形速查');
             setElText('guide-close-btn', isEn ? 'Back to Battle' : '返回戰場');
             setElText('guide-menu-btn', isEn ? 'Change Map / Main Menu' : '切換地圖 / 返回封面');
             setElText('victory-title', isEn ? 'Victory · World Tree Protected' : '防守成功 · 世界樹安然無恙');
+            setElText('victory-rank-text', isEn
+                ? 'Protected the World Tree and repelled the Wave 10 Blighted Treant King.'
+                : '成功守護世界樹，擊退第 10 波腐朽古樹王。');
             setElText('victory-restart-btn', isEn ? 'Restart' : '重新開始');
             setElText('endless-btn', isEn ? 'Endless Mode' : '繼續無盡挑戰');
             setElText('victory-menu-btn', isEn ? 'Change Map / Menu' : '切換地圖 / 主選單');
