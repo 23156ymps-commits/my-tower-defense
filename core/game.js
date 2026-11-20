@@ -44,7 +44,7 @@
         ['inspectorLineageEl', 'inspector-lineage'],
         ['inspectorDpsEl', 'inspector-dps'], ['inspectorAoeDpsEl', 'inspector-aoe-dps'], ['inspectorTotalDmgEl', 'inspector-total-dmg'],
         ['inspectorRangeEl', 'inspector-range'], ['inspectorTerrainEl', 'inspector-terrain'],
-        ['inspectorAwakenBtn', 'inspector-awaken-btn'], ['inspectorTargetBtn', 'inspector-target-btn'], ['inspectorSellBtn', 'inspector-sell-btn'],
+        ['inspectorAwakenBtn', 'inspector-awaken-btn'], ['inspectorAwakenTextEl', 'inspector-awaken-text'], ['inspectorTargetBtn', 'inspector-target-btn'], ['inspectorSellBtn', 'inspector-sell-btn'],
         ['evoConfirmOverlayEl', 'evo-confirm-overlay'], ['evoConfirmTitleEl', 'evo-confirm-title'],
         ['evoConfirmOptionsEl', 'evo-confirm-options'], ['evoCancelBtn', 'evo-cancel-btn'],
         ['codexBtn', 'codex-btn'], ['codexOverlayEl', 'codex-overlay'], ['codexCloseBtn', 'codex-close-btn'],
@@ -61,12 +61,14 @@
         ['victoryGoldTextEl', 'victory-gold-text'], ['victoryMvpTextEl', 'victory-mvp-text'], ['victoryGoldEarnedTextEl', 'victory-gold-earned-text'],
         ['victoryFusionTextEl', 'victory-fusion-text'], ['victoryRestartBtn', 'victory-restart-btn'], ['victoryMenuBtn', 'victory-menu-btn'], ['endlessBtn', 'endless-btn'],
         ['victoryRatingStatusEl', 'victory-rating-status'], ['victoryCopyReportBtn', 'victory-copy-report-btn'],
+        ['victoryFeedbackToggle', 'victory-feedback-toggle'], ['victoryFeedbackBox', 'victory-feedback-box'],
         ['gameOverOverlayEl', 'game-over-overlay'], ['gameoverMapTextEl', 'gameover-map-text'], ['finalWaveTextEl', 'final-wave-text'],
         ['finalBestTextEl', 'final-best-text'], ['finalKillsTextEl', 'final-kills-text'], ['gameoverMvpTextEl', 'gameover-mvp-text'],
         ['gameoverGoldEarnedTextEl', 'gameover-gold-earned-text'], ['gameoverFusionTextEl', 'gameover-fusion-text'],
         ['gameoverBreakerRowEl', 'gameover-breaker-row'], ['gameoverBreakerTextEl', 'gameover-breaker-text'],
         ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn'], ['gameoverMenuBtn', 'gameover-menu-btn'],
         ['gameoverRatingStatusEl', 'gameover-rating-status'], ['gameoverCopyReportBtn', 'gameover-copy-report-btn'],
+        ['gameoverFeedbackToggle', 'gameover-feedback-toggle'], ['gameoverFeedbackBox', 'gameover-feedback-box'],
         ['helpBtn', 'help-btn'], ['guideOverlayEl', 'guide-overlay'], ['guideXBtn', 'guide-x-btn'], ['guideCloseBtn', 'guide-close-btn'], ['guideMenuBtn', 'guide-menu-btn'],
         ['terrainTooltipEl', 'terrain-tooltip'], ['towerTooltipEl', 'tower-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
         ['forecastToggleBtn', 'forecast-toggle-btn'], ['forecastBarTitleEl', 'forecast-bar-title'],
@@ -397,6 +399,13 @@
             if (!el) return;
             delete el.dataset.rated;
             el.innerText = L('點擊上方標籤一鍵回饋本局體感', 'Tap a tag above to submit instant feedback');
+        });
+        [
+            [G.dom.victoryFeedbackToggle, G.dom.victoryFeedbackBox],
+            [G.dom.gameoverFeedbackToggle, G.dom.gameoverFeedbackBox]
+        ].forEach(([btn, box]) => {
+            if (box) box.classList.add('hidden');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
         });
         if (G.dom.victoryCopyReportBtn) G.dom.victoryCopyReportBtn.innerText = L('複製本局數據戰報', 'Copy Battle Report');
         if (G.dom.gameoverCopyReportBtn) G.dom.gameoverCopyReportBtn.innerText = L('複製本局數據戰報', 'Copy Battle Report');
@@ -831,11 +840,12 @@
                 const usedCrowns = st.crownedUsedCount || 0;
                 const remainCrowns = Math.max(0, maxCrowns - usedCrowns);
                 const canAfford = EconSys.canAffordCrownAwaken ? EconSys.canAffordCrownAwaken() : (st.currentGold >= costSpec.gold && st.dewEnergy >= costSpec.dew);
+                const awakenLabelEl = dom.inspectorAwakenTextEl || dom.inspectorAwakenBtn;
                 if (remainCrowns <= 0) {
-                    dom.inspectorAwakenBtn.innerText = L(`👑 聖冠已滿 (${usedCrowns}/${maxCrowns})`, `👑 Max Crowns (${usedCrowns}/${maxCrowns})`);
+                    awakenLabelEl.innerText = L(`聖冠已滿 (${usedCrowns}/${maxCrowns})`, `Max Crowns (${usedCrowns}/${maxCrowns})`);
                     dom.inspectorAwakenBtn.disabled = true;
                 } else {
-                    dom.inspectorAwakenBtn.innerText = L(`👑 覺醒聖冠 (${costSpec.gold} 💰 · ${costSpec.dew} 💧 · ${remainCrowns}/2)`, `👑 Awaken (${costSpec.gold} 💰 · ${costSpec.dew} 💧 · ${remainCrowns}/2)`);
+                    awakenLabelEl.innerText = L(`覺醒聖冠 (${costSpec.gold}G · ${costSpec.dew}露 · ${remainCrowns}/2)`, `Awaken (${costSpec.gold}G · ${costSpec.dew} Dew · ${remainCrowns}/2)`);
                     dom.inspectorAwakenBtn.disabled = !isGameplayActive() || !canAfford;
                 }
             }
@@ -1385,6 +1395,49 @@
         spawnTowerAtCell(type, targetIdx);
     }
 
+    function tryClearObstacleCell(index) {
+        const st = G.state;
+        const terrainsDict = (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
+        if (TerrainSys.getTerrainAt(index) !== 'obstacle' || typeof TerrainSys.clearObstacleAt !== 'function') return false;
+        if (st.isTouchMode) clearMonsterHoverLock();
+        st.pendingSpawnType = null;
+        st.selectedIndex = null;
+        st.hoveredIndex = null;
+        st.buildTargetIndex = null;
+        const clearRes = TerrainSys.clearObstacleAt(index);
+        if (!clearRes.ok) {
+            if (clearRes.reason === 'insufficient_gold') {
+                setStatusMsg(
+                    `爆破古代巨岩需花費 ${clearRes.cost} 💰，當前金幣不足。`,
+                    `Clearing Ancient Boulder requires ${clearRes.cost} 💰 (insufficient Gold).`
+                );
+            }
+            Renderer.renderBoard([]);
+            return true;
+        }
+        if (typeof Renderer.refreshCellTerrain === 'function') Renderer.refreshCellTerrain(index);
+        const c = indexToCoords(index);
+        const center = Renderer.getCellCenter(c.x, c.y);
+        Renderer.emitParticleBurst(center.left, center.top, '#D97724', 12, 95);
+        SoundEngine.playMerge(2, true);
+        const revInfo = clearRes.revealedTerrain ? terrainsDict[clearRes.revealedTerrain] : null;
+        if (revInfo) {
+            const revTag = getTerrainShortTagForCell(index, revInfo);
+            setStatusMsg(
+                `地脈拓荒完成（-${clearRes.cost} 💰）：岩層下發掘出【${revInfo.name} · ${revTag}】！`,
+                `Boulder cleared (-${clearRes.cost} 💰): Unearthed ${revInfo.name} · ${revTag}!`
+            );
+        } else {
+            setStatusMsg(
+                `地脈拓荒完成（-${clearRes.cost} 💰）：已清除障礙，可在此座標建造防禦塔。`,
+                `Boulder cleared (-${clearRes.cost} 💰): Tile is now buildable.`
+            );
+        }
+        Renderer.renderBoard([index]);
+        updateHUD();
+        return true;
+    }
+
     function handleCellClick(index) {
         const st = G.state;
         const towersDict = getTowersDict();
@@ -1436,6 +1489,9 @@
                 spawnTowerAtCell(pendingType, index);
                 return;
             }
+            if (tryClearObstacleCell(index)) {
+                return;
+            }
             if (st.board[index] !== null) {
                 st.pendingSpawnType = null;
                 st.selectedIndex = index; st.buildTargetIndex = null;
@@ -1485,40 +1541,7 @@
                         `Selected tile (${c.x + 1},${c.y + 1})${cellTag ? ` (${cellTag})` : ''}. Click an element card below to build.`
                     );
                 }
-            } else if (TerrainSys.getTerrainAt(index) === 'obstacle' && typeof TerrainSys.clearObstacleAt === 'function') {
-                if (st.isTouchMode) clearMonsterHoverLock();
-                st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
-                const clearRes = TerrainSys.clearObstacleAt(index);
-                if (!clearRes.ok) {
-                    if (clearRes.reason === 'insufficient_gold') {
-                        setStatusMsg(
-                            `爆破古代巨岩需花費 ${clearRes.cost} 💰，當前金幣不足。`,
-                            `Clearing Ancient Boulder requires ${clearRes.cost} 💰 (insufficient Gold).`
-                        );
-                    }
-                    Renderer.renderBoard([]);
-                    return;
-                }
-                if (typeof Renderer.refreshCellTerrain === 'function') Renderer.refreshCellTerrain(index);
-                const c = indexToCoords(index);
-                const center = Renderer.getCellCenter(c.x, c.y);
-                Renderer.emitParticleBurst(center.left, center.top, '#D97724', 12, 95);
-                SoundEngine.playMerge(2, true);
-                const revInfo = clearRes.revealedTerrain ? terrainsDict[clearRes.revealedTerrain] : null;
-                if (revInfo) {
-                    const revTag = getTerrainShortTagForCell(index, revInfo);
-                    setStatusMsg(
-                        `地脈拓荒完成（-${clearRes.cost} 💰）：岩層下發掘出【${revInfo.name} · ${revTag}】！`,
-                        `Boulder cleared (-${clearRes.cost} 💰): Unearthed ${revInfo.name} · ${revTag}!`
-                    );
-                } else {
-                    setStatusMsg(
-                        `地脈拓荒完成（-${clearRes.cost} 💰）：已清除障礙，可在此座標建造防禦塔。`,
-                        `Boulder cleared (-${clearRes.cost} 💰): Tile is now buildable.`
-                    );
-                }
-                Renderer.renderBoard([index]);
-                updateHUD();
+            } else if (tryClearObstacleCell(index)) {
                 return;
             } else {
                 st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
@@ -2265,6 +2288,17 @@
                     el.dataset.rated = '1';
                     el.innerText = L(`感謝回饋！（已記錄：${tag}）`, `Thanks for the feedback! (${tag})`);
                 });
+            });
+        });
+
+        [
+            [G.dom.victoryFeedbackToggle, G.dom.victoryFeedbackBox],
+            [G.dom.gameoverFeedbackToggle, G.dom.gameoverFeedbackBox]
+        ].forEach(([btn, box]) => {
+            if (!btn || !box) return;
+            btn.addEventListener('click', () => {
+                const nowHidden = box.classList.toggle('hidden');
+                btn.setAttribute('aria-expanded', nowHidden ? 'false' : 'true');
             });
         });
 

@@ -281,8 +281,8 @@
             let armor = Number(mCfg.baseArmor) || 0;
             if (armor > 0 && Number.isFinite(mCfg.armorGrowthPerWave)) {
                 armor = Math.min(mCfg.maxArmor || 20, armor + Math.max(0, waveNum - (mCfg.minWave || 4)) * mCfg.armorGrowthPerWave);
-            } else if (armor === 0 && isElite) {
-                armor = eliteArmor;
+            } else if (isElite) {
+                armor = Math.max(armor, eliteArmor);
             }
             queue.push({ typeKey, hpScale, rewardBonus, isElite, isBoss: false, armor, useAltRoute: hasAltRoute && (i % 2 === 1) });
         }

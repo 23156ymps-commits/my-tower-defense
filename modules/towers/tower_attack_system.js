@@ -85,11 +85,6 @@
             speedMult *= TerrainSys.getTerrainBonusesAt(index).attackSpeedMult;
         }
 
-        const TreeSys = GameApp.systems && GameApp.systems.tree;
-        if (TreeSys) {
-            speedMult *= TreeSys.getTowerBlessingSpeedMult(type);
-        }
-
         if (typeof towerOrType === 'object' && towerOrType && towerOrType.isCrowned) {
             speedMult *= 1.25;
         }
@@ -175,13 +170,6 @@
             rawScales = DEFAULT_CHAIN_SCALES_BY_TIER[tier] || [1.0, 0.55];
         }
         const scales = rawScales.slice();
-
-        const TreeSys = GameApp.systems && GameApp.systems.tree;
-        const extraTargets = TreeSys ? TreeSys.getThunderChainBonus(towerObj.type) : 0;
-        for (let i = 0; i < extraTargets; i++) {
-            const last = scales.length > 0 ? scales[scales.length - 1] : 0.55;
-            scales.push(Math.max(0.30, Number((last - 0.15).toFixed(2))));
-        }
         return scales;
     }
 
@@ -216,7 +204,6 @@
         }
 
         const terrainBonuses = TerrainSys ? TerrainSys.getTerrainBonusesAt(index) : { damageMult: 1.0, terrainType: null };
-        const globalBlessMult = TreeSys ? TreeSys.getGlobalBlessingDamageMult() : 1.0;
         const mapSpec = G && G.map && G.map.spec;
         const family = cfg.family || towerObj.type;
         const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
@@ -224,7 +211,7 @@
         const mapIceMult = (mapSpec && Number.isFinite(mapSpec.iceDamageBonus) && isIceLineage)
             ? (1 + mapSpec.iceDamageBonus)
             : 1.0;
-        const unitDmg = baseDmg * terrainBonuses.damageMult * globalBlessMult * mapIceMult;
+        const unitDmg = baseDmg * terrainBonuses.damageMult * mapIceMult;
         let singleDps = Math.round((unitDmg * singleHitFactor) / intervalSec);
         if (style === 'fire_B_ember') {
             singleDps += Math.round((fxParams.burnFlatDps || 8) * 2);
@@ -238,8 +225,7 @@
             aoeDps = Math.round((unitDmg * chainTotalMult) / intervalSec);
             aoeLabel = isEn ? 'Chain DPS' : '連鎖 DPS';
         } else if (style === 'stun_pulse' || style === 'magnet_B_overload') {
-            const extraChain = (fxParams.chainTargets ? fxParams.chainTargets - 1 : (fxParams.chainExtraTargets ?? 2))
-                + (TreeSys ? TreeSys.getThunderChainBonus(towerObj.type) : 0);
+            const extraChain = (fxParams.chainTargets ? fxParams.chainTargets - 1 : (fxParams.chainExtraTargets ?? 2));
             const chainRatio = fxParams.chainDamageRatio ?? 0.70;
             const shockExtra = style === 'magnet_B_overload' ? (fxParams.shockBonusDamage || 12) * 2 : 0;
             aoeDps = Math.round((unitDmg * (1 + extraChain * chainRatio)) / intervalSec + shockExtra);
@@ -285,7 +271,6 @@
         const terrainBonuses = (TerrainSys && index !== null && index !== undefined)
             ? TerrainSys.getTerrainBonusesAt(index)
             : { damageMult: 1.0, terrainType: null };
-        const globalBlessMult = TreeSys ? TreeSys.getGlobalBlessingDamageMult() : 1.0;
         const mapSpec = G && G.map && G.map.spec;
         const family = cfg.family || towerObj.type;
         const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
@@ -293,7 +278,7 @@
         const mapIceMult = (mapSpec && Number.isFinite(mapSpec.iceDamageBonus) && isIceLineage)
             ? (1 + mapSpec.iceDamageBonus)
             : 1.0;
-        const effDmg = Math.max(1, Math.round(baseDmg * terrainBonuses.damageMult * globalBlessMult * mapIceMult));
+        const effDmg = Math.max(1, Math.round(baseDmg * terrainBonuses.damageMult * mapIceMult));
         const intervalSec = (Math.max(120, getTowerAttackInterval(towerObj, index)) / 1000).toFixed(2);
         const effRange = Number(getTowerEffectiveRangeCells(index, towerObj).toFixed(2)).toString();
         const stars = GameApp.renderer && typeof GameApp.renderer.getTierStars === 'function'
@@ -383,7 +368,6 @@
         const TreeSys = GameApp.systems && GameApp.systems.tree;
         const MonsterSys = GameApp.systems && GameApp.systems.monster;
 
-        const thornMult = TreeSys ? TreeSys.getGlobalBlessingDamageMult() : 1.0;
         const towerElementTag = cfg.elementTag || towerObj.type;
         const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
         const isWeakness = Boolean((!cfg.isHybrid) && monster.weakness && towerElementTag === monster.weakness);
@@ -409,7 +393,7 @@
             ? (1 + mapSpec.iceDamageBonus)
             : 1.0;
 
-        const raw = baseDmg * thornMult * resonanceMult * mapIceMult * (options.damageScale ?? 1.0) * (options.terrainMult ?? 1.0) * (options.extraMult ?? 1.0) * weakMult * vulnMult;
+        const raw = baseDmg * resonanceMult * mapIceMult * (options.damageScale ?? 1.0) * (options.terrainMult ?? 1.0) * (options.extraMult ?? 1.0) * weakMult * vulnMult;
         let armorPierce = options.armorPierce || 0;
         if (towerObj && towerObj.isCrowned && (family === 'steam' || towerObj.type === 'steam_bud')) {
             armorPierce = Math.min(1.0, armorPierce + 0.25);
@@ -504,8 +488,7 @@
         if ((cfg.attackStyle === 'slow_control' || options.forceSlow) && options.applySlow !== false && MonsterSys) {
             const baseRate = options.slowRate ?? fxParams.slowRate ?? 0.40;
             const baseDur = options.slowDurationMs ?? fxParams.slowDurationMs ?? 2000;
-            const slowSpec = TreeSys ? TreeSys.getIceLineageSlowParams(towerObj.type, baseRate, baseDur) : { rate: baseRate, durationMs: baseDur };
-            MonsterSys.applySlowToMonster(monster, slowSpec.rate, slowSpec.durationMs, options.slowSourceId || towerObj.type);
+            MonsterSys.applySlowToMonster(monster, baseRate, baseDur, options.slowSourceId || towerObj.type);
         }
 
         // T4 聖冠覺醒被動效果（依六大血脈分流）
@@ -536,6 +519,9 @@
         const displayDmg = hpDmg > 0 ? hpDmg : shieldAbsorbed;
         const dmgTag = options.dmgTag || (shellReduced ? (isEn ? 'Shell ' : '甲殼 ') : (shieldAbsorbed > 0 && hpDmg === 0 ? (isEn ? 'Shield ' : '破盾 ') : ''));
         GameApp.renderer.spawnDamageNumber(displayDmg, result.isWeakness, monster.pixelX, monster.pixelY, dmgTag, result.isAffinity);
+        if (monster.hp > 0 && (result.isWeakness || result.isAffinity) && typeof GameApp.renderer.triggerMonsterHitFlash === 'function') {
+            GameApp.renderer.triggerMonsterHitFlash(monster.id);
+        }
 
         // 感電協同觸發：任何防禦塔命中感電怪額外觸發 +12 雷傷（單怪 0.35s 內置冷卻）
         if (monster.hp > 0 && MonsterSys && typeof MonsterSys.tryTriggerShockBonusDamage === 'function') {
@@ -717,12 +703,9 @@
         // T3 ❄️A 永凍領域樹：1.5 格群體 60% 減速 ＋ 每命中已減速目標第 4 次觸發 0.9s 凍結 (Boss 減半，6s 免疫)
         ice_A_permafrost(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
             const fxParams = cfg.effectParams || {};
-            const TreeSys = GameApp.systems && GameApp.systems.tree;
             const MonsterSys = GameApp.systems && GameApp.systems.monster;
             const frostRadiusPx = (fxParams.aoeRadiusCells ?? 1.5) * G.boardMetrics.step;
-            const slowSpec = TreeSys
-                ? TreeSys.getIceLineageSlowParams(towerObj.type, fxParams.slowRate ?? 0.60, fxParams.slowDurationMs ?? 2500)
-                : { rate: fxParams.slowRate ?? 0.60, durationMs: fxParams.slowDurationMs ?? 2500 };
+            const slowSpec = { rate: fxParams.slowRate ?? 0.60, durationMs: fxParams.slowDurationMs ?? 2500 };
 
             const wasSlowed = MonsterSys ? MonsterSys.isMonsterSlowed(target) : false;
             applyHitToMonster(towerIndex, towerObj, target, {
@@ -839,19 +822,13 @@
         // T2 蒸氣噴泉：無視 45% 護甲 ＋ 1.3 格 70% 濺射
         aoe_mist(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
             const fxParams = cfg.effectParams || {};
-            const TreeSys = GameApp.systems && GameApp.systems.tree;
-            const MonsterSys = GameApp.systems && GameApp.systems.monster;
             const crownAoEBonus = towerObj && towerObj.isCrowned ? 0.4 : 0;
             const splashRadiusPx = ((fxParams.splashRadiusCells ?? 1.3) + crownAoEBonus) * G.boardMetrics.step;
             const splashRatio = fxParams.splashRatio ?? 0.70;
             const armorPierce = fxParams.armorPierce ?? 0.45;
-            const mistSlow = TreeSys ? TreeSys.getIceLineageSlowParams(towerObj.type, 0, 0) : { rate: 0, durationMs: 0 };
 
             applyHitToMonster(towerIndex, towerObj, target, { armorPierce });
-            if (mistSlow.rate > 0 && target.hp > 0 && MonsterSys) {
-                MonsterSys.applySlowToMonster(target, mistSlow.rate, mistSlow.durationMs, 'steam_chill');
-            }
-            applySplashDamage(towerIndex, towerObj, targetPos, splashRadiusPx, target.id, { damageScale: splashRatio, armorPierce }, mistSlow);
+            applySplashDamage(towerIndex, towerObj, targetPos, splashRadiusPx, target.id, { damageScale: splashRatio, armorPierce });
             GameApp.renderer.emitCanvasAttackFX('steam', towerPos, targetPos, { splashRadiusPx });
         },
 
@@ -883,13 +860,10 @@
         // T3 💨B 霜霧迷宮樹：1.6 格迷霧 AoE，附加 35% 減速 ＋ +20% 全隊濕冷易傷 (3s)
         steam_B_fog(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
             const fxParams = cfg.effectParams || {};
-            const TreeSys = GameApp.systems && GameApp.systems.tree;
             const MonsterSys = GameApp.systems && GameApp.systems.monster;
             const crownAoEBonus = towerObj && towerObj.isCrowned ? 0.4 : 0;
             const fogRadiusPx = ((fxParams.aoeRadiusCells ?? 1.6) + crownAoEBonus) * G.boardMetrics.step;
-            const slowSpec = TreeSys
-                ? TreeSys.getIceLineageSlowParams(towerObj.type, fxParams.slowRate ?? 0.35, fxParams.slowDurationMs ?? 3000)
-                : { rate: fxParams.slowRate ?? 0.35, durationMs: fxParams.slowDurationMs ?? 3000 };
+            const slowSpec = { rate: fxParams.slowRate ?? 0.35, durationMs: fxParams.slowDurationMs ?? 3000 };
             const vulnBonus = fxParams.vulnBonus ?? 0.20;
             const vulnDur = fxParams.vulnDurationMs ?? 3000;
 
@@ -920,14 +894,12 @@
             const MonsterSys = GameApp.systems && GameApp.systems.monster;
             const frostRadiusPx = (fxParams.aoeRadiusCells ?? 1.3) * G.boardMetrics.step;
             const chainRadiusPx = (fxParams.chainRadiusCells ?? 2.6) * G.boardMetrics.step;
-            const pulseSlow = TreeSys
-                ? TreeSys.getIceLineageSlowParams(towerObj.type, fxParams.slowRate ?? 0.45, fxParams.slowDurationMs ?? 2200)
-                : { rate: 0.45, durationMs: 2200 };
+            const pulseSlow = { rate: fxParams.slowRate ?? 0.45, durationMs: fxParams.slowDurationMs ?? 2200 };
             const stormExtra = (TreeSys && typeof TreeSys.getChainStormExtraBounces === 'function') ? TreeSys.getChainStormExtraBounces() : 0;
             const stormRadiusPx = (TreeSys && typeof TreeSys.getChainStormRadiusCells === 'function')
                 ? TreeSys.getChainStormRadiusCells() * G.boardMetrics.step
                 : chainRadiusPx;
-            let maxChain = (fxParams.chainExtraTargets ?? 2) + (TreeSys ? TreeSys.getThunderChainBonus(towerObj.type) : 0);
+            let maxChain = fxParams.chainExtraTargets ?? 2;
 
             const stunMs = fxParams.stunDurationMs ?? 350;
             const bossStunMs = fxParams.bossStunDurationMs ?? 150;
@@ -986,12 +958,9 @@
         // T3 💠A 引力黑洞樹：1.5 格 45% 群體減速，每第 3 次脈衝將範圍內非 Boss 怪沿路徑回拉 0.45 格聚攏
         magnet_A_singularity(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
             const fxParams = cfg.effectParams || {};
-            const TreeSys = GameApp.systems && GameApp.systems.tree;
             const MonsterSys = GameApp.systems && GameApp.systems.monster;
             const radiusPx = (fxParams.aoeRadiusCells ?? 1.5) * G.boardMetrics.step;
-            const slowSpec = TreeSys
-                ? TreeSys.getIceLineageSlowParams(towerObj.type, fxParams.slowRate ?? 0.45, fxParams.slowDurationMs ?? 2400)
-                : { rate: 0.45, durationMs: 2400 };
+            const slowSpec = { rate: fxParams.slowRate ?? 0.45, durationMs: fxParams.slowDurationMs ?? 2400 };
 
             towerObj.shotCounter = (towerObj.shotCounter || 0) + 1;
             const isPullPulse = (towerObj.shotCounter % (fxParams.pullEveryN || 3)) === 0;
@@ -1032,7 +1001,7 @@
             const stormRadiusPx = (TreeSys && typeof TreeSys.getChainStormRadiusCells === 'function')
                 ? TreeSys.getChainStormRadiusCells() * G.boardMetrics.step
                 : chainRadiusPx;
-            let totalTargets = (fxParams.chainTargets ?? 3) + (TreeSys ? TreeSys.getThunderChainBonus(towerObj.type) : 0);
+            let totalTargets = fxParams.chainTargets ?? 3;
 
             if (MonsterSys) MonsterSys.applyShockToMonster(target, fxParams, towerObj);
             applyHitToMonster(towerIndex, towerObj, target);
@@ -1248,6 +1217,10 @@
             } else {
                 towerObj.accMs = Math.min(intervalMs, towerObj.accMs);
             }
+        }
+        const MonsterSys = GameApp.systems && GameApp.systems.monster;
+        if (MonsterSys && typeof MonsterSys.pruneDeadMonsters === 'function') {
+            MonsterSys.pruneDeadMonsters();
         }
         if (didCombatAct) GameApp.renderer.renderMonsterLayer();
     }

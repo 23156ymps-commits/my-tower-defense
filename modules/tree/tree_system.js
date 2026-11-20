@@ -47,26 +47,6 @@
         return String(towerType || '').replace(/_(bud|trunk|A|B)$/, '');
     }
 
-    function getIceLineageSlowParams(towerType, baseRate, baseDurationMs) {
-        return { rate: baseRate, durationMs: baseDurationMs };
-    }
-
-    function getThunderChainBonus() {
-        return 0;
-    }
-
-    function getTowerBlessingSpeedMult() {
-        return 1.0;
-    }
-
-    function getGlobalBlessingDamageMult() {
-        return 1.0;
-    }
-
-    function getNearTreeVulnerabilityBonus() {
-        return 0;
-    }
-
     function computeKillDewGain(monster) {
         if (!monster || monster.isSplitChild) return 0;
         const tc = getTreeConfig();
@@ -192,10 +172,6 @@
         if (!G || !G.state || G.state.dewOverchargeMs <= 0 || !hasBlessing('dew_overcharge')) return false;
         const tc = getTreeConfig();
         return Math.random() < (tc.BLESSING_DEW_OVERCHARGE_CHANCE || 0.40);
-    }
-
-    function tryTriggerEmberExplosion() {
-        return;
     }
 
     function L(zh, en) {
@@ -388,11 +364,6 @@
         hasBlessing,
         towerHasLineage,
         resolveTowerFamily,
-        getIceLineageSlowParams,
-        getThunderChainBonus,
-        getTowerBlessingSpeedMult,
-        getGlobalBlessingDamageMult,
-        getNearTreeVulnerabilityBonus,
         computeKillDewGain,
         registerResonanceHit,
         getElementalResonanceMult,
@@ -402,7 +373,6 @@
         trySpawnScorchedBrand,
         activateDewOverchargeIfUnlocked,
         shouldTriggerDewOvercharge,
-        tryTriggerEmberExplosion,
         castEntangleSkill,
         castFrenzySkill,
         triggerBlessingSelection,

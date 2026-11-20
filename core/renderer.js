@@ -696,12 +696,21 @@
         if (fxCtx && fxCanvasEl) fxCtx.clearRect(0, 0, fxCanvasEl.width || G.boardMetrics.stageW, fxCanvasEl.height || G.boardMetrics.stageH);
     }
 
+    function pushCanvasParticle(particle) {
+        const particles = G && G.fxEntities && G.fxEntities.particles;
+        if (!particles) return;
+        if (particles.length >= 200) {
+            particles.splice(0, particles.length - 199);
+        }
+        particles.push(particle);
+    }
+
     function emitParticleBurst(x, y, color, count = 8, speedMax = 85) {
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
             const speed = speedMax * (0.45 + Math.random() * 0.55);
-            G.fxEntities.particles.push({
-                x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                pushCanvasParticle({
+                    x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
                 radius: 1.8 + Math.random() * 2.0, color, ageMs: 0, durationMs: 240 + Math.random() * 120
             });
         }
@@ -718,6 +727,10 @@
     function spawnDamageNumber(amount, isWeakness, px, py, tagPrefix = '', isAffinity = false) {
         const layer = G.dom.floatingLayerEl;
         if (!layer) return;
+        const activeDmg = layer.getElementsByClassName('floating-dmg');
+        while (activeDmg.length >= 40 && activeDmg[0]) {
+            activeDmg[0].remove();
+        }
         const dmgEl = document.createElement('div');
         const toneClass = isWeakness ? 'weakness' : (isAffinity ? 'affinity' : 'normal');
         dmgEl.classList.add('floating-dmg', toneClass);
@@ -843,8 +856,8 @@
                 for (let idx = 0; idx < st.board.length; idx++) {
                     if (!st.board[idx] || Math.random() > 0.48) continue;
                     const c = indexToCoords(idx), pos = getCellCenter(c.x, c.y);
-                    fx.particles.push({
-                        x: pos.left + (Math.random() - 0.5) * m.cellW * 0.55, y: pos.top + (Math.random() - 0.2) * m.cellH * 0.4,
+                        pushCanvasParticle({
+                            x: pos.left + (Math.random() - 0.5) * m.cellW * 0.55, y: pos.top + (Math.random() - 0.2) * m.cellH * 0.4,
                         vx: (Math.random() - 0.5) * 14, vy: -24 - Math.random() * 18, radius: 1.7 + Math.random() * 1.4,
                         color: Math.random() < 0.5 ? tk.elLightning : tk.accentCta, ageMs: 0, durationMs: 420 + Math.random() * 180
                     });
@@ -1055,11 +1068,22 @@
         return tags.join('');
     }
 
+    function triggerMonsterHitFlash(monsterId) {
+        const rec = G && G.monsterDomMap ? G.monsterDomMap.get(monsterId) : null;
+        if (!rec || !rec.el) return;
+        const useB = rec.el.classList.contains('hit-flash-a');
+        rec.el.classList.remove('hit-flash-a', 'hit-flash-b');
+        rec.el.classList.add(useB ? 'hit-flash-b' : 'hit-flash-a');
+    }
+
     function renderMonsterLayer() {
         if (!G || !G.dom || !G.dom.monsterLayerEl) return;
         const monsters = G.state.monsters;
         const activeIds = new Set();
-        for (let i = 0; i < monsters.length; i++) activeIds.add(monsters[i].id);
+        for (let i = 0; i < monsters.length; i++) {
+            const m = monsters[i];
+            if (m && m.hp > 0 && !m._killHandled && !m._dead) activeIds.add(m.id);
+        }
         for (const [id, rec] of G.monsterDomMap.entries()) {
             if (!activeIds.has(id)) { rec.el.remove(); G.monsterDomMap.delete(id); }
         }
@@ -1069,6 +1093,7 @@
         const curLang = isEnNow ? 'en' : 'zh-TW';
         for (let i = 0; i < monsters.length; i++) {
             const m = monsters[i];
+            if (!m || m.hp <= 0 || m._killHandled || m._dead) continue;
             const rec = G.monsterDomMap.get(m.id) || createMonsterDom(m);
             rec.el.style.left = `${m.pixelX}px`;
             rec.el.style.top = `${m.pixelY}px`;
@@ -1605,52 +1630,53 @@
         st.treeHitShakeTimer = G.callbacks.scheduleTimeout(() => {
             if (G.dom.boardStageEl) G.dom.boardStageEl.classList.remove('tree-hit-shake');
             st.treeHitShakeTimer = null;
-        }, 300);
-    }
+    }, 160);
+}
 
     const RendererModule = {
-        bind,
-        getTierStars,
-        createTowerSvgParts,
-        createMonsterSvgHtml,
-        drawPortrait,
-        showDragEvolutionPreview,
-        clearDragEvolutionPreview,
-        updateTowerHoverTooltip,
-        hideTerrainTooltip,
-        resizeFxCanvas,
-        measureBoardMetrics,
-        fillCellClampedText,
-        getCellCenter,
-        clearCanvasFXState,
-        emitParticleBurst,
-        emitHitFlash,
-        emitRingFX,
-        spawnDamageNumber,
-        spawnFloatingNotice,
-        emitCanvasAttackFX,
-        updateAndRenderCanvasFX,
-        updateTowerAimVisual,
-        createMonsterDom,
-        removeMonsterDom,
-        renderMonsterLayer,
-        repositionAllMonsters,
-        clearCellDragHighlights,
-        clearTouchDragVisuals,
-        createTowerElement,
-        setTowerStunnedVisual,
-        renderCellTower,
-        initBoard,
-        refreshCellTerrain,
-        renderBoard,
-        showDragRangePreview,
-        updateRangeIndicator,
-        updateWorldTreeVisualState,
-        triggerWorldTreeShake
-    };
+    bind,
+    getTierStars,
+    createTowerSvgParts,
+    createMonsterSvgHtml,
+    drawPortrait,
+    showDragEvolutionPreview,
+    clearDragEvolutionPreview,
+    updateTowerHoverTooltip,
+    hideTerrainTooltip,
+    resizeFxCanvas,
+    measureBoardMetrics,
+    fillCellClampedText,
+    getCellCenter,
+    clearCanvasFXState,
+    emitParticleBurst,
+    emitHitFlash,
+    emitRingFX,
+    spawnDamageNumber,
+    spawnFloatingNotice,
+    emitCanvasAttackFX,
+    updateAndRenderCanvasFX,
+    updateTowerAimVisual,
+    triggerMonsterHitFlash,
+    createMonsterDom,
+    removeMonsterDom,
+    renderMonsterLayer,
+    repositionAllMonsters,
+    clearCellDragHighlights,
+    clearTouchDragVisuals,
+    createTowerElement,
+    setTowerStunnedVisual,
+    renderCellTower,
+    initBoard,
+    refreshCellTerrain,
+    renderBoard,
+    showDragRangePreview,
+    updateRangeIndicator,
+    updateWorldTreeVisualState,
+    triggerWorldTreeShake
+};
 
-    GameApp.core = GameApp.core || {};
-    GameApp.core.renderer = RendererModule;
-    GameApp.renderer = RendererModule;
-    global.GameRenderer = RendererModule;
-})(window);
+GameApp.core = GameApp.core || {};
+GameApp.core.renderer = RendererModule;
+GameApp.renderer = RendererModule;
+global.GameRenderer = RendererModule;
+}) (window);

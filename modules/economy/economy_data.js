@@ -5,7 +5,7 @@
  * 【讀取資料】：無（本檔為純數值設定表，供 economy_system.js 讀取）。
  * 【常見修改入口】：
  *   1. 修改開局預設金幣：調整 ECONOMY_DATA.INITIAL_GOLD（預設 40）。
- *   2. 修改召喚塔階梯定價曲線與上限：調整 SUMMON_COST_STEPS 與 COST_MAX (65)。
+ *   2. 修改召喚塔階梯定價曲線與上限：調整 SUMMON_COST_STEPS 與 COST_MAX (80)。
  * ============================================================================
  */
 (function (global) {

@@ -323,9 +323,33 @@ body.map-frost {
 
 .hud-help-btn {
     min-width: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     border-color: var(--border-subtle);
     color: var(--el-lightning);
+}
+.ui-ico {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    vertical-align: -2px;
+    flex-shrink: 0;
+}
+.hud-hp .ui-ico-heart { color: #EE9B8F; }
+.hud-gold .ui-ico-coin { color: var(--el-lightning); }
+.info-legend-inline > span,
+.side-panel-row > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.awaken-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
 }
 .lang-dropdown {
     position: relative;
@@ -752,11 +776,12 @@ body.map-frost {
 .pause-menu-btn:hover { background-color: #38443D; border-color: var(--accent-cta); }
 .pause-banner-btn:active { transform: scale(0.98); }
 
-#board-stage.tree-hit-shake { animation: treeHitShake 0.25s ease-out; }
+#board-stage.tree-hit-shake { animation: treeHitShake 150ms ease-out; }
 @keyframes treeHitShake {
     0%, 100% { transform: translate(0, 0); }
-    25% { transform: translate(-2px, 0); }
-    75% { transform: translate(2px, 0); }
+    25% { transform: translate(-3px, 1px); }
+    55% { transform: translate(3px, -1px); }
+    80% { transform: translate(-2px, 0); }
 }
 
 #board-stage,
@@ -946,10 +971,10 @@ body.map-frost .cell.path-cell {
 .tower-head-recoil { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
 .tower-base-svg, .tower-head-svg, .monster-unit .m-svg { width: 100%; height: 100%; display: block; overflow: visible; pointer-events: none; }
 
-.tower-head-recoil.recoil-a { animation: turretRecoilA 0.13s cubic-bezier(0.22, 1, 0.36, 1); }
-.tower-head-recoil.recoil-b { animation: turretRecoilB 0.13s cubic-bezier(0.22, 1, 0.36, 1); }
-@keyframes turretRecoilA { 0%, 100% { transform: translateY(0) scale(1); } 28% { transform: translateY(15%) scale(0.94, 0.92); } }
-@keyframes turretRecoilB { 0%, 100% { transform: translateY(0) scale(1); } 28% { transform: translateY(15%) scale(0.94, 0.92); } }
+.tower-head-recoil.recoil-a { animation: turretRecoilA 80ms ease-out; }
+.tower-head-recoil.recoil-b { animation: turretRecoilB 80ms ease-out; }
+@keyframes turretRecoilA { 0% { transform: scale(1); } 35% { transform: translateY(6%) scale(1.08); } 100% { transform: scale(1); } }
+@keyframes turretRecoilB { 0% { transform: scale(1); } 35% { transform: translateY(6%) scale(1.08); } 100% { transform: scale(1); } }
 
 /* 格子內微標示（10px–11px 高對比，嚴格限寬不超出格子） */
 .tower-name {
@@ -1024,6 +1049,10 @@ body.map-frost .cell.path-cell {
     opacity: 0.36;
     filter: saturate(0.45);
 }
+.monster-unit.hit-flash-a .m-icon { animation: monsterHitFlashA 60ms ease-out; }
+.monster-unit.hit-flash-b .m-icon { animation: monsterHitFlashB 60ms ease-out; }
+@keyframes monsterHitFlashA { 0% { filter: brightness(2.4) saturate(0.25); } 100% { filter: none; } }
+@keyframes monsterHitFlashB { 0% { filter: brightness(2.4) saturate(0.25); } 100% { filter: none; } }
 .tower.is-crowned .tower-crown-halo {
     position: absolute;
     inset: -3px;
@@ -1607,7 +1636,7 @@ body.map-frost .cell.path-cell {
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(-4px); } 50% { transform: translateX(4px); } }
 
 /* 2×2 等高技能與功能列（與左側召喚卡並排，單行對齊不折行） */
-.debug-controls {
+.action-controls {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1615,7 +1644,7 @@ body.map-frost .cell.path-cell {
     gap: 8px;
 }
 
-.debug-controls button {
+.action-controls button {
     width: 100%;
     min-width: 0;
     min-height: 40px;
@@ -1638,12 +1667,12 @@ body.map-frost .cell.path-cell {
     transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, filter 0.15s ease, transform 0.12s ease;
 }
 
-.debug-controls button:hover:not(:disabled) {
+.action-controls button:hover:not(:disabled) {
     background-color: #38443D;
     border-color: var(--accent-cta);
 }
-.debug-controls button:active:not(:disabled) { transform: scale(0.98); }
-.debug-controls button:disabled:not(.skill-btn) {
+.action-controls button:active:not(:disabled) { transform: scale(0.98); }
+.action-controls button:disabled:not(.skill-btn) {
     color: var(--text-secondary);
     background-color: var(--bg-grid-elevated);
     opacity: 0.48;
@@ -2530,7 +2559,41 @@ body.map-frost .cell.path-cell {
     font-weight: 600;
 }
 
-/* 結算雙重回饋工具：5 秒主觀體感快評列 ＋ 單局黑盒子複製按鈕 */
+/* 結算雙重回饋工具：預設收合至角落低調切換鈕，點擊再展開 */
+.outcome-corner-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+}
+.feedback-toggle-btn {
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.feedback-toggle-btn:hover,
+.feedback-toggle-btn[aria-expanded="true"] {
+    background-color: #323D37;
+    border-color: var(--accent-cta);
+    color: var(--text-primary);
+}
+.start-quick-tip {
+    margin: 0 0 12px 0;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    text-align: center;
+}
 .feel-feedback-box {
     border-top: 1px solid var(--border-subtle);
     border-bottom: 1px solid var(--border-subtle);
@@ -2540,6 +2603,7 @@ body.map-frost .cell.path-cell {
     flex-direction: column;
     gap: 6px;
 }
+.feel-feedback-box.hidden { display: none; }
 .feel-rating-header {
     font-size: 13px;
     font-weight: 600;
@@ -2683,8 +2747,8 @@ body.map-frost .cell.path-cell {
     .spawn-card-portrait, .spawn-portrait-canvas { width: 28px; height: 28px; }
     .spawn-card-role .role-full { display: none; }
     .spawn-card-role .role-short { display: inline; }
-    .debug-controls { grid-template-columns: repeat(2, 1fr); gap: 6px; }
-    .debug-controls button { min-height: 40px; padding: 4px 6px; font-size: 12px; }
+    .action-controls { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .action-controls button { min-height: 40px; padding: 4px 6px; font-size: 12px; }
     #msg-text { margin-top: 4px; font-size: 12px; min-height: 16px; }
 
     .terrain-tooltip {
@@ -3029,8 +3093,8 @@ body.map-frost .cell.path-cell {
     .spawn-card-portrait, .spawn-portrait-canvas { width: 28px; height: 28px; }
     .spawn-card-head { font-size: 12px; }
     .spawn-card-role { font-size: 12px; }
-    .debug-controls { gap: 6px; }
-    .debug-controls button { padding: 4px 8px; font-size: 12px; }
+    .action-controls { gap: 6px; }
+    .action-controls button { padding: 4px 8px; font-size: 12px; }
     #msg-text { margin-top: 4px; min-height: 16px; line-height: 1.3; }
     .codex-card { padding: 12px; }
     .tree-viewport { height: 300px; }
@@ -3052,6 +3116,6 @@ html[lang="en"] .spawn-card-head { font-size: 11px; gap: 3px; }
 html[lang="en"] .spawn-card-role { font-size: 11px; }
 html[lang="en"] .btn-cost-val { font-size: 11px; }
 html[lang="en"] .skill-btn .skill-label { font-size: 12px; }
-html[lang="en"] .debug-controls button { font-size: 12px; padding: 4px 6px; }
+html[lang="en"] .action-controls button { font-size: 12px; padding: 4px 6px; }
 html[lang="en"] .inspector-stat,
 html[lang="en"] .inspector-btn { font-size: 12px; }

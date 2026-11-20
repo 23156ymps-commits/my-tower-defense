@@ -16,7 +16,7 @@
     try {
         const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
         if (saved === 'en' || saved === 'zh-TW') currentLang = saved;
-    } catch (_) {}
+    } catch (_) { }
 
     const EN_TOWERS = {
         fire_bud: {
@@ -508,275 +508,274 @@
         const goldItem = document.querySelector('.hud-gold');
         if (goldItem) goldItem.title = isEn ? 'Current Gold' : '當前金幣';
         const dewLabelNode = document.querySelector('.hud-dew');
-        if (dewLabelNode && dewLabelNode.firstChild && dewLabelNode.firstChild.nodeType === 3) {
-            dewLabelNode.firstChild.nodeValue = isEn ? 'Dew ' : '靈露 ';
-        }
-        if (dewLabelNode) dewLabelNode.title = isEn ? 'Slay enemies to gather Dew for World Tree active skills' : '擊殺敵人累積靈露，用於施放世界樹主動技能';
-        const bestLabelNode = document.querySelector('.hud-best');
-        if (bestLabelNode && bestLabelNode.firstChild && bestLabelNode.firstChild.nodeType === 3) {
-            bestLabelNode.firstChild.nodeValue = isEn ? 'Best ' : '最高 ';
-        }
-
-        // 預告條右側簡易圖例
-        const legendEl = document.getElementById('info-legend');
-        if (legendEl) {
-            const spans = legendEl.querySelectorAll('span');
-            if (spans[0]) spans[0].innerText = isEn ? '🔥Fire ▸ 🌿Vine' : '🔥火 ▸ 🌿蔓藤';
-            if (spans[1]) spans[1].innerText = isEn ? '❄️Ice ▸ 🌋Lava' : '❄️冰 ▸ 🌋熔岩';
-            if (spans[2]) spans[2].innerText = isEn ? '⚡Thunder ▸ 🛸Air' : '⚡雷 ▸ 🛸機械';
-        }
-
-        // 左右側欄靜態標題
-        const leftTitles = document.querySelectorAll('#side-panel-left .side-panel-title');
-        if (leftTitles[0]) leftTitles[0].innerText = isEn ? 'Elemental Counters' : '元素相剋速查';
-        if (leftTitles[1]) leftTitles[1].innerText = isEn ? 'Terrain Bonuses' : '戰術地形加成';
-        if (leftTitles[2]) leftTitles[2].innerText = isEn ? 'Evolution Tiers' : '轉職與升星';
-
-        const leftList = document.querySelectorAll('#side-panel-left .side-panel-list');
-        if (leftList[0]) {
-            const rows = leftList[0].querySelectorAll('.side-panel-row');
-            const zh0 = [['🔥 火 ▸ 蔓藤 / 史萊姆', '175%'], ['❄️ 冰 ▸ 熔岩 / 獵犬', '175%'], ['⚡ 雷 ▸ 飛艇 / 魔像', '175%'], ['✨ 轉職 ▸ 親和弱點', '135%']];
-            const en0 = [['🔥 Fire ▸ Vine / Slime', '175%'], ['❄️ Ice ▸ Lava / Hound', '175%'], ['⚡ Thunder ▸ Air / Golem', '175%'], ['✨ Hybrid ▸ Affinity', '135%']];
-            (isEn ? en0 : zh0).forEach((pair, idx) => {
-                if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
-                rows[idx].children[0].innerText = pair[0];
-                rows[idx].children[1].innerText = pair[1];
-            });
-        }
-        if (leftList[1]) {
-            const rows = leftList[1].querySelectorAll('.side-panel-row');
-            const zh1 = [['制高點', '射程 +30%'], ['元素靈脈', '攻速 +25%'], ['世界樹庇護', '傷 +20%']];
-            const en1 = [['Highground', 'Rng +30%'], ['Mana Vein', 'Spd +25%'], ['Sanctuary', 'DMG +20%']];
-            (isEn ? en1 : zh1).forEach((pair, idx) => {
-                if (!rows[idx] || !rows[idx].children[1] || !rows[idx].children[2]) return;
-                rows[idx].children[1].innerText = pair[0];
-                rows[idx].children[2].innerText = pair[1];
-            });
-        }
-        if (leftList[2]) {
-            const rows = leftList[2].querySelectorAll('.side-panel-row');
-            const zh2 = [['異系 1★ + 1★', '轉職 1★'], ['同種 / 灌注 1★', '升星 2★'], ['同種 2★ + 2★', '冠枝 3★']];
-            const en2 = [['Cross 1★ + 1★', 'Job 1★'], ['Same / Infuse 1★', 'Star 2★'], ['Same 2★ + 2★', 'Crown 3★']];
-            (isEn ? en2 : zh2).forEach((pair, idx) => {
-                if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
-                rows[idx].children[0].innerText = pair[0];
-                rows[idx].children[1].innerText = pair[1];
-            });
-        }
-
-        // 底部與彈窗固定鈕
-        setElText('codex-btn', isEn ? 'World Tree' : '世界樹圖譜');
-        setElText('next-wave-btn', isEn ? 'Start Wave' : '立即開波');
-        setElText('pause-resume-btn', isEn ? 'Resume' : '繼續');
-        setElText('pause-menu-btn', isEn ? 'Change Map' : '切換地圖');
-        setElText('evo-confirm-title', isEn ? 'Crown Branch Evolution' : '世界樹冠枝開花選擇');
-        setElText('evo-cancel-btn', isEn ? 'Cancel [Esc]' : '取消退回原位 [Esc]');
-        setElText('codex-title', isEn ? 'Elemental World Tree Codex' : '元素世界樹演化圖譜');
-        setElText('codex-close-btn', isEn ? 'Close [Esc]' : '關閉 [Esc]');
-        setElText('blessing-title', isEn ? 'World Tree Blessings' : '世界樹枝枒祝福');
-        setElText('start-title', isEn ? 'Elemental Frontline: Merge TD' : '元素陣線：合成塔防');
-        setElText('start-game-btn', isEn ? 'Start Defense' : '開始防守');
-        setElText('guide-title', isEn ? 'Tactical Field Guide' : '戰術手冊與地形速查');
-        setElText('guide-close-btn', isEn ? 'Back to Battle' : '返回戰場');
-        setElText('guide-menu-btn', isEn ? 'Change Map / Main Menu' : '切換地圖 / 返回封面');
-        setElText('victory-title', isEn ? 'Victory · World Tree Protected' : '防守成功 · 世界樹安然無恙');
-        setElText('victory-restart-btn', isEn ? 'Restart' : '重新開始');
-        setElText('endless-btn', isEn ? 'Endless Mode' : '繼續無盡挑戰');
-        setElText('victory-menu-btn', isEn ? 'Change Map / Menu' : '切換地圖 / 主選單');
-        setElText('game-over-title', isEn ? 'Defense Fallen' : '防線失守');
-        setElText('restart-btn', isEn ? 'Restart' : '重新開始');
-        setElText('gameover-menu-btn', isEn ? 'Change Map / Menu' : '切換地圖 / 主選單');
-
-        const mapSecHead = document.querySelector('.map-selector-header');
-        if (mapSecHead) mapSecHead.innerText = isEn ? 'Select Battlefield' : '選擇戰場地圖';
-
-        const startSub = document.querySelector('#start-overlay .modal-subtitle');
-        if (startSub) startSub.innerText = isEn ? '15×10 Woodland Front · Defend 10 Waves' : '15×10 古林戰線 · 守護世界樹抵禦 10 波攻勢';
-
-        const mapCards = document.querySelectorAll('#map-selector-grid .map-card');
-        mapCards.forEach((card) => {
-            const id = card.dataset.mapId;
-            const nameEl = card.querySelector('.map-card-name');
-            const badgeEl = card.querySelector('.map-diff-badge');
-            const descEl = card.querySelector('.map-card-desc');
-            if (id === 'forest') {
-                if (nameEl) nameEl.innerText = isEn ? 'Sunlit Woods' : '晨光森林';
-                if (badgeEl) badgeEl.innerText = isEn ? 'Standard' : '標準難度';
-                if (descEl) descEl.innerText = isEn ? '41-cell winding path · Classic defense' : '41 格蜿蜒長徑 · 經典穩定防線';
-            } else if (id === 'lava') {
-                if (nameEl) nameEl.innerText = isEn ? 'Magma Canyon' : '熔岩峽谷';
-                if (badgeEl) badgeEl.innerText = isEn ? 'Hard' : '進階挑戰';
-                if (descEl) descEl.innerText = isEn ? '31-cell short path · Start +10 💰' : '31 格雙折短徑 · 初始 +10 💰';
-            } else if (id === 'frost') {
-                if (nameEl) nameEl.innerText = isEn ? 'Permafrost Rift' : '永凍裂谷';
-                if (badgeEl) badgeEl.innerText = isEn ? 'Dual-Lane' : '雙路分線';
-                if (descEl) descEl.innerText = isEn ? '36-cell dual-lane · Start +15 💰 · Ice DMG +20%' : '36 格雙線匯流 · 初始 +15 💰 · 冰脈傷害 +20%';
+            setElText('hud-dew-label', isEn ? 'Dew' : '靈露');
+            if (dewLabelNode) dewLabelNode.title = isEn ? 'Slay enemies to gather Dew for World Tree active skills' : '擊殺敵人累積靈露，用於施放世界樹主動技能';
+            const helpBtnEl = document.getElementById('help-btn');
+            if (helpBtnEl) {
+                helpBtnEl.title = isEn ? 'Tactical Field Guide & Counters' : '開啟戰術手冊與屬性地形速查';
+                helpBtnEl.setAttribute('aria-label', isEn ? 'Open Tactical Field Guide' : '開啟戰術手冊');
             }
-        });
+            const bestLabelNode = document.querySelector('.hud-best');
+            if (bestLabelNode && bestLabelNode.firstChild && bestLabelNode.firstChild.nodeType === 3) {
+                bestLabelNode.firstChild.nodeValue = isEn ? 'Best ' : '最高 ';
+            }
 
-        const contractsLabel = document.querySelector('#contracts-drawer .contracts-summary span:first-child');
-        if (contractsLabel) contractsLabel.innerText = isEn ? 'Difficulty Contracts (Optional)' : '難度契約（選填挑戰）';
+            // 預告條右側簡易圖例
+            const legendEl = document.getElementById('info-legend');
+            if (legendEl) {
+                const texts = legendEl.querySelectorAll('.legend-text');
+                if (texts[0]) texts[0].innerText = isEn ? 'Fire ▸ Vine' : '火 ▸ 蔓藤';
+                if (texts[1]) texts[1].innerText = isEn ? 'Ice ▸ Lava' : '冰 ▸ 熔岩';
+                if (texts[2]) texts[2].innerText = isEn ? 'Thunder ▸ Air' : '雷 ▸ 機械';
+            }
 
-        const pauseBannerText = document.querySelector('#pause-banner .pause-banner-text');
-        if (pauseBannerText) pauseBannerText.innerText = isEn ? 'Game Paused — Click Resume or press [Space]' : '遊戲已暫停 — 點擊繼續或按 [Space] 恢復';
+            // 左右側欄靜態標題
+            const leftTitles = document.querySelectorAll('#side-panel-left .side-panel-title');
+            if (leftTitles[0]) leftTitles[0].innerText = isEn ? 'Elemental Counters' : '元素相剋速查';
+            if (leftTitles[1]) leftTitles[1].innerText = isEn ? 'Terrain Bonuses' : '戰術地形加成';
+            if (leftTitles[2]) leftTitles[2].innerText = isEn ? 'Evolution Tiers' : '轉職與升星';
 
-        const smcTitle = document.querySelector('#side-monster-card .side-panel-title');
-        if (smcTitle) smcTitle.innerText = isEn ? 'Target Enemy Info' : '目標敵軍情報';
+            const leftList = document.querySelectorAll('#side-panel-left .side-panel-list');
+            if (leftList[0]) {
+                const rows = leftList[0].querySelectorAll('.side-panel-row');
+                const zh0 = [['火 ▸ 蔓藤 / 史萊姆', '175%'], ['冰 ▸ 熔岩 / 獵犬', '175%'], ['雷 ▸ 飛艇 / 魔像', '175%'], ['✨ 轉職 ▸ 親和弱點', '135%']];
+                const en0 = [['Fire ▸ Vine / Slime', '175%'], ['Ice ▸ Lava / Hound', '175%'], ['Thunder ▸ Air / Golem', '175%'], ['✨ Hybrid ▸ Affinity', '135%']];
+                (isEn ? en0 : zh0).forEach((pair, idx) => {
+                    if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
+                    const textEl = rows[idx].querySelector('.el-counter-text');
+                    if (textEl) textEl.innerText = pair[0];
+                    else rows[idx].children[0].innerText = pair[0];
+                    rows[idx].children[1].innerText = pair[1];
+                });
+            }
+            if (leftList[1]) {
+                const rows = leftList[1].querySelectorAll('.side-panel-row');
+                const zh1 = [['制高點', '射程 +30%'], ['元素靈脈', '攻速 +25%'], ['世界樹庇護', '傷 +20%']];
+                const en1 = [['Highground', 'Rng +30%'], ['Mana Vein', 'Spd +25%'], ['Sanctuary', 'DMG +20%']];
+                (isEn ? en1 : zh1).forEach((pair, idx) => {
+                    if (!rows[idx] || !rows[idx].children[1] || !rows[idx].children[2]) return;
+                    rows[idx].children[1].innerText = pair[0];
+                    rows[idx].children[2].innerText = pair[1];
+                });
+            }
+            if (leftList[2]) {
+                const rows = leftList[2].querySelectorAll('.side-panel-row');
+                const zh2 = [['異系 1★ + 1★', '轉職 1★'], ['同種 / 灌注 1★', '升星 2★'], ['同種 2★ + 2★', '冠枝 3★']];
+                const en2 = [['Cross 1★ + 1★', 'Job 1★'], ['Same / Infuse 1★', 'Star 2★'], ['Same 2★ + 2★', 'Crown 3★']];
+                (isEn ? en2 : zh2).forEach((pair, idx) => {
+                    if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
+                    rows[idx].children[0].innerText = pair[0];
+                    rows[idx].children[1].innerText = pair[1];
+                });
+            }
 
-        // 開局三條核心規則說明
-        const ruleContents = document.querySelectorAll('#start-overlay .rule-content');
-        if (ruleContents[0]) ruleContents[0].innerHTML = isEn
-            ? '<strong>Drag Summon</strong>: Drag an element card onto a green tile to build; leverage Highground and Mana Veins.'
-            : '<strong>拖拉召喚</strong>：按住下方元素卡拖入綠色空地即可建塔，善用制高點與靈脈強化戰力。';
-        if (ruleContents[1]) ruleContents[1].innerHTML = isEn
-            ? '<strong>Transfer &amp; Star Up</strong>: Cross 1★ buds transfer to 1★ hybrid species; same species merge 1★ ➔ 2★ ➔ 3★ Crown Branches, with World Tree blessings every 3 waves.'
-            : '<strong>轉職與升星</strong>：異系 1★ 基礎芽相融轉職為 1★ 新物種；同物種相融升星（1★ ➔ 2★ ➔ 3★ 分岔），每過 3 波可獲世界樹賜福。';
-        if (ruleContents[2]) ruleContents[2].innerHTML = isEn
-            ? '<strong>Dew Skills</strong>: Slay foes to gather Dew energy and cast Entangle or Frenzy to hold the line.'
-            : '<strong>靈露救場</strong>：擊殺敵軍累積靈露能量，適時施放纏繞或狂熱技能穩固防線。';
+            // 底部與彈窗固定鈕
+            setElText('codex-btn', isEn ? 'World Tree' : '世界樹圖譜');
+            setElText('next-wave-btn', isEn ? 'Start Wave' : '立即開波');
+            setElText('pause-resume-btn', isEn ? 'Resume' : '繼續');
+            setElText('pause-menu-btn', isEn ? 'Change Map' : '切換地圖');
+            setElText('evo-confirm-title', isEn ? 'Crown Branch Evolution' : '世界樹冠枝開花選擇');
+            setElText('evo-cancel-btn', isEn ? 'Cancel [Esc]' : '取消退回原位 [Esc]');
+            setElText('codex-title', isEn ? 'Elemental World Tree Codex' : '元素世界樹演化圖譜');
+            setElText('codex-close-btn', isEn ? 'Close [Esc]' : '關閉 [Esc]');
+            setElText('blessing-title', isEn ? 'World Tree Blessings' : '世界樹枝枒祝福');
+            setElText('start-title', isEn ? 'Elemental Frontline: Merge TD' : '元素陣線：合成塔防');
+            setElText('start-game-btn', isEn ? 'Start Defense' : '開始防守');
+            setElText('guide-title', isEn ? 'Tactical Field Guide' : '戰術手冊與地形速查');
+            setElText('guide-close-btn', isEn ? 'Back to Battle' : '返回戰場');
+            setElText('guide-menu-btn', isEn ? 'Change Map / Main Menu' : '切換地圖 / 返回封面');
+            setElText('victory-title', isEn ? 'Victory · World Tree Protected' : '防守成功 · 世界樹安然無恙');
+            setElText('victory-restart-btn', isEn ? 'Restart' : '重新開始');
+            setElText('endless-btn', isEn ? 'Endless Mode' : '繼續無盡挑戰');
+            setElText('victory-menu-btn', isEn ? 'Change Map / Menu' : '切換地圖 / 主選單');
+            setElText('victory-feedback-toggle', isEn ? 'Report & Feedback' : '戰報與回饋');
+            setElText('game-over-title', isEn ? 'Defense Fallen' : '防線失守');
+            setElText('restart-btn', isEn ? 'Restart' : '重新開始');
+            setElText('gameover-menu-btn', isEn ? 'Change Map / Menu' : '切換地圖 / 主選單');
+            setElText('gameover-feedback-toggle', isEn ? 'Report & Feedback' : '戰報與回饋');
 
-        // 圖鑑副標題與祝福副標題
-        const codexSub = document.querySelector('#codex-overlay .codex-subtitle');
-        if (codexSub) codexSub.innerText = isEn
-            ? 'Grows from Core: 3 Base Buds + 3 Hybrid Species ➔ 6 Trunks ➔ 12 Crown Branches (Press [T] anytime to pause & inspect).'
-            : '由世界樹原核向上生長：3 基礎芽 ＋ 3 轉職物種 ➔ 6 進階主幹 ➔ 12 終極冠枝（按 [T] 隨時開啟並自動暫停）。';
+            const mapSecHead = document.querySelector('.map-selector-header');
+            if (mapSecHead) mapSecHead.innerText = isEn ? 'Select Battlefield' : '選擇戰場地圖';
 
-        // 戰術手冊彈窗 (#guide-overlay)
-        const guideSub = document.querySelector('#guide-overlay .modal-subtitle');
-        if (guideSub) guideSub.innerText = isEn ? 'Master elemental counters and tactical terrains to defend the World Tree.' : '掌握屬性相剋與特殊地形加成，穩固世界樹防線。';
-        const guideTitles = document.querySelectorAll('#guide-overlay .guide-section-title');
-        if (guideTitles[0]) guideTitles[0].innerText = isEn ? 'Elemental Counters' : '元素相剋速查';
-        if (guideTitles[1]) guideTitles[1].innerText = isEn ? 'Terrain Bonuses (Hover tile on board)' : '戰術地形加成（懸停棋盤特殊格可檢視）';
-        if (guideTitles[2]) guideTitles[2].innerText = isEn ? 'Summary & Hotkeys' : '防線紀要與快捷鍵';
-        const guideRows = document.querySelectorAll('#guide-overlay .panel-row');
-        const zhGuideRows = [
-            ['🔥 火塔 ▸ 蔓藤巨魔 / 史萊姆', '175% 暴擊 · 破甲 30%'],
-            ['❄️ 冰塔 ▸ 熔岩傀儡 / 疾風獵犬', '175% 暴擊 · 緩速 45%'],
-            ['⚡ 雷塔 ▸ 機械飛艇 / 重裝魔像', '175% 暴擊 · 連鎖彈跳'],
-            ['✨ 跨元素融合塔 ▸ 任一親和弱點', '135% 親和增傷'],
-            ['制高點', '射程 +30%'],
-            ['元素靈脈', '攻速 +25%'],
-            ['世界樹庇護所', '依血量最高 +20% 傷害']
-        ];
-        const enGuideRows = [
-            ['🔥 Fire ▸ Vine / Slime', '175% Crit · 30% Shred'],
-            ['❄️ Ice ▸ Lava / Hound', '175% Crit · 45% Slow'],
-            ['⚡ Thunder ▸ Airship / Golem', '175% Crit · Chain Arc'],
-            ['✨ Hybrid ▸ Affinity Weak', '135% Affinity DMG'],
-            ['Highground', 'Range +30%'],
-            ['Mana Vein', 'ATK Spd +25%'],
-            ['Tree Sanctuary', 'Up to +20% DMG by HP']
-        ];
-        (isEn ? enGuideRows : zhGuideRows).forEach((pair, idx) => {
-            const row = guideRows[idx];
-            if (!row) return;
-            const kEl = row.querySelector('.panel-key');
-            const vEl = row.querySelector('.panel-val');
-            if (kEl) kEl.innerText = pair[0];
-            if (vEl) vEl.innerText = pair[1];
-        });
-        const guideNote = document.querySelector('#guide-overlay .codex-note');
-        if (guideNote) guideNote.innerHTML = isEn
-            ? 'Choose a World Tree Blessing every 3 waves; Bosses arrive on Wave 5 &amp; 10.<br>Hotkeys: <b>[1/2/3]</b> Summon | <b>[Q/W]</b> Skills | <b>[T]</b> World Tree | <b>[Space]</b> Pause | <b>[Tab/S]</b> Speed | <b>[Esc]</b> Cancel'
-            : '每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波迎戰領主魔王。<br>熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W]</b> 技能 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消';
+            const startSub = document.querySelector('#start-overlay .modal-subtitle');
+            if (startSub) startSub.innerText = isEn ? '15×10 Woodland Front · Defend 10 Waves' : '15×10 古林戰線 · 守護世界樹抵禦 10 波攻勢';
 
-        // 勝敗結算彈窗靜態欄位 (#victory-overlay & #game-over-overlay)
-        const goSub = document.querySelector('#game-over-overlay .modal-subtitle');
-        if (goSub) goSub.innerText = isEn ? 'The World Tree has fallen. Campaign ended.' : '世界樹生命枯竭，本局戰役結束。';
-        setElText('new-record-badge', isEn ? 'New Best Wave Record!' : '刷新歷史最高波數紀錄');
-
-        const vStatLabels = document.querySelectorAll('#victory-overlay .stat-row span');
-        if (vStatLabels[0]) vStatLabels[0].innerText = isEn ? 'Battlefield' : '戰場地圖';
-        if (vStatLabels[1]) vStatLabels[1].innerText = isEn ? 'Remaining Tree HP' : '剩餘世界樹生命';
-        if (vStatLabels[2]) vStatLabels[2].innerText = isEn ? 'Remaining Gold' : '剩餘金幣';
-
-        const gStatLabels = document.querySelectorAll('#game-over-overlay .stat-row span');
-        if (gStatLabels[0]) gStatLabels[0].innerText = isEn ? 'Battlefield' : '戰場地圖';
-        if (gStatLabels[1]) gStatLabels[1].innerText = isEn ? 'Wave Reached' : '抵達波數';
-        if (gStatLabels[2]) gStatLabels[2].innerText = isEn ? 'Best Record' : '歷史最高紀錄';
-
-        document.querySelectorAll('.recap-title').forEach(el => { el.innerText = isEn ? 'Battle Recap' : '本局數據戰報'; });
-        document.querySelectorAll('.recap-mvp-label').forEach(el => { el.innerText = isEn ? 'MVP Tower' : '本局 MVP 砲塔'; });
-        document.querySelectorAll('.recap-grid').forEach(grid => {
-            const labels = grid.querySelectorAll('.recap-cell span');
-            if (labels[0]) labels[0].innerText = isEn ? 'Total Kills' : '總擊殺數';
-            if (labels[1]) labels[1].innerText = isEn ? 'Gold Earned' : '累計獲得金幣';
-            if (labels[2]) labels[2].innerText = isEn ? 'Total Merges' : '合成融合次數';
-        });
-        const breakerLabel = document.querySelector('#gameover-breaker-row span');
-        if (breakerLabel) breakerLabel.innerText = isEn ? 'Fatal Breaker' : '致命突破敵人';
-
-        document.querySelectorAll('.feel-rating-header').forEach(el => { el.innerText = isEn ? '5s Quick Playtest Rating' : '5 秒試玩體感快評'; });
-        const ratingMap = [
-            ['🔥 爽快好玩', '🔥 Fun & Crisp'],
-            ['😴 中間有點無聊', '😴 Slow Midgame'],
-            ['🤯 難度太高卡關', '🤯 Too Hard'],
-            ['🖐️ 拖拉操作卡手', '🖐️ Clunky Drag']
-        ];
-        document.querySelectorAll('.feel-rating-bar').forEach(bar => {
-            bar.querySelectorAll('.feel-rating-btn').forEach((btn, idx) => {
-                if (ratingMap[idx]) btn.innerText = isEn ? ratingMap[idx][1] : ratingMap[idx][0];
+            const mapCards = document.querySelectorAll('#map-selector-grid .map-card');
+            mapCards.forEach((card) => {
+                const id = card.dataset.mapId;
+                const nameEl = card.querySelector('.map-card-name');
+                const badgeEl = card.querySelector('.map-diff-badge');
+                const descEl = card.querySelector('.map-card-desc');
+                if (id === 'forest') {
+                    if (nameEl) nameEl.innerText = isEn ? 'Sunlit Woods' : '晨光森林';
+                    if (badgeEl) badgeEl.innerText = isEn ? 'Standard' : '標準難度';
+                    if (descEl) descEl.innerText = isEn ? '41-cell winding path · Classic defense' : '41 格蜿蜒長徑 · 經典穩定防線';
+                } else if (id === 'lava') {
+                    if (nameEl) nameEl.innerText = isEn ? 'Magma Canyon' : '熔岩峽谷';
+                    if (badgeEl) badgeEl.innerText = isEn ? 'Hard' : '進階挑戰';
+                    if (descEl) descEl.innerText = isEn ? '31-cell short path · Start +10 💰' : '31 格雙折短徑 · 初始 +10 💰';
+                } else if (id === 'frost') {
+                    if (nameEl) nameEl.innerText = isEn ? 'Permafrost Rift' : '永凍裂谷';
+                    if (badgeEl) badgeEl.innerText = isEn ? 'Dual-Lane' : '雙路分線';
+                    if (descEl) descEl.innerText = isEn ? '36-cell dual-lane · Start +15 💰 · Ice DMG +20%' : '36 格雙線匯流 · 初始 +15 💰 · 冰脈傷害 +20%';
+                }
             });
-        });
-        document.querySelectorAll('.feel-rating-status').forEach(el => {
-            if (!el.dataset.rated) el.innerText = isEn ? 'Tap a tag above to submit instant feedback' : '點擊上方標籤一鍵回饋本局體感';
-        });
-        setElText('victory-copy-report-btn', isEn ? 'Copy Battle Report' : '複製本局數據戰報');
-        setElText('gameover-copy-report-btn', isEn ? 'Copy Battle Report' : '複製本局數據戰報');
-    }
 
-    function getWeaknessLabel(weakness) {
-        const w = WEAKNESS_NAMES[weakness];
-        if (w) return currentLang === 'en' ? w.en : w.zh;
-        return weakness || (currentLang === 'en' ? 'None' : '無');
-    }
+            const contractsLabel = document.querySelector('#contracts-drawer .contracts-summary span:first-child');
+            if (contractsLabel) contractsLabel.innerText = isEn ? 'Difficulty Contracts (Optional)' : '難度契約（選填挑戰）';
 
-    function applyLanguage() {
-        translateDataCatalogs(currentLang);
-        applyStaticDom(currentLang);
-        subscribers.forEach((fn) => {
-            try { fn(currentLang); } catch (_) {}
-        });
-    }
+            const pauseBannerText = document.querySelector('#pause-banner .pause-banner-text');
+            if (pauseBannerText) pauseBannerText.innerText = isEn ? 'Game Paused — Click Resume or press [Space]' : '遊戲已暫停 — 點擊繼續或按 [Space] 恢復';
 
-    function setLang(lang) {
-        const next = lang === 'en' ? 'en' : 'zh-TW';
-        currentLang = next;
-        try {
-            if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, next);
-        } catch (_) {}
-        applyLanguage();
-        return currentLang;
-    }
+            const smcTitle = document.querySelector('#side-monster-card .side-panel-title');
+            if (smcTitle) smcTitle.innerText = isEn ? 'Target Enemy Info' : '目標敵軍情報';
 
-    function toggleLang() {
-        return setLang(currentLang === 'en' ? 'zh-TW' : 'en');
-    }
+            setElText('start-quick-tip', isEn
+                ? 'Drag cards to build · Cross-merge transfers / Same-merge stars up · [Q/W] Tree skills'
+                : '拖曳元素卡建塔 · 異系轉職／同系升星 · [Q/W] 世界樹技能');
 
-    function getLang() {
-        return currentLang;
-    }
+            // 圖鑑副標題與祝福副標題
+            const codexSub = document.querySelector('#codex-overlay .codex-subtitle');
+            if (codexSub) codexSub.innerText = isEn
+                ? 'Grows from Core: 3 Base Buds + 3 Hybrid Species ➔ 6 Trunks ➔ 12 Crown Branches (Press [T] anytime to pause & inspect).'
+                : '由世界樹原核向上生長：3 基礎芽 ＋ 3 轉職物種 ➔ 6 進階主幹 ➔ 12 終極冠枝（按 [T] 隨時開啟並自動暫停）。';
 
-    function isEnglish() {
-        return currentLang === 'en';
-    }
+            // 戰術手冊彈窗 (#guide-overlay)
+            const guideSub = document.querySelector('#guide-overlay .modal-subtitle');
+            if (guideSub) guideSub.innerText = isEn ? 'Master elemental counters and tactical terrains to defend the World Tree.' : '掌握屬性相剋與特殊地形加成，穩固世界樹防線。';
+            const guideTitles = document.querySelectorAll('#guide-overlay .guide-section-title');
+            if (guideTitles[0]) guideTitles[0].innerText = isEn ? 'Elemental Counters' : '元素相剋速查';
+            if (guideTitles[1]) guideTitles[1].innerText = isEn ? 'Terrain Bonuses (Hover tile on board)' : '戰術地形加成（懸停棋盤特殊格可檢視）';
+            if (guideTitles[2]) guideTitles[2].innerText = isEn ? 'Summary & Hotkeys' : '防線紀要與快捷鍵';
+            const guideRows = document.querySelectorAll('#guide-overlay .panel-row');
+            const zhGuideRows = [
+                ['🔥 火塔 ▸ 蔓藤巨魔 / 史萊姆', '175% 暴擊 · 破甲 30%'],
+                ['❄️ 冰塔 ▸ 熔岩傀儡 / 疾風獵犬', '175% 暴擊 · 緩速 45%'],
+                ['⚡ 雷塔 ▸ 機械飛艇 / 重裝魔像', '175% 暴擊 · 連鎖彈跳'],
+                ['✨ 跨元素融合塔 ▸ 任一親和弱點', '135% 親和增傷'],
+                ['制高點', '射程 +30%'],
+                ['元素靈脈', '攻速 +25%'],
+                ['世界樹庇護所', '依血量最高 +20% 傷害']
+            ];
+            const enGuideRows = [
+                ['🔥 Fire ▸ Vine / Slime', '175% Crit · 30% Shred'],
+                ['❄️ Ice ▸ Lava / Hound', '175% Crit · 45% Slow'],
+                ['⚡ Thunder ▸ Airship / Golem', '175% Crit · Chain Arc'],
+                ['✨ Hybrid ▸ Affinity Weak', '135% Affinity DMG'],
+                ['Highground', 'Range +30%'],
+                ['Mana Vein', 'ATK Spd +25%'],
+                ['Tree Sanctuary', 'Up to +20% DMG by HP']
+            ];
+            (isEn ? enGuideRows : zhGuideRows).forEach((pair, idx) => {
+                const row = guideRows[idx];
+                if (!row) return;
+                const kEl = row.querySelector('.panel-key');
+                const vEl = row.querySelector('.panel-val');
+                if (kEl) kEl.innerText = pair[0];
+                if (vEl) vEl.innerText = pair[1];
+            });
+            const guideNote = document.querySelector('#guide-overlay .codex-note');
+            if (guideNote) guideNote.innerHTML = isEn
+                ? 'Choose a World Tree Blessing every 3 waves; Bosses arrive on Wave 5 &amp; 10.<br>Hotkeys: <b>[1/2/3]</b> Summon | <b>[Q/W]</b> Skills | <b>[T]</b> World Tree | <b>[Space]</b> Pause | <b>[Tab/S]</b> Speed | <b>[Esc]</b> Cancel'
+                : '每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波迎戰領主魔王。<br>熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W]</b> 技能 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消';
 
-    function pick(zhStr, enStr) {
-        return currentLang === 'en' ? enStr : zhStr;
-    }
+            // 勝敗結算彈窗靜態欄位 (#victory-overlay & #game-over-overlay)
+            const goSub = document.querySelector('#game-over-overlay .modal-subtitle');
+            if (goSub) goSub.innerText = isEn ? 'The World Tree has fallen. Campaign ended.' : '世界樹生命枯竭，本局戰役結束。';
+            setElText('new-record-badge', isEn ? 'New Best Wave Record!' : '刷新歷史最高波數紀錄');
 
-    function onChange(fn) {
-        if (typeof fn === 'function') subscribers.add(fn);
-    }
+            const vStatLabels = document.querySelectorAll('#victory-overlay .stat-row span');
+            if (vStatLabels[0]) vStatLabels[0].innerText = isEn ? 'Battlefield' : '戰場地圖';
+            if (vStatLabels[1]) vStatLabels[1].innerText = isEn ? 'Remaining Tree HP' : '剩餘世界樹生命';
+            if (vStatLabels[2]) vStatLabels[2].innerText = isEn ? 'Remaining Gold' : '剩餘金幣';
 
-    GameApp.i18n = {
-        getLang,
-        setLang,
-        toggleLang,
-        isEnglish,
-        pick,
-        getWeaknessLabel,
-        onChange,
-        applyLanguage
-    };
-})(window);
+            const gStatLabels = document.querySelectorAll('#game-over-overlay .stat-row span');
+            if (gStatLabels[0]) gStatLabels[0].innerText = isEn ? 'Battlefield' : '戰場地圖';
+            if (gStatLabels[1]) gStatLabels[1].innerText = isEn ? 'Wave Reached' : '抵達波數';
+            if (gStatLabels[2]) gStatLabels[2].innerText = isEn ? 'Best Record' : '歷史最高紀錄';
+
+            document.querySelectorAll('.recap-title').forEach(el => { el.innerText = isEn ? 'Battle Recap' : '本局數據戰報'; });
+            document.querySelectorAll('.recap-mvp-label').forEach(el => { el.innerText = isEn ? 'MVP Tower' : '本局 MVP 砲塔'; });
+            document.querySelectorAll('.recap-grid').forEach(grid => {
+                const labels = grid.querySelectorAll('.recap-cell span');
+                if (labels[0]) labels[0].innerText = isEn ? 'Total Kills' : '總擊殺數';
+                if (labels[1]) labels[1].innerText = isEn ? 'Gold Earned' : '累計獲得金幣';
+                if (labels[2]) labels[2].innerText = isEn ? 'Total Merges' : '合成融合次數';
+            });
+            const breakerLabel = document.querySelector('#gameover-breaker-row span');
+            if (breakerLabel) breakerLabel.innerText = isEn ? 'Fatal Breaker' : '致命突破敵人';
+
+            document.querySelectorAll('.feel-rating-header').forEach(el => { el.innerText = isEn ? '5s Quick Playtest Rating' : '5 秒試玩體感快評'; });
+            const ratingMap = [
+                ['🔥 爽快好玩', '🔥 Fun & Crisp'],
+                ['😴 中間有點無聊', '😴 Slow Midgame'],
+                ['🤯 難度太高卡關', '🤯 Too Hard'],
+                ['🖐️ 拖拉操作卡手', '🖐️ Clunky Drag']
+            ];
+            document.querySelectorAll('.feel-rating-bar').forEach(bar => {
+                bar.querySelectorAll('.feel-rating-btn').forEach((btn, idx) => {
+                    if (ratingMap[idx]) btn.innerText = isEn ? ratingMap[idx][1] : ratingMap[idx][0];
+                });
+            });
+            document.querySelectorAll('.feel-rating-status').forEach(el => {
+                if (!el.dataset.rated) el.innerText = isEn ? 'Tap a tag above to submit instant feedback' : '點擊上方標籤一鍵回饋本局體感';
+            });
+            setElText('victory-copy-report-btn', isEn ? 'Copy Battle Report' : '複製本局數據戰報');
+            setElText('gameover-copy-report-btn', isEn ? 'Copy Battle Report' : '複製本局數據戰報');
+        }
+
+        function getWeaknessLabel(weakness) {
+            const w = WEAKNESS_NAMES[weakness];
+            if (w) return currentLang === 'en' ? w.en : w.zh;
+            return weakness || (currentLang === 'en' ? 'None' : '無');
+        }
+
+        function applyLanguage() {
+            translateDataCatalogs(currentLang);
+            applyStaticDom(currentLang);
+            subscribers.forEach((fn) => {
+                try { fn(currentLang); } catch (_) { }
+            });
+        }
+
+        function setLang(lang) {
+            const next = lang === 'en' ? 'en' : 'zh-TW';
+            currentLang = next;
+            try {
+                if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, next);
+            } catch (_) { }
+            applyLanguage();
+            return currentLang;
+        }
+
+        function toggleLang() {
+            return setLang(currentLang === 'en' ? 'zh-TW' : 'en');
+        }
+
+        function getLang() {
+            return currentLang;
+        }
+
+        function isEnglish() {
+            return currentLang === 'en';
+        }
+
+        function pick(zhStr, enStr) {
+            return currentLang === 'en' ? enStr : zhStr;
+        }
+
+        function onChange(fn) {
+            if (typeof fn === 'function') subscribers.add(fn);
+        }
+
+        GameApp.i18n = {
+            getLang,
+            setLang,
+            toggleLang,
+            isEnglish,
+            pick,
+            getWeaknessLabel,
+            onChange,
+            applyLanguage
+        };
+    }) (window);

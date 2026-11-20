@@ -686,10 +686,6 @@
                 totalVuln += v.bonus;
             }
         });
-        const TreeSys = GameApp.systems && GameApp.systems.tree;
-        if (TreeSys && typeof TreeSys.getNearTreeVulnerabilityBonus === 'function') {
-            totalVuln += TreeSys.getNearTreeVulnerabilityBonus(monster);
-        }
         return 1.0 + Math.min(cap, Math.max(0, totalVuln));
     }
 
@@ -707,8 +703,21 @@
     function spawnGroundHazard(spec = {}) {
         if (!G || !G.state) return null;
         if (!Array.isArray(G.state.groundHazards)) G.state.groundHazards = [];
+        const hazardType = spec.type || 'steam_pool';
+        if (hazardType === 'steam_pool') {
+            let steamCount = 0;
+            for (let i = 0; i < G.state.groundHazards.length; i++) {
+                if (G.state.groundHazards[i] && G.state.groundHazards[i].type === 'steam_pool') steamCount++;
+            }
+            while (steamCount >= 24) {
+                const oldIdx = G.state.groundHazards.findIndex(h => h && h.type === 'steam_pool');
+                if (oldIdx === -1) break;
+                G.state.groundHazards.splice(oldIdx, 1);
+                steamCount--;
+            }
+        }
         const hazard = {
-            type: spec.type || 'steam_pool',
+            type: hazardType,
             x: Number(spec.x) || 0,
             y: Number(spec.y) || 0,
             radiusPx: Number(spec.radiusPx) || (1.3 * G.boardMetrics.step),
@@ -723,10 +732,18 @@
         return hazard;
     }
 
+    function pruneDeadMonsters() {
+        if (!G || !G.state || !Array.isArray(G.state.monsters)) return;
+        if (!G.state.monsters.some(m => !m || m.hp <= 0 || m._killHandled || m._dead)) return;
+        G.state.monsters = G.state.monsters.filter(m => m && m.hp > 0 && !m._killHandled && !m._dead);
+    }
+
     function handleMonsterKilled(monster, killerTowerObj, killingDamage, options = {}) {
         const st = G.state;
         if (!monster || monster._killHandled) return;
         monster._killHandled = true;
+        monster._dead = true;
+        monster.hp = 0;
         monster.isTargetable = false;
 
         const WaveSys = GameApp.systems && GameApp.systems.wave;
@@ -745,17 +762,20 @@
         const dewMax = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.DEW_MAX) || 100;
         if (dewGain > 0) st.dewEnergy = Math.min(dewMax, st.dewEnergy + dewGain);
 
-        if (monster.isBoss && GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
-            const progPct = Math.round(getMonsterProgressRatio(monster) * 100);
-            GameApp.backend.trackFeel(`Boss:KillProgress:Wave_${st.currentWave}`, progPct, {
-                bossName: monster.name,
-                wave: st.currentWave,
-                progressPct: progPct
-            });
+        if (monster.isBoss) {
+            if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
+                const progPct = Math.round(getMonsterProgressRatio(monster) * 100);
+                GameApp.backend.trackFeel(`Boss:KillProgress:Wave_${st.currentWave}`, progPct, {
+                    bossName: monster.name,
+                    wave: st.currentWave,
+                    progressPct: progPct
+                });
+            }
+            if (GameApp.renderer && typeof GameApp.renderer.triggerWorldTreeShake === 'function') {
+                GameApp.renderer.triggerWorldTreeShake();
+            }
         }
 
-        const deadIdx = st.monsters.findIndex(m => m.id === monster.id);
-        if (deadIdx !== -1) st.monsters.splice(deadIdx, 1);
         GameApp.renderer.removeMonsterDom(monster.id);
         GameApp.audio.playKill();
 
@@ -799,9 +819,6 @@
             }
         }
 
-        if (!options.isEmberSplash && TreeSys && typeof TreeSys.tryTriggerEmberExplosion === 'function') {
-            TreeSys.tryTriggerEmberExplosion(monster.pixelX, monster.pixelY, killerTowerObj, killingDamage);
-        }
         G.callbacks.updateHUD();
     }
 
@@ -846,6 +863,7 @@
                 st.groundHazards.splice(i, 1);
             }
         }
+        pruneDeadMonsters();
     }
 
     function tickMonsterStatusEffects(m, dtMs) {
@@ -1181,12 +1199,15 @@
                         ? `${m.name} breached the line! World Tree -${leakDmg} HP.`
                         : `【${m.name}】突破防線，世界樹受損 -${leakDmg} 生命。`;
                 }
-                st.monsters.splice(i, 1);
+                m.hp = 0;
+                m._dead = true;
+                m._killHandled = true;
                 Renderer.removeMonsterDom(m.id);
                 if (G.callbacks && typeof G.callbacks.onMonsterLeaked === 'function') {
                     G.callbacks.onMonsterLeaked(m.id);
                 }
                 if (st.baseHp <= 0) {
+                    pruneDeadMonsters();
                     G.callbacks.triggerGameOver();
                     return;
                 }
@@ -1199,6 +1220,7 @@
             m.pixelX = pos.left + (m.visualOffsetX || 0);
             m.pixelY = pos.top + (m.visualOffsetY || 0);
         }
+        pruneDeadMonsters();
         Renderer.renderMonsterLayer();
     }
 
@@ -1235,6 +1257,7 @@
         applyArmorShred,
         spawnGroundHazard,
         updateGroundHazards,
+        pruneDeadMonsters,
         handleMonsterKilled,
         updateMonsters
     };
