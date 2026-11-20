@@ -32,9 +32,7 @@
             measurementId: 'G-JS6XDZREKR'
         },
         GAME_ANALYTICS: {
-            gameKey: '7207cb99b684a05881326b4cde399736',
-            secretKey: '33917bdf4e38d8813453645b74e9bbdd420fc1a2',
-            endpoint: 'https://api.gameanalytics.com/v2'
+            enabled: false
         }
     };
 
@@ -517,7 +515,7 @@
     const GameAnalyticsTracker = {
         initialized: false,
         enabled: false,
-        disabledOffline: false,
+        disabledOffline: true,
         initPromise: null,
         flushTimer: null,
         tsOffsetSec: 0,
@@ -551,7 +549,7 @@
                 session_id: this.sessionId,
                 session_num: this.sessionNum,
                 client_ts: Math.floor(Date.now() / 1000) + this.tsOffsetSec,
-                sdk_version: 'rest api v2',
+                sdk_version: 'local',
                 os_version: this.env.osVersion,
                 manufacturer: 'unknown',
                 device: 'unknown',
@@ -560,127 +558,47 @@
         },
 
         async init() {
-            if (this.initPromise) return this.initPromise;
-            this.initPromise = (async () => {
-                try {
-                    if (isNetworkOffline()) {
-                        this.disabledOffline = true;
-                        this.queue.length = 0;
-                        return false;
-                    }
-                    this.ensureIdentity();
-                    const body = JSON.stringify({
-                        platform: this.env.platform,
-                        os_version: this.env.osVersion,
-                        sdk_version: 'rest api v2'
-                    });
-                    const auth = await hmacSha256Base64(CLOUD_CONFIG.GAME_ANALYTICS.secretKey, body);
-                    const res = await fetchWithTimeout(
-                        `${CLOUD_CONFIG.GAME_ANALYTICS.endpoint}/${CLOUD_CONFIG.GAME_ANALYTICS.gameKey}/init`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': auth
-                            },
-                            body
-                        },
-                        CLOUD_CONFIG.TIMEOUT_MS
-                    );
-                    if (!res || !res.ok) {
-                        this.disabledOffline = true;
-                        this.queue.length = 0;
-                        return false;
-                    }
-                    const data = await res.json();
-                    this.initialized = true;
-                    this.enabled = Boolean(data && data.enabled);
-                    if (data && Number.isFinite(data.server_ts)) {
-                        this.tsOffsetSec = data.server_ts - Math.floor(Date.now() / 1000);
-                    }
-                    if (this.enabled) {
-                        this.queue.unshift({ ...this.buildBaseEvent(), category: 'user' });
-                        this.flush();
-                    } else {
-                        this.queue.length = 0;
-                    }
-                    return this.enabled;
-                } catch (_) {
-                    this.disabledOffline = true;
-                    this.queue.length = 0;
-                    return false;
-                }
-            })();
-            return this.initPromise;
+            this.initialized = true;
+            this.enabled = false;
+            this.disabledOffline = true;
+            this.queue.length = 0;
+            return false;
         },
 
-        enqueue(payload) {
-            try {
-                if (this.disabledOffline || isNetworkOffline()) return;
-                this.ensureIdentity();
-                this.queue.push({ ...this.buildBaseEvent(), ...payload });
-                if (this.queue.length > 50) this.queue.shift();
-                if (!this.initialized) {
-                    this.init();
-                    return;
-                }
-                if (!this.enabled) return;
-                if (!this.flushTimer) {
-                    this.flushTimer = setTimeout(() => {
-                        this.flushTimer = null;
-                        this.flush();
-                    }, 120);
-                }
-            } catch (_) {}
+        enqueue() {
+            // 純前端環境停用外部 GameAnalytics 上報，僅由 trackFeel 安全記錄至本機 runTelemetry
         },
 
         async flush() {
-            try {
-                if (!this.enabled || this.queue.length === 0 || isNetworkOffline()) return;
-                const batch = this.queue.splice(0, 20);
-                const body = JSON.stringify(batch);
-                const auth = await hmacSha256Base64(CLOUD_CONFIG.GAME_ANALYTICS.secretKey, body);
-                await fetchWithTimeout(
-                    `${CLOUD_CONFIG.GAME_ANALYTICS.endpoint}/${CLOUD_CONFIG.GAME_ANALYTICS.gameKey}/events`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': auth
-                        },
-                        body
-                    },
-                    CLOUD_CONFIG.TIMEOUT_MS
-                );
-            } catch (_) {}
+            this.queue.length = 0;
         },
 
         trackProgression(status, waveNum, mapId, score = null) {
             try {
+                this.ensureIdentity();
+                if (!Array.isArray(runTelemetry.progressionLog)) {
+                    runTelemetry.progressionLog = [];
+                }
                 const cleanMap = String(mapId || 'forest').replace(/[^A-Za-z0-9_.-]/g, '_');
-                const payload = {
+                const entry = {
+                    t: Date.now(),
                     category: 'progression',
                     event_id: `${status}:${cleanMap}:Wave_${waveNum}`,
                     attempt_num: 1
                 };
                 if (status !== 'Start' && Number.isFinite(score)) {
-                    payload.score = Math.round(score);
+                    entry.score = Math.round(score);
                 }
-                this.enqueue(payload);
+                runTelemetry.progressionLog.push(entry);
+                if (runTelemetry.progressionLog.length > 100) runTelemetry.progressionLog.shift();
             } catch (_) {}
         },
 
         trackDesign(eventId, value = null) {
             try {
-                const safeId = String(eventId || 'Feel:Unknown').replace(/[^A-Za-z0-9_.:-]/g, '_');
-                const payload = {
-                    category: 'design',
-                    event_id: safeId
-                };
-                if (Number.isFinite(value)) {
-                    payload.value = Number(value);
-                }
-                this.enqueue(payload);
+                // 已由 trackFeel 寫入 runTelemetry.eventsLog，此處保留相容介面不再外送請求
+                void eventId;
+                void value;
             } catch (_) {}
         }
     };

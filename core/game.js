@@ -157,7 +157,7 @@
             gameSpeed: keepSpeed,
             spawnCounts,
             board: Array(CONFIG.BOARD_SIZE || 150).fill(null), monsters: [], monsterIdCounter: 1,
-            groundHazards: [], dragTether: null, pendingEvolution: null,
+            groundHazards: [], dragTether: null, pendingEvolution: null, pendingBlessingWave: null,
             selectedIndex: null, buildTargetIndex: null, pendingSpawnType: null, hoveredIndex: null,
             hoveredMonsterId: null, hoverLockMonster: null, isCursorOnHoveredMonster: false,
             hoverStickUntilPerfMs: 0, hoverKillUntilPerfMs: 0,
@@ -198,6 +198,8 @@
         return isOverlayVisible(dom.startOverlayEl)
             || isCodexOpen()
             || isGuideOpen()
+            || isOverlayVisible(dom.evoConfirmOverlayEl)
+            || Boolean(st.pendingEvolution)
             || isOverlayVisible(dom.blessingOverlayEl)
             || isOverlayVisible(dom.victoryOverlayEl)
             || isOverlayVisible(dom.gameOverOverlayEl)
@@ -209,7 +211,7 @@
     }
     function isGameplayActive() {
         const st = G.state;
-        return !st.isGameOver && !st.isPaused && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen() && !isGuideOpen();
+        return !st.isGameOver && !st.isPaused && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen() && !isGuideOpen() && !isOverlayVisible(G.dom.evoConfirmOverlayEl) && !st.pendingEvolution;
     }
     function isMatchPhaseActive() {
         const st = G.state;
@@ -1705,10 +1707,26 @@
             );
             Renderer.renderBoard([pending.fromIndex, pending.toIndex]);
             updateHUD();
+            if (st.pendingBlessingWave !== null) {
+                const queuedWave = st.pendingBlessingWave;
+                st.pendingBlessingWave = null;
+                if (!st.blessingGrantedWaves.has(queuedWave)) {
+                    TreeSys.triggerBlessingSelection(queuedWave);
+                }
+            }
+            if (isGameplayActive() && st.rafId === null) startMainLoop();
             return true;
         }
         Renderer.renderBoard([]);
         updateHUD();
+        if (st.pendingBlessingWave !== null) {
+            const queuedWave = st.pendingBlessingWave;
+            st.pendingBlessingWave = null;
+            if (!st.blessingGrantedWaves.has(queuedWave)) {
+                TreeSys.triggerBlessingSelection(queuedWave);
+            }
+        }
+        if (isGameplayActive() && st.rafId === null) startMainLoop();
         return false;
     }
 
@@ -1724,6 +1742,14 @@
         setStatusMsg('已取消進化確認，防禦塔維持原位且未消耗。', 'Evolution cancelled; towers remain unchanged.');
         Renderer.renderBoard([fromIndex, toIndex]);
         updateHUD();
+        if (st.pendingBlessingWave !== null) {
+            const queuedWave = st.pendingBlessingWave;
+            st.pendingBlessingWave = null;
+            if (!st.blessingGrantedWaves.has(queuedWave)) {
+                TreeSys.triggerBlessingSelection(queuedWave);
+            }
+        }
+        if (isGameplayActive() && st.rafId === null) startMainLoop();
         return true;
     }
 
@@ -1973,7 +1999,15 @@
             if (!st.isEndlessMode && st.currentWave === victoryWave) { triggerVictory(); return; }
             Backend.finalizeWaveFeel(st.currentWave);
             Backend.trackFeel('Progression:Complete', st.currentGold, { wave: st.currentWave, mapId: st.currentMapId });
-            if (st.currentWave % blessingInterval === 0 && !st.blessingGrantedWaves.has(st.currentWave) && TreeSys.triggerBlessingSelection(st.currentWave)) return;
+            if (st.currentWave % blessingInterval === 0 && !st.blessingGrantedWaves.has(st.currentWave)) {
+                if (st.pendingEvolution || isOverlayVisible(G.dom.evoConfirmOverlayEl)) {
+                    st.pendingBlessingWave = st.currentWave;
+                    st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
+                    updateWavePhaseUI();
+                    return;
+                }
+                if (TreeSys.triggerBlessingSelection(st.currentWave)) return;
+            }
             st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
             setStatusMsg(
                 `第 ${st.currentWave} 波防禦完成，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後開始。`,
@@ -2061,6 +2095,9 @@
         Backend.recordPlayerAction();
         const sellIdx = st.selectedIndex, t = st.board[sellIdx], refund = EconSys.getTowerSellRefund(t);
         const cfg = getTowersDict()[t.type] || { name: t.type };
+        if (t.isCrowned) {
+            st.crownedUsedCount = Math.max(0, (st.crownedUsedCount || 0) - 1);
+        }
         st.currentGold += refund; st.board[sellIdx] = null;
         st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
         Backend.trackFeel('Economy:SellTower', refund, { towerType: t.type, tier: t.tier, refund });
@@ -2092,6 +2129,7 @@
         Backend.recordPlayerAction();
         st.currentGold -= costSpec.gold;
         st.dewEnergy -= costSpec.dew;
+        towerObj.investedGold = (towerObj.investedGold || 0) + costSpec.gold;
         towerObj.isCrowned = true;
         st.crownedUsedCount = (st.crownedUsedCount || 0) + 1;
 
@@ -2343,6 +2381,10 @@
 
             const key = e.key || '', lowerKey = key.toLowerCase(), st = G.state;
             if (st.pendingEvolution) {
+                if (key === 'Tab' || e.code === 'Space' || key === ' ') {
+                    e.preventDefault();
+                    return;
+                }
                 if (key === 'Escape') { e.preventDefault(); cancelPendingEvolution(); return; }
                 if ((key === 'Enter' || lowerKey === 'a' || key === '1') && st.pendingEvolution.options[0]) {
                     e.preventDefault();
@@ -2368,6 +2410,12 @@
                     setStatusMsg('已取消選取與待放置狀態。', 'Selection and placement cancelled.');
                 }
                 return;
+            }
+            if (isAnyModalOpen()) {
+                if (key === 'Tab' || e.code === 'Space' || key === ' ') {
+                    e.preventDefault();
+                    return;
+                }
             }
             if (e.code === 'Space' || key === ' ') {
                 if (!isAnyModalOpen() && isMatchPhaseActive()) {

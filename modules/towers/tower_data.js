@@ -765,9 +765,9 @@
             roleTag: '霜霧易傷·3.1·1.10s',
             roleSummary: '1.6格大範圍迷霧減速＋全隊+20%濕冷易傷',
             tooltipSummary: '1.6 格 35% 群緩 · +20% 全隊易傷',
-            damage: 90,
-            tierDamage: [0, 46, 99, 90],
-            badges: ['單發 90 · 1.6格迷霧', '群體 35%減速', '+20%濕冷易傷 3s'],
+            damage: 100,
+            tierDamage: [0, 46, 99, 100],
+            badges: ['單發 100 · 1.6格迷霧', '群體 35%減速', '+20%濕冷易傷 3s'],
             effectParams: {
                 aoeRadiusCells: 1.6,
                 slowRate: 0.35,

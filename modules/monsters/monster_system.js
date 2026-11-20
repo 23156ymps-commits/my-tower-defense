@@ -103,6 +103,9 @@
             armorShredRate: 0,
             rootTimer: 0,
             rootVulnRate: 0,
+            stunTimer: 0,
+            stunImmuneMs: 0,
+            _stunPendingImmuneMs: 0,
             status: createInitialStatusState(),
             ...fields
         };
@@ -427,7 +430,7 @@
 
     function isMonsterControlled(monster) {
         if (!monster) return false;
-        return isMonsterSlowed(monster) || isMonsterFrozen(monster) || (monster.rootTimer || 0) > 0;
+        return isMonsterSlowed(monster) || isMonsterFrozen(monster) || (monster.rootTimer || 0) > 0 || (monster.stunTimer || 0) > 0;
     }
 
     /**
@@ -499,9 +502,28 @@
         if (!monster || monster.hp <= 0) return;
         const st = ensureMonsterStatus(monster);
         if (!st.crownBurn) st.crownBurn = { dps: 0, durationMs: 0, tickAccMs: 0, sourceTower: null };
-        st.crownBurn.dps = Math.max(st.crownBurn.dps || 0, Math.round((monster.maxHp || 100) * pctPerSec));
+        const maxBossBurnPerSec = 120;
+        const rawDps = Math.round((monster.maxHp || 100) * pctPerSec);
+        const cappedDps = monster.isBoss ? Math.min(maxBossBurnPerSec, rawDps) : rawDps;
+        st.crownBurn.dps = Math.max(st.crownBurn.dps || 0, cappedDps);
         st.crownBurn.durationMs = Math.max(st.crownBurn.durationMs || 0, durationMs);
         if (sourceTower) st.crownBurn.sourceTower = sourceTower;
+    }
+
+    /**
+     * 施加短暫暈眩（Boss 縮短至 0.15s 且結束後觸發 2.5s 暈眩免疫，防止無限連控）
+     */
+    function applyStunToMonster(monster, durationMs = 350, options = {}) {
+        if (!monster || monster.hp <= 0 || monster.isTargetable === false) return false;
+        if ((monster.stunImmuneMs || 0) > 0) return false;
+        const effDuration = monster.isBoss ? Math.min(options.bossDurationMs ?? 150, durationMs) : durationMs;
+        if (effDuration <= 0) return false;
+        if (monster.isBoss && (monster.stunTimer || 0) > 0) return false;
+        monster.stunTimer = Math.max(monster.stunTimer || 0, effDuration);
+        monster._stunPendingImmuneMs = monster.isBoss
+            ? (options.bossImmuneMs ?? 2500)
+            : (options.immuneMs ?? 0);
+        return true;
     }
 
     function checkVoidBossPhaseShift(monster) {
@@ -509,19 +531,22 @@
         const hpPct = monster.hp / Math.max(1, monster.maxHp);
         const nextPhase = hpPct <= 0.25 ? 3 : (hpPct <= 0.50 ? 2 : (hpPct <= 0.75 ? 1 : 0));
         if (nextPhase <= (monster.voidPhaseIndex || 0)) return false;
-        monster.voidPhaseIndex = nextPhase;
-        const cycle = ['fire', 'ice', 'thunder'];
-        const idx = cycle.indexOf(monster.weakness);
-        monster.weakness = cycle[(idx + 1) % cycle.length];
 
+        const cycle = ['fire', 'ice', 'thunder'];
         const st = ensureMonsterStatus(monster);
-        st.slow = {};
-        st.vuln = {};
-        monster.slowTimer = 0;
-        monster.slowRate = 0;
-        monster.armorShredTimer = 0;
-        monster.armorShredRate = 0;
-        if (st.burn && st.burn.stacks > 1) st.burn.stacks = Math.ceil(st.burn.stacks / 2);
+        while ((monster.voidPhaseIndex || 0) < nextPhase) {
+            monster.voidPhaseIndex = (monster.voidPhaseIndex || 0) + 1;
+            const idx = cycle.indexOf(monster.weakness);
+            monster.weakness = cycle[(idx + 1) % cycle.length];
+
+            st.slow = {};
+            st.vuln = {};
+            monster.slowTimer = 0;
+            monster.slowRate = 0;
+            monster.armorShredTimer = 0;
+            monster.armorShredRate = 0;
+            if (st.burn && st.burn.stacks > 1) st.burn.stacks = Math.ceil(st.burn.stacks / 2);
+        }
 
         if (GameApp.renderer) {
             GameApp.renderer.emitRingFX(monster.pixelX, monster.pixelY, G.boardMetrics.step * 1.4, '#D97724', 0.30, 360);
@@ -857,9 +882,16 @@
             m._scorchBrandIcdMs = Math.max(0, m._scorchBrandIcdMs - dtMs);
         }
 
-        // 3. 破甲與纏繞倒數
+        // 3. 破甲、纏繞與暈眩倒數
         if (m.armorShredTimer > 0 && (m.armorShredTimer = Math.max(0, m.armorShredTimer - dtMs)) === 0) m.armorShredRate = 0;
         if ((m.rootTimer || 0) > 0 && (m.rootTimer = Math.max(0, m.rootTimer - dtMs)) === 0) m.rootVulnRate = 0;
+        if ((m.stunImmuneMs || 0) > 0) m.stunImmuneMs = Math.max(0, m.stunImmuneMs - dtMs);
+        if ((m.stunTimer || 0) > 0 && (m.stunTimer = Math.max(0, m.stunTimer - dtMs)) === 0) {
+            if ((m._stunPendingImmuneMs || 0) > 0) {
+                m.stunImmuneMs = m._stunPendingImmuneMs;
+                m._stunPendingImmuneMs = 0;
+            }
+        }
 
         // 4. 重傷倒數
         if (st.grievousWound.durationMs > 0) {
@@ -948,7 +980,9 @@
             cb.tickAccMs += dtMs;
             while (cb.tickAccMs >= 250 && m.hp > 0) {
                 cb.tickAccMs -= 250;
-                const tickDmg = Math.max(1, Math.round(cb.dps * 0.25));
+                const maxBossBurnPerSec = 120;
+                const effectiveDps = m.isBoss ? Math.min(maxBossBurnPerSec, cb.dps) : cb.dps;
+                const tickDmg = Math.max(1, Math.round(effectiveDps * 0.25));
                 const hpBefore = m.hp;
                 m.hp = Math.max(0, hpBefore - tickDmg);
                 if (AttackSys && cb.sourceTower) {
@@ -1104,7 +1138,7 @@
             if (killedByDot || m.hp <= 0) continue;
 
             const routeWps = m.waypoints || G.map.waypoints;
-            const isRootedOrFrozen = (m.rootTimer || 0) > 0 || isMonsterFrozen(m);
+            const isRootedOrFrozen = (m.rootTimer || 0) > 0 || (m.stunTimer || 0) > 0 || isMonsterFrozen(m);
             const effSlowRate = getMonsterEffectiveSlowRate(m);
             const stealthSpeedMult = m.isStealthed ? (1 + ((m.pantherSpec && m.pantherSpec.stealthSpeedBonus) || 0.65)) : 1.0;
             const slowMult = isRootedOrFrozen
@@ -1187,6 +1221,7 @@
         revealStealthMonster,
         tryTriggerPantherStealth,
         applyCrownTrueBurn,
+        applyStunToMonster,
         checkVoidBossPhaseShift,
         applyBurnToMonster,
         getMonsterBurnDps,

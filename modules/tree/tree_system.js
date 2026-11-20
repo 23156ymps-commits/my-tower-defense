@@ -210,8 +210,9 @@
         const skills = getTreeData().ACTIVE_SKILLS || {};
         const entCfg = skills.entangle || { cost: 40, cdMs: 8000, durationMs: 2500, vulnBonus: 0.20 };
         if (!G.callbacks.isGameplayActive() || st.entangleCdMs > 0) return false;
-        if (st.monsters.length === 0) {
-            G.dom.msgText.innerText = L('場上目前沒有敵人，無需施放根鬚纏繞。', 'No enemies on the field—Root Entangle not needed.');
+        const hasLivingMonsters = st.monsters.some(m => m && m.hp > 0);
+        if (!hasLivingMonsters) {
+            G.dom.msgText.innerText = L('場上目前沒有存活敵人，無需施放根鬚纏繞。', 'No living enemies on the field—Root Entangle not needed.');
             return false;
         }
         if (st.dewEnergy < entCfg.cost) {

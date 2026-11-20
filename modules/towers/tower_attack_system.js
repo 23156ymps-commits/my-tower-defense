@@ -719,14 +719,21 @@
                 MonsterSys.registerPermafrostHitAndTryFreeze(target, towerObj, fxParams);
             }
 
+            const splashRatio = fxParams.aoeDamageRatio ?? 0.35;
             for (let i = 0; i < G.state.monsters.length; i++) {
                 const m = G.state.monsters[i];
                 if (m.id === target.id || m.hp <= 0 || (m.isTargetable === false && !m.isStealthed)) continue;
-                if (Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= frostRadiusPx && MonsterSys) {
+                if (Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= frostRadiusPx) {
                     maybeRevealByAoE(m);
-                    const mWasSlowed = MonsterSys.isMonsterSlowed(m);
-                    MonsterSys.applySlowToMonster(m, slowSpec.rate, slowSpec.durationMs, 'ice_A');
-                    if (mWasSlowed) {
+                    const mWasSlowed = MonsterSys ? MonsterSys.isMonsterSlowed(m) : false;
+                    applyHitToMonster(towerIndex, towerObj, m, {
+                        damageScale: splashRatio,
+                        forceSlow: true,
+                        slowRate: slowSpec.rate,
+                        slowDurationMs: slowSpec.durationMs,
+                        slowSourceId: 'ice_A'
+                    });
+                    if (mWasSlowed && m.hp > 0 && MonsterSys) {
                         MonsterSys.registerPermafrostHitAndTryFreeze(m, towerObj, fxParams);
                     }
                 }
@@ -766,6 +773,8 @@
                 if (cand.id === target.id || cand.hp <= 0 || cand.isTargetable === false) continue;
                 const relX = cand.pixelX - targetPos.left;
                 const relY = cand.pixelY - targetPos.top;
+                const dot = relX * ux + relY * uy;
+                if (dot < 0) continue;
                 const dist = Math.hypot(relX, relY);
                 if (dist > maxSearchPx) continue;
                 const perp = Math.abs(relX * (-uy) + relY * ux);
@@ -904,9 +913,21 @@
                 : chainRadiusPx;
             let maxChain = (fxParams.chainExtraTargets ?? 2) + (TreeSys ? TreeSys.getThunderChainBonus(towerObj.type) : 0);
 
+            const stunMs = fxParams.stunDurationMs ?? 350;
+            const bossStunMs = fxParams.bossStunDurationMs ?? 150;
+            const bossStunImmuneMs = fxParams.bossStunImmuneMs ?? 2500;
+
             applyHitToMonster(towerIndex, towerObj, target);
             if (target.hp <= 0 && stormExtra > 0) maxChain += stormExtra;
-            if (target.hp > 0 && MonsterSys) MonsterSys.applySlowToMonster(target, pulseSlow.rate, pulseSlow.durationMs, 'magnet_pulse');
+            if (target.hp > 0 && MonsterSys) {
+                MonsterSys.applySlowToMonster(target, pulseSlow.rate, pulseSlow.durationMs, 'magnet_pulse');
+                if (typeof MonsterSys.applyStunToMonster === 'function') {
+                    MonsterSys.applyStunToMonster(target, stunMs, {
+                        bossDurationMs: bossStunMs,
+                        bossImmuneMs: bossStunImmuneMs
+                    });
+                }
+            }
             for (let i = 0; i < G.state.monsters.length; i++) {
                 const m = G.state.monsters[i];
                 if (m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= frostRadiusPx && MonsterSys) {
@@ -932,7 +953,15 @@
                 const nextPos = { left: bestNext.pixelX, top: bestNext.pixelY };
                 applyHitToMonster(towerIndex, towerObj, bestNext, { damageScale: fxParams.chainDamageRatio ?? 0.70 });
                 if (bestNext.hp <= 0 && stormExtra > 0) maxChain += stormExtra;
-                if (bestNext.hp > 0 && MonsterSys) MonsterSys.applySlowToMonster(bestNext, pulseSlow.rate, pulseSlow.durationMs, 'magnet_pulse');
+                if (bestNext.hp > 0 && MonsterSys) {
+                    MonsterSys.applySlowToMonster(bestNext, pulseSlow.rate, pulseSlow.durationMs, 'magnet_pulse');
+                    if (typeof MonsterSys.applyStunToMonster === 'function') {
+                        MonsterSys.applyStunToMonster(bestNext, stunMs, {
+                            bossDurationMs: bossStunMs,
+                            bossImmuneMs: bossStunImmuneMs
+                        });
+                    }
+                }
                 GameApp.renderer.emitCanvasAttackFX('magnet-arc', prevPos, nextPos);
                 prevPos = nextPos;
             }
@@ -1187,9 +1216,9 @@
             if (st.monsters.length === 0 && st.waveState !== 'SPAWNING') continue;
             if (!Number.isFinite(towerObj.accMs)) towerObj.accMs = 0;
             const intervalMs = getTowerAttackInterval(towerObj, idx);
-            towerObj.accMs = Math.min(intervalMs, towerObj.accMs + dtMs);
+            towerObj.accMs = towerObj.accMs + dtMs;
             if (towerObj.accMs >= intervalMs && st.monsters.length > 0 && performTowerAttack(idx, towerObj)) {
-                towerObj.accMs -= intervalMs;
+                towerObj.accMs = Math.min(intervalMs, Math.max(0, towerObj.accMs - intervalMs));
                 didCombatAct = true;
                 if (TreeSys && typeof TreeSys.shouldTriggerDewOvercharge === 'function' && TreeSys.shouldTriggerDewOvercharge()) {
                     if (!Array.isArray(st.pendingOverchargeShots)) st.pendingOverchargeShots = [];
@@ -1200,6 +1229,8 @@
                         sessionId: st.sessionId
                     });
                 }
+            } else {
+                towerObj.accMs = Math.min(intervalMs, towerObj.accMs);
             }
         }
         if (didCombatAct) GameApp.renderer.renderMonsterLayer();
