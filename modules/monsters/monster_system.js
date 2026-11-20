@@ -1185,7 +1185,8 @@
                 st.baseHp = Math.max(0, st.baseHp - leakDmg);
 
                 if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
-                    GameApp.backend.trackFeel(`Leak:${m.typeKey}:Wave_${st.currentWave}`, leakDmg, {
+                    const wavePad = String(Math.max(1, Number(st.currentWave) || 1)).padStart(2, '0');
+                    GameApp.backend.trackFeel(`Leak:${m.typeKey}:Wave_${wavePad}`, leakDmg, {
                         monsterType: m.typeKey,
                         monsterName: m.name,
                         wave: st.currentWave,

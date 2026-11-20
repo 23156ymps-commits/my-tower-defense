@@ -15,7 +15,12 @@
     let currentLang = 'zh-TW';
     try {
         const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
-        if (saved === 'en' || saved === 'zh-TW') currentLang = saved;
+        if (saved === 'en' || saved === 'zh-TW') {
+            currentLang = saved;
+        } else if (typeof navigator !== 'undefined') {
+            const navLang = navigator.language || (Array.isArray(navigator.languages) && navigator.languages[0]) || '';
+            currentLang = String(navLang).toLowerCase().includes('zh') ? 'zh-TW' : 'en';
+        }
     } catch (_) { }
 
     const EN_TOWERS = {
@@ -515,10 +520,7 @@
                 helpBtnEl.title = isEn ? 'Tactical Field Guide & Counters' : '開啟戰術手冊與屬性地形速查';
                 helpBtnEl.setAttribute('aria-label', isEn ? 'Open Tactical Field Guide' : '開啟戰術手冊');
             }
-            const bestLabelNode = document.querySelector('.hud-best');
-            if (bestLabelNode && bestLabelNode.firstChild && bestLabelNode.firstChild.nodeType === 3) {
-                bestLabelNode.firstChild.nodeValue = isEn ? 'Best ' : '最高 ';
-            }
+            setElText('hud-best-label', isEn ? 'Best' : '最高');
 
             // 預告條右側簡易圖例
             const legendEl = document.getElementById('info-legend');
@@ -575,6 +577,7 @@
             setElText('pause-resume-btn', isEn ? 'Resume' : '繼續');
             setElText('pause-menu-btn', isEn ? 'Change Map' : '切換地圖');
             setElText('evo-confirm-title', isEn ? 'Crown Branch Evolution' : '世界樹冠枝開花選擇');
+            setElText('evo-bullet-tag', isEn ? '0.15x Bullet Time' : '0.15x 子彈時間');
             setElText('evo-cancel-btn', isEn ? 'Cancel [Esc]' : '取消退回原位 [Esc]');
             setElText('codex-title', isEn ? 'Elemental World Tree Codex' : '元素世界樹演化圖譜');
             setElText('codex-close-btn', isEn ? 'Close [Esc]' : '關閉 [Esc]');

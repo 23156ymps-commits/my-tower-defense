@@ -592,9 +592,10 @@
         document.addEventListener('pointercancel', () => {
             lastPointerEventTs = Date.now();
             if (!activeDrag) return;
+            const wasDragging = Boolean(activeDrag.isDragging);
             const src = activeDrag.dragSource;
             cancelActiveDrag();
-            if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
+            if (wasDragging && GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
                 GameApp.backend.trackFeel(`Feel:DragCancel:${src}`, 1);
             }
         });
@@ -628,7 +629,13 @@
         });
 
         document.addEventListener('touchcancel', () => {
-            if (activeDrag) cancelActiveDrag();
+            if (!activeDrag) return;
+            const wasDragging = Boolean(activeDrag.isDragging);
+            const src = activeDrag.dragSource;
+            cancelActiveDrag();
+            if (wasDragging && GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
+                GameApp.backend.trackFeel(`Feel:DragCancel:${src}`, 1);
+            }
         });
     }
 

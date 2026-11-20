@@ -206,7 +206,7 @@ body.map-frost {
     flex-wrap: wrap;
     align-items: center;
     gap: 2px clamp(6px, 0.8vw, 10px);
-    flex: 1 1 auto;
+    flex: 1 1 0%;
     min-width: 0;
     overflow: visible;
 }
@@ -231,7 +231,11 @@ body.map-frost {
     gap: 6px;
     flex-shrink: 0;
 }
-.hud-best { flex-shrink: 0; }
+.hud-best {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
 
 .hud-hp { color: #A8D5B5; }
 .hud-hp.hp-warning { color: var(--el-lightning); }
@@ -3075,12 +3079,13 @@ body.map-frost .cell.path-cell {
 
     body { padding: 4px 12px; }
     #hud-container { padding: 4px 8px; margin-bottom: 4px; gap: 6px; }
-    .hud-stats { gap: 6px; flex: 1 1 auto; min-width: 0; }
-    .hud-item { font-size: 13px; }
-    .dew-bar-track { width: 28px; }
-    .wave-phase-tag { padding: 0 6px; }
+    .hud-stats { gap: 2px 6px; flex: 1 1 0%; min-width: 0; }
+    .hud-item { font-size: 12px; gap: 3px; }
+    .hud-best { font-size: 11px; }
+    .dew-bar-track { width: 24px; }
+    .wave-phase-tag { padding: 0 5px; }
     .hud-actions { gap: 4px; }
-    .hud-ctrl-btn { min-height: 34px; min-width: 28px; padding: 4px 6px; font-size: 12px; }
+    .hud-ctrl-btn { min-height: 32px; min-width: 28px; padding: 3px 6px; font-size: 12px; }
     .hud-lang-btn { min-width: auto; padding: 4px 6px; }
     .lang-globe-icon { width: 12px; height: 12px; }
     .hud-sub-slot { margin-bottom: 4px; }

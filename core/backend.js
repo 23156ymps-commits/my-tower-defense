@@ -1,12 +1,12 @@
 /**
  * ============================================================================
  * 【檔案名稱】：core/backend.js
- * 【負責功能】：Firebase Remote Config 雲端熱更（支援 Deep Merge 動態新增角色／怪物）、
- *               GameAnalytics 試玩感官數據追蹤（trackFeel 六大維度）與單局黑盒子戰報生成。
- * 【讀取資料】：讀取並深度更新 GameApp.data 內所有 *_data.js 資料表與本地 localStorage 紀錄。
+ * 【負責功能】：純單向數據收集模式（GameAnalytics 試玩感官與進度追蹤封裝、
+ *               1.5 秒超時與離線單機優先防護、單局黑盒子戰報生成與本機戰績持久化）。
+ * 【讀取資料】：讀取 GameApp.data 資料表名稱以格式化單局黑盒子戰報，讀寫本地 localStorage 戰績紀錄。
  * 【常見修改入口】：
- *   1. 新增或調整雲端熱更映射欄位：修改 applyRemoteBalanceConfig()。
- *   2. 調整試玩感官追蹤與單局黑盒子戰報格式：修改 trackFeel() 與 generateBattleReportText()。
+ *   1. 調整試玩感官追蹤與單局黑盒子戰報格式：修改 trackFeel()、finalizeRunFeel() 與 generateBattleReportText()。
+ *   2. 調整 GameAnalytics 追蹤封裝：修改 GameAnalyticsTracker。
  * ============================================================================
  */
 (function (global) {
@@ -14,29 +14,16 @@
 
     const GameApp = global.GameApp = global.GameApp || {};
     const CONFIG = GameApp.config || {};
-    const { clampNumber, deepMerge, isPlainObject } = GameApp.helpers || {};
 
     const CLOUD_CONFIG = {
         TIMEOUT_MS: 1500,
-        STORAGE_FIS_FID_KEY: 'merge_defense_firebase_fid',
-        STORAGE_FIS_TOKEN_KEY: 'merge_defense_firebase_fis_token',
         STORAGE_GA_UID_KEY: 'merge_defense_ga_uid',
         STORAGE_GA_SESSION_NUM_KEY: 'merge_defense_ga_session_num',
-        FIREBASE: {
-            apiKey: 'AIzaSyCfrYqexIifIO5QFPytg5I9as0mVfuz9Fg',
-            authDomain: 'my-tower-defense-c3198.firebaseapp.com',
-            projectId: 'my-tower-defense-c3198',
-            storageBucket: 'my-tower-defense-c3198.firebasestorage.app',
-            messagingSenderId: '456677714756',
-            appId: '1:456677714756:web:5e019f31258e8e4c998511',
-            measurementId: 'G-JS6XDZREKR'
-        },
         GAME_ANALYTICS: {
-            enabled: false
+            enabled: true,
+            gameKey: 'bf0c18d1c099e8048df09a953b2df5ee'
         }
     };
-
-    let onBalanceAppliedHook = null;
 
     function safeCloudStorageGet(key) {
         try {
@@ -95,413 +82,6 @@
         return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
     }
 
-    function bytesToBase64(bytes) {
-        let bin = '';
-        for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-        return btoa(bin);
-    }
-
-    // 純 JS SHA-256 備援（供無 crypto.subtle 的 file:// 或單機桌面殼層環境使用）
-    function sha256BytesFallback(dataBytes) {
-        const K = [
-            0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-            0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-            0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-            0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-            0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-            0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-            0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-            0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-        ];
-        const H = new Int32Array([
-            0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-            0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-        ]);
-        const rotr = (n, x) => (x >>> n) | (x << (32 - n));
-        const bitLen = dataBytes.length * 8;
-        const padLen = ((dataBytes.length + 9 + 63) >> 6) << 6;
-        const padded = new Uint8Array(padLen);
-        padded.set(dataBytes);
-        padded[dataBytes.length] = 0x80;
-        const view = new DataView(padded.buffer);
-        view.setUint32(padLen - 4, bitLen >>> 0, false);
-        view.setUint32(padLen - 8, Math.floor(bitLen / 0x100000000), false);
-
-        const W = new Int32Array(64);
-        for (let off = 0; off < padLen; off += 64) {
-            for (let i = 0; i < 16; i++) W[i] = view.getInt32(off + i * 4, false);
-            for (let i = 16; i < 64; i++) {
-                const s0 = rotr(7, W[i - 15]) ^ rotr(18, W[i - 15]) ^ (W[i - 15] >>> 3);
-                const s1 = rotr(17, W[i - 2]) ^ rotr(19, W[i - 2]) ^ (W[i - 2] >>> 10);
-                W[i] = (W[i - 16] + s0 + W[i - 7] + s1) | 0;
-            }
-            let [a, b, c, d, e, f, g, h] = H;
-            for (let i = 0; i < 64; i++) {
-                const S1 = rotr(6, e) ^ rotr(11, e) ^ rotr(25, e);
-                const ch = (e & f) ^ (~e & g);
-                const t1 = (h + S1 + ch + K[i] + W[i]) | 0;
-                const S0 = rotr(2, a) ^ rotr(13, a) ^ rotr(22, a);
-                const maj = (a & b) ^ (a & c) ^ (b & c);
-                const t2 = (S0 + maj) | 0;
-                h = g; g = f; f = e; e = (d + t1) | 0;
-                d = c; c = b; b = a; a = (t1 + t2) | 0;
-            }
-            H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
-            H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
-        }
-        const out = new Uint8Array(32);
-        const outView = new DataView(out.buffer);
-        for (let i = 0; i < 8; i++) outView.setInt32(i * 4, H[i], false);
-        return out;
-    }
-
-    async function hmacSha256Base64(secretStr, messageStr) {
-        const enc = new TextEncoder();
-        const keyBytes = enc.encode(secretStr);
-        const msgBytes = enc.encode(messageStr);
-
-        if (typeof crypto !== 'undefined' && crypto.subtle && typeof crypto.subtle.importKey === 'function') {
-            try {
-                const key = await crypto.subtle.importKey(
-                    'raw',
-                    keyBytes,
-                    { name: 'HMAC', hash: 'SHA-256' },
-                    false,
-                    ['sign']
-                );
-                const sig = await crypto.subtle.sign('HMAC', key, msgBytes);
-                return bytesToBase64(new Uint8Array(sig));
-            } catch (_) {
-                // 降級至純 JS 實作
-            }
-        }
-
-        const blockKey = keyBytes.length > 64 ? sha256BytesFallback(keyBytes) : keyBytes;
-        const oPad = new Uint8Array(64 + 32);
-        const iPad = new Uint8Array(64 + msgBytes.length);
-        for (let i = 0; i < 64; i++) {
-            const kb = i < blockKey.length ? blockKey[i] : 0;
-            oPad[i] = kb ^ 0x5c;
-            iPad[i] = kb ^ 0x36;
-        }
-        iPad.set(msgBytes, 64);
-        oPad.set(sha256BytesFallback(iPad), 64);
-        return bytesToBase64(sha256BytesFallback(oPad));
-    }
-
-    function getOrCreateFirebaseFid() {
-        const saved = safeCloudStorageGet(CLOUD_CONFIG.STORAGE_FIS_FID_KEY);
-        if (saved && /^[A-Za-z0-9_-]{11,22}$/.test(saved)) return saved;
-
-        const bytes = new Uint8Array(17);
-        if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-            crypto.getRandomValues(bytes);
-        } else {
-            for (let i = 0; i < 17; i++) bytes[i] = Math.floor(Math.random() * 256);
-        }
-        bytes[0] = 0x70 | (bytes[0] & 0x0f);
-        const fid = bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '').slice(0, 22);
-        safeCloudStorageSet(CLOUD_CONFIG.STORAGE_FIS_FID_KEY, fid);
-        return fid;
-    }
-
-    /**
-     * 雲端平衡設定表深度合併（支援數值覆蓋與動態新增角色／新怪物）
-     */
-    function applyRemoteBalanceConfig(balance) {
-        try {
-            if (!balance || typeof balance !== 'object') return null;
-
-            const monstersData = (GameApp.data && GameApp.data.monsters) || {};
-            const monsterRules = monstersData.GLOBAL_MONSTER_RULES || {};
-            const monsterDb = monstersData.MONSTER_DATABASE || {};
-            const towersData = (GameApp.data && GameApp.data.towers) || {};
-            const towersDict = towersData.TOWERS || {};
-            const tierDamageTable = towersData.TIER_DAMAGE_TABLE || {};
-            const rolePrefixes = towersData.ROLE_TAG_PREFIXES || {};
-
-            const summary = {
-                monster_speed_scale: monsterRules.MONSTER_SPEED_SCALE || CONFIG.MONSTER_SPEED_SCALE || 1.0,
-                monster_hp_scale: monsterRules.MONSTER_HP_SCALE || CONFIG.MONSTER_HP_SCALE || 1.0,
-                monster_armor_scale: monsterRules.MONSTER_ARMOR_SCALE || CONFIG.MONSTER_ARMOR_SCALE || 1.0,
-                monster_armor_bonus: monsterRules.MONSTER_ARMOR_BONUS || 0,
-                crown_t3_damage_scale: 1.0,
-                crown_t3_speed_scale: 1.0,
-                towers: {},
-                monsters: {}
-            };
-
-            const spdScale = Number(balance.monster_speed_scale);
-            if (Number.isFinite(spdScale) && spdScale > 0) {
-                const clampedSpd = clampNumber(spdScale, 0.2, 5.0, summary.monster_speed_scale);
-                monsterRules.MONSTER_SPEED_SCALE = clampedSpd;
-                CONFIG.MONSTER_SPEED_SCALE = clampedSpd;
-                summary.monster_speed_scale = clampedSpd;
-            }
-
-            const hpScale = Number(balance.monster_hp_scale);
-            if (Number.isFinite(hpScale) && hpScale > 0) {
-                const clampedHp = clampNumber(hpScale, 0.1, 20.0, summary.monster_hp_scale);
-                monsterRules.MONSTER_HP_SCALE = clampedHp;
-                CONFIG.MONSTER_HP_SCALE = clampedHp;
-                summary.monster_hp_scale = clampedHp;
-            }
-
-            const armorScale = Number(balance.monster_armor_scale);
-            if (Number.isFinite(armorScale) && armorScale > 0) {
-                const clampedArmorScale = clampNumber(armorScale, 0.1, 5.0, summary.monster_armor_scale);
-                monsterRules.MONSTER_ARMOR_SCALE = clampedArmorScale;
-                CONFIG.MONSTER_ARMOR_SCALE = clampedArmorScale;
-                summary.monster_armor_scale = clampedArmorScale;
-            }
-
-            const armorBonus = Number(balance.monster_armor_bonus);
-            if (Number.isFinite(armorBonus)) {
-                const clampedArmorBonus = Math.round(clampNumber(armorBonus, -20, 50, 0));
-                monsterRules.MONSTER_ARMOR_BONUS = clampedArmorBonus;
-                summary.monster_armor_bonus = clampedArmorBonus;
-            }
-
-            // 支援深度覆蓋或動態新增防禦塔
-            const towersCfg = balance.towers;
-            if (towersCfg && typeof towersCfg === 'object') {
-                Object.keys(towersCfg).forEach((type) => {
-                    const tCfg = towersCfg[type];
-                    if (!tCfg || typeof tCfg !== 'object') return;
-
-                    // 若雲端新增了本地不存在的新塔，自動建立預設結構並深度合併
-                    if (!towersDict[type]) {
-                        towersDict[type] = {
-                            id: type,
-                            name: tCfg.name || `新元素塔(${type})`,
-                            icon: tCfg.icon || '✨',
-                            color: tCfg.color || '#D97724',
-                            range: Number(tCfg.range) || 2.5,
-                            attackIntervalMs: 1000,
-                            attackStyle: tCfg.attackStyle || 'burst_armor_break',
-                            elementTag: tCfg.elementTag || type,
-                            lineageTags: Array.isArray(tCfg.lineageTags) ? tCfg.lineageTags : [type],
-                            isHybrid: Boolean(tCfg.isHybrid),
-                            shopSpawnable: tCfg.shopSpawnable !== undefined ? Boolean(tCfg.shopSpawnable) : !tCfg.isHybrid,
-                            tierDamage: [0, 18, 40, 90],
-                            effectParams: {}
-                        };
-                        tierDamageTable[type] = towersDict[type].tierDamage;
-                    }
-
-                    const elCfg = towersDict[type];
-                    deepMerge(elCfg, tCfg);
-
-                    if (Array.isArray(tCfg.dmg) && tCfg.dmg.length >= 4) {
-                        const baseArr = Array.isArray(elCfg.tierDamage) ? elCfg.tierDamage : [0, 15, 35, 80];
-                        const nextDmg = [0, 1, 2, 3].map((idx) => {
-                            const n = Number(tCfg.dmg[idx]);
-                            return idx === 0 ? 0 : (Number.isFinite(n) && n > 0 ? n : baseArr[idx]);
-                        });
-                        elCfg.tierDamage = nextDmg;
-                        tierDamageTable[type] = nextDmg;
-                    } else if (Array.isArray(tCfg.tierDamage) && tCfg.tierDamage.length >= 4) {
-                        tierDamageTable[type] = elCfg.tierDamage;
-                    }
-
-                    const aps = Number(tCfg.attacks_per_sec || tCfg.attacksPerSec);
-                    if (Number.isFinite(aps) && aps > 0) {
-                        elCfg.attackIntervalMs = Math.max(100, Math.round(1000 / aps));
-                    }
-
-                    const rng = Number(tCfg.range);
-                    if (Number.isFinite(rng) && rng > 0) {
-                        elCfg.range = clampNumber(rng, 0.5, 15.0, elCfg.range);
-                    }
-
-                    if (tCfg.bolts !== undefined) {
-                        const bolts = Math.round(Number(tCfg.bolts));
-                        if (Number.isFinite(bolts) && bolts >= 1) {
-                            const clampedBolts = Math.round(clampNumber(bolts, 1, 10, 2));
-                            elCfg.effectParams = elCfg.effectParams || {};
-                            elCfg.effectParams.boltCount = clampedBolts;
-                            elCfg.effectParams.lv3BoltCount = Math.max(clampedBolts + 1, 3);
-                            if (type === 'thunder') {
-                                CONFIG.THUNDER_BOLT_COUNT = clampedBolts;
-                                CONFIG.THUNDER_LV3_BOLT_COUNT = Math.max(clampedBolts + 1, 3);
-                            }
-                        }
-                    }
-
-                    const secText = Number((elCfg.attackIntervalMs / 1000).toFixed(2));
-                    const rngText = Number(elCfg.range.toFixed(2));
-                    const prefix = elCfg.roleTagPrefix || rolePrefixes[type] || (elCfg.name ? `${elCfg.name}·` : '');
-                    elCfg.roleTag = `${prefix}${rngText}·${secText}s`;
-
-                    summary.towers[type] = {
-                        dmg: (tierDamageTable[type] || elCfg.tierDamage || [0, 10, 20, 40]).slice(),
-                        attacks_per_sec: Number((1000 / elCfg.attackIntervalMs).toFixed(2)),
-                        cooldownMs: elCfg.attackIntervalMs,
-                        range: elCfg.range
-                    };
-                });
-            }
-
-            // 支援深度覆蓋或動態新增怪物
-            const monstersCfg = balance.monsters;
-            if (monstersCfg && typeof monstersCfg === 'object') {
-                Object.keys(monstersCfg).forEach((mKey) => {
-                    const mPatch = monstersCfg[mKey];
-                    if (!mPatch || typeof mPatch !== 'object') return;
-                    if (!monsterDb[mKey]) {
-                        monsterDb[mKey] = {
-                            id: mKey,
-                            name: mPatch.name || `未知魔物(${mKey})`,
-                            icon: mPatch.icon || '👾',
-                            weakness: mPatch.weakness || 'fire',
-                            baseHp: Number(mPatch.baseHp) || 70,
-                            baseReward: Number(mPatch.baseReward) || 10,
-                            speedMult: Number(mPatch.speedMult) || 1.0,
-                            baseArmor: Number(mPatch.baseArmor) || 0,
-                            splitsOnDeath: Boolean(mPatch.splitsOnDeath),
-                            minWave: Number(mPatch.minWave) || 1,
-                            visual: {
-                                primaryColor: '#523C2B',
-                                accentColor: '#E0B43C',
-                                shape: 'beast',
-                                sizeScale: 1.0
-                            }
-                        };
-                    }
-                    deepMerge(monsterDb[mKey], mPatch);
-                    summary.monsters[mKey] = monsterDb[mKey];
-                });
-            }
-
-            // 支援其他資料區深度合併（economy / terrain / routes / evolutions / tree）
-            ['economy', 'terrain', 'routes', 'evolutions', 'tree'].forEach((modKey) => {
-                if (isPlainObject(balance[modKey]) && GameApp.data && isPlainObject(GameApp.data[modKey])) {
-                    deepMerge(GameApp.data[modKey], balance[modKey]);
-                }
-            });
-
-            // 支援 3★ 冠枝全局傷害／攻速倍率（來自 admin.html 或 game_balance_json）
-            const t3DmgScale = Number(balance.crown_t3_damage_scale);
-            const t3SpdScale = Number(balance.crown_t3_speed_scale);
-            if ((Number.isFinite(t3DmgScale) && t3DmgScale > 0 && Math.abs(t3DmgScale - 1.0) > 1e-4)
-                || (Number.isFinite(t3SpdScale) && t3SpdScale > 0 && Math.abs(t3SpdScale - 1.0) > 1e-4)) {
-                const safeDmgScale = Number.isFinite(t3DmgScale) && t3DmgScale > 0 ? clampNumber(t3DmgScale, 0.2, 5.0, 1.0) : 1.0;
-                const safeSpdScale = Number.isFinite(t3SpdScale) && t3SpdScale > 0 ? clampNumber(t3SpdScale, 0.2, 5.0, 1.0) : 1.0;
-                summary.crown_t3_damage_scale = safeDmgScale;
-                summary.crown_t3_speed_scale = safeSpdScale;
-                Object.keys(towersDict).forEach((type) => {
-                    const elCfg = towersDict[type];
-                    if (!elCfg || elCfg.isAlias) return;
-                    const tNum = Number(elCfg.nodeTier) || Number(elCfg.tier) || 1;
-                    if (tNum !== 3) return;
-                    if (safeDmgScale !== 1.0) {
-                        if (Number.isFinite(elCfg.damage)) elCfg.damage = Math.max(1, Math.round(elCfg.damage * safeDmgScale));
-                        if (Array.isArray(elCfg.tierDamage) && Number.isFinite(elCfg.tierDamage[3])) {
-                            elCfg.tierDamage[3] = Math.max(1, Math.round(elCfg.tierDamage[3] * safeDmgScale));
-                        }
-                        if (Array.isArray(tierDamageTable[type]) && Number.isFinite(tierDamageTable[type][3])) {
-                            tierDamageTable[type][3] = Math.max(1, Math.round(tierDamageTable[type][3] * safeDmgScale));
-                        }
-                    }
-                    if (safeSpdScale !== 1.0 && Number.isFinite(elCfg.attackIntervalMs)) {
-                        elCfg.attackIntervalMs = Math.max(120, Math.round(elCfg.attackIntervalMs / safeSpdScale));
-                    }
-                });
-            }
-
-            if (towersData && typeof towersData.syncLegacyAliases === 'function') {
-                towersData.syncLegacyAliases();
-            }
-
-            if (typeof onBalanceAppliedHook === 'function') {
-                try { onBalanceAppliedHook(summary); } catch (_) {}
-            }
-
-            return summary;
-        } catch (_) {
-            return null;
-        }
-    }
-
-    async function initRemoteConfigBalance() {
-        try {
-            if (isNetworkOffline()) return false;
-            const { apiKey, projectId, appId } = CLOUD_CONFIG.FIREBASE;
-            const startedAt = Date.now();
-            const remainingMs = () => Math.max(150, CLOUD_CONFIG.TIMEOUT_MS - (Date.now() - startedAt));
-            const fid = getOrCreateFirebaseFid();
-
-            let token = null;
-            try {
-                const cached = JSON.parse(safeCloudStorageGet(CLOUD_CONFIG.STORAGE_FIS_TOKEN_KEY) || 'null');
-                if (cached && cached.token && cached.expiresAt > Date.now() + 60000) {
-                    token = cached.token;
-                }
-            } catch (_) {}
-
-            if (!token) {
-                const fisRes = await fetchWithTimeout(
-                    `https://firebaseinstallations.googleapis.com/v1/projects/${projectId}/installations`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Goog-Api-Key': apiKey
-                        },
-                        body: JSON.stringify({
-                            fid,
-                            appId,
-                            authVersion: 'FIS_v2',
-                            sdkVersion: 'w:0.6.4'
-                        })
-                    },
-                    remainingMs()
-                );
-                if (!fisRes || !fisRes.ok) return false;
-                const fisData = await fisRes.json();
-                token = fisData && fisData.authToken && fisData.authToken.token;
-                if (!token) return false;
-
-                const ttlMs = (parseInt(fisData.authToken.expiresIn, 10) || 3600) * 1000;
-                safeCloudStorageSet(CLOUD_CONFIG.STORAGE_FIS_TOKEN_KEY, JSON.stringify({
-                    token,
-                    expiresAt: Date.now() + ttlMs
-                }));
-            }
-
-            if (Date.now() - startedAt >= CLOUD_CONFIG.TIMEOUT_MS) return false;
-
-            const rcRes = await fetchWithTimeout(
-                `https://firebaseremoteconfig.googleapis.com/v1/projects/${projectId}/namespaces/firebase:fetch?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Goog-Firebase-Installations-Auth': token
-                    },
-                    body: JSON.stringify({
-                        appInstanceId: fid,
-                        appInstanceIdToken: token,
-                        appId,
-                        languageCode: 'zh-TW'
-                    })
-                },
-                remainingMs()
-            );
-            if (!rcRes || !rcRes.ok) return false;
-
-            const rcData = await rcRes.json();
-            const rawJson = rcData && rcData.entries && rcData.entries.game_balance_json;
-            if (!rawJson || typeof rawJson !== 'string') return false;
-
-            const parsed = JSON.parse(rawJson);
-            applyRemoteBalanceConfig(parsed);
-            return true;
-        } catch (_) {
-            return false;
-        }
-    }
-
     function detectGaRuntimeEnv() {
         const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
         const plat = (typeof navigator !== 'undefined' && navigator.platform) ? navigator.platform.toLowerCase() : '';
@@ -514,8 +94,9 @@
 
     const GameAnalyticsTracker = {
         initialized: false,
-        enabled: false,
-        disabledOffline: true,
+        enabled: true,
+        gameKey: CLOUD_CONFIG.GAME_ANALYTICS.gameKey,
+        disabledOffline: false,
         initPromise: null,
         flushTimer: null,
         tsOffsetSec: 0,
@@ -526,20 +107,22 @@
         queue: [],
 
         ensureIdentity() {
-            if (this.userId && this.sessionId) return;
-            let uid = safeCloudStorageGet(CLOUD_CONFIG.STORAGE_GA_UID_KEY);
-            if (!uid) {
-                uid = `ga_${generateUuidV4()}`;
-                safeCloudStorageSet(CLOUD_CONFIG.STORAGE_GA_UID_KEY, uid);
-            }
-            const prevNum = parseInt(safeCloudStorageGet(CLOUD_CONFIG.STORAGE_GA_SESSION_NUM_KEY), 10);
-            const nextNum = Number.isFinite(prevNum) && prevNum >= 1 ? prevNum + 1 : 1;
-            safeCloudStorageSet(CLOUD_CONFIG.STORAGE_GA_SESSION_NUM_KEY, String(nextNum));
+            try {
+                if (this.userId && this.sessionId) return;
+                let uid = safeCloudStorageGet(CLOUD_CONFIG.STORAGE_GA_UID_KEY);
+                if (!uid) {
+                    uid = `ga_${generateUuidV4()}`;
+                    safeCloudStorageSet(CLOUD_CONFIG.STORAGE_GA_UID_KEY, uid);
+                }
+                const prevNum = parseInt(safeCloudStorageGet(CLOUD_CONFIG.STORAGE_GA_SESSION_NUM_KEY), 10);
+                const nextNum = Number.isFinite(prevNum) && prevNum >= 1 ? prevNum + 1 : 1;
+                safeCloudStorageSet(CLOUD_CONFIG.STORAGE_GA_SESSION_NUM_KEY, String(nextNum));
 
-            this.userId = uid;
-            this.sessionId = generateUuidV4();
-            this.sessionNum = nextNum;
-            this.env = detectGaRuntimeEnv();
+                this.userId = uid;
+                this.sessionId = generateUuidV4();
+                this.sessionNum = nextNum;
+                this.env = detectGaRuntimeEnv();
+            } catch (_) {}
         },
 
         buildBaseEvent() {
@@ -549,7 +132,7 @@
                 session_id: this.sessionId,
                 session_num: this.sessionNum,
                 client_ts: Math.floor(Date.now() / 1000) + this.tsOffsetSec,
-                sdk_version: 'local',
+                sdk_version: 'local_ga_collector',
                 os_version: this.env.osVersion,
                 manufacturer: 'unknown',
                 device: 'unknown',
@@ -558,32 +141,53 @@
         },
 
         async init() {
-            this.initialized = true;
-            this.enabled = false;
-            this.disabledOffline = true;
-            this.queue.length = 0;
-            return false;
+            try {
+                const gaCfg = CLOUD_CONFIG.GAME_ANALYTICS || {};
+                this.gameKey = gaCfg.gameKey || '';
+                this.enabled = Boolean(gaCfg.enabled && this.gameKey);
+                this.disabledOffline = isNetworkOffline();
+                this.ensureIdentity();
+                this.initialized = true;
+                return this.enabled;
+            } catch (_) {
+                this.initialized = true;
+                this.enabled = false;
+                return false;
+            }
         },
 
-        enqueue() {
-            // 純前端環境停用外部 GameAnalytics 上報，僅由 trackFeel 安全記錄至本機 runTelemetry
+        enqueue(eventObj) {
+            try {
+                if (!this.enabled || !eventObj) return;
+                this.queue.push(eventObj);
+                if (this.queue.length > 200) this.queue.shift();
+            } catch (_) {}
         },
 
         async flush() {
-            this.queue.length = 0;
+            try {
+                if (isNetworkOffline()) return false;
+                // 純前端安全模式：不存放私密金鑰亦不直接對 GA 發送未簽章請求（避免 401 紅字），保留本機佇列與 1.5s 超時防護介面
+                return true;
+            } catch (_) {
+                return false;
+            }
         },
 
         trackProgression(status, waveNum, mapId, score = null) {
             try {
+                if (!this.enabled) return;
                 this.ensureIdentity();
                 if (!Array.isArray(runTelemetry.progressionLog)) {
                     runTelemetry.progressionLog = [];
                 }
                 const cleanMap = String(mapId || 'forest').replace(/[^A-Za-z0-9_.-]/g, '_');
+                const wavePad = String(Math.max(1, Number(waveNum) || 1)).padStart(2, '0');
                 const entry = {
+                    ...this.buildBaseEvent(),
                     t: Date.now(),
                     category: 'progression',
-                    event_id: `${status}:${cleanMap}:Wave_${waveNum}`,
+                    event_id: `${status}:${cleanMap}:Wave_${wavePad}`,
                     attempt_num: 1
                 };
                 if (status !== 'Start' && Number.isFinite(score)) {
@@ -591,14 +195,29 @@
                 }
                 runTelemetry.progressionLog.push(entry);
                 if (runTelemetry.progressionLog.length > 100) runTelemetry.progressionLog.shift();
+                this.enqueue(entry);
             } catch (_) {}
         },
 
         trackDesign(eventId, value = null) {
             try {
-                // 已由 trackFeel 寫入 runTelemetry.eventsLog，此處保留相容介面不再外送請求
-                void eventId;
-                void value;
+                if (!this.enabled || !eventId) return;
+                this.ensureIdentity();
+                if (!Array.isArray(runTelemetry.designLog)) {
+                    runTelemetry.designLog = [];
+                }
+                const entry = {
+                    ...this.buildBaseEvent(),
+                    t: Date.now(),
+                    category: 'design',
+                    event_id: String(eventId)
+                };
+                if (value !== null && value !== undefined && Number.isFinite(Number(value))) {
+                    entry.value = Number(value);
+                }
+                runTelemetry.designLog.push(entry);
+                if (runTelemetry.designLog.length > 200) runTelemetry.designLog.shift();
+                this.enqueue(entry);
             } catch (_) {}
         }
     };
@@ -630,7 +249,9 @@
             leaks: [],
             bossKillProgressList: [],
             subjectiveRating: '',
-            eventsLog: []
+            eventsLog: [],
+            progressionLog: [],
+            designLog: []
         };
     }
 
@@ -712,7 +333,8 @@
             if (eventKey.startsWith('Leak:')) {
                 const parts = eventKey.split(':');
                 const monsterName = (meta && meta.monsterName) || parts[1] || '未知怪物';
-                const waveNum = (meta && meta.wave) || parts[2] || 1;
+                const parsedWave = parts[2] ? parseInt(String(parts[2]).replace(/^Wave_0*/i, ''), 10) : NaN;
+                const waveNum = (meta && meta.wave) || (Number.isFinite(parsedWave) ? parsedWave : 1);
                 runTelemetry.leaks.push({ monsterType: parts[1], monsterName, wave: waveNum });
             } else if (eventKey.startsWith('Boss:KillProgress')) {
                 if (Number.isFinite(value)) runTelemetry.bossKillProgressList.push(Math.round(value));
@@ -775,6 +397,28 @@
         const s3 = runTelemetry.speedTimeMs[3] || 0;
         const total = s1 + s2 + s3;
         return total > 0 ? Math.round(((s2 + s3) / total) * 100) : 0;
+    }
+
+    function finalizeRunFeel(outcomeMode = 'victory', meta = null) {
+        try {
+            const idleRatio = getAverageIdleRatio();
+            const fastSpeedRatio = getFastSpeedRatio();
+            const dragCancelShop = runTelemetry.dragCancel.shop || 0;
+            const dragCancelBoard = runTelemetry.dragCancel.board || 0;
+            const dragCancelTotal = dragCancelShop + dragCancelBoard;
+            const earlyStarts = runTelemetry.earlyStartCount || 0;
+            const codexOpens = runTelemetry.codexOpenCount || 0;
+            const pauses = runTelemetry.pauseCount || 0;
+            const baseMeta = Object.assign({ outcomeMode }, meta && typeof meta === 'object' ? meta : {});
+
+            trackFeel('Feel:Run:IdleRatio', idleRatio, baseMeta);
+            trackFeel('Feel:Run:SpeedUsage', fastSpeedRatio, baseMeta);
+            trackFeel('Feel:Run:DragCancel', dragCancelTotal, Object.assign({ shop: dragCancelShop, board: dragCancelBoard }, baseMeta));
+            trackFeel('Feel:Run:EarlyStart', earlyStarts, baseMeta);
+            trackFeel('Feel:Run:CodexOpen', codexOpens, baseMeta);
+            trackFeel('Feel:Run:Pause', pauses, baseMeta);
+            GameAnalyticsTracker.flush();
+        } catch (_) {}
     }
 
     function generateBattleReportText(runtime, outcomeMode = 'victory') {
@@ -1008,41 +652,21 @@
         return (records[mapId] && records[mapId].bestWave) || 1;
     }
 
-    function applyLocalBalanceOverride() {
+    function init() {
         try {
-            const raw = safeCloudStorageGet(CONFIG.STORAGE_LOCAL_BALANCE_KEY || 'merge_defense_local_balance_override');
-            if (!raw) return false;
-            const parsed = JSON.parse(raw);
-            return Boolean(applyRemoteBalanceConfig(parsed));
-        } catch (_) {
-            return false;
-        }
-    }
-
-    function init(options = {}) {
-        try {
-            if (options && typeof options.onBalanceApplied === 'function') {
-                onBalanceAppliedHook = options.onBalanceApplied;
-            }
-            // 本機 admin.html 預覽覆蓋（無論離線或連線皆優先檢查，確保測試平衡即時生效）
-            const hasLocalOverride = applyLocalBalanceOverride();
-            if (isNetworkOffline()) return;
-            if (!hasLocalOverride) initRemoteConfigBalance();
             GameAnalyticsTracker.init();
         } catch (_) {}
     }
 
     const BackendModule = {
         CLOUD_CONFIG,
-        applyRemoteBalanceConfig,
-        applyLocalBalanceOverride,
-        initRemoteConfigBalance,
         GameAnalyticsTracker,
         trackFeel,
         resetRunTelemetry,
         recordPlayerAction,
         tickFeelMetrics,
         finalizeWaveFeel,
+        finalizeRunFeel,
         getRunTelemetry: () => runTelemetry,
         generateBattleReportText,
         copyBattleReportToClipboard,

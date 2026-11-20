@@ -424,16 +424,11 @@
 
     function populateBattleRecap(mode) {
         const st = G.state, dom = G.dom, mapSpec = WaveSys.getCurrentMapSpec();
-        const { mvp, pct, text: mvpText } = getMvpData();
+        const { text: mvpText } = getMvpData();
         const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
         const maxHp = st.maxBaseHp || treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
         const honor = computeRunHonorSummary(st);
         const career = Backend.loadCareerStats ? Backend.loadCareerStats() : { totalClears: 0 };
-
-        if (mvp) {
-            Backend.trackFeel(`MVP:DamageShare:${mvp.type}`, pct, { mvpType: mvp.type, sharePct: pct });
-        }
-        Backend.trackFeel('Economy:EndGold', st.currentGold, { endGold: st.currentGold, mode });
 
         resetFeedbackUI();
 
@@ -1283,8 +1278,10 @@
         SoundEngine.playSpawn(spawnedTier);
         CodexSys.unlockEntry(`tower:${placedTower.type}`);
         Backend.recordPlayerAction();
-        Backend.trackFeel(`Tower:Summon:${type}`, deduct.cost, {
+        const elementKey = (cfg && (cfg.shopKey || cfg.elementTag)) || type;
+        Backend.trackFeel(`Tower:Summon:${elementKey}`, deduct.cost, {
             towerType: type,
+            element: elementKey,
             tier: spawnedTier,
             cost: deduct.cost,
             cellIndex: targetIndex
@@ -1687,6 +1684,8 @@
                 ? (fusionPreview.title || L('元素灌注升星確認（0.15x 子彈時間）', 'Confirm Elemental Infusion (0.15x Bullet Time)'))
                 : (isSingle ? L('定向冠枝開花確認（0.15x 子彈時間）', 'Confirm Crown Evolution (0.15x Bullet Time)') : L('世界樹冠枝雙分岔選擇（0.15x 子彈時間）', 'Crown Branch Choice (0.15x Bullet Time)'));
         }
+        const evoBulletTagEl = document.getElementById('evo-bullet-tag');
+        if (evoBulletTagEl) evoBulletTagEl.innerText = L('0.15x 子彈時間', '0.15x Bullet Time');
         if (dom.evoConfirmOptionsEl) {
             dom.evoConfirmOptionsEl.innerHTML = '';
             dom.evoConfirmOptionsEl.classList.toggle('single-branch', isSingle);
@@ -1909,6 +1908,14 @@
         finalizeOutcomeScreen('VICTORY', 'victory');
         Backend.trackFeel('Progression:Complete', st.currentGold, { wave: st.currentWave, mapId: st.currentMapId, contracts: honor.count });
         Backend.trackFeel(`Run:Victory:${st.currentMapId}:Wave_${st.currentWave}`, st.baseHp);
+        const mvpData = getMvpData();
+        if (mvpData.mvp) {
+            Backend.trackFeel(`MVP:${mvpData.mvp.type}`, mvpData.pct, { mvpType: mvpData.mvp.type, sharePct: mvpData.pct, mode: 'victory' });
+        }
+        Backend.trackFeel('Economy:EndGold', st.currentGold, { endGold: st.currentGold, mode: 'victory' });
+        if (typeof Backend.finalizeRunFeel === 'function') {
+            Backend.finalizeRunFeel('victory', { wave: st.currentWave, mapId: st.currentMapId, contracts: honor.count });
+        }
         setDomText(G.dom.victoryStarsEl, stars); setDomText(G.dom.victoryRankTextEl, rankText);
         populateBattleRecap('victory');
         if (G.dom.victoryOverlayEl) G.dom.victoryOverlayEl.classList.remove('hidden');
@@ -1932,6 +1939,14 @@
         finalizeOutcomeScreen('GAMEOVER', 'gameover');
         Backend.trackFeel('Progression:Fail', st.killsCount, { wave: st.currentWave, mapId: st.currentMapId, contracts: honor.count });
         Backend.trackFeel(`Run:Fail:${st.currentMapId}:Wave_${st.currentWave}`, st.killsCount);
+        const mvpData = getMvpData();
+        if (mvpData.mvp) {
+            Backend.trackFeel(`MVP:${mvpData.mvp.type}`, mvpData.pct, { mvpType: mvpData.mvp.type, sharePct: mvpData.pct, mode: 'gameover' });
+        }
+        Backend.trackFeel('Economy:EndGold', st.currentGold, { endGold: st.currentGold, mode: 'gameover' });
+        if (typeof Backend.finalizeRunFeel === 'function') {
+            Backend.finalizeRunFeel('gameover', { wave: st.currentWave, mapId: st.currentMapId, contracts: honor.count });
+        }
         populateBattleRecap('gameover');
         if (G.dom.newRecordBadgeEl) G.dom.newRecordBadgeEl.classList.toggle('hidden', !st.isNewRecordThisRun);
         if (G.dom.gameOverOverlayEl) G.dom.gameOverOverlayEl.classList.remove('hidden');
@@ -2716,26 +2731,7 @@
     updateSpeedButtonUI();
     updateSoundButtonUI();
 
-    Backend.init({
-        onBalanceApplied: () => {
-            if (G.state.waveState === 'WAITING_START') {
-                const mapSpec = WaveSys.getCurrentMapSpec();
-                const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
-                G.state.maxBaseHp = G.state.activeContracts.has('fragile_heart') ? 12 : (treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20);
-                G.state.baseHp = G.state.maxBaseHp;
-                G.state.dewEnergy = G.state.activeContracts.has('dew_drought') ? 0 : (treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20);
-                G.state.currentGold = EconSys.getInitialGold(mapSpec, G.state.activeContracts);
-            }
-            if (GameApp.i18n && typeof GameApp.i18n.applyLanguage === 'function') {
-                GameApp.i18n.applyLanguage();
-            }
-            if (G.dom.spawnerContainer) renderSpawnerButtons();
-            if (CodexSys && typeof CodexSys.renderCodexModal === 'function') CodexSys.renderCodexModal('fusion');
-            updateHUD();
-            updateTowerInspector();
-            Renderer.updateRangeIndicator();
-        }
-    });
+    Backend.init();
 
     const GameController = {
         runtime: G,

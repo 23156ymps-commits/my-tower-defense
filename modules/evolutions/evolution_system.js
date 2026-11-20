@@ -326,7 +326,7 @@
             GameApp.systems.codex.unlockEntry(`tower:${targetType}`);
         }
         if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
-            GameApp.backend.trackFeel(`Fusion:Create:${targetType}:Tier_${fusion.tier}`, st.fusionCount, {
+            GameApp.backend.trackFeel(`Fusion:Create:${targetType}`, st.fusionCount, {
                 resultType: targetType,
                 tier: fusion.tier,
                 mode: fusion.mode,
