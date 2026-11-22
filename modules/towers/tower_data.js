@@ -23,13 +23,18 @@
         lowhp: '殘血'
     };
 
-    // 戰鬥傷害核心公式常數（含 Phase 2A 硬性上限鎖）
+    // 戰鬥傷害核心公式常數（含四桶分離防膨脹與 Phase 2A 硬性上限鎖）
     const COMBAT_CONSTANTS = {
         ATTACK_INTERVAL: 1000,
-        ARMOR_HYPERBOLIC_K: 35,             // 雙曲線百分比護甲常數：35 / (35 + effectiveArmor)
+        ARMOR_HYPERBOLIC_K: 35,             // 雙曲線百分比護甲常數：35 / (35 + A_eff)
         WEAKNESS_MULTIPLIER: 1.75,          // 純元素相剋暴擊倍率 (175%)
         HYBRID_AFFINITY_MULTIPLIER: 1.35,   // 跨元素共生／冠枝命中任一父系弱點之親和倍率 (135%)
-        VULN_ADDITIVE_CAP: 0.60,            // 易傷加法疊加上限 60%：M_vuln = 1 + min(0.60, totalVuln)
+        POWER_TERRAIN_CAP: 0.25,            // 自身戰力加法桶：地形上限 0.25
+        POWER_BLESSING_CAP: 0.30,           // 自身戰力加法桶：賜福上限 0.30
+        POWER_DIVIDEND_CAP: 0.24,           // 自身戰力加法桶：持股紅利預留欄位上限 0.24
+        INFUSION_BASE_COST: 150,            // 無盡靈脈灌注第 k 次費用基礎：150 + 75 * k
+        INFUSION_STEP_COST: 75,             // 無盡靈脈灌注第 k 次費用遞增：75 * k
+        VULN_ADDITIVE_CAP: 0.60,            // 敵方易傷加法桶硬上限 60%：B_vuln = Math.min(0.60, v_root + v_frost_mist + v_brand)
         SLOW_DIMINISH_SECOND_FACTOR: 0.25,  // 減速遞減：最高減速 + 次高減速 × 0.25
         SLOW_TOTAL_CAP: 0.70,               // 總減速上限 70%（移速下限 0.30）
         MIN_SPEED_FLOOR_RATIO: 0.30,        // 減速後移速下限比例 30%（定身/凍結除外）

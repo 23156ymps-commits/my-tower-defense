@@ -86,7 +86,11 @@
         ['sideMonsterLockTagEl', 'side-monster-lock-tag'], ['sideMonsterLockTrackEl', 'side-monster-lock-track'],
         ['sideMonsterLockFillEl', 'side-monster-lock-fill'], ['startCareerBannerEl', 'start-career-banner'],
         ['contractsGridEl', 'contracts-grid'], ['contractsSummaryBadgeEl', 'contracts-summary-badge'],
-        ['victoryContractsRowEl', 'victory-contracts-row'], ['gameoverContractsRowEl', 'gameover-contracts-row']
+        ['victoryContractsRowEl', 'victory-contracts-row'], ['gameoverContractsRowEl', 'gameover-contracts-row'],
+        ['treeRootPanelEl', 'world-tree-root-panel'], ['treeRootTitleEl', 'tree-root-title'],
+        ['treeRootLvBadgeEl', 'tree-root-lv-badge'], ['treeRootRefundBadgeEl', 'tree-root-refund-badge'],
+        ['treeRootYieldBadgeEl', 'tree-root-yield-badge'], ['treeRootUpgradeBtn', 'tree-root-upgrade-btn'],
+        ['treeRootTiersEl', 'tree-root-tiers']
     ];
 
     function buildDomCache() {
@@ -147,6 +151,13 @@
             maxBaseHp,
             baseHp: maxBaseHp,
             dewEnergy: initDew,
+            rootLevel: 0,
+            sellRefundRate: 0.70,
+            infusionCount: 0,
+            dividendBonus: 0,
+            blessingPowerBonus: 0,
+            waveNonCombatGold: 0,
+            lastRootWavePayout: null,
             entangleCdMs: 0, frenzyCdMs: 0, frenzyActiveMs: 0, dewOverchargeMs: 0,
             activeBlessings: new Set(), blessingGrantedWaves: new Set(), blessingChoices: [],
             seedPityCount: 0, treeHitShakeTimer: null,
@@ -1137,6 +1148,103 @@
         return String(val);
     }
 
+    function updateTreasureRootUI() {
+        const dom = G.dom, st = G.state;
+        if (!dom.treeRootPanelEl) return;
+
+        const rootLv = TreeSys && typeof TreeSys.getTreasureRootLevel === 'function' ? TreeSys.getTreasureRootLevel() : (st.rootLevel || 0);
+        const curSpec = TreeSys && typeof TreeSys.getTreasureRootSpec === 'function'
+            ? TreeSys.getTreasureRootSpec(rootLv)
+            : { level: rootLv, name: '未啟用', nameEn: 'Dormant', sellRefundRate: rootLv >= 2 ? 0.80 : 0.70 };
+        const nextSpec = TreeSys && typeof TreeSys.getNextTreasureRootSpec === 'function'
+            ? TreeSys.getNextTreasureRootSpec()
+            : null;
+        const refundRate = EconSys && typeof EconSys.getSellRefundRate === 'function'
+            ? EconSys.getSellRefundRate(rootLv)
+            : (rootLv >= 2 ? 0.80 : 0.70);
+        const refundPct = Math.round(refundRate * 100);
+        const curWave = Math.max(1, st.currentWave || 1);
+        const estPayout = EconSys && typeof EconSys.computeRootWaveIncome === 'function'
+            ? EconSys.computeRootWaveIncome(rootLv, st.currentGold, curWave)
+            : { totalGain: 0, baseGain: 0, interestGain: 0, waveCap: 22 + 8 * curWave, isSoftCapped: false };
+
+        if (dom.treeRootTitleEl) {
+            dom.treeRootTitleEl.innerText = L('世界樹 · 聚寶根鬚', 'World Tree · Treasure Roots');
+        }
+        if (dom.treeRootLvBadgeEl) {
+            const lvName = L(curSpec.name, curSpec.nameEn || curSpec.name);
+            dom.treeRootLvBadgeEl.innerText = `Lv.${rootLv} / Lv.3 · ${lvName}`;
+            dom.treeRootLvBadgeEl.classList.toggle('is-max', rootLv >= 3);
+        }
+        if (dom.treeRootRefundBadgeEl) {
+            dom.treeRootRefundBadgeEl.innerText = L(`出售退費 ${refundPct}%`, `Sell Refund ${refundPct}%`);
+            dom.treeRootRefundBadgeEl.classList.toggle('is-boosted', refundPct >= 80);
+        }
+        if (dom.treeRootYieldBadgeEl) {
+            if (rootLv >= 3) {
+                const capHintZh = estPayout.isSoftCapped ? `，已達軟上限 ${estPayout.waveCap} 💰` : `，軟上限 ${estPayout.waveCap} 💰`;
+                const capHintEn = estPayout.isSoftCapped ? `, Capped ${estPayout.waveCap} 💰` : `, Cap ${estPayout.waveCap} 💰`;
+                dom.treeRootYieldBadgeEl.innerText = L(
+                    `本波預估 +${estPayout.totalGain} 💰（固定 +${estPayout.baseGain} ＋ 利息 +${estPayout.interestGain}${capHintZh}）`,
+                    `Wave Est. +${estPayout.totalGain} 💰 (Fixed +${estPayout.baseGain} + Int +${estPayout.interestGain}${capHintEn})`
+                );
+            } else {
+                dom.treeRootYieldBadgeEl.innerText = L(
+                    `本波預估 +${estPayout.totalGain} 💰（單波軟上限 ${estPayout.waveCap} 💰）`,
+                    `Wave Est. +${estPayout.totalGain} 💰 (Soft Cap ${estPayout.waveCap} 💰)`
+                );
+            }
+        }
+
+        const canAct = isMatchPhaseActive();
+        if (dom.treeRootUpgradeBtn) {
+            if (!nextSpec) {
+                dom.treeRootUpgradeBtn.innerText = L('已達最高等級 Lv.3 複利樹心', 'Max Level Lv.3 Compound Heart');
+                dom.treeRootUpgradeBtn.disabled = true;
+            } else {
+                const canAfford = st.currentGold >= nextSpec.cost;
+                const nextName = L(nextSpec.name, nextSpec.nameEn || nextSpec.name);
+                dom.treeRootUpgradeBtn.innerText = L(
+                    `升級 Lv.${nextSpec.level} ${nextName} (${nextSpec.cost} 💰)`,
+                    `Upgrade Lv.${nextSpec.level} ${nextName} (${nextSpec.cost} 💰)`
+                );
+                dom.treeRootUpgradeBtn.disabled = !canAct || !canAfford;
+            }
+        }
+
+        if (dom.treeRootTiersEl) {
+            const tierCards = dom.treeRootTiersEl.querySelectorAll('.tree-root-tier-card');
+            tierCards.forEach((card) => {
+                const tLv = Number(card.dataset.rootTier) || 1;
+                const tSpec = TreeSys && typeof TreeSys.getTreasureRootSpec === 'function'
+                    ? TreeSys.getTreasureRootSpec(tLv)
+                    : { level: tLv, name: `Lv.${tLv}`, cost: 45, shortDesc: '' };
+                const unlocked = rootLv >= tLv;
+                const isNext = rootLv + 1 === tLv;
+                const locked = tLv > rootLv + 1;
+                card.classList.toggle('is-unlocked', unlocked);
+                card.classList.toggle('is-next', isNext);
+                card.classList.toggle('is-locked', locked);
+                card.disabled = !canAct || unlocked;
+
+                const nameEl = card.querySelector('.root-tier-name');
+                const costEl = card.querySelector('.root-tier-cost');
+                const descEl = card.querySelector('.root-tier-desc');
+                if (nameEl) {
+                    nameEl.innerText = `Lv.${tLv} ${L(tSpec.name, tSpec.nameEn || tSpec.name)}`;
+                }
+                if (costEl) {
+                    costEl.innerText = unlocked
+                        ? L('已啟用', 'Active')
+                        : `${tSpec.cost} 💰`;
+                }
+                if (descEl) {
+                    descEl.innerText = L(tSpec.shortDesc || tSpec.desc || '', tSpec.shortDescEn || tSpec.descEn || '');
+                }
+            });
+        }
+    }
+
     function updateHUD() {
         const dom = G.dom, st = G.state;
         const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
@@ -1147,7 +1255,7 @@
         setDomText(dom.waveDisplay, st.isEndlessMode ? `Wave ${st.currentWave} (${L('無盡', 'Endless')})` : `Wave ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10}`);
         setDomText(dom.bestWaveDisplay, `W${st.bestWave}`);
         updateWavePhaseUI(); Renderer.updateWorldTreeVisualState(); updateSkillButtonsUI();
-        updateSeedPityUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
+        updateSeedPityUI(); updateTreasureRootUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
         updateWaveForecastUI(); updateMonsterHoverCardUI();
 
         const activePlay = isGameplayActive();
@@ -1556,6 +1664,19 @@
                 }
             } else if (tryClearObstacleCell(index)) {
                 return;
+            } else if (index === G.map.endCellIndex) {
+                st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
+                const rootLv = TreeSys && typeof TreeSys.getTreasureRootLevel === 'function' ? TreeSys.getTreasureRootLevel() : (st.rootLevel || 0);
+                const curSpec = TreeSys && typeof TreeSys.getTreasureRootSpec === 'function' ? TreeSys.getTreasureRootSpec(rootLv) : { name: '未啟用' };
+                const nextSpec = TreeSys && typeof TreeSys.getNextTreasureRootSpec === 'function' ? TreeSys.getNextTreasureRootSpec() : null;
+                const estPayout = EconSys && typeof EconSys.computeRootWaveIncome === 'function'
+                    ? EconSys.computeRootWaveIncome(rootLv, st.currentGold, st.currentWave)
+                    : { totalGain: 0, waveCap: 22 + 8 * st.currentWave };
+                const refundPct = Math.round(((EconSys && EconSys.getSellRefundRate ? EconSys.getSellRefundRate(rootLv) : 0.70)) * 100);
+                setStatusMsg(
+                    `世界樹【聚寶根鬚 Lv.${rootLv} ${curSpec.name}】｜本波預估產出 +${estPayout.totalGain} 💰（軟上限 ${estPayout.waveCap} 💰）｜出售退費 ${refundPct}%${nextSpec ? `｜下一級：Lv.${nextSpec.level} ${nextSpec.name} (${nextSpec.cost} 💰)` : '｜已達最高等級'}。`,
+                    `World Tree [Treasure Roots Lv.${rootLv} ${curSpec.nameEn || curSpec.name}] | Est. +${estPayout.totalGain} 💰 (Cap ${estPayout.waveCap} 💰) | Sell Refund ${refundPct}%${nextSpec ? ` | Next: Lv.${nextSpec.level} (${nextSpec.cost} 💰)` : ' | Max Level'}.`
+                );
             } else {
                 st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
                 const nearMon = findMonsterNearCell(index);
@@ -1850,6 +1971,7 @@
         const victoryWave = CONFIG.VICTORY_WAVE || 10;
         const towersDict = getTowersDict();
         st.currentWave = waveNum;
+        st.waveNonCombatGold = 0;
         if (st.currentWave > st.bestWave) {
             st.bestWave = st.currentWave;
             Backend.saveMapRecord(st.currentMapId, st.bestWave);
@@ -1991,6 +2113,9 @@
 
         G.state = createInitialMatchState(prev.currentMapId, initialWaveState, nextSession, resetSpeed, selectedContracts);
         G.state.isTouchMode = prev.isTouchMode;
+        if (TreeSys && typeof TreeSys.resetTreasureRoots === 'function') {
+            TreeSys.resetTreasureRoots();
+        }
         const mapSpec = WaveSys.getCurrentMapSpec();
         Backend.resetRunTelemetry(G.state.currentMapId, mapSpec.name);
         ['startOverlayEl', 'victoryOverlayEl', 'gameOverOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl', 'evoConfirmOverlayEl'].forEach(k => {
@@ -2030,6 +2155,9 @@
         st.baseHp = st.maxBaseHp;
         st.dewEnergy = st.activeContracts.has('dew_drought') ? 0 : (treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20);
         st.currentGold = EconSys ? EconSys.getInitialGold(mapSpec, st.activeContracts) : st.currentGold;
+        if (TreeSys && typeof TreeSys.resetTreasureRoots === 'function') {
+            TreeSys.resetTreasureRoots();
+        }
         if (CodexSys && typeof CodexSys.resetRunCodex === 'function') {
             CodexSys.resetRunCodex();
         }
@@ -2103,24 +2231,48 @@
                 if (st.waveSpawnQueue.length === 0) { st.waveState = 'CLEARING'; updateWavePhaseUI(); }
             }
         } else if (st.waveState === 'CLEARING' && st.monsters.length === 0) {
-            if (!st.isEndlessMode && st.currentWave === victoryWave) { triggerVictory(); return; }
+            const rootPayout = (TreeSys && typeof TreeSys.settleWaveRootIncome === 'function')
+                ? TreeSys.settleWaveRootIncome(st.currentWave)
+                : null;
+            const rootMsgZh = rootPayout ? `（${rootPayout.summaryZh}）` : '';
+            const rootMsgEn = rootPayout ? ` (${rootPayout.summaryEn})` : '';
+            if (!st.isEndlessMode && st.currentWave === victoryWave) {
+                if (rootPayout) {
+                    setStatusMsg(
+                        `第 ${st.currentWave} 波最終防禦完成${rootMsgZh}！`,
+                        `Final Wave ${st.currentWave} cleared${rootMsgEn}!`
+                    );
+                }
+                triggerVictory();
+                return;
+            }
             Backend.finalizeWaveFeel(st.currentWave);
             Backend.trackFeel('Progression:Complete', st.currentGold, { wave: st.currentWave, mapId: st.currentMapId });
             if (st.currentWave % blessingInterval === 0 && !st.blessingGrantedWaves.has(st.currentWave)) {
                 if (st.pendingEvolution || isOverlayVisible(G.dom.evoConfirmOverlayEl)) {
                     st.pendingBlessingWave = st.currentWave;
                     st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
-                    updateWavePhaseUI();
+                    setStatusMsg(
+                        `第 ${st.currentWave} 波防禦完成${rootMsgZh}，完成進化選擇後將開啟枝枒祝福。`,
+                        `Wave ${st.currentWave} cleared${rootMsgEn}! Blessing selection opens after evolution.`
+                    );
+                    updateHUD();
                     return;
                 }
-                if (TreeSys.triggerBlessingSelection(st.currentWave)) return;
+                if (TreeSys.triggerBlessingSelection(st.currentWave)) {
+                    setStatusMsg(
+                        `第 ${st.currentWave} 波防禦完成${rootMsgZh}，請擇一項世界樹枝枒祝福。`,
+                        `Wave ${st.currentWave} cleared${rootMsgEn}! Choose a World Tree Blessing.`
+                    );
+                    return;
+                }
             }
             st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
             setStatusMsg(
-                `第 ${st.currentWave} 波防禦完成，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後開始。`,
-                `Wave ${st.currentWave} cleared! Next wave begins in ${Math.ceil(intermissionMs / 1000)}s.`
+                `第 ${st.currentWave} 波防禦完成${rootMsgZh}，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後開始。`,
+                `Wave ${st.currentWave} cleared${rootMsgEn}! Next wave begins in ${Math.ceil(intermissionMs / 1000)}s.`
             );
-            updateWavePhaseUI();
+            updateHUD();
         }
 
         if (st.monsters.length > 0) {
@@ -2399,9 +2551,27 @@
         ['victoryRestartBtn', restartGame], ['victoryMenuBtn', returnToMainMenu], ['endlessBtn', continueEndlessMode],
         ['restartBtn', restartGame], ['gameoverMenuBtn', returnToMainMenu],
         ['evoCancelBtn', cancelPendingEvolution],
+        ['treeRootUpgradeBtn', () => {
+            SoundEngine.ensureContext();
+            if (TreeSys && typeof TreeSys.upgradeTreasureRoot === 'function') {
+                TreeSys.upgradeTreasureRoot();
+            }
+        }],
         ['addGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold += 500; setStatusMsg('已增加 500 💰。', 'Added 500 💰.'); updateHUD(); } }],
         ['clearGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold = 0; setStatusMsg('金幣已歸零。', 'Gold cleared to 0.'); updateHUD(); } }]
     ].forEach(([domKey, fn]) => { if (G.dom[domKey] && typeof fn === 'function') G.dom[domKey].addEventListener('click', fn); });
+
+    if (G.dom.treeRootTiersEl) {
+        G.dom.treeRootTiersEl.addEventListener('click', (e) => {
+            const card = e && e.target && e.target.closest ? e.target.closest('.tree-root-tier-card') : null;
+            if (!card) return;
+            SoundEngine.ensureContext();
+            const targetLv = Number(card.dataset.rootTier) || null;
+            if (TreeSys && typeof TreeSys.upgradeTreasureRoot === 'function') {
+                TreeSys.upgradeTreasureRoot(targetLv);
+            }
+        });
+    }
 
     if (G.dom.guideOverlayEl) {
         G.dom.guideOverlayEl.addEventListener('click', (e) => {

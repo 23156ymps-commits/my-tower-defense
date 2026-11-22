@@ -35,8 +35,80 @@
         BLESSING_SCORCH_DPS: 22,
         BLESSING_SCORCH_RADIUS_CELLS: 0.75,
         BLESSING_DEW_OVERCHARGE_DUR_MS: 3000,
-        BLESSING_DEW_OVERCHARGE_CHANCE: 0.40
+        BLESSING_DEW_OVERCHARGE_CHANCE: 0.40,
+        ROOT_MAX_LEVEL: 3,
+        NON_COMBAT_GAIN_BASE: 22,
+        NON_COMBAT_GAIN_PER_WAVE: 8
     };
+
+    // 世界樹「聚寶根鬚（Lv.0 → Lv.3）」經營系統設定表（不占棋盤格）
+    const TREASURE_ROOTS_LEVELS = {
+        0: {
+            level: 0,
+            id: 'root_lv0',
+            name: '未啟用',
+            nameEn: 'Dormant Roots',
+            cost: 0,
+            fixedWaveGold: 0,
+            interestRate: 0,
+            interestCap: 0,
+            sellRefundRate: 0.70,
+            shortDesc: '波末額外 +0 💰 · 出售退費 70%',
+            shortDescEn: 'Wave End +0 💰 · Sell Refund 70%',
+            desc: '尚未升級聚寶根鬚，全場出售防禦塔退費率為 70%。',
+            descEn: 'Treasure Roots not yet awakened. Tower sell refund rate is 70%.'
+        },
+        1: {
+            level: 1,
+            id: 'root_lv1',
+            name: '汲取根鬚',
+            nameEn: 'Siphon Roots',
+            cost: 45,
+            fixedWaveGold: 15,
+            interestRate: 0,
+            interestCap: 0,
+            sellRefundRate: 0.70,
+            shortDesc: '每清完 1 波固定額外獲得 +15 💰',
+            shortDescEn: 'Each wave cleared grants +15 💰',
+            desc: '每清完 1 波固定額外獲得 +15 💰。',
+            descEn: 'Grants a fixed +15 💰 bonus after clearing each wave.'
+        },
+        2: {
+            level: 2,
+            id: 'root_lv2',
+            name: '黃金根脈',
+            nameEn: 'Golden Veins',
+            cost: 75,
+            fixedWaveGold: 32,
+            interestRate: 0,
+            interestCap: 0,
+            sellRefundRate: 0.80,
+            shortDesc: '每波 +32 💰 · 全場出售退費率 70% → 80%',
+            shortDescEn: 'Wave End +32 💰 · Sell Refund 70% → 80%',
+            desc: '每清完 1 波固定額外獲得 +32 💰，且全場出售防禦塔退費率從 70% 提升為 80%。',
+            descEn: 'Grants +32 💰 per cleared wave and raises tower sell refund from 70% to 80%.'
+        },
+        3: {
+            level: 3,
+            id: 'root_lv3',
+            name: '複利樹心',
+            nameEn: 'Compound Heart',
+            cost: 110,
+            fixedWaveGold: 42,
+            interestRate: 0.08,
+            interestCap: 35,
+            sellRefundRate: 0.80,
+            shortDesc: '每波 +42 💰 ＋ 現金 8% 利息（上限 +35 💰，軟上限 22 + 8w）',
+            shortDescEn: 'Wave End +42 💰 + 8% Interest (cap +35 💰, soft cap 22 + 8w)',
+            desc: '每清完 1 波固定額外獲得 +42 💰 ＋ 當前持有現金的 8% 利息（單波利息部分上限 +35 💰，且受單波非戰鬥淨收益軟上限 22 + 8w 約束）。',
+            descEn: 'Grants +42 💰 + 8% cash interest per wave (interest cap +35 💰, bound by wave soft cap 22 + 8w).'
+        }
+    };
+
+    function getTreasureRootLevelSpec(level = 0) {
+        const lv = Math.max(0, Math.min(3, Math.floor(Number(level) || 0)));
+        return TREASURE_ROOTS_LEVELS[lv] || TREASURE_ROOTS_LEVELS[0];
+    }
 
     const ACTIVE_SKILLS = {
         entangle: {
@@ -140,6 +212,8 @@
     GameApp.data.tree = {
         TREE_CONFIG,
         ACTIVE_SKILLS,
+        TREASURE_ROOTS_LEVELS,
+        getTreasureRootLevelSpec,
         BLESSINGS_MAP,
         BLESSINGS_CATALOG,
         getBlessingsCatalog

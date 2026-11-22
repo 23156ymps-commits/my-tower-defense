@@ -255,7 +255,7 @@
         }
     };
 
-    // 4 階段機制 Boss 輪替序列（W5 熔岩巨獸王 -> W10 腐朽古樹王 -> W15 天穹堡壘艦 -> W20 虛空噬樹者）
+    // 4 階段機制 Boss 輪替序列（每 5 波 m = w / 5：H_boss(w) = round(920 * M_hp(w) * (1 + 0.04 * m))，A_boss(w) = min(36, 12 + round(3.5 * m))）
     const BOSS_ROSTER = [
         {
             wave: 5,
@@ -267,7 +267,7 @@
             icon: '🌋',
             weakness: 'ice',
             armorBase: 16,
-            hpBase: 2800,
+            hpBase: 2978,
             traitDesc: '硬化外殼：受到前 12 次攻擊減傷 50%，需高攻速連擊破殼。'
         },
         {
@@ -280,8 +280,8 @@
             name: '腐朽古樹王',
             icon: '👹',
             weakness: 'fire',
-            armorBase: 22,
-            hpBase: 9000,
+            armorBase: 19,
+            hpBase: 8487,
             traitDesc: '古樹再生：每 8 秒召喚 2 隻蔓藤小怪並回復 5% 生命（重傷減半）。'
         },
         {
@@ -295,8 +295,8 @@
             name: '天穹堡壘艦',
             icon: '🛸',
             weakness: 'thunder',
-            armorBase: 26,
-            hpBase: 22000,
+            armorBase: 23,
+            hpBase: 17323,
             traitDesc: '天穹護盾：開局附帶 50% 護盾，每 10 秒 EMP 癱瘓最近 2 座塔 1.5s。'
         },
         {
@@ -306,8 +306,8 @@
             name: '虛空噬樹者',
             icon: '🕳️',
             weakness: 'thunder',
-            armorBase: 32,
-            hpBase: 48000,
+            armorBase: 26,
+            hpBase: 35313,
             traitDesc: '虛空變相：每損失 25% 生命切換弱點屬性並淨化部分負面狀態。'
         }
     ];

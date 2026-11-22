@@ -87,14 +87,107 @@
         return { ok: true, cost };
     }
 
-    function getTowerSellRefund(towerObj) {
+    function getSellRefundRate(rootLevelOverride = null) {
+        const d = getData();
+        const lv = rootLevelOverride !== null
+            ? Number(rootLevelOverride)
+            : ((G && G.state && Number.isFinite(G.state.rootLevel)) ? G.state.rootLevel : 0);
+        if (lv >= 2) {
+            return Number.isFinite(d.SELL_REFUND_RATE_LV2) ? d.SELL_REFUND_RATE_LV2 : 0.80;
+        }
+        return Number.isFinite(d.SELL_REFUND_RATE) ? d.SELL_REFUND_RATE : 0.70;
+    }
+
+    function getTowerSellRefund(towerObj, rootLevelOverride = null) {
         if (!towerObj) return 0;
         const d = getData();
         const baseCost = d.BASE_COST ?? 10;
-        const refundRate = d.SELL_REFUND_RATE ?? 0.70;
+        const refundRate = getSellRefundRate(rootLevelOverride);
         const fallback = baseCost * Math.pow(2, Math.max(0, (towerObj.tier || 1) - 1));
         const invested = Number.isFinite(towerObj.investedGold) ? towerObj.investedGold : fallback;
-        return Math.floor(invested * refundRate);
+        return Math.floor(invested * refundRate + 1e-9);
+    }
+
+    /**
+     * 單波非戰鬥淨收益軟上限：maxNonCombatGain(w) = 22 + 8 * w
+     */
+    function maxNonCombatGain(waveNum = null) {
+        const d = getData();
+        const base = Number.isFinite(d.NON_COMBAT_GAIN_BASE) ? d.NON_COMBAT_GAIN_BASE : 22;
+        const perWave = Number.isFinite(d.NON_COMBAT_GAIN_PER_WAVE) ? d.NON_COMBAT_GAIN_PER_WAVE : 8;
+        const rawW = waveNum !== null ? waveNum : (G && G.state ? G.state.currentWave : 1);
+        const w = Math.max(1, Math.floor(Number(rawW) || 1));
+        return base + perWave * w;
+    }
+
+    /**
+     * 無盡靈脈灌注第 k 次費用：150 + 75 * k
+     */
+    function getInfusionCost(k = 1) {
+        const d = getData();
+        const base = Number.isFinite(d.INFUSION_BASE_COST) ? d.INFUSION_BASE_COST : 150;
+        const step = Number.isFinite(d.INFUSION_STEP_COST) ? d.INFUSION_STEP_COST : 75;
+        const count = Math.max(1, Math.floor(Number(k) || 1));
+        return base + step * count;
+    }
+
+    /**
+     * 計算聚寶根鬚（Lv.0 → Lv.3）於指定波次的波末產出明細（受單波非戰鬥淨收益軟上限 22 + 8w 約束）
+     */
+    function computeRootWaveIncome(rootLevel = null, currentGold = null, waveNum = null) {
+        const d = getData();
+        const lv = rootLevel !== null
+            ? Math.max(0, Math.min(3, Math.floor(Number(rootLevel) || 0)))
+            : ((G && G.state && Number.isFinite(G.state.rootLevel)) ? G.state.rootLevel : 0);
+        const gold = currentGold !== null
+            ? Math.max(0, Number(currentGold) || 0)
+            : ((G && G.state && Number.isFinite(G.state.currentGold)) ? G.state.currentGold : 0);
+        const w = waveNum !== null
+            ? Math.max(1, Math.floor(Number(waveNum) || 1))
+            : ((G && G.state && Number.isFinite(G.state.currentWave)) ? G.state.currentWave : 1);
+
+        const waveCap = maxNonCombatGain(w);
+        const fixedArr = Array.isArray(d.TREASURE_ROOTS_FIXED_GAIN) ? d.TREASURE_ROOTS_FIXED_GAIN : [0, 15, 32, 42];
+        const interestRate = Number.isFinite(d.TREASURE_ROOTS_LV3_INTEREST_RATE) ? d.TREASURE_ROOTS_LV3_INTEREST_RATE : 0.08;
+        const interestCap = Number.isFinite(d.TREASURE_ROOTS_LV3_INTEREST_CAP) ? d.TREASURE_ROOTS_LV3_INTEREST_CAP : 35;
+
+        if (lv <= 0) {
+            return {
+                level: 0,
+                wave: w,
+                fixedGain: 0,
+                rawInterest: 0,
+                uncappedGain: 0,
+                waveCap,
+                baseGain: 0,
+                interestGain: 0,
+                totalGain: 0,
+                isInterestCapped: false,
+                isSoftCapped: false
+            };
+        }
+
+        const fixedGain = Number(fixedArr[lv]) || (lv === 1 ? 15 : (lv === 2 ? 32 : 42));
+        const unClampedInterest = lv >= 3 ? Math.floor(gold * interestRate + 1e-9) : 0;
+        const rawInterest = lv >= 3 ? Math.min(interestCap, unClampedInterest) : 0;
+        const uncappedGain = fixedGain + rawInterest;
+        const totalGain = Math.min(waveCap, uncappedGain);
+        const baseGain = Math.min(waveCap, fixedGain);
+        const interestGain = Math.max(0, totalGain - baseGain);
+
+        return {
+            level: lv,
+            wave: w,
+            fixedGain,
+            rawInterest,
+            uncappedGain,
+            waveCap,
+            baseGain,
+            interestGain,
+            totalGain,
+            isInterestCapped: lv >= 3 && unClampedInterest > interestCap,
+            isSoftCapped: uncappedGain > waveCap
+        };
     }
 
     function getCombatMoveCost() {
@@ -152,7 +245,11 @@
         getSummonCost,
         canAffordSummon,
         deductSummonCost,
+        getSellRefundRate,
         getTowerSellRefund,
+        maxNonCombatGain,
+        getInfusionCost,
+        computeRootWaveIncome,
         getCombatMoveCost,
         canAffordCombatMove,
         getObstacleClearCost,

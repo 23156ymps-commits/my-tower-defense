@@ -350,9 +350,19 @@
     }
 
     function getMonsterEffectiveArmor(monster, armorPierce = 0) {
-        const shred = monster.armorShredTimer > 0 ? Math.max(0, Math.min(1, Number(monster.armorShredRate) || 0.30)) : 0;
-        const pierce = Math.max(0, Math.min(1, Number(armorPierce) || 0));
-        return Math.max(0, (Number(monster.armor) || 0) * (1 - shred) * (1 - pierce));
+        const A_base = Math.max(0, Number(monster && (monster.A_base ?? monster.armor)) || 0);
+        const R_shred = (monster && Number.isFinite(monster.R_shred))
+            ? Math.max(0, Math.min(1, Number(monster.R_shred)))
+            : ((monster && monster.armorShredTimer > 0) ? Math.max(0, Math.min(1, Number(monster.armorShredRate) || 0.30)) : 0);
+        const P_pierce = Math.max(0, Math.min(1, Number(armorPierce) || 0));
+        const A_eff = Math.max(0, A_base * (1 - R_shred) * (1 - P_pierce));
+        return A_eff;
+    }
+
+    function getMonsterArmorMultiplier(monster, armorPierce = 0) {
+        const A_eff = getMonsterEffectiveArmor(monster, armorPierce);
+        const M_armor = 35 / (35 + A_eff);
+        return M_armor;
     }
 
     // ==================== Phase 2A 通用異常狀態機與上限鎖 ====================
@@ -667,26 +677,59 @@
     }
 
     /**
-     * 計算怪物總易傷倍率（含世界樹纏繞、霜霧迷宮濕冷易傷、世界樹荊棘近樹易傷，硬性上限 +60%）
-     * M_vuln = 1 + Math.min(0.60, totalVuln)
+     * 敵方易傷加法桶純函式：B_vuln = Math.min(0.60, v_root + v_frost_mist + v_brand)（硬上限 60%）
      */
-    function getMonsterVulnerabilityMultiplier(monster) {
-        if (!monster) return 1.0;
-        const st = ensureMonsterStatus(monster);
+    function computeVulnerabilityBucket(v_root = 0, v_frost_mist = 0, v_brand = 0) {
         const cc = getCombatConstants();
         const cap = Number.isFinite(cc.VULN_ADDITIVE_CAP) ? cc.VULN_ADDITIVE_CAP : 0.60;
+        const r = Math.max(0, Number(v_root) || 0);
+        const fm = Math.max(0, Number(v_frost_mist) || 0);
+        const br = Math.max(0, Number(v_brand) || 0);
+        const B_vuln = Math.min(cap, r + fm + br);
+        return B_vuln;
+    }
 
-        let totalVuln = 0;
-        if ((monster.rootTimer || 0) > 0 && (monster.rootVulnRate || 0) > 0) {
-            totalVuln += monster.rootVulnRate;
+    /**
+     * 計算怪物當前易傷加法桶 B_vuln = Math.min(0.60, v_root + v_frost_mist + v_brand)
+     */
+    function getMonsterVulnerabilityBonus(monster) {
+        if (!monster) return 0;
+        const st = ensureMonsterStatus(monster);
+        const vulnMap = (st && st.vuln) || {};
+
+        let v_root = Number.isFinite(monster.v_root)
+            ? Math.max(0, Number(monster.v_root))
+            : (((monster.rootTimer || 0) > 0 && (monster.rootVulnRate || 0) > 0) ? Math.max(0, Number(monster.rootVulnRate)) : 0);
+        if (vulnMap.root && vulnMap.root.durationMs > 0 && vulnMap.root.bonus > 0) {
+            v_root = Math.max(v_root, vulnMap.root.bonus);
         }
-        Object.keys(st.vuln).forEach((k) => {
-            const v = st.vuln[k];
-            if (v && v.durationMs > 0 && v.bonus > 0) {
-                totalVuln += v.bonus;
+
+        let v_frost_mist = Number.isFinite(monster.v_frost_mist) ? Math.max(0, Number(monster.v_frost_mist)) : 0;
+        ['steam_B_fog', 'frost_mist', 'mist_fog'].forEach((k) => {
+            const entry = vulnMap[k];
+            if (entry && entry.durationMs > 0 && entry.bonus > 0) {
+                v_frost_mist = Math.max(v_frost_mist, entry.bonus);
             }
         });
-        return 1.0 + Math.min(cap, Math.max(0, totalVuln));
+
+        let v_brand = Number.isFinite(monster.v_brand) ? Math.max(0, Number(monster.v_brand)) : 0;
+        Object.keys(vulnMap).forEach((k) => {
+            if (k === 'root' || k === 'steam_B_fog' || k === 'frost_mist' || k === 'mist_fog') return;
+            const entry = vulnMap[k];
+            if (entry && entry.durationMs > 0 && entry.bonus > 0) {
+                v_brand += entry.bonus;
+            }
+        });
+
+        const B_vuln = Math.min(0.60, v_root + v_frost_mist + v_brand);
+        return B_vuln;
+    }
+
+    /**
+     * 計算怪物總易傷倍率：1 + B_vuln（硬上限 +60%）
+     */
+    function getMonsterVulnerabilityMultiplier(monster) {
+        return 1.0 + getMonsterVulnerabilityBonus(monster);
     }
 
     function applyArmorShred(monster, shredRate = 0.30, durationMs = 3000) {
@@ -1236,6 +1279,7 @@
         getMonsterProgressRatio,
         pullMonsterAlongPath,
         getMonsterEffectiveArmor,
+        getMonsterArmorMultiplier,
         getMonsterEffectiveSlowRate,
         applySlowToMonster,
         isMonsterSlowed,
@@ -1254,6 +1298,8 @@
         applyShockToMonster,
         tryTriggerShockBonusDamage,
         applyVulnerabilityToMonster,
+        computeVulnerabilityBucket,
+        getMonsterVulnerabilityBonus,
         getMonsterVulnerabilityMultiplier,
         applyArmorShred,
         spawnGroundHazard,

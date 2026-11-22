@@ -23,15 +23,20 @@
         SUMMON_NEAR_PATH_RADIUS: 2.0
     };
 
-    // 波次強度與魔王參數（統一平滑血量公式 + 無盡遞推）
+    // 波次強度與魔王參數（雙段防膨脹血量曲線 M_hp(w) 與每 5 波 Boss 公式）
     const WAVE_BALANCE = {
         BASE_COUNT: 6,
         COUNT_PER_WAVE: 2,
         MAX_COUNT_PER_WAVE: 28,
-        HP_GROWTH_LINEAR: 0.30,
-        HP_GROWTH_QUAD: 0.068,
-        ENDLESS_HP_BASE_W10: 9.21,
-        ENDLESS_HP_EXP: 1.20,
+        HP_GROWTH_LINEAR: 0.28,
+        HP_GROWTH_QUAD: 0.062,
+        ENDLESS_HP_BASE_W10: 8.542,
+        ENDLESS_HP_EXP: 1.145,
+        BOSS_BASE_HP_COEFF: 920,
+        BOSS_MILESTONE_HP_STEP: 0.04,
+        BOSS_BASE_ARMOR: 12,
+        BOSS_ARMOR_PER_MILESTONE: 3.5,
+        BOSS_ARMOR_CAP: 36,
         ENDLESS_BOSS_HP_MULT: 2.364,
         ENDLESS_BOSS_ARMOR_STEP: 6,
         REWARD_WAVE_STEP: 2,

@@ -43,6 +43,7 @@
         const map = G.map;
         const boardSize = CONFIG.BOARD_SIZE || 150;
         G.state.currentMapId = spec.id;
+        map.spec = spec;
         map.waypoints = spec.waypoints.map(pt => ({ x: pt.x, y: pt.y }));
         map.altWaypoints = Array.isArray(spec.altWaypoints) ? spec.altWaypoints.map(pt => ({ x: pt.x, y: pt.y })) : null;
         map.startCellIndex = coordsToIndex(map.waypoints[0].x, map.waypoints[0].y);
@@ -153,17 +154,49 @@
         return Boolean(isEndless && waveNum >= victoryWave && waveNum % 5 === 0);
     }
 
+    /**
+     * 普通/精英雙段血量倍率曲線 M_hp(w)：
+     *   1 <= w <= 10: 1 + 0.28 * (w - 1) + 0.062 * Math.pow(w - 1, 2)
+     *   w > 10:       8.542 * Math.pow(1.145, w - 10)
+     */
     function computeWaveHpScale(waveNum) {
         const wb = getRoutesData().WAVE_BALANCE || {};
         const w = Math.max(1, Number(waveNum) || 1);
-        const linear = Number.isFinite(wb.HP_GROWTH_LINEAR) ? wb.HP_GROWTH_LINEAR : 0.30;
-        const quad = Number.isFinite(wb.HP_GROWTH_QUAD) ? wb.HP_GROWTH_QUAD : 0.068;
+        const linear = Number.isFinite(wb.HP_GROWTH_LINEAR) ? wb.HP_GROWTH_LINEAR : 0.28;
+        const quad = Number.isFinite(wb.HP_GROWTH_QUAD) ? wb.HP_GROWTH_QUAD : 0.062;
         if (w <= 10) {
             return 1 + linear * (w - 1) + quad * Math.pow(w - 1, 2);
         }
-        const baseW10 = Number.isFinite(wb.ENDLESS_HP_BASE_W10) ? wb.ENDLESS_HP_BASE_W10 : 9.21;
-        const expBase = Number.isFinite(wb.ENDLESS_HP_EXP) ? wb.ENDLESS_HP_EXP : 1.20;
+        const baseW10 = Number.isFinite(wb.ENDLESS_HP_BASE_W10) ? wb.ENDLESS_HP_BASE_W10 : 8.542;
+        const expBase = Number.isFinite(wb.ENDLESS_HP_EXP) ? wb.ENDLESS_HP_EXP : 1.145;
         return baseW10 * Math.pow(expBase, w - 10);
+    }
+
+    /**
+     * 每 5 波 Boss 血量公式（m = w / 5）：
+     *   H_boss(w) = Math.round(920 * M_hp(w) * (1 + 0.04 * m))
+     */
+    function computeBossHp(waveNum) {
+        const wb = getRoutesData().WAVE_BALANCE || {};
+        const w = Math.max(1, Number(waveNum) || 5);
+        const m = w / 5;
+        const baseCoeff = Number.isFinite(wb.BOSS_BASE_HP_COEFF) ? wb.BOSS_BASE_HP_COEFF : 920;
+        const milestoneStep = Number.isFinite(wb.BOSS_MILESTONE_HP_STEP) ? wb.BOSS_MILESTONE_HP_STEP : 0.04;
+        return Math.round(baseCoeff * computeWaveHpScale(w) * (1 + milestoneStep * m));
+    }
+
+    /**
+     * 每 5 波 Boss 護甲公式（m = w / 5，硬封頂 36）：
+     *   A_boss(w) = Math.min(36, 12 + Math.round(3.5 * m))
+     */
+    function computeBossArmor(waveNum) {
+        const wb = getRoutesData().WAVE_BALANCE || {};
+        const w = Math.max(1, Number(waveNum) || 5);
+        const m = w / 5;
+        const baseArmor = Number.isFinite(wb.BOSS_BASE_ARMOR) ? wb.BOSS_BASE_ARMOR : 12;
+        const perMilestone = Number.isFinite(wb.BOSS_ARMOR_PER_MILESTONE) ? wb.BOSS_ARMOR_PER_MILESTONE : 3.5;
+        const armorCap = Number.isFinite(wb.BOSS_ARMOR_CAP) ? wb.BOSS_ARMOR_CAP : 36;
+        return Math.min(armorCap, baseArmor + Math.round(perMilestone * m));
     }
 
     function getBossSpecForWave(waveNum) {
@@ -175,23 +208,11 @@
 
         const milestoneIdx = Math.max(0, Math.floor(waveNum / 5) - 1);
         const template = bossRoster[milestoneIdx % Math.max(1, bossRoster.length)] || {
-            typeKey: 'wood', name: '腐朽古樹王', icon: '👹', weakness: 'fire', armorBase: 22, hpBase: 9000
+            typeKey: 'wood', name: '腐朽古樹王', icon: '👹', weakness: 'fire', armorBase: 19, hpBase: 8487
         };
 
-        let bossHp;
-        let bossArmor;
-        if (bossRoster.length > 0 && milestoneIdx < bossRoster.length) {
-            bossHp = Number(template.hpBase) || 2800;
-            bossArmor = Number(template.armorBase) || 16;
-        } else {
-            const lastBoss = bossRoster[Math.max(0, bossRoster.length - 1)] || template;
-            const stepsBeyond = Math.max(1, milestoneIdx - Math.max(0, bossRoster.length - 1));
-            const hpStepMult = Number.isFinite(wb.ENDLESS_BOSS_HP_MULT) ? wb.ENDLESS_BOSS_HP_MULT : 2.364;
-            const armorStep = Number.isFinite(wb.ENDLESS_BOSS_ARMOR_STEP) ? wb.ENDLESS_BOSS_ARMOR_STEP : 6;
-            const rawHp = (Number(lastBoss.hpBase) || 22000) * Math.pow(hpStepMult, stepsBeyond);
-            bossHp = Math.round(rawHp / 100) * 100;
-            bossArmor = (Number(lastBoss.armorBase) || 26) + stepsBeyond * armorStep;
-        }
+        const bossHp = computeBossHp(waveNum);
+        const bossArmor = computeBossArmor(waveNum);
 
         const bossBaseDamage = waveNum === victoryWave
             ? (wb.BOSS_BASE_DAMAGE || 20)
@@ -315,6 +336,11 @@
         rebuildRouteFromWaypoints,
         isBossWaveNumber,
         computeWaveHpScale,
+        M_hp: computeWaveHpScale,
+        computeBossHp,
+        H_boss: computeBossHp,
+        computeBossArmor,
+        A_boss: computeBossArmor,
         getBossSpecForWave,
         getWaveNormalPool,
         buildWaveQueue

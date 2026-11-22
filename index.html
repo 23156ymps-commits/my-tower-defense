@@ -284,6 +284,44 @@
             </div>
         </div>
 
+        <!-- 世界樹「聚寶根鬚（Lv.0 → Lv.3）」互動經營面板（不占棋盤格） -->
+        <section id="world-tree-root-panel" class="tree-root-panel" aria-label="世界樹聚寶根鬚經營系統">
+            <div class="tree-root-header">
+                <div class="tree-root-title-wrap">
+                    <span id="tree-root-title" class="tree-root-title">世界樹 · 聚寶根鬚</span>
+                    <span id="tree-root-lv-badge" class="tree-root-lv-badge num">Lv.0 / Lv.3</span>
+                    <span id="tree-root-refund-badge" class="tree-root-meta-tag num">出售退費 70%</span>
+                    <span id="tree-root-yield-badge" class="tree-root-meta-tag tree-root-yield num">本波預估 +0 💰（軟上限 30 💰）</span>
+                </div>
+                <button id="tree-root-upgrade-btn" class="tree-root-upgrade-btn num" type="button">
+                    升級 Lv.1 汲取根鬚 (45 💰)
+                </button>
+            </div>
+            <div id="tree-root-tiers" class="tree-root-tiers">
+                <button type="button" class="tree-root-tier-card is-next" data-root-tier="1">
+                    <div class="root-tier-head">
+                        <span class="root-tier-name">Lv.1 汲取根鬚</span>
+                        <span class="root-tier-cost num">45 💰</span>
+                    </div>
+                    <div class="root-tier-desc num">每清完 1 波固定額外獲得 +15 💰</div>
+                </button>
+                <button type="button" class="tree-root-tier-card is-locked" data-root-tier="2">
+                    <div class="root-tier-head">
+                        <span class="root-tier-name">Lv.2 黃金根脈</span>
+                        <span class="root-tier-cost num">75 💰</span>
+                    </div>
+                    <div class="root-tier-desc num">每波 +32 💰 · 全場出售退費率 70% → 80%</div>
+                </button>
+                <button type="button" class="tree-root-tier-card is-locked" data-root-tier="3">
+                    <div class="root-tier-head">
+                        <span class="root-tier-name">Lv.3 複利樹心</span>
+                        <span class="root-tier-cost num">110 💰</span>
+                    </div>
+                    <div class="root-tier-desc num">每波 +42 💰 ＋ 現金 8% 利息（上限 +35 💰，軟上限 22 + 8w）</div>
+                </button>
+            </div>
+        </section>
+
         <!-- 精簡底部操作區：左側元素召喚卡 ＋ 右側世界樹主動技能與快捷功能列 -->
         <div class="bottom-action-deck">
             <!-- 屬性等寬拖拉式指定召喚控制區（由 Object.keys 動態掃描生成） -->

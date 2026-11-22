@@ -178,6 +178,257 @@
         return (GameApp.i18n && typeof GameApp.i18n.pick === 'function') ? GameApp.i18n.pick(zh, en) : zh;
     }
 
+    // ==================== 世界樹「聚寶根鬚（Lv.0 → Lv.3）」經營系統 ====================
+    function getTreasureRootLevelsMap() {
+        return getTreeData().TREASURE_ROOTS_LEVELS || {};
+    }
+
+    function getTreasureRootLevel() {
+        if (!G || !G.state) return 0;
+        return Math.max(0, Math.min(3, Math.floor(Number(G.state.rootLevel) || 0)));
+    }
+
+    function getTreasureRootSpec(level = null) {
+        const lv = level !== null ? Math.max(0, Math.min(3, Math.floor(Number(level) || 0))) : getTreasureRootLevel();
+        const map = getTreasureRootLevelsMap();
+        return map[lv] || {
+            level: lv,
+            id: `root_lv${lv}`,
+            name: lv === 1 ? '汲取根鬚' : (lv === 2 ? '黃金根脈' : (lv === 3 ? '複利樹心' : '未啟用')),
+            nameEn: lv === 1 ? 'Siphon Roots' : (lv === 2 ? 'Golden Veins' : (lv === 3 ? 'Compound Heart' : 'Dormant Roots')),
+            cost: lv === 1 ? 45 : (lv === 2 ? 75 : (lv === 3 ? 110 : 0)),
+            fixedWaveGold: lv === 1 ? 15 : (lv === 2 ? 32 : (lv === 3 ? 42 : 0)),
+            interestRate: lv === 3 ? 0.08 : 0,
+            interestCap: lv === 3 ? 35 : 0,
+            sellRefundRate: lv >= 2 ? 0.80 : 0.70
+        };
+    }
+
+    function getNextTreasureRootSpec() {
+        const curLv = getTreasureRootLevel();
+        if (curLv >= 3) return null;
+        return getTreasureRootSpec(curLv + 1);
+    }
+
+    function canAffordTreasureRootUpgrade() {
+        if (!G || !G.state) return false;
+        const nextSpec = getNextTreasureRootSpec();
+        if (!nextSpec) return false;
+        return G.state.currentGold >= nextSpec.cost;
+    }
+
+    function resetTreasureRoots() {
+        if (!G || !G.state) return;
+        G.state.rootLevel = 0;
+        G.state.sellRefundRate = 0.70;
+        G.state.waveNonCombatGold = 0;
+        G.state.lastRootWavePayout = null;
+        if (GameApp.config) {
+            GameApp.config.SELL_REFUND_RATE = 0.70;
+        }
+    }
+
+    function upgradeTreasureRoot(targetLevel = null) {
+        if (!G || !G.state) return { ok: false, reason: 'no_runtime' };
+        const st = G.state;
+        const isActiveMatch = G.callbacks && typeof G.callbacks.isMatchPhaseActive === 'function'
+            ? G.callbacks.isMatchPhaseActive()
+            : (!st.isGameOver && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY');
+        if (!isActiveMatch) {
+            return { ok: false, reason: 'inactive_match', level: getTreasureRootLevel() };
+        }
+
+        const curLv = getTreasureRootLevel();
+        if (curLv >= 3) {
+            if (G.dom && G.dom.msgText) {
+                G.dom.msgText.innerText = L(
+                    '【聚寶根鬚】已達最高等級 Lv.3 複利樹心。',
+                    'Treasure Roots already at max level (Lv.3 Compound Heart).'
+                );
+            }
+            return { ok: false, reason: 'max_level', level: curLv };
+        }
+
+        const nextLv = curLv + 1;
+        if (targetLevel !== null && Number(targetLevel) !== nextLv) {
+            if (Number(targetLevel) <= curLv) {
+                return { ok: false, reason: 'already_unlocked', level: curLv };
+            }
+            if (G.dom && G.dom.msgText) {
+                const reqSpec = getTreasureRootSpec(nextLv);
+                G.dom.msgText.innerText = L(
+                    `請依序升級聚寶根鬚：需先升級【Lv.${nextLv} ${reqSpec.name}】（${reqSpec.cost} 💰）。`,
+                    `Upgrade Treasure Roots in order: unlock Lv.${nextLv} ${reqSpec.nameEn || reqSpec.name} (${reqSpec.cost} 💰) first.`
+                );
+            }
+            return { ok: false, reason: 'out_of_order', level: curLv };
+        }
+
+        const nextSpec = getTreasureRootSpec(nextLv);
+        const cost = Number(nextSpec.cost) || 45;
+        if (st.currentGold < cost) {
+            if (G.dom && G.dom.msgText) {
+                G.dom.msgText.innerText = L(
+                    `金幣不足，升級【聚寶根鬚 Lv.${nextLv} ${nextSpec.name}】需要 ${cost} 💰。`,
+                    `Not enough Gold: Lv.${nextLv} ${nextSpec.nameEn || nextSpec.name} requires ${cost} 💰.`
+                );
+            }
+            const btn = G.dom && G.dom.treeRootUpgradeBtn;
+            if (btn) {
+                btn.classList.remove('shake-anim', 'insufficient-gold');
+                void btn.offsetWidth;
+                btn.classList.add('shake-anim', 'insufficient-gold');
+                setTimeout(() => btn.classList.remove('insufficient-gold'), 450);
+            }
+            return { ok: false, reason: 'insufficient_gold', cost, level: curLv };
+        }
+
+        st.currentGold -= cost;
+        st.rootLevel = nextLv;
+        st.sellRefundRate = nextSpec.sellRefundRate;
+        if (GameApp.config) {
+            GameApp.config.SELL_REFUND_RATE = nextSpec.sellRefundRate;
+        }
+
+        const Renderer = GameApp.renderer;
+        if (Renderer && G.map && Array.isArray(G.map.waypoints) && G.map.waypoints.length > 0) {
+            const lastWp = G.map.waypoints[G.map.waypoints.length - 1];
+            const tp = Renderer.getCellCenter(lastWp.x, lastWp.y);
+            Renderer.emitRingFX(tp.left, tp.top, G.boardMetrics.step * 1.6, '#D97724', 0.26, 400);
+            Renderer.emitParticleBurst(tp.left, tp.top, '#E0B43C', 10, 85);
+            if (typeof Renderer.spawnFloatingNotice === 'function') {
+                Renderer.spawnFloatingNotice(
+                    L(`聚寶根鬚 Lv.${nextLv} ${nextSpec.name}`, `Roots Lv.${nextLv} ${nextSpec.nameEn || nextSpec.name}`),
+                    tp.left,
+                    tp.top,
+                    'pity-seed'
+                );
+            }
+        }
+        if (GameApp.audio && typeof GameApp.audio.playMerge === 'function') {
+            GameApp.audio.playMerge(nextLv, true);
+        }
+        if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
+            GameApp.backend.recordPlayerAction();
+            GameApp.backend.trackFeel(`Tree:RootUpgrade:Lv${nextLv}`, cost, {
+                rootLevel: nextLv,
+                cost,
+                wave: st.currentWave
+            });
+        }
+
+        if (G.dom && G.dom.msgText) {
+            if (nextLv === 1) {
+                G.dom.msgText.innerText = L(
+                    `已升級【聚寶根鬚 Lv.1 汲取根鬚】（-${cost} 💰）：每清完 1 波固定額外獲得 +15 💰。`,
+                    `Upgraded to Lv.1 Siphon Roots (-${cost} 💰): +15 💰 after clearing each wave.`
+                );
+            } else if (nextLv === 2) {
+                G.dom.msgText.innerText = L(
+                    `已升級【聚寶根鬚 Lv.2 黃金根脈】（-${cost} 💰）：每波固定 +32 💰，全場出售防禦塔退費率提升至 80%。`,
+                    `Upgraded to Lv.2 Golden Veins (-${cost} 💰): +32 💰 per wave & tower sell refund raised to 80%.`
+                );
+            } else {
+                G.dom.msgText.innerText = L(
+                    `已升級【聚寶根鬚 Lv.3 複利樹心】（-${cost} 💰）：每波固定 +42 💰 ＋ 當前現金 8% 利息（上限 +35 💰，受軟上限 22 + 8w 約束）。`,
+                    `Upgraded to Lv.3 Compound Heart (-${cost} 💰): +42 💰 + 8% cash interest per wave (interest cap +35 💰, wave cap 22 + 8w).`
+                );
+            }
+        }
+
+        if (G.callbacks && typeof G.callbacks.updateHUD === 'function') {
+            G.callbacks.updateHUD();
+        }
+        return {
+            ok: true,
+            level: nextLv,
+            cost,
+            sellRefundRate: st.sellRefundRate,
+            spec: nextSpec
+        };
+    }
+
+    /**
+     * 波末結算聚寶根鬚產出金幣（受單波非戰鬥淨收益軟上限 maxNonCombatGain(w) = 22 + 8w 約束）
+     */
+    function settleWaveRootIncome(waveNum = null) {
+        if (!G || !G.state) return null;
+        const st = G.state;
+        const EconSys = GameApp.systems && GameApp.systems.economy;
+        const w = waveNum !== null ? Math.max(1, Math.floor(Number(waveNum) || 1)) : Math.max(1, st.currentWave || 1);
+        const lv = getTreasureRootLevel();
+        const spec = getTreasureRootSpec(lv);
+
+        const rawPayout = (EconSys && typeof EconSys.computeRootWaveIncome === 'function')
+            ? EconSys.computeRootWaveIncome(lv, st.currentGold, w)
+            : {
+                level: lv,
+                wave: w,
+                fixedGain: spec.fixedWaveGold || 0,
+                rawInterest: lv >= 3 ? Math.min(35, Math.floor(Math.max(0, st.currentGold) * 0.08 + 1e-9)) : 0,
+                waveCap: 22 + 8 * w,
+                totalGain: Math.min(22 + 8 * w, (spec.fixedWaveGold || 0) + (lv >= 3 ? Math.min(35, Math.floor(Math.max(0, st.currentGold) * 0.08 + 1e-9)) : 0))
+            };
+
+        const waveCap = rawPayout.waveCap || (22 + 8 * w);
+        const alreadyNonCombat = Math.max(0, Number(st.waveNonCombatGold) || 0);
+        const remainingCap = Math.max(0, waveCap - alreadyNonCombat);
+        const grantedGold = Math.min(remainingCap, rawPayout.totalGain);
+        const baseGain = Math.min(grantedGold, rawPayout.fixedGain || 0);
+        const interestGain = Math.max(0, grantedGold - baseGain);
+        const isSoftCapped = (rawPayout.uncappedGain || rawPayout.totalGain) > remainingCap;
+
+        if (grantedGold > 0) {
+            st.currentGold += grantedGold;
+            st.totalGoldEarned += grantedGold;
+            st.waveNonCombatGold = alreadyNonCombat + grantedGold;
+
+            const Renderer = GameApp.renderer;
+            if (Renderer && G.map && Array.isArray(G.map.waypoints) && G.map.waypoints.length > 0 && typeof Renderer.spawnFloatingNotice === 'function') {
+                const lastWp = G.map.waypoints[G.map.waypoints.length - 1];
+                const tp = Renderer.getCellCenter(lastWp.x, lastWp.y);
+                Renderer.spawnFloatingNotice(
+                    L(`聚寶根鬚 +${grantedGold} 💰`, `Treasure Roots +${grantedGold} 💰`),
+                    tp.left,
+                    tp.top,
+                    'pity-seed'
+                );
+            }
+        }
+
+        let summaryZh = `聚寶根鬚 Lv.0 產出 +0 💰`;
+        let summaryEn = `Treasure Roots Lv.0: +0 💰`;
+        if (lv === 1) {
+            summaryZh = `聚寶根鬚 Lv.1（汲取根鬚）產出 +${grantedGold} 💰`;
+            summaryEn = `Treasure Roots Lv.1 (Siphon Roots): +${grantedGold} 💰`;
+        } else if (lv === 2) {
+            summaryZh = `聚寶根鬚 Lv.2（黃金根脈）產出 +${grantedGold} 💰`;
+            summaryEn = `Treasure Roots Lv.2 (Golden Veins): +${grantedGold} 💰`;
+        } else if (lv >= 3) {
+            const capNoteZh = isSoftCapped ? `，已觸發單波軟上限 ${waveCap} 💰` : '';
+            const capNoteEn = isSoftCapped ? `, wave soft cap ${waveCap} 💰 applied` : '';
+            summaryZh = `聚寶根鬚 Lv.3（複利樹心）產出 +${grantedGold} 💰（固定 +${baseGain} 💰 ＋ 8% 利息 +${interestGain} 💰${capNoteZh}）`;
+            summaryEn = `Treasure Roots Lv.3 (Compound Heart): +${grantedGold} 💰 (Fixed +${baseGain} 💰 + 8% Interest +${interestGain} 💰${capNoteEn})`;
+        }
+
+        const result = {
+            level: lv,
+            wave: w,
+            fixedGain: rawPayout.fixedGain || 0,
+            rawInterest: rawPayout.rawInterest || 0,
+            uncappedGain: rawPayout.uncappedGain || 0,
+            waveCap,
+            baseGain,
+            interestGain,
+            totalGain: grantedGold,
+            isSoftCapped,
+            summaryZh,
+            summaryEn
+        };
+        st.lastRootWavePayout = result;
+        return result;
+    }
+
     /**
      * 主動技能 1：根鬚纏繞（全場敵人定身 2.5s + 易傷 20%）
      */
@@ -296,9 +547,12 @@
         GameApp.renderer.updateRangeIndicator();
 
         if (G.dom.blessingWaveSubtitleEl) {
+            const rootPayout = st.lastRootWavePayout && st.lastRootWavePayout.wave === clearedWave ? st.lastRootWavePayout : null;
+            const rootNoteZh = rootPayout && rootPayout.level > 0 ? `（${rootPayout.summaryZh}）` : '';
+            const rootNoteEn = rootPayout && rootPayout.level > 0 ? ` (${rootPayout.summaryEn})` : '';
             G.dom.blessingWaveSubtitleEl.innerText = L(
-                `第 ${clearedWave} 波捷報！世界樹賜予枝枒祝福，請擇一強化防線`,
-                `Wave ${clearedWave} cleared! Choose a World Tree Blessing to empower your defense.`
+                `第 ${clearedWave} 波捷報${rootNoteZh}！世界樹賜予枝枒祝福，請擇一強化防線`,
+                `Wave ${clearedWave} cleared${rootNoteEn}! Choose a World Tree Blessing to empower your defense.`
             );
         }
         if (G.dom.blessingChoicesEl) {
@@ -350,9 +604,12 @@
 
         st.waveState = 'INTERMISSION';
         st.waveTimerMs = intermissionMs;
+        const rootPayout = st.lastRootWavePayout && st.lastRootWavePayout.wave === st.currentWave ? st.lastRootWavePayout : null;
+        const rootSuffixZh = rootPayout ? `｜本波${rootPayout.summaryZh}` : '';
+        const rootSuffixEn = rootPayout ? ` | ${rootPayout.summaryEn}` : '';
         G.dom.msgText.innerText = L(
-            `已獲得祝福【${picked.icon} ${picked.name}】，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後到來。`,
-            `Blessing gained: ${picked.icon} ${picked.name}. Next wave begins in ${Math.ceil(intermissionMs / 1000)}s.`
+            `已獲得祝福【${picked.icon} ${picked.name}】${rootSuffixZh}，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後到來。`,
+            `Blessing gained: ${picked.icon} ${picked.name}${rootSuffixEn}. Next wave begins in ${Math.ceil(intermissionMs / 1000)}s.`
         );
         GameApp.audio.playMagic('blessing');
         G.callbacks.updateHUD();
@@ -375,6 +632,13 @@
         shouldTriggerDewOvercharge,
         castEntangleSkill,
         castFrenzySkill,
+        getTreasureRootLevel,
+        getTreasureRootSpec,
+        getNextTreasureRootSpec,
+        canAffordTreasureRootUpgrade,
+        resetTreasureRoots,
+        upgradeTreasureRoot,
+        settleWaveRootIncome,
         triggerBlessingSelection,
         selectBlessing
     };

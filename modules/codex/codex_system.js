@@ -299,18 +299,53 @@
 
         if (!nodeMeta || nodeId === 'world_core') {
             const totalUnlocked = Object.keys(WORLD_TREE_LAYOUT).filter(id => id !== 'world_core' && isEntryUnlocked(`tower:${id}`, false)).length;
+            const TreeSys = GameApp.systems && GameApp.systems.tree;
+            const EconSys = GameApp.systems && GameApp.systems.economy;
+            const rootLv = TreeSys && typeof TreeSys.getTreasureRootLevel === 'function' ? TreeSys.getTreasureRootLevel() : 0;
+            const curRootSpec = TreeSys && typeof TreeSys.getTreasureRootSpec === 'function' ? TreeSys.getTreasureRootSpec(rootLv) : { level: 0, name: '未啟用', sellRefundRate: 0.70 };
+            const nextRootSpec = TreeSys && typeof TreeSys.getNextTreasureRootSpec === 'function' ? TreeSys.getNextTreasureRootSpec() : null;
+            const curWave = (G && G.state && G.state.currentWave) || 1;
+            const curGold = (G && G.state && G.state.currentGold) || 0;
+            const estIncome = EconSys && typeof EconSys.computeRootWaveIncome === 'function'
+                ? EconSys.computeRootWaveIncome(rootLv, curGold, curWave)
+                : { totalGain: 0, waveCap: 22 + 8 * curWave };
+            const refundPct = Math.round((curRootSpec.sellRefundRate || 0.70) * 100);
+            const canUpgradeNow = Boolean(nextRootSpec && curGold >= nextRootSpec.cost && G && G.callbacks && G.callbacks.isMatchPhaseActive());
+
             detailEl.className = 'wt-detail-card is-core';
             detailEl.innerHTML = `
                 <div class="wt-detail-portrait core-emblem" aria-hidden="true">🌳</div>
                 <div class="wt-detail-body">
                     <div class="wt-detail-top">
-                        <span class="wt-detail-title">${L('世界樹原核', 'World Tree Core')}</span>
+                        <span class="wt-detail-title">${L('世界樹原核 · 聚寶根鬚', 'World Tree Core · Treasure Roots')}</span>
+                        <span class="wt-detail-tag num">${L(`聚寶根鬚 Lv.${rootLv} / Lv.3`, `Treasure Roots Lv.${rootLv} / Lv.3`)}</span>
+                        <span class="wt-detail-tag num">${L(`出售退費 ${refundPct}%`, `Sell Refund ${refundPct}%`)}</span>
+                        <span class="wt-detail-tag num">${L(`本波預估 +${estIncome.totalGain} 💰（軟上限 ${estIncome.waveCap} 💰）`, `Est. +${estIncome.totalGain} 💰 (Cap ${estIncome.waveCap} 💰)`)}</span>
                         <span class="wt-detail-tag num">${L(`已喚醒枝脈：${totalUnlocked} / 24`, `Awakened Nodes: ${totalUnlocked} / 24`)}</span>
                     </div>
-                    <div class="wt-detail-row">${L('<strong>轉職與升星脈絡：</strong>基礎 1★ 異系轉職 ➔ 轉職 1★ 新物種；同物種 1★ + 1★（或基礎芽灌注轉職 1★）➔ 2★ 主幹 ➔ 3★ 冠枝分岔', '<strong>Evolution Lineage:</strong> Cross 1★ buds ➔ Hybrid 1★; same species 1★+1★ (or bud infusion) ➔ 2★ Trunk ➔ 3★ Crown Branch')}</div>
-                    <div class="wt-detail-row">${L('<strong>戰術指引：</strong>點擊上方任一節點可檢視合成路徑與數值；場上素材就緒或可進化方向將以琥珀金框提示。', '<strong>Tactical Guide:</strong> Click any node above to inspect recipes & stats. Craftable nodes glow with an amber outline.')}</div>
+                    <div class="wt-detail-row">${L(
+                        '<strong>聚寶根鬚（Lv.0 → Lv.3）：</strong>Lv.1 汲取根鬚（45 💰 ➔ 每波 +15 💰）｜Lv.2 黃金根脈（75 💰 ➔ 每波 +32 💰 · 退費 80%）｜Lv.3 複利樹心（110 💰 ➔ 每波 +42 💰 ＋ 8% 利息，上限 +35 💰，單波軟上限 22 + 8w）',
+                        '<strong>Treasure Roots (Lv.0 → Lv.3):</strong> Lv.1 Siphon (45 💰 ➔ +15 💰/wave) | Lv.2 Golden (75 💰 ➔ +32 💰/wave · 80% refund) | Lv.3 Compound (110 💰 ➔ +42 💰 + 8% interest, cap +35 💰, wave cap 22 + 8w)'
+                    )}</div>
+                    <div class="wt-detail-row">
+                        <button type="button" id="wt-core-root-upgrade-btn" class="tree-root-upgrade-btn num" ${canUpgradeNow ? '' : 'disabled'}>
+                            ${nextRootSpec
+                                ? L(`升級 Lv.${nextRootSpec.level} ${nextRootSpec.name} (${nextRootSpec.cost} 💰)`, `Upgrade Lv.${nextRootSpec.level} ${nextRootSpec.nameEn || nextRootSpec.name} (${nextRootSpec.cost} 💰)`)
+                                : L('已達最高等級 Lv.3 複利樹心', 'Max Level Reached (Lv.3)')}
+                        </button>
+                    </div>
                 </div>
             `;
+            const upBtn = detailEl.querySelector('#wt-core-root-upgrade-btn');
+            if (upBtn && TreeSys && typeof TreeSys.upgradeTreasureRoot === 'function') {
+                upBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const res = TreeSys.upgradeTreasureRoot();
+                    if (res && res.ok) {
+                        renderWorldTreeDetail(detailEl, 'world_core', scanState);
+                    }
+                });
+            }
             return;
         }
 

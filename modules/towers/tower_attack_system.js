@@ -188,12 +188,85 @@
         return (towerObj && towerObj.isCrowned) ? Math.round(baseDmg * 2.2) : baseDmg;
     }
 
+    /**
+     * 無盡靈脈灌注預留計算函式 b_infusion(k)：
+     *   第 k 次費用：150 + 75 * k
+     *   1 <= k <= 5：0.12 * k
+     *   k > 5：0.60 + 0.07 * (k - 5)
+     */
+    function b_infusion(k = 0) {
+        const count = Math.max(0, Math.floor(Number(k) || 0));
+        if (count <= 0) return 0;
+        if (count <= 5) return Number((0.12 * count).toFixed(4));
+        return Number((0.60 + 0.07 * (count - 5)).toFixed(4));
+    }
+
+    function getInfusionCost(k = 1) {
+        const step = Math.max(1, Math.floor(Number(k) || 1));
+        return 150 + 75 * step;
+    }
+
+    /**
+     * 自身戰力加法桶 B_power = b_terrain + b_blessing + b_dividend + b_infusion(k)
+     * （地形上限 0.25、賜福上限 0.30、持股紅利預留欄位上限 0.24）
+     */
+    function computePowerBucket(towerObj = null, monster = null, options = {}) {
+        const constants = getTowersData().COMBAT_CONSTANTS || {};
+        const terrainCap = Number.isFinite(constants.POWER_TERRAIN_CAP) ? constants.POWER_TERRAIN_CAP : 0.25;
+        const blessingCap = Number.isFinite(constants.POWER_BLESSING_CAP) ? constants.POWER_BLESSING_CAP : 0.30;
+        const dividendCap = Number.isFinite(constants.POWER_DIVIDEND_CAP) ? constants.POWER_DIVIDEND_CAP : 0.24;
+
+        const cfg = towerObj ? (getTowerCfg(towerObj.type, towerObj.tier) || {}) : {};
+        const family = cfg.family || (towerObj && towerObj.type) || '';
+        const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
+        const isIceLineage = family === 'ice' || family === 'steam' || family === 'magnet' || lineageTags.includes('ice');
+        const WaveSys = GameApp.systems && GameApp.systems.wave;
+        const mapSpec = (G && G.map && G.map.spec) || (WaveSys && typeof WaveSys.getCurrentMapSpec === 'function' ? WaveSys.getCurrentMapSpec() : null);
+        const mapIceBonus = (mapSpec && Number.isFinite(mapSpec.iceDamageBonus) && isIceLineage) ? Math.max(0, mapSpec.iceDamageBonus) : 0;
+
+        const rawTerrain = Number.isFinite(options.b_terrain)
+            ? options.b_terrain
+            : Math.max(0, ((options.terrainMult ?? 1.0) - 1) + mapIceBonus);
+        const b_terrain = Math.min(terrainCap, Math.max(0, rawTerrain));
+
+        const TreeSys = GameApp.systems && GameApp.systems.tree;
+        const resonanceBonus = (TreeSys && monster && typeof TreeSys.getElementalResonanceMult === 'function')
+            ? Math.max(0, TreeSys.getElementalResonanceMult(towerObj, monster) - 1)
+            : 0;
+        const rawBlessing = Number.isFinite(options.b_blessing)
+            ? options.b_blessing
+            : (resonanceBonus + ((G && G.state && Number(G.state.blessingPowerBonus)) || 0));
+        const b_blessing = Math.min(blessingCap, Math.max(0, rawBlessing));
+
+        const rawDividend = Number.isFinite(options.b_dividend)
+            ? options.b_dividend
+            : ((G && G.state && Number(G.state.dividendBonus)) || 0);
+        const b_dividend = Math.min(dividendCap, Math.max(0, rawDividend));
+
+        const infusionK = Number.isFinite(options.infusionCount)
+            ? options.infusionCount
+            : (Number.isFinite(options.k)
+                ? options.k
+                : ((towerObj && Number.isFinite(towerObj.infusionCount))
+                    ? towerObj.infusionCount
+                    : ((G && G.state && Number(G.state.infusionCount)) || 0)));
+        const b_inf = Number.isFinite(options.b_infusion) ? Math.max(0, options.b_infusion) : b_infusion(infusionK);
+
+        const B_power = b_terrain + b_blessing + b_dividend + b_inf;
+        return {
+            b_terrain,
+            b_blessing,
+            b_dividend,
+            b_infusion: b_inf,
+            B_power
+        };
+    }
+
     function getTowerInspectorStats(index, towerObj) {
         const cfg = getTowerCfg(towerObj.type, towerObj.tier) || {};
         const baseDmg = getBaseDamageForTower(towerObj, cfg);
         const intervalSec = Math.max(0.12, getTowerAttackInterval(towerObj, index) / 1000);
         const fxParams = cfg.effectParams || {};
-        const TreeSys = GameApp.systems && GameApp.systems.tree;
         const TerrainSys = GameApp.systems && GameApp.systems.terrain;
         const style = cfg.attackStyle || 'burst_armor_break';
 
@@ -207,14 +280,8 @@
         }
 
         const terrainBonuses = TerrainSys ? TerrainSys.getTerrainBonusesAt(index) : { damageMult: 1.0, terrainType: null };
-        const mapSpec = G && G.map && G.map.spec;
-        const family = cfg.family || towerObj.type;
-        const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
-        const isIceLineage = family === 'ice' || family === 'steam' || family === 'magnet' || lineageTags.includes('ice');
-        const mapIceMult = (mapSpec && Number.isFinite(mapSpec.iceDamageBonus) && isIceLineage)
-            ? (1 + mapSpec.iceDamageBonus)
-            : 1.0;
-        const unitDmg = baseDmg * terrainBonuses.damageMult * mapIceMult;
+        const powerBucket = computePowerBucket(towerObj, null, { terrainMult: terrainBonuses.damageMult });
+        const unitDmg = baseDmg * (1 + powerBucket.B_power);
         let singleDps = Math.round((unitDmg * singleHitFactor) / intervalSec);
         if (style === 'fire_B_ember') {
             singleDps += Math.round((fxParams.burnFlatDps || 8) * 2);
@@ -270,18 +337,11 @@
         const cfg = getTowerCfg(towerObj.type, towerObj.tier) || {};
         const baseDmg = getBaseDamageForTower(towerObj, cfg);
         const TerrainSys = GameApp.systems && GameApp.systems.terrain;
-        const TreeSys = GameApp.systems && GameApp.systems.tree;
         const terrainBonuses = (TerrainSys && index !== null && index !== undefined)
             ? TerrainSys.getTerrainBonusesAt(index)
             : { damageMult: 1.0, terrainType: null };
-        const mapSpec = G && G.map && G.map.spec;
-        const family = cfg.family || towerObj.type;
-        const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
-        const isIceLineage = family === 'ice' || family === 'steam' || family === 'magnet' || lineageTags.includes('ice');
-        const mapIceMult = (mapSpec && Number.isFinite(mapSpec.iceDamageBonus) && isIceLineage)
-            ? (1 + mapSpec.iceDamageBonus)
-            : 1.0;
-        const effDmg = Math.max(1, Math.round(baseDmg * terrainBonuses.damageMult * mapIceMult));
+        const powerBucket = computePowerBucket(towerObj, null, { terrainMult: terrainBonuses.damageMult });
+        const effDmg = Math.max(1, Math.round(baseDmg * (1 + powerBucket.B_power)));
         const intervalSec = (Math.max(120, getTowerAttackInterval(towerObj, index)) / 1000).toFixed(2);
         const effRange = Number(getTowerEffectiveRangeCells(index, towerObj).toFixed(2)).toString();
         const stars = GameApp.renderer && typeof GameApp.renderer.getTierStars === 'function'
@@ -363,48 +423,72 @@
         return bestTarget;
     }
 
+    /**
+     * 四桶分離最終傷害公式（不連乘膨脹）：
+     *   D_final = Math.max(1, Math.round(D_tier * M_elem * M_armor * (1 + B_power) * (1 + B_vuln)))
+     *   A_eff = Math.max(0, A_base * (1 - R_shred) * (1 - P_pierce))
+     *   M_armor = 35 / (35 + A_eff)
+     *   B_power = b_terrain + b_blessing + b_dividend + b_infusion(k)
+     *   B_vuln = Math.min(0.60, v_root + v_frost_mist + v_brand)
+     */
     function calculateDamage(towerObj, monster, options = {}) {
         const towersData = getTowersData();
-        const cfg = getTowerCfg(towerObj.type, towerObj.tier) || {};
-        const baseDmg = getBaseDamageForTower(towerObj, cfg);
+        const cfg = (towerObj && getTowerCfg(towerObj.type, towerObj.tier)) || {};
+        const baseDmg = getBaseDamageForTower(towerObj || {}, cfg);
+        const D_tier = Number.isFinite(options.D_tier)
+            ? options.D_tier
+            : baseDmg * (options.damageScale ?? 1.0) * (options.extraMult ?? 1.0);
 
-        const TreeSys = GameApp.systems && GameApp.systems.tree;
         const MonsterSys = GameApp.systems && GameApp.systems.monster;
 
-        const towerElementTag = cfg.elementTag || towerObj.type;
+        const towerElementTag = cfg.elementTag || (towerObj && towerObj.type);
         const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
-        const isWeakness = Boolean((!cfg.isHybrid) && monster.weakness && towerElementTag === monster.weakness);
-        const isAffinity = Boolean(cfg.isHybrid && monster.weakness && lineageTags.includes(monster.weakness));
-
-        const vulnMult = MonsterSys && typeof MonsterSys.getMonsterVulnerabilityMultiplier === 'function'
-            ? MonsterSys.getMonsterVulnerabilityMultiplier(monster)
-            : (1.0 + Math.min(0.60, ((monster.rootTimer || 0) > 0 ? (monster.rootVulnRate || 0) : 0)));
+        const isWeakness = Boolean((!cfg.isHybrid) && monster && monster.weakness && towerElementTag === monster.weakness);
+        const isAffinity = Boolean(cfg.isHybrid && monster && monster.weakness && lineageTags.includes(monster.weakness));
 
         const constants = towersData.COMBAT_CONSTANTS || {};
         const weaknessMult = Number.isFinite(constants.WEAKNESS_MULTIPLIER) ? constants.WEAKNESS_MULTIPLIER : 1.75;
         const affinityMult = Number.isFinite(constants.HYBRID_AFFINITY_MULTIPLIER) ? constants.HYBRID_AFFINITY_MULTIPLIER : 1.35;
-        const weakMult = isWeakness ? weaknessMult : (isAffinity ? affinityMult : 1.0);
-        const resonanceMult = TreeSys && typeof TreeSys.getElementalResonanceMult === 'function'
-            ? TreeSys.getElementalResonanceMult(towerObj, monster)
-            : 1.0;
+        const M_elem = Number.isFinite(options.M_elem)
+            ? options.M_elem
+            : (isWeakness ? weaknessMult : (isAffinity ? affinityMult : 1.0));
 
-        // 永凍裂谷 (+20% 冰系血脈傷害)
-        const mapSpec = G && G.map && G.map.spec;
-        const family = cfg.family || towerObj.type;
-        const isIceLineage = family === 'ice' || family === 'steam' || family === 'magnet' || lineageTags.includes('ice');
-        const mapIceMult = (mapSpec && Number.isFinite(mapSpec.iceDamageBonus) && isIceLineage)
-            ? (1 + mapSpec.iceDamageBonus)
-            : 1.0;
-
-        const raw = baseDmg * resonanceMult * mapIceMult * (options.damageScale ?? 1.0) * (options.terrainMult ?? 1.0) * (options.extraMult ?? 1.0) * weakMult * vulnMult;
-        let armorPierce = options.armorPierce || 0;
+        const family = cfg.family || (towerObj && towerObj.type);
+        let P_pierce = Math.max(0, Math.min(1, Number(options.P_pierce ?? options.armorPierce) || 0));
         if (towerObj && towerObj.isCrowned && (family === 'steam' || towerObj.type === 'steam_bud')) {
-            armorPierce = Math.min(1.0, armorPierce + 0.25);
+            P_pierce = Math.min(1.0, P_pierce + 0.25);
         }
-        const effArmor = MonsterSys ? MonsterSys.getMonsterEffectiveArmor(monster, armorPierce) : (monster.armor || 0);
-        const kVal = (constants && constants.ARMOR_HYPERBOLIC_K) || 35;
+        const A_base = Math.max(0, Number(options.A_base ?? (monster && (monster.A_base ?? monster.armor))) || 0);
+        const R_shred = Number.isFinite(options.R_shred)
+            ? Math.max(0, Math.min(1, Number(options.R_shred)))
+            : ((monster && Number.isFinite(monster.R_shred))
+                ? Math.max(0, Math.min(1, Number(monster.R_shred)))
+                : ((monster && monster.armorShredTimer > 0) ? Math.max(0, Math.min(1, Number(monster.armorShredRate) || 0.30)) : 0));
+
+        const A_eff = Math.max(0, A_base * (1 - R_shred) * (1 - P_pierce));
+        const M_armor = Number.isFinite(options.M_armor) ? options.M_armor : (35 / (35 + A_eff));
+
+        const powerInfo = computePowerBucket(towerObj, monster, options);
+        const B_power = Number.isFinite(options.B_power) ? options.B_power : powerInfo.B_power;
+
+        const B_vuln = Number.isFinite(options.B_vuln)
+            ? Math.min(0.60, Math.max(0, Number(options.B_vuln)))
+            : (MonsterSys && typeof MonsterSys.getMonsterVulnerabilityBonus === 'function'
+                ? MonsterSys.getMonsterVulnerabilityBonus(monster)
+                : Math.min(0.60, ((monster && (monster.rootTimer || 0) > 0) ? (monster.rootVulnRate || 0) : 0)));
+
+        const D_final = Math.max(1, Math.round(D_tier * M_elem * M_armor * (1 + B_power) * (1 + B_vuln)));
+
         return {
-            damage: Math.max(1, Math.round(raw * (kVal / (kVal + effArmor)))),
+            damage: D_final,
+            D_final,
+            D_tier,
+            M_elem,
+            A_eff,
+            M_armor,
+            B_power,
+            B_vuln,
+            powerBreakdown: powerInfo,
             isWeakness,
             isAffinity
         };
@@ -1243,6 +1327,10 @@
         getThunderChainScales,
         createTowerObj,
         recordTowerDamage,
+        b_infusion,
+        computeInfusionBonus: b_infusion,
+        getInfusionCost,
+        computePowerBucket,
         getTowerInspectorStats,
         getTowerHoverTooltipData,
         pickSmartSpawnIndex,

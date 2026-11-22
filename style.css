@@ -87,6 +87,7 @@ body.map-frost {
 #hud-container,
 .hud-sub-slot,
 #tower-inspector,
+#world-tree-root-panel,
 .bottom-action-deck,
 #msg-text {
     width: var(--board-width);
@@ -1476,6 +1477,205 @@ body.map-frost .cell.path-cell {
 .inspector-btn.awaken-btn { border-color: var(--el-lightning); background-color: #36301E; color: var(--el-lightning); }
 .inspector-btn.awaken-btn:hover:not(:disabled) { background-color: #453C24; }
 .inspector-btn.hidden { display: none; }
+
+/* ==================== 5B. 世界樹「聚寶根鬚（Lv.0 → Lv.3）」互動經營面板 ==================== */
+.tree-root-panel {
+    margin-top: 4px;
+    width: var(--board-width);
+    max-width: 100%;
+    padding: 6px 10px;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.tree-root-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    min-width: 0;
+}
+
+.tree-root-title-wrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+}
+
+.tree-root-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.tree-root-lv-badge {
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    color: var(--el-lightning);
+    white-space: nowrap;
+}
+
+.tree-root-lv-badge.is-max {
+    border-color: var(--accent-cta);
+    color: var(--text-primary);
+}
+
+.tree-root-meta-tag {
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.tree-root-meta-tag.is-boosted {
+    border-color: var(--accent-cta);
+    color: var(--text-primary);
+}
+
+.tree-root-meta-tag.tree-root-yield {
+    color: var(--text-primary);
+}
+
+.tree-root-upgrade-btn {
+    min-height: 30px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    background-color: var(--accent-cta);
+    border: 1px solid var(--accent-cta);
+    color: #1B211E;
+    transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.12s ease;
+}
+
+.tree-root-upgrade-btn:hover:not(:disabled) {
+    background-color: #E28533;
+}
+
+.tree-root-upgrade-btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.tree-root-upgrade-btn:disabled {
+    background-color: var(--bg-grid-elevated);
+    border-color: var(--border-subtle);
+    color: var(--text-secondary);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.tree-root-upgrade-btn.insufficient-gold {
+    border-color: var(--el-fire) !important;
+    background-color: #3D211E !important;
+    color: var(--text-primary) !important;
+}
+
+.tree-root-tiers {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.tree-root-tier-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 3px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.tree-root-tier-card:hover:not(:disabled) {
+    background-color: #323D37;
+    border-color: var(--accent-cta);
+}
+
+.tree-root-tier-card.is-unlocked {
+    background-color: #22352B;
+    border-color: #4E9A68;
+    cursor: default;
+}
+
+.tree-root-tier-card.is-next {
+    border-color: var(--accent-cta);
+}
+
+.tree-root-tier-card.is-locked {
+    opacity: 0.72;
+}
+
+.tree-root-tier-card:disabled {
+    cursor: not-allowed;
+}
+
+.root-tier-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+}
+
+.root-tier-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.root-tier-cost {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--el-lightning);
+    white-space: nowrap;
+}
+
+.tree-root-tier-card.is-unlocked .root-tier-cost {
+    color: #A8D5B5;
+}
+
+.root-tier-desc {
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--text-secondary);
+    white-space: normal;
+}
+
+@media (max-width: 767px) {
+    .tree-root-tiers {
+        grid-template-columns: 1fr;
+    }
+    .tree-root-upgrade-btn {
+        width: 100%;
+        min-height: 36px;
+    }
+}
 
 /* 底部整合操作區：左側 3 欄召喚卡 ＋ 右側 2×2 技能與功能列 */
 .bottom-action-deck {

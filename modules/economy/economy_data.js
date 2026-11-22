@@ -23,8 +23,17 @@
         OBSTACLE_CLEAR_COST: 45,            // 地脈拓荒（爆破岩石障礙）固定花費
         CROWN_AWAKEN_GOLD_COST: 220,        // 無盡模式 T4 世界樹聖冠覺醒金幣消耗
         CROWN_AWAKEN_DEW_COST: 60,          // 無盡模式 T4 世界樹聖冠覺醒靈露消耗
-        SELL_REFUND_RATE: 0.70,             // 出售防禦塔退還累計投入金幣比例 (70%)
+        SELL_REFUND_RATE: 0.70,             // 出售防禦塔預設退還累計投入金幣比例 (70%)
+        SELL_REFUND_RATE_LV2: 0.80,         // 聚寶根鬚 Lv.2 黃金根脈起出售防禦塔退費比例 (80%)
         COMBAT_MOVE_COST: 5,                // 戰鬥出怪/清場期間移塔戰術調度費 (5 金幣)
+        NON_COMBAT_GAIN_BASE: 22,           // 單波非戰鬥淨收益軟上限基礎值：maxNonCombatGain(w) = 22 + 8 * w
+        NON_COMBAT_GAIN_PER_WAVE: 8,        // 單波非戰鬥淨收益軟上限每波成長值：8 * w
+        INFUSION_BASE_COST: 150,            // 無盡靈脈灌注第 k 次費用基礎值：150 + 75 * k
+        INFUSION_STEP_COST: 75,             // 無盡靈脈灌注第 k 次費用步長：75 * k
+        TREASURE_ROOTS_COSTS: [0, 45, 75, 110],
+        TREASURE_ROOTS_FIXED_GAIN: [0, 15, 32, 42],
+        TREASURE_ROOTS_LV3_INTEREST_RATE: 0.08,
+        TREASURE_ROOTS_LV3_INTEREST_CAP: 35,
         EARLY_WAVE_BONUS: {                 // 備戰期／波次間提前開波獎金公式參數
             BASE_BONUS: 2,
             PER_SECOND_RATE: 1.5,
