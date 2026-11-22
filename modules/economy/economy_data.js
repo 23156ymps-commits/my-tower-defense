@@ -34,6 +34,38 @@
         TREASURE_ROOTS_FIXED_GAIN: [0, 15, 32, 42],
         TREASURE_ROOTS_LV3_INTEREST_RATE: 0.08,
         TREASURE_ROOTS_LV3_INTEREST_CAP: 35,
+        // ==================== 第 2 階段：元素股市、命運種子盲盒與波次對賭懸賞 ====================
+        STOCK_INITIAL_PRICE: 20,            // 三元素股初始價格 (20 金)
+        STOCK_MIN_PRICE: 10,                // 股價下限 (10 金)
+        STOCK_MAX_PRICE: 60,                // 股價上限 (60 金)
+        STOCK_MAX_SHARES: 10,               // 單一元素最多持倉股數 (10 股)
+        STOCK_SELL_FEE: 0.05,               // 賣出股票手續費 (5%)
+        STOCK_INTEL_COEFF: 0.24,            // 下波預告內線趨勢係數：mu_intel = 0.24 * (r_e - 1/3)
+        STOCK_NOISE_AMP: 0.025,             // 溫和隨機波動幅度（不反轉顯著預告訊號）
+        STOCK_DIVIDEND_PER_SHARE: 0.024,    // 每持有 1 股提供對應元素塔 b_dividend +0.024
+        STOCK_DIVIDEND_CAP: 0.24,           // 持滿 10 股最高 b_dividend +0.24 (+24%)
+        BLIND_BOX_COST_MULT: 1.15,          // 盲盒定價係數：round(1.15 * avgShopCost)
+        BLIND_BOX_MIN_COST: 35,             // 盲盒最低價格 (35 金)
+        BLIND_BOX_MAX_COST: 85,             // 盲盒最高價格 (85 金)
+        BLIND_BOX_PROBS: {                  // 盲盒機率分布：1★ 48%、2★ 32%、萬能果實 12%、3★ 8%
+            TIER_1: 0.48,
+            TIER_2: 0.32,
+            FRUIT: 0.12,
+            TIER_3: 0.08
+        },
+        BLIND_BOX_PITY_STREAK: 3,           // 連續 3 次只開出 1★ 時，第 4 次必出 2★ 以上
+        BLIND_BOX_PITY_TIER3_CHANCE: 0.25,  // 第 4 抽保底觸發時，25% 機率直出 3★（75% 出 2★）
+        BLIND_BOX_CRIT_BONUS_STEP: 0.015,   // 每次未出 2★ 以上為全隊疊加 +1.5% 暴擊率
+        BLIND_BOX_CRIT_BONUS_CAP: 0.15,     // 全隊盲盒保底暴擊率上限 +15%
+        FUSION_FRUIT_MAX_SLOTS: 1,          // 萬能融合果實暫存槽位上限 (1 顆)
+        WAGER_ZERO_LEAK_STAKE: 40,          // 零封懸賞押注金幣 (40 金)
+        WAGER_ZERO_LEAK_RETURN: 70,         // 零封懸賞成功返還總金幣 (70 金，淨賺 +30 金)
+        WAGER_ZERO_LEAK_NET_PROFIT: 30,     // 零封懸賞成功淨利 (+30 金，受單波非戰鬥軟上限約束)
+        WAGER_ZERO_LEAK_FAIL_DEW: 15,       // 零封懸賞失敗補償靈露 (+15 靈露)
+        WAGER_SURGE_HP_MULT: 1.25,          // 魔潮加碼：本波怪物血量 +25%
+        WAGER_SURGE_SPEED_MULT: 1.10,       // 魔潮加碼：本波怪物移速 +10%
+        WAGER_SURGE_KILL_GOLD_MULT: 1.45,   // 魔潮加碼：本波擊殺賞金 ×1.45
+        WAGER_SURGE_MAX_PER_RUN: 2,         // 魔潮加碼：每局限觸發 2 次
         EARLY_WAVE_BONUS: {                 // 備戰期／波次間提前開波獎金公式參數
             BASE_BONUS: 2,
             PER_SECOND_RATE: 1.5,

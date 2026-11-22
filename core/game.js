@@ -90,7 +90,20 @@
         ['treeRootPanelEl', 'world-tree-root-panel'], ['treeRootTitleEl', 'tree-root-title'],
         ['treeRootLvBadgeEl', 'tree-root-lv-badge'], ['treeRootRefundBadgeEl', 'tree-root-refund-badge'],
         ['treeRootYieldBadgeEl', 'tree-root-yield-badge'], ['treeRootUpgradeBtn', 'tree-root-upgrade-btn'],
-        ['treeRootTiersEl', 'tree-root-tiers']
+        ['treeRootTiersEl', 'tree-root-tiers'],
+        ['guildPanelEl', 'world-tree-guild-panel'], ['guildToggleBtn', 'guild-drawer-toggle-btn'],
+        ['guildTitleEl', 'guild-drawer-title'], ['guildChevronEl', 'guild-drawer-chevron'],
+        ['guildNonCombatBadgeEl', 'guild-noncombat-cap-badge'], ['guildCritBadgeEl', 'guild-crit-bonus-badge'],
+        ['guildHoldTimerBtn', 'guild-hold-timer-btn'], ['guildBodyEl', 'guild-drawer-body'],
+        ['guildStockListEl', 'guild-stock-list'],
+        ['stockPriceFireEl', 'stock-price-fire'], ['stockTrendFireEl', 'stock-trend-fire'], ['stockHoldFireEl', 'stock-hold-fire'],
+        ['stockPriceIceEl', 'stock-price-ice'], ['stockTrendIceEl', 'stock-trend-ice'], ['stockHoldIceEl', 'stock-hold-ice'],
+        ['stockPriceThunderEl', 'stock-price-thunder'], ['stockTrendThunderEl', 'stock-trend-thunder'], ['stockHoldThunderEl', 'stock-hold-thunder'],
+        ['guildBoxTitleEl', 'guild-box-title'], ['guildBoxPityEl', 'guild-box-pity'], ['guildBoxDescEl', 'guild-box-desc'],
+        ['blindBoxBuyBtn', 'blind-box-buy-btn'], ['fusionFruitSlotBtn', 'fusion-fruit-slot-btn'],
+        ['guildWagerTitleEl', 'guild-wager-title'], ['guildWagerSubEl', 'guild-wager-sub'],
+        ['wagerZeroLeakBtn', 'wager-zero-leak-btn'], ['wagerZeroTitleEl', 'wager-zero-title'], ['wagerZeroCostEl', 'wager-zero-cost'], ['wagerZeroDescEl', 'wager-zero-desc'],
+        ['wagerSurgeBtn', 'wager-surge-btn'], ['wagerSurgeTitleEl', 'wager-surge-title'], ['wagerSurgeLimitEl', 'wager-surge-limit'], ['wagerSurgeDescEl', 'wager-surge-desc']
     ];
 
     function buildDomCache() {
@@ -157,7 +170,26 @@
             dividendBonus: 0,
             blessingPowerBonus: 0,
             waveNonCombatGold: 0,
+            nonCombatLedgerWave: 1,
             lastRootWavePayout: null,
+            stocks: EconSys && typeof EconSys.createInitialStockState === 'function'
+                ? EconSys.createInitialStockState()
+                : {
+                    fire: { element: 'fire', price: 20, prevPrice: 20, lastDelta: 0, shares: 0, totalCost: 0, weaknessRatio: 1 / 3, muIntel: 0, trend: 'neutral' },
+                    ice: { element: 'ice', price: 20, prevPrice: 20, lastDelta: 0, shares: 0, totalCost: 0, weaknessRatio: 1 / 3, muIntel: 0, trend: 'neutral' },
+                    thunder: { element: 'thunder', price: 20, prevPrice: 20, lastDelta: 0, shares: 0, totalCost: 0, weaknessRatio: 1 / 3, muIntel: 0, trend: 'neutral' }
+                },
+            blindBox1StarStreak: 0,
+            teamCritBonusRate: 0,
+            fusionFruitCount: 0,
+            isApplyingFusionFruit: false,
+            activeWager: null,
+            surgeWagerUsedCount: 0,
+            waveLeakedCount: 0,
+            lastWagerSettlement: null,
+            guildDrawerOpen: true,
+            guildAutoHoldTimer: false,
+            guildTimerHold: false,
             entangleCdMs: 0, frenzyCdMs: 0, frenzyActiveMs: 0, dewOverchargeMs: 0,
             activeBlessings: new Set(), blessingGrantedWaves: new Set(), blessingChoices: [],
             seedPityCount: 0, treeHitShakeTimer: null,
@@ -920,8 +952,8 @@
 
     const WAVE_STATE_TEXT = {
         WAITING_START: () => L('等待開始', 'Standby'), BLESSING_SELECT: () => L('賜福選擇', 'Blessing'),
-        PREP: st => `${L('備戰', 'Prep')} ${Math.max(1, Math.ceil(st.waveTimerMs / 1000))}s`,
-        INTERMISSION: st => `${L('下波', 'Next')} ${Math.max(1, Math.ceil(st.waveTimerMs / 1000))}s`,
+        PREP: st => st.guildTimerHold ? L('備戰暫護', 'Prep Hold') : `${L('備戰', 'Prep')} ${Math.max(1, Math.ceil(st.waveTimerMs / 1000))}s`,
+        INTERMISSION: st => st.guildTimerHold ? L('波間整備', 'Guild Hold') : `${L('下波', 'Next')} ${Math.max(1, Math.ceil(st.waveTimerMs / 1000))}s`,
         SPAWNING: (_, b) => (b ? L('魔王決戰', 'Boss Wave') : L('出怪中', 'Spawning')), CLEARING: (_, b) => (b ? L('魔王決戰', 'Boss Wave') : L('清場中', 'Clearing')),
         VICTORY: () => L('通關勝利', 'Victory')
     };
@@ -1245,6 +1277,189 @@
         }
     }
 
+    function updateGuildDrawerUI() {
+        const dom = G.dom, st = G.state;
+        if (!dom.guildPanelEl) return;
+
+        if (EconSys && typeof EconSys.refreshStockForecastSignals === 'function') {
+            EconSys.refreshStockForecastSignals();
+        }
+        const canAct = isMatchPhaseActive();
+        const isPrepOrInter = canAct && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION');
+        const curWave = Math.max(1, st.currentWave || 1);
+        const waveCap = EconSys && typeof EconSys.maxNonCombatGain === 'function'
+            ? EconSys.maxNonCombatGain(curWave)
+            : (22 + 8 * curWave);
+        if (EconSys && typeof EconSys.ensureWaveNonCombatLedger === 'function') {
+            EconSys.ensureWaveNonCombatLedger(curWave);
+        }
+        const usedNonCombat = Math.max(0, Number(st.waveNonCombatGold) || 0);
+
+        if (dom.guildTitleEl) {
+            dom.guildTitleEl.innerText = L('世界樹商會 · 波間整備', 'World Tree Guild · Intermission');
+        }
+        if (dom.guildChevronEl) {
+            dom.guildChevronEl.innerText = st.guildDrawerOpen ? '▴' : '▾';
+        }
+        if (dom.guildToggleBtn) {
+            dom.guildToggleBtn.setAttribute('aria-expanded', st.guildDrawerOpen ? 'true' : 'false');
+        }
+        if (dom.guildBodyEl) {
+            dom.guildBodyEl.classList.toggle('hidden', !st.guildDrawerOpen);
+        }
+        if (dom.guildNonCombatBadgeEl) {
+            dom.guildNonCombatBadgeEl.innerText = L(
+                `本波非戰鬥淨利 ${usedNonCombat} / ${waveCap} 💰`,
+                `Wave Non-Combat Net ${usedNonCombat} / ${waveCap} 💰`
+            );
+            dom.guildNonCombatBadgeEl.classList.toggle('is-active', usedNonCombat >= waveCap);
+        }
+        const critPct = ((Number(st.teamCritBonusRate) || 0) * 100).toFixed(1);
+        if (dom.guildCritBadgeEl) {
+            dom.guildCritBadgeEl.innerText = L(`全隊盲盒暴擊 +${critPct}%`, `Team Box Crit +${critPct}%`);
+            dom.guildCritBadgeEl.classList.toggle('is-active', (st.teamCritBonusRate || 0) > 0);
+        }
+        if (dom.guildHoldTimerBtn) {
+            const holding = Boolean(st.guildTimerHold && isPrepOrInter);
+            dom.guildHoldTimerBtn.classList.toggle('is-holding', holding);
+            if (isPrepOrInter) {
+                dom.guildHoldTimerBtn.innerText = holding
+                    ? L('波間倒數：已暫停（點擊恢復）', 'Countdown: Held (Click to Resume)')
+                    : L('波間暫停倒數', 'Hold Intermission Timer');
+                dom.guildHoldTimerBtn.disabled = false;
+            } else {
+                dom.guildHoldTimerBtn.innerText = st.guildAutoHoldTimer
+                    ? L('波間自動暫停：開', 'Auto-Hold Intermission: ON')
+                    : L('波間自動暫停：關', 'Auto-Hold Intermission: OFF');
+                dom.guildHoldTimerBtn.disabled = !canAct;
+            }
+        }
+
+        // A. 元素股市 UI
+        const stocks = st.stocks || {};
+        const stockMeta = [
+            { key: 'fire', priceEl: dom.stockPriceFireEl, trendEl: dom.stockTrendFireEl, holdEl: dom.stockHoldFireEl },
+            { key: 'ice', priceEl: dom.stockPriceIceEl, trendEl: dom.stockTrendIceEl, holdEl: dom.stockHoldIceEl },
+            { key: 'thunder', priceEl: dom.stockPriceThunderEl, trendEl: dom.stockTrendThunderEl, holdEl: dom.stockHoldThunderEl }
+        ];
+        stockMeta.forEach(({ key, priceEl, trendEl, holdEl }) => {
+            const rec = stocks[key] || { price: 20, shares: 0, weaknessRatio: 1 / 3, trend: 'neutral', lastDelta: 0 };
+            const deltaStr = rec.lastDelta > 0 ? ` (+${rec.lastDelta})` : (rec.lastDelta < 0 ? ` (${rec.lastDelta})` : '');
+            if (priceEl) priceEl.innerText = `${rec.price} 💰${deltaStr}`;
+            if (trendEl) {
+                const ratioPct = Math.round((rec.weaknessRatio ?? (1 / 3)) * 100);
+                trendEl.classList.remove('trend-bull', 'trend-bear');
+                if (rec.trend === 'bull') {
+                    trendEl.classList.add('trend-bull');
+                    trendEl.innerText = L(`看漲 ▲ ${ratioPct}%`, `Bull ▲ ${ratioPct}%`);
+                } else if (rec.trend === 'bear') {
+                    trendEl.classList.add('trend-bear');
+                    trendEl.innerText = L(`看跌 ▼ ${ratioPct}%`, `Bear ▼ ${ratioPct}%`);
+                } else {
+                    trendEl.innerText = L(`持平 ${ratioPct}%`, `Flat ${ratioPct}%`);
+                }
+            }
+            if (holdEl) {
+                const divPct = Math.round((rec.shares || 0) * 2.4 * 10) / 10;
+                holdEl.innerText = `${rec.shares || 0}/10 (+${divPct}%)`;
+                holdEl.classList.toggle('has-shares', (rec.shares || 0) > 0);
+            }
+        });
+        if (dom.guildStockListEl) {
+            dom.guildStockListEl.querySelectorAll('.stock-btn').forEach((btn) => {
+                const act = btn.dataset.stockAction;
+                const elKey = btn.dataset.stockEl;
+                const rec = stocks[elKey] || { price: 20, shares: 0 };
+                if (act === 'buy') {
+                    btn.innerText = L('買入', 'Buy');
+                    btn.disabled = !canAct || (rec.shares || 0) >= 10 || st.currentGold < (rec.price || 20);
+                } else if (act === 'sell') {
+                    btn.innerText = L('賣出', 'Sell');
+                    btn.disabled = !canAct || (rec.shares || 0) <= 0;
+                }
+            });
+        }
+
+        // B. 命運種子盲盒 & 萬能融合果實 UI
+        const boxCost = EconSys && typeof EconSys.getBlindBoxCost === 'function' ? EconSys.getBlindBoxCost() : 35;
+        const streak = Math.max(0, Number(st.blindBox1StarStreak) || 0);
+        if (dom.guildBoxTitleEl) dom.guildBoxTitleEl.innerText = L('命運種子盲盒', 'Fate Seed Blind Box');
+        if (dom.guildBoxPityEl) {
+            dom.guildBoxPityEl.innerText = streak >= 3
+                ? L('保底已滿 3 / 3（本抽必出 2★+）', 'Pity Ready 3 / 3 (Next 2★+ Guaranteed)')
+                : L(`1★ 保底進度 ${streak} / 3（第 4 抽必出 2★+）`, `1★ Pity ${streak} / 3 (4th Pull 2★+)`);
+        }
+        if (dom.guildBoxDescEl) {
+            dom.guildBoxDescEl.innerText = L(
+                '1★ 48% · 2★ 32% · 萬能果實 12% · 3★ 8%（未出 2★+ 全隊暴擊 +1.5%，盲盒塔退費依實付價計）',
+                '1★ 48% · 2★ 32% · Fruit 12% · 3★ 8% (Non-2★+ adds +1.5% team crit; refund based on paid box cost)'
+            );
+        }
+        if (dom.blindBoxBuyBtn) {
+            dom.blindBoxBuyBtn.innerText = L(`開啟命運盲盒 (${boxCost} 💰)`, `Open Blind Box (${boxCost} 💰)`);
+            dom.blindBoxBuyBtn.disabled = !isGameplayActive() || st.currentGold < boxCost;
+        }
+        if (dom.fusionFruitSlotBtn) {
+            const hasFruit = (st.fusionFruitCount || 0) > 0;
+            dom.fusionFruitSlotBtn.classList.toggle('has-fruit', hasFruit);
+            dom.fusionFruitSlotBtn.classList.toggle('is-applying', Boolean(hasFruit && st.isApplyingFusionFruit));
+            dom.fusionFruitSlotBtn.disabled = !isGameplayActive() || !hasFruit;
+            if (!hasFruit) {
+                dom.fusionFruitSlotBtn.innerText = L('萬能融合果實 (0/1) · 暫無果實', 'Universal Fusion Fruit (0/1)');
+            } else if (st.isApplyingFusionFruit) {
+                dom.fusionFruitSlotBtn.innerText = L('萬能融合果實 (1/1) · 請點選場上 1★/2★ 塔（再點取消）', 'Fruit Active (1/1) · Click a 1★/2★ Tower');
+            } else {
+                dom.fusionFruitSlotBtn.innerText = L('萬能融合果實 (1/1) · 點選或拖曳至 1★/2★ 塔升星', 'Universal Fruit (1/1) · Click or Drag onto 1★/2★');
+            }
+        }
+
+        // C. 波次對賭懸賞 UI
+        const activeWagerType = st.activeWager ? st.activeWager.type : null;
+        const surgeUsed = st.surgeWagerUsedCount || 0;
+        const surgeRemain = Math.max(0, 2 - surgeUsed);
+        if (dom.guildWagerTitleEl) dom.guildWagerTitleEl.innerText = L('波次對賭懸賞', 'Wave Wager Bounty');
+        if (dom.guildWagerSubEl) {
+            if (activeWagerType === 'zero_leak') {
+                dom.guildWagerSubEl.innerText = L('已選：零封懸賞（0 掉血返還 70 💰）', 'Active: Zero-Leak Bounty (70 💰 on 0 leak)');
+            } else if (activeWagerType === 'monster_surge') {
+                dom.guildWagerSubEl.innerText = L('已選：魔潮加碼（擊殺 ×1.45 ＋ 萬能果實）', 'Active: Monster Surge (×1.45 Kill Gold + Fruit)');
+            } else {
+                dom.guildWagerSubEl.innerText = L('開戰前二選一 · 不選則正常開波', 'Pick 1 before wave starts (optional)');
+            }
+        }
+        if (dom.wagerZeroLeakBtn) {
+            const isSel = activeWagerType === 'zero_leak';
+            dom.wagerZeroLeakBtn.classList.toggle('is-selected', isSel);
+            const canAffordZero = isSel || st.currentGold >= 40;
+            dom.wagerZeroLeakBtn.disabled = !isPrepOrInter || !canAffordZero;
+            if (dom.wagerZeroTitleEl) dom.wagerZeroTitleEl.innerText = L('零封懸賞', 'Zero-Leak Bounty');
+            if (dom.wagerZeroCostEl) dom.wagerZeroCostEl.innerText = isSel ? L('已押注 40 💰（點擊取消）', 'Staked 40 💰 (Cancel)') : L('押注 40 💰', 'Stake 40 💰');
+            if (dom.wagerZeroDescEl) {
+                dom.wagerZeroDescEl.innerText = L(
+                    '本波 0 掉血返還 70 💰（淨賺 +30 💰）；漏怪沒收押金並補償 +15 💧',
+                    '0 HP lost returns 70 💰 (Net +30 💰); leak forfeits stake & grants +15 💧'
+                );
+            }
+        }
+        if (dom.wagerSurgeBtn) {
+            const isSel = activeWagerType === 'monster_surge';
+            dom.wagerSurgeBtn.classList.toggle('is-selected', isSel);
+            dom.wagerSurgeBtn.disabled = !isPrepOrInter || (!isSel && surgeRemain <= 0);
+            if (dom.wagerSurgeTitleEl) dom.wagerSurgeTitleEl.innerText = L('魔潮加碼', 'Monster Surge');
+            if (dom.wagerSurgeLimitEl) {
+                dom.wagerSurgeLimitEl.innerText = isSel
+                    ? L(`已啟用（剩 ${surgeRemain}/2 次 · 點擊取消）`, `Active (${surgeRemain}/2 left · Cancel)`)
+                    : L(`免押金 · 剩 ${surgeRemain}/2 次`, `Free · ${surgeRemain}/2 Left`);
+            }
+            if (dom.wagerSurgeDescEl) {
+                dom.wagerSurgeDescEl.innerText = L(
+                    '怪血量 +25% · 移速 +10%；守住後擊殺賞金 ×1.45 ＋ 1 顆萬能果實',
+                    'Enemy HP +25% · Spd +10%; clear grants ×1.45 kill gold + 1 Universal Fruit'
+                );
+            }
+        }
+    }
+
     function updateHUD() {
         const dom = G.dom, st = G.state;
         const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
@@ -1255,7 +1470,7 @@
         setDomText(dom.waveDisplay, st.isEndlessMode ? `Wave ${st.currentWave} (${L('無盡', 'Endless')})` : `Wave ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10}`);
         setDomText(dom.bestWaveDisplay, `W${st.bestWave}`);
         updateWavePhaseUI(); Renderer.updateWorldTreeVisualState(); updateSkillButtonsUI();
-        updateSeedPityUI(); updateTreasureRootUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
+        updateSeedPityUI(); updateTreasureRootUI(); updateGuildDrawerUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
         updateWaveForecastUI(); updateMonsterHoverCardUI();
 
         const activePlay = isGameplayActive();
@@ -1604,6 +1819,18 @@
             return;
         }
 
+        if (st.isApplyingFusionFruit && (st.fusionFruitCount || 0) > 0) {
+            if (st.board[index] !== null) {
+                applyFusionFruitAtCell(index);
+                return;
+            }
+            st.isApplyingFusionFruit = false;
+            setStatusMsg('已取消萬能融合果實套用模式。', 'Cancelled Universal Fusion Fruit mode.');
+            Renderer.renderBoard([]);
+            updateHUD();
+            return;
+        }
+
         if (st.pendingSpawnType) {
             const pendingType = st.pendingSpawnType;
             if (TerrainSys.canBuildAt(index) && st.board[index] === null) {
@@ -1794,6 +2021,324 @@
         return false;
     }
 
+    // ==================== 5B. 世界樹商會（A. 元素股市 / B. 命運種子盲盒 / C. 波次對賭懸賞） ====================
+    function holdIntermissionTimerIfPrep() {
+        const st = G.state;
+        if (st.waveState === 'PREP' || st.waveState === 'INTERMISSION') {
+            st.guildTimerHold = true;
+            updateWavePhaseUI();
+        }
+    }
+
+    function toggleGuildDrawer() {
+        const st = G.state;
+        Backend.recordPlayerAction();
+        st.guildDrawerOpen = !st.guildDrawerOpen;
+        if (st.guildDrawerOpen && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION')) {
+            st.guildTimerHold = true;
+        } else if (!st.guildDrawerOpen && st.guildTimerHold) {
+            st.guildTimerHold = false;
+        }
+        updateHUD();
+    }
+
+    function toggleGuildTimerHold() {
+        const st = G.state;
+        Backend.recordPlayerAction();
+        if (st.waveState === 'PREP' || st.waveState === 'INTERMISSION') {
+            st.guildTimerHold = !st.guildTimerHold;
+            st.guildAutoHoldTimer = st.guildTimerHold;
+            setStatusMsg(
+                st.guildTimerHold
+                    ? '已暫停波間休整倒數，完成股市、盲盒或懸賞配置後可點「立即開波」或再次點擊恢復倒數。'
+                    : '已恢復波間倒數計時。',
+                st.guildTimerHold
+                    ? 'Intermission countdown held. Click "Start Wave" or click again to resume countdown.'
+                    : 'Intermission countdown resumed.'
+            );
+        } else {
+            st.guildAutoHoldTimer = !st.guildAutoHoldTimer;
+            setStatusMsg(
+                st.guildAutoHoldTimer ? '已開啟「波間休整自動暫停倒數」。' : '已關閉「波間休整自動暫停倒數」。',
+                st.guildAutoHoldTimer ? 'Auto-Hold Intermission Timer enabled.' : 'Auto-Hold Intermission Timer disabled.'
+            );
+        }
+        updateHUD();
+    }
+
+    function handleStockTrade(action, elementKey) {
+        const st = G.state;
+        if (!isMatchPhaseActive() || !EconSys) return { ok: false, reason: 'inactive' };
+        Backend.recordPlayerAction();
+        holdIntermissionTimerIfPrep();
+
+        const elNames = {
+            fire: L('🔥 火股', '🔥 Fire Stock'),
+            ice: L('❄️ 冰股', '❄️ Ice Stock'),
+            thunder: L('⚡ 雷股', '⚡ Thunder Stock')
+        };
+        const label = elNames[elementKey] || elementKey;
+
+        if (action === 'buy') {
+            const res = EconSys.buyStock(elementKey);
+            if (!res.ok) {
+                if (res.reason === 'max_shares') {
+                    setStatusMsg(`【${label}】已達持倉上限 10 股。`, `${label} reached max position (10 shares).`);
+                } else if (res.reason === 'insufficient_gold') {
+                    setStatusMsg(`金幣不足，買入【${label}】需要 ${res.price} 💰。`, `Not enough Gold: ${label} costs ${res.price} 💰.`);
+                }
+                updateHUD();
+                return res;
+            }
+            SoundEngine.playSpawn(1);
+            const divPct = Math.round(res.dividendBonus * 1000) / 10;
+            setStatusMsg(
+                `買入 1 股【${label}】（-${res.price} 💰），當前持倉 ${res.shares}/10 股（對應元素塔戰力桶 +${divPct}%）。`,
+                `Bought 1 ${label} (-${res.price} 💰). Holding ${res.shares}/10 (+${divPct}% element tower power).`
+            );
+            updateHUD();
+            return res;
+        }
+
+        if (action === 'sell') {
+            const res = EconSys.sellStock(elementKey, st.currentWave);
+            if (!res.ok) {
+                setStatusMsg(`目前未持有【${label}】，無法賣出。`, `No ${label} shares to sell.`);
+                updateHUD();
+                return res;
+            }
+            SoundEngine.playSpawn(1);
+            const divPct = Math.round(res.dividendBonus * 1000) / 10;
+            const capNoteZh = res.isSoftCapped ? '（淨利部分已受單波軟上限約束）' : '';
+            const capNoteEn = res.isSoftCapped ? ' (net profit capped by wave soft cap)' : '';
+            setStatusMsg(
+                `賣出 1 股【${label}】（扣除 5% 手續費 ${res.fee} 💰，實拿 +${res.payout} 💰${capNoteZh}），剩餘 ${res.shares}/10 股（+${divPct}%）。`,
+                `Sold 1 ${label} (5% fee ${res.fee} 💰, received +${res.payout} 💰${capNoteEn}). Remaining ${res.shares}/10 (+${divPct}%).`
+            );
+            updateHUD();
+            return res;
+        }
+        return { ok: false, reason: 'invalid_action' };
+    }
+
+    function openBlindBox(options = {}) {
+        const st = G.state;
+        const towersDict = getTowersDict();
+        if (!isGameplayActive() || !EconSys) return { ok: false, reason: 'inactive' };
+        Backend.recordPlayerAction();
+        holdIntermissionTimerIfPrep();
+
+        const boxCost = Number.isFinite(options.costOverride) ? options.costOverride : EconSys.getBlindBoxCost();
+        if (st.currentGold < boxCost) {
+            setStatusMsg(
+                `金幣不足，開啟【命運種子盲盒】需要 ${boxCost} 💰。`,
+                `Not enough Gold: Fate Seed Blind Box costs ${boxCost} 💰.`
+            );
+            return { ok: false, reason: 'insufficient_gold', boxCost };
+        }
+
+        const spot = AttackSys.pickSmartSpawnIndex('fire_bud');
+        if (!spot && options.forceOutcome !== 'fruit') {
+            setStatusMsg(
+                '棋盤可建造地塊已滿，請先融合或出售防禦塔騰出空間後再開啟盲盒。',
+                'No buildable tiles available. Merge or sell towers before opening a Blind Box.'
+            );
+            return { ok: false, reason: 'board_full', boxCost };
+        }
+
+        st.currentGold -= boxCost;
+        const roll = EconSys.rollBlindBoxOutcome(options);
+        const critPct = ((st.teamCritBonusRate || 0) * 100).toFixed(1);
+
+        if (roll.kind === 'fruit') {
+            st.fusionFruitCount = 1;
+            SoundEngine.playMerge(2, true);
+            setStatusMsg(
+                `命運盲盒（-${boxCost} 💰）開出【萬能融合果實 ★】！已存入槽位 (1/1)，全隊暴擊加成 +${critPct}%。`,
+                `Blind Box (-${boxCost} 💰) yielded [Universal Fusion Fruit ★]! Stored (1/1), Team Crit +${critPct}%.`
+            );
+            updateHUD();
+            return { ok: true, kind: 'fruit', boxCost, roll };
+        }
+
+        const targetIndex = (options.targetIndex !== undefined && options.targetIndex !== null && TerrainSys.canBuildAt(options.targetIndex) && st.board[options.targetIndex] === null)
+            ? options.targetIndex
+            : (spot ? spot.index : 0);
+        const towerType = roll.towerType || (roll.tier === 3 ? 'fire_A' : (roll.tier === 2 ? 'fire_trunk' : 'fire_bud'));
+        // 防刷錢鎖：investedGold 嚴格記錄實付 boxCost
+        const spawnedTower = AttackSys.createTowerObj(towerType, roll.tier, boxCost, null, {
+            fromBlindBox: true,
+            keepRawType: true
+        });
+        spawnedTower.investedGold = boxCost;
+        st.board[targetIndex] = spawnedTower;
+        st.selectedIndex = targetIndex;
+        st.buildTargetIndex = null;
+        st.pendingSpawnType = null;
+
+        const cfg = towersDict[spawnedTower.type] || { icon: '🔥', name: spawnedTower.type };
+        const coords = indexToCoords(targetIndex);
+        SoundEngine.playMerge(roll.tier, roll.tier >= 2);
+        if (CodexSys && typeof CodexSys.unlockEntry === 'function') {
+            CodexSys.unlockEntry(`tower:${spawnedTower.type}`);
+        }
+        if (Renderer && typeof Renderer.spawnFloatingNotice === 'function') {
+            const center = Renderer.getCellCenter(coords.x, coords.y);
+            Renderer.spawnFloatingNotice(
+                L(`盲盒 ${cfg.name} ${Renderer.getTierStars(roll.tier)}`, `Box ${cfg.name} ${Renderer.getTierStars(roll.tier)}`),
+                center.left,
+                center.top,
+                'pity-seed'
+            );
+        }
+
+        const pityNoteZh = roll.isPityTriggered ? '（觸發第 4 抽 2★+ 保底）' : '';
+        const pityNoteEn = roll.isPityTriggered ? ' (4th-pull 2★+ Pity!)' : '';
+        const refundPreview = EconSys.getTowerSellRefund(spawnedTower);
+        setStatusMsg(
+            `命運盲盒（-${boxCost} 💰）${pityNoteZh}於 (${coords.x + 1},${coords.y + 1}) 開出【${cfg.icon} ${cfg.name} ${Renderer.getTierStars(roll.tier)}】（實付鎖定 ${boxCost} 💰，出售退還 ${refundPreview} 💰｜全隊暴擊 +${critPct}%）。`,
+            `Blind Box (-${boxCost} 💰)${pityNoteEn} spawned ${cfg.icon} ${cfg.name} ${Renderer.getTierStars(roll.tier)} at (${coords.x + 1},${coords.y + 1}) (Invested ${boxCost} 💰, Refund ${refundPreview} 💰 | Team Crit +${critPct}%).`
+        );
+        Renderer.renderBoard([targetIndex]);
+        updateHUD();
+        return {
+            ok: true,
+            kind: 'tower',
+            boxCost,
+            tower: spawnedTower,
+            cellIndex: targetIndex,
+            roll
+        };
+    }
+
+    function applyFusionFruitAtCell(cellIndex, chosenBranchType = null) {
+        const st = G.state;
+        const towersDict = getTowersDict();
+        if (!isGameplayActive() || (st.fusionFruitCount || 0) <= 0) {
+            return { ok: false, reason: 'no_fruit' };
+        }
+        const targetTower = st.board[cellIndex];
+        if (!targetTower) {
+            return { ok: false, reason: 'empty_cell' };
+        }
+        const preview = EvoSys && typeof EvoSys.getFruitUpgradePreview === 'function'
+            ? EvoSys.getFruitUpgradePreview(targetTower)
+            : null;
+        if (!preview) {
+            setStatusMsg(
+                '該防禦塔已達 3★ 最高階級，無法套用萬能融合果實。',
+                'Tower is already at max 3★ tier; cannot apply Universal Fusion Fruit.'
+            );
+            return { ok: false, reason: 'max_tier' };
+        }
+
+        holdIntermissionTimerIfPrep();
+        // 若為 2★ 塔且未指定分支，開啟 3★ 冠枝雙分岔選擇輪盤
+        if (preview.requiresConfirmation && !chosenBranchType) {
+            st.isApplyingFusionFruit = false;
+            openEvolutionConfirmModal(cellIndex, cellIndex, preview);
+            Renderer.renderBoard([]);
+            updateHUD();
+            return { ok: true, pendingConfirmation: true, preview };
+        }
+
+        const res = EvoSys.executeFruitUpgrade(cellIndex, chosenBranchType);
+        if (!res) return { ok: false, reason: 'upgrade_failed' };
+
+        st.selectedIndex = cellIndex;
+        const cfg = towersDict[res.fusion.type] || { icon: '🔥', name: res.fusion.type };
+        SoundEngine.playMerge(res.fusion.tier, true);
+        setStatusMsg(
+            `已套用【萬能融合果實】：【${cfg.icon} ${cfg.name} ${Renderer.getTierStars(res.fusion.tier)}】升星完成${res.bonusHint || ''}！`,
+            `Universal Fusion Fruit applied: ${cfg.icon} ${cfg.name} ${Renderer.getTierStars(res.fusion.tier)} starred up${res.bonusHint || ''}!`
+        );
+        Renderer.renderBoard([cellIndex]);
+        updateHUD();
+        return { ok: true, result: res };
+    }
+
+    function handleFusionFruitSlotClick() {
+        const st = G.state;
+        if (!isGameplayActive() || (st.fusionFruitCount || 0) <= 0) return false;
+        Backend.recordPlayerAction();
+        holdIntermissionTimerIfPrep();
+
+        // 若目前已選取場上 1★ 或 2★ 防禦塔，直接一鍵套用升星！
+        if (st.selectedIndex !== null && st.board[st.selectedIndex] !== null) {
+            const selTower = st.board[st.selectedIndex];
+            if (selTower.tier >= 1 && selTower.tier < 3) {
+                applyFusionFruitAtCell(st.selectedIndex);
+                return true;
+            }
+        }
+
+        st.isApplyingFusionFruit = !st.isApplyingFusionFruit;
+        st.pendingSpawnType = null;
+        if (st.isApplyingFusionFruit) {
+            setStatusMsg(
+                '已啟動【萬能融合果實】：請點選場上任一 1★ 或 2★ 防禦塔直接升星（按 Esc 或再點槽位取消）。',
+                'Universal Fusion Fruit active: Click any 1★ or 2★ tower on the board to star up (Esc to cancel).'
+            );
+        } else {
+            setStatusMsg('已取消萬能融合果實待套用狀態。', 'Cancelled Universal Fusion Fruit placement.');
+        }
+        Renderer.renderBoard([]);
+        updateHUD();
+        return true;
+    }
+
+    function handleWagerSelect(wagerType) {
+        if (!EconSys || typeof EconSys.selectWaveWager !== 'function') return { ok: false };
+        Backend.recordPlayerAction();
+        holdIntermissionTimerIfPrep();
+
+        const res = EconSys.selectWaveWager(wagerType);
+        if (!res.ok) {
+            if (res.reason === 'insufficient_gold') {
+                setStatusMsg(
+                    `金幣不足，押注【零封懸賞】需要 ${res.stake || 40} 💰。`,
+                    `Not enough Gold: Zero-Leak Bounty requires ${res.stake || 40} 💰.`
+                );
+            } else if (res.reason === 'max_uses_reached') {
+                setStatusMsg(
+                    '本局【魔潮加碼】已達觸發上限（2 / 2 次）。',
+                    'Monster Surge limit reached for this run (2 / 2 uses).'
+                );
+            } else if (res.reason === 'not_in_prep_phase') {
+                setStatusMsg(
+                    '波次對賭懸賞僅能於開戰前（備戰或波間休整期）選擇。',
+                    'Wave Wager Bounties can only be selected before a wave starts.'
+                );
+            }
+            updateHUD();
+            return res;
+        }
+
+        SoundEngine.playSpawn(2);
+        if (res.cancelledType) {
+            setStatusMsg(
+                res.refundedStake > 0
+                    ? `已取消本波對賭懸賞，退還押金 +${res.refundedStake} 💰。`
+                    : '已取消本波【魔潮加碼】懸賞。',
+                res.refundedStake > 0
+                    ? `Cancelled Wave Wager and refunded +${res.refundedStake} 💰.`
+                    : 'Cancelled Monster Surge wager.'
+            );
+        } else if (res.type === 'zero_leak') {
+            setStatusMsg(
+                '已啟用【零封懸賞】（押注 40 💰）：本波世界樹 0 掉血將於波末返還 70 💰（淨賺 +30 💰）；若掉血則沒收押金並補償 +15 💧。',
+                'Activated [Zero-Leak Bounty] (-40 💰 stake): 0 HP lost returns 70 💰 (+30 💰 net); leak forfeits stake & grants +15 💧.'
+            );
+        } else if (res.type === 'monster_surge') {
+            setStatusMsg(
+                `已啟用【魔潮加碼】（剩餘 ${res.remainingUses}/2 次）：本波怪血量 +25%、移速 +10%，守住後擊殺賞金 ×1.45 並獲得 1 顆萬能融合果實！`,
+                `Activated [Monster Surge] (${res.remainingUses}/2 left): Enemy HP +25%, Spd +10%; clear grants ×1.45 kill gold + 1 Universal Fruit!`
+            );
+        }
+        updateHUD();
+        return res;
+    }
+
     function openEvolutionConfirmModal(fromIndex, toIndex, fusionPreview) {
         const st = G.state, dom = G.dom;
         if (!fusionPreview || !Array.isArray(fusionPreview.options) || fusionPreview.options.length === 0) return false;
@@ -1803,6 +2348,7 @@
         st.pendingEvolution = {
             fromIndex,
             toIndex,
+            isFruitUpgrade: Boolean(fusionPreview.isFruitUpgrade),
             tier: fusionPreview.tier || 3,
             mode: fusionPreview.mode,
             options: fusionPreview.options.slice(),
@@ -1906,7 +2452,9 @@
             Renderer.clearDragEvolutionPreview();
         }
 
-        const res = EvoSys.executeTowerFusion(pending.fromIndex, pending.toIndex, branchType);
+        const res = pending.isFruitUpgrade
+            ? EvoSys.executeFruitUpgrade(pending.toIndex, branchType)
+            : EvoSys.executeTowerFusion(pending.fromIndex, pending.toIndex, branchType);
         if (res) {
             const { fusion, bonusHint } = res;
             const cfg = getTowersDict()[fusion.type] || { name: fusion.type };
@@ -1972,6 +2520,14 @@
         const towersDict = getTowersDict();
         st.currentWave = waveNum;
         st.waveNonCombatGold = 0;
+        st.nonCombatLedgerWave = waveNum;
+        st.waveLeakedCount = 0;
+        st.guildTimerHold = false;
+        st.isApplyingFusionFruit = false;
+        if (st.activeWager && st.activeWager.type === 'zero_leak') {
+            st.activeWager.leakedThisWave = false;
+            st.activeWager.startBaseHp = st.baseHp;
+        }
         if (st.currentWave > st.bestWave) {
             st.bestWave = st.currentWave;
             Backend.saveMapRecord(st.currentMapId, st.bestWave);
@@ -2219,10 +2775,12 @@
         const intermissionMs = (st.activeContracts && st.activeContracts.has('rapid_waves')) ? Math.round(baseInterMs * 0.5) : baseInterMs;
 
         if (st.waveState === 'PREP' || st.waveState === 'INTERMISSION') {
-            const prevSec = Math.ceil(st.waveTimerMs / 1000);
-            st.waveTimerMs -= dtMs;
-            if (st.waveTimerMs <= 0) startWave(st.waveState === 'PREP' ? 1 : st.currentWave + 1);
-            else if (prevSec !== Math.ceil(st.waveTimerMs / 1000)) updateWavePhaseUI();
+            if (!st.guildTimerHold) {
+                const prevSec = Math.ceil(st.waveTimerMs / 1000);
+                st.waveTimerMs -= dtMs;
+                if (st.waveTimerMs <= 0) startWave(st.waveState === 'PREP' ? 1 : st.currentWave + 1);
+                else if (prevSec !== Math.ceil(st.waveTimerMs / 1000)) updateWavePhaseUI();
+            }
         } else if (st.waveState === 'SPAWNING') {
             st.waveSpawnAccMs += dtMs;
             while (st.waveSpawnAccMs >= st.waveSpawnIntervalMs && st.waveSpawnQueue.length > 0) {
@@ -2231,13 +2789,30 @@
                 if (st.waveSpawnQueue.length === 0) { st.waveState = 'CLEARING'; updateWavePhaseUI(); }
             }
         } else if (st.waveState === 'CLEARING' && st.monsters.length === 0) {
+            const wagerResult = (EconSys && typeof EconSys.settleWaveWager === 'function')
+                ? EconSys.settleWaveWager(st.currentWave)
+                : null;
+            st.lastWagerSettlement = wagerResult;
             const rootPayout = (TreeSys && typeof TreeSys.settleWaveRootIncome === 'function')
                 ? TreeSys.settleWaveRootIncome(st.currentWave)
                 : null;
-            const rootMsgZh = rootPayout ? `（${rootPayout.summaryZh}）` : '';
-            const rootMsgEn = rootPayout ? ` (${rootPayout.summaryEn})` : '';
+            if (EconSys && typeof EconSys.settleWaveStocks === 'function') {
+                EconSys.settleWaveStocks(st.currentWave + 1);
+            }
+            const extraSummariesZh = [];
+            const extraSummariesEn = [];
+            if (rootPayout) {
+                extraSummariesZh.push(rootPayout.summaryZh);
+                extraSummariesEn.push(rootPayout.summaryEn);
+            }
+            if (wagerResult) {
+                extraSummariesZh.push(wagerResult.summaryZh);
+                extraSummariesEn.push(wagerResult.summaryEn);
+            }
+            const rootMsgZh = extraSummariesZh.length > 0 ? `（${extraSummariesZh.join('｜')}）` : '';
+            const rootMsgEn = extraSummariesEn.length > 0 ? ` (${extraSummariesEn.join(' | ')})` : '';
             if (!st.isEndlessMode && st.currentWave === victoryWave) {
-                if (rootPayout) {
+                if (rootMsgZh) {
                     setStatusMsg(
                         `第 ${st.currentWave} 波最終防禦完成${rootMsgZh}！`,
                         `Final Wave ${st.currentWave} cleared${rootMsgEn}!`
@@ -2252,6 +2827,7 @@
                 if (st.pendingEvolution || isOverlayVisible(G.dom.evoConfirmOverlayEl)) {
                     st.pendingBlessingWave = st.currentWave;
                     st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
+                    st.guildTimerHold = Boolean(st.guildAutoHoldTimer);
                     setStatusMsg(
                         `第 ${st.currentWave} 波防禦完成${rootMsgZh}，完成進化選擇後將開啟枝枒祝福。`,
                         `Wave ${st.currentWave} cleared${rootMsgEn}! Blessing selection opens after evolution.`
@@ -2268,6 +2844,7 @@
                 }
             }
             st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
+            st.guildTimerHold = Boolean(st.guildAutoHoldTimer);
             setStatusMsg(
                 `第 ${st.currentWave} 波防禦完成${rootMsgZh}，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後開始。`,
                 `Wave ${st.currentWave} cleared${rootMsgEn}! Next wave begins in ${Math.ceil(intermissionMs / 1000)}s.`
@@ -2557,9 +3134,36 @@
                 TreeSys.upgradeTreasureRoot();
             }
         }],
+        ['guildToggleBtn', () => { SoundEngine.ensureContext(); toggleGuildDrawer(); }],
+        ['guildHoldTimerBtn', () => { SoundEngine.ensureContext(); toggleGuildTimerHold(); }],
+        ['blindBoxBuyBtn', () => { SoundEngine.ensureContext(); openBlindBox(); }],
+        ['wagerZeroLeakBtn', () => { SoundEngine.ensureContext(); handleWagerSelect('zero_leak'); }],
+        ['wagerSurgeBtn', () => { SoundEngine.ensureContext(); handleWagerSelect('monster_surge'); }],
         ['addGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold += 500; setStatusMsg('已增加 500 💰。', 'Added 500 💰.'); updateHUD(); } }],
         ['clearGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold = 0; setStatusMsg('金幣已歸零。', 'Gold cleared to 0.'); updateHUD(); } }]
     ].forEach(([domKey, fn]) => { if (G.dom[domKey] && typeof fn === 'function') G.dom[domKey].addEventListener('click', fn); });
+
+    if (G.dom.guildStockListEl) {
+        G.dom.guildStockListEl.addEventListener('click', (e) => {
+            const btn = e && e.target && e.target.closest ? e.target.closest('.stock-btn') : null;
+            if (!btn) return;
+            SoundEngine.ensureContext();
+            const action = btn.dataset.stockAction;
+            const elKey = btn.dataset.stockEl;
+            if (action && elKey) {
+                handleStockTrade(action, elKey);
+            }
+        });
+    }
+
+    if (G.dom.fusionFruitSlotBtn && DragSys && typeof DragSys.bindFusionFruitElement === 'function') {
+        DragSys.bindFusionFruitElement(G.dom.fusionFruitSlotBtn, handleFusionFruitSlotClick);
+    } else if (G.dom.fusionFruitSlotBtn) {
+        G.dom.fusionFruitSlotBtn.addEventListener('click', () => {
+            SoundEngine.ensureContext();
+            handleFusionFruitSlotClick();
+        });
+    }
 
     if (G.dom.treeRootTiersEl) {
         G.dom.treeRootTiersEl.addEventListener('click', (e) => {
@@ -2721,8 +3325,8 @@
                 else if (isCodexOpen()) { e.preventDefault(); CodexSys.closeCodex(); }
                 else if (isGuideOpen()) { e.preventDefault(); closeGuide(); }
                 else if (st.forecastDrawerOpen) { e.preventDefault(); st.forecastDrawerOpen = false; updateWaveForecastUI(); }
-                else if (isMatchPhaseActive() && (st.selectedIndex !== null || st.buildTargetIndex !== null || st.pendingSpawnType !== null || st.inspectedMonsterId !== null)) {
-                    e.preventDefault(); st.selectedIndex = null; st.buildTargetIndex = null; st.pendingSpawnType = null; st.inspectedMonsterId = null;
+                else if (isMatchPhaseActive() && (st.selectedIndex !== null || st.buildTargetIndex !== null || st.pendingSpawnType !== null || st.isApplyingFusionFruit || st.inspectedMonsterId !== null)) {
+                    e.preventDefault(); st.selectedIndex = null; st.buildTargetIndex = null; st.pendingSpawnType = null; st.isApplyingFusionFruit = false; st.inspectedMonsterId = null;
                     Renderer.renderBoard([]); updateHUD();
                     setStatusMsg('已取消選取與待放置狀態。', 'Selection and placement cancelled.');
                 }
@@ -2804,6 +3408,13 @@
         handleAction,
         spawnTowerAtCell,
         handleShopCardClick,
+        handleStockTrade,
+        openBlindBox,
+        applyFusionFruitAtCell,
+        handleFusionFruitSlotClick,
+        handleWagerSelect,
+        toggleGuildDrawer,
+        toggleGuildTimerHold,
         inspectMonsterById,
         onMonsterLeaked,
         activateTouchMode,
@@ -2930,6 +3541,13 @@
         spawnTowerAtCell,
         handleAction,
         handleCellClick,
+        handleStockTrade,
+        openBlindBox,
+        applyFusionFruitAtCell,
+        handleFusionFruitSlotClick,
+        handleWagerSelect,
+        toggleGuildDrawer,
+        toggleGuildTimerHold,
         openEvolutionConfirmModal,
         confirmPendingEvolution,
         cancelPendingEvolution,

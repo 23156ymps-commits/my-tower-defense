@@ -238,9 +238,13 @@
             : (resonanceBonus + ((G && G.state && Number(G.state.blessingPowerBonus)) || 0));
         const b_blessing = Math.min(blessingCap, Math.max(0, rawBlessing));
 
+        const EconSys = GameApp.systems && GameApp.systems.economy;
+        const stockDividend = (EconSys && towerObj && typeof EconSys.getTowerDividendBonus === 'function')
+            ? EconSys.getTowerDividendBonus(towerObj)
+            : 0;
         const rawDividend = Number.isFinite(options.b_dividend)
             ? options.b_dividend
-            : ((G && G.state && Number(G.state.dividendBonus)) || 0);
+            : (stockDividend + ((G && G.state && Number(G.state.dividendBonus)) || 0));
         const b_dividend = Math.min(dividendCap, Math.max(0, rawDividend));
 
         const infusionK = Number.isFinite(options.infusionCount)
@@ -529,6 +533,12 @@
         });
 
         let finalDamage = result.damage;
+        let isTeamCrit = false;
+        const teamCritRate = (G && G.state && Number(G.state.teamCritBonusRate)) || 0;
+        if (!result.isWeakness && teamCritRate > 0 && !options.disableRandomCrit && Math.random() < teamCritRate) {
+            finalDamage = Math.max(1, Math.round(finalDamage * 1.5));
+            isTeamCrit = true;
+        }
         let shellReduced = false;
         if ((monster.shellHitsLeft || 0) > 0) {
             monster.shellHitsLeft -= 1;
@@ -604,8 +614,9 @@
 
         const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         const displayDmg = hpDmg > 0 ? hpDmg : shieldAbsorbed;
-        const dmgTag = options.dmgTag || (shellReduced ? (isEn ? 'Shell ' : '甲殼 ') : (shieldAbsorbed > 0 && hpDmg === 0 ? (isEn ? 'Shield ' : '破盾 ') : ''));
-        GameApp.renderer.spawnDamageNumber(displayDmg, result.isWeakness, monster.pixelX, monster.pixelY, dmgTag, result.isAffinity);
+        const critTag = isTeamCrit ? (isEn ? 'Crit ' : '暴擊 ') : '';
+        const dmgTag = options.dmgTag || critTag || (shellReduced ? (isEn ? 'Shell ' : '甲殼 ') : (shieldAbsorbed > 0 && hpDmg === 0 ? (isEn ? 'Shield ' : '破盾 ') : ''));
+        GameApp.renderer.spawnDamageNumber(displayDmg, result.isWeakness || isTeamCrit, monster.pixelX, monster.pixelY, dmgTag, result.isAffinity);
         if (monster.hp > 0 && (result.isWeakness || result.isAffinity) && typeof GameApp.renderer.triggerMonsterHitFlash === 'function') {
             GameApp.renderer.triggerMonsterHitFlash(monster.id);
         }

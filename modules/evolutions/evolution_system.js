@@ -338,6 +338,133 @@
         return { fusion: appliedFusion, mergedTower, bonusHint: getAscensionHint(appliedFusion, targetType) };
     }
 
+    /**
+     * 取得萬能融合果實（Universal Fusion Fruit）對單座防禦塔的升星預覽：
+     *   - 1★ 塔：直接升為同物種 2★ 主幹
+     *   - 2★ 塔：觸發 3★ 冠枝 A/B 雙分岔選擇輪盤
+     */
+    function getFruitUpgradePreview(towerObj) {
+        const evo = getEvoData();
+        const maxTier = evo.MAX_TIER || 3;
+        if (!towerObj || towerObj.tier >= maxTier) return null;
+        const towersDict = getTowersDict();
+        const nodeId = normalizeNodeId(towerObj);
+
+        if (towerObj.tier === 1) {
+            const pairKey = getRecipeKey(nodeId, nodeId);
+            const t1Recipes = evo.T1_RECIPES || evo.T1_TO_T2_RECIPES || {};
+            const matched = t1Recipes[pairKey];
+            const resultType = (matched && matched.resultType) || `${nodeId.replace(/_bud$/, '')}_trunk`;
+            const resCfg = towersDict[resultType];
+            if (!resCfg) return null;
+            return {
+                isFruitUpgrade: true,
+                type: resultType,
+                options: [resultType],
+                tier: 2,
+                isCrossElement: Boolean(resCfg.isHybrid),
+                mode: 'fruit_star_up_t2',
+                requiresConfirmation: false,
+                title: `${resCfg.icon} ${resCfg.name}`,
+                previewLabel: `${L('萬能果實升星', 'Fruit Star Up')} ▸ ${resCfg.icon} ${resCfg.name} ★★`
+            };
+        }
+
+        if (towerObj.tier === 2) {
+            const pairKey = getRecipeKey(nodeId, nodeId);
+            const t2Rules = evo.T2_TO_T3_RULES || {};
+            const rule = t2Rules[pairKey];
+            if (!rule || !Array.isArray(rule.options) || rule.options.length === 0) return null;
+            const validOptions = rule.options.filter(optId => Boolean(towersDict[optId]));
+            if (validOptions.length === 0) return null;
+            return {
+                isFruitUpgrade: true,
+                type: validOptions[0],
+                options: validOptions,
+                tier: 3,
+                isCrossElement: Boolean(towersDict[validOptions[0]] && towersDict[validOptions[0]].isHybrid),
+                mode: 'fruit_dual_choice_t3',
+                family: rule.family || '',
+                requiresConfirmation: true,
+                title: L(`${rule.title || '世界樹冠枝開花'}（萬能融合果實）`, 'Crown Branch Evolution (Universal Fruit)'),
+                previewLabel: L(rule.previewLabel || `萬能果實冠枝進化 ▸ ${getShortNodeLabel(validOptions[0])}`, `Fruit Crown Evolution ▸ ${getShortNodeLabel(validOptions[0])}`)
+            };
+        }
+
+        return null;
+    }
+
+    /**
+     * 執行萬能融合果實升星（1★ -> 2★ 或 2★ -> 3★ 分岔確認後），消耗 1 顆萬能果實並保持原塔 investedGold（防刷錢膨脹）
+     */
+    function executeFruitUpgrade(cellIndex, chosenBranchType = null) {
+        if (!G || !G.state) return null;
+        const st = G.state;
+        if ((st.fusionFruitCount || 0) <= 0) return null;
+        const towerObj = st.board[cellIndex];
+        const preview = getFruitUpgradePreview(towerObj);
+        if (!preview) return null;
+
+        const targetType = (chosenBranchType && preview.options.includes(chosenBranchType))
+            ? chosenBranchType
+            : preview.type;
+
+        const baseCost = (GameApp.data && GameApp.data.economy && GameApp.data.economy.BASE_COST) || 10;
+        const keptInvestedGold = Number.isFinite(towerObj.investedGold)
+            ? towerObj.investedGold
+            : baseCost * Math.pow(2, Math.max(0, (towerObj.tier || 1) - 1));
+        const keptDamage = towerObj.totalDamage || 0;
+        const resShort = getShortNodeLabel(targetType);
+        const prevPath = Array.isArray(towerObj.lineagePath) && towerObj.lineagePath.length > 0
+            ? towerObj.lineagePath.slice()
+            : [getShortNodeLabel(normalizeNodeId(towerObj))];
+        if (prevPath[prevPath.length - 1] !== resShort) prevPath.push(resShort);
+
+        const prevIds = Array.isArray(towerObj.lineageIds) && towerObj.lineageIds.length > 0
+            ? towerObj.lineageIds.slice()
+            : [normalizeNodeId(towerObj)];
+        if (prevIds[prevIds.length - 1] !== targetType) prevIds.push(targetType);
+
+        st.fusionFruitCount = Math.max(0, (st.fusionFruitCount || 0) - 1);
+        st.isApplyingFusionFruit = false;
+        st.fusionCount++;
+
+        const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
+        const intervalMs = AttackSys ? AttackSys.getTowerAttackInterval(targetType, cellIndex) : 1000;
+        const carriedAcc = Math.max(0, Math.min(intervalMs - 120, towerObj.accMs || 0));
+
+        const upgradedTower = AttackSys.createTowerObj(targetType, preview.tier, keptInvestedGold, carriedAcc, {
+            targetMode: towerObj.targetMode || 'first',
+            totalDamage: keptDamage,
+            lineagePath: prevPath,
+            lineageIds: prevIds
+        });
+        st.board[cellIndex] = upgradedTower;
+
+        if (keptDamage > 0 && (!st.peakTowerSnapshot || keptDamage >= st.peakTowerSnapshot.totalDamage)) {
+            const fusedCfg = getTowersDict()[targetType];
+            st.peakTowerSnapshot = {
+                uid: upgradedTower.uid,
+                type: upgradedTower.type,
+                tier: upgradedTower.tier,
+                isCrowned: Boolean(upgradedTower.isCrowned),
+                name: fusedCfg ? fusedCfg.name : upgradedTower.type,
+                icon: fusedCfg ? fusedCfg.icon : '',
+                totalDamage: keptDamage
+            };
+        }
+
+        const appliedFusion = Object.assign({}, preview, { type: targetType });
+        if (GameApp.systems && GameApp.systems.codex && typeof GameApp.systems.codex.unlockEntry === 'function') {
+            GameApp.systems.codex.unlockEntry(`tower:${targetType}`);
+        }
+        return {
+            fusion: appliedFusion,
+            mergedTower: upgradedTower,
+            bonusHint: getAscensionHint(appliedFusion, targetType)
+        };
+    }
+
     const EvolutionSystem = {
         bind,
         getRecipeKey,
@@ -349,7 +476,9 @@
         getFusionResult,
         canCombineTowers,
         getAscensionHint,
-        executeTowerFusion
+        executeTowerFusion,
+        getFruitUpgradePreview,
+        executeFruitUpgrade
     };
 
     GameApp.systems = GameApp.systems || {};

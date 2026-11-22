@@ -371,6 +371,9 @@
             };
 
         const waveCap = rawPayout.waveCap || (22 + 8 * w);
+        if (EconSys && typeof EconSys.ensureWaveNonCombatLedger === 'function') {
+            EconSys.ensureWaveNonCombatLedger(w);
+        }
         const alreadyNonCombat = Math.max(0, Number(st.waveNonCombatGold) || 0);
         const remainingCap = Math.max(0, waveCap - alreadyNonCombat);
         const grantedGold = Math.min(remainingCap, rawPayout.totalGain);

@@ -135,6 +135,37 @@
         return EvoSys ? EvoSys.canCombineTowers(fromTower, toTower) : false;
     }
 
+    /**
+     * 判定萬能融合果實拖拉至目標格是否合法（須為場上 1★ 或 2★ 防禦塔）
+     */
+    function isFruitDropValidAt(cellIndex) {
+        if (cellIndex === null || cellIndex === undefined || !G || !G.state) return false;
+        const tower = G.state.board[cellIndex];
+        if (!tower) return false;
+        const maxTier = (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || 3;
+        return tower.tier >= 1 && tower.tier < maxTier;
+    }
+
+    function createFruitGhostElement() {
+        const ghost = document.createElement('div');
+        ghost.className = 'touch-drag-ghost fruit-drag-ghost';
+        ghost.style.pointerEvents = 'none';
+        ghost.style.width = '36px';
+        ghost.style.height = '36px';
+        ghost.style.borderRadius = '50%';
+        ghost.style.backgroundColor = '#2C3530';
+        ghost.style.border = '2px solid #D97724';
+        ghost.style.display = 'flex';
+        ghost.style.alignItems = 'center';
+        ghost.style.justifyContent = 'center';
+        ghost.style.color = '#F4F1EA';
+        ghost.style.fontSize = '14px';
+        ghost.style.fontWeight = '700';
+        ghost.innerText = '★';
+        document.body.appendChild(ghost);
+        return ghost;
+    }
+
     function updateDragVisualFeedback(clientX, clientY) {
         if (!activeDrag || !G) return;
         const Renderer = GameApp.renderer;
@@ -169,6 +200,31 @@
                 } else if (G.dom.rangeCircleEl) {
                     G.dom.rangeCircleEl.className = '';
                 }
+            }
+            return;
+        }
+
+        if (activeDrag.dragSource === 'fruit') {
+            const EvoSys = GameApp.systems && GameApp.systems.evolution;
+            if (cellIndex !== null && G.cellElements[cellIndex]) {
+                const valid = isFruitDropValidAt(cellIndex);
+                const cellEl = G.cellElements[cellIndex];
+                cellEl.classList.add(valid ? 'drag-valid-build' : 'drag-invalid');
+                if (valid) cellEl.classList.add('drag-over');
+                const dstTower = G.state.board[cellIndex];
+                if (dstTower && typeof Renderer.showDragEvolutionPreview === 'function') {
+                    const preview = EvoSys && typeof EvoSys.getFruitUpgradePreview === 'function'
+                        ? EvoSys.getFruitUpgradePreview(dstTower)
+                        : null;
+                    if (preview) {
+                        Renderer.showDragEvolutionPreview(cellIndex, cellIndex, preview.previewLabel, true);
+                    } else {
+                        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                        Renderer.showDragEvolutionPreview(cellIndex, cellIndex, isEn ? 'Max 3★ reached' : '已達 3★ 上限', false);
+                    }
+                }
+            } else if (typeof Renderer.clearDragEvolutionPreview === 'function') {
+                Renderer.clearDragEvolutionPreview();
             }
             return;
         }
@@ -328,11 +384,44 @@
         return true;
     }
 
+    function startFruitDrag(btnEl, clientX, clientY, pointerId = null) {
+        if (!G || !G.state || (G.state.fusionFruitCount || 0) <= 0) return false;
+        const canAct = G.callbacks && typeof G.callbacks.isMatchPhaseActive === 'function'
+            ? G.callbacks.isMatchPhaseActive()
+            : !G.state.isGameOver;
+        if (!canAct) return false;
+        cancelActiveDrag({ silent: true, resetTimestamps: true });
+        activeDrag = {
+            dragSource: 'fruit',
+            pointerId,
+            btnEl,
+            startX: clientX,
+            startY: clientY,
+            currentX: clientX,
+            currentY: clientY,
+            isDragging: false,
+            handled: false,
+            movedDistance: 0,
+            hoveredCellIndex: null,
+            ghostEl: null
+        };
+        return true;
+    }
+
     function handleMovePoint(clientX, clientY) {
         if (!activeDrag || activeDrag.handled || !G) return;
         activeDrag.currentX = clientX;
         activeDrag.currentY = clientY;
         activeDrag.movedDistance = Math.hypot(clientX - activeDrag.startX, clientY - activeDrag.startY);
+
+        if (activeDrag.dragSource === 'fruit' && !activeDrag.isDragging) {
+            if (activeDrag.movedDistance > 10 || resolveCellIndexAtPoint(clientX, clientY) !== null) {
+                activeDrag.isDragging = true;
+                activeDrag.ghostEl = createFruitGhostElement();
+                positionGhostElement(activeDrag.ghostEl, clientX, clientY);
+                if (activeDrag.btnEl) activeDrag.btnEl.classList.add('dragging-card');
+            }
+        }
 
         if (activeDrag.dragSource === 'shop' && !activeDrag.isDragging) {
             if (activeDrag.movedDistance > 10 || resolveCellIndexAtPoint(clientX, clientY) !== null) {
@@ -373,6 +462,24 @@
         const finalY = Number.isFinite(clientY) ? clientY : drag.currentY;
         const dropDistance = Math.hypot(finalX - drag.startX, finalY - drag.startY);
         const targetIndex = resolveCellIndexAtPoint(finalX, finalY);
+
+        if (drag.dragSource === 'fruit') {
+            const wasDragGesture = Boolean(drag.isDragging || dropDistance > 10 || targetIndex !== null);
+            const validDrop = wasDragGesture && isFruitDropValidAt(targetIndex);
+            cancelActiveDrag({ silent: true });
+            if (!wasDragGesture) return;
+            lastShopDragCompleteTs = performance.now();
+            G.state.lastTouchDragEndTime = lastShopDragCompleteTs;
+            if (validDrop && G.callbacks && typeof G.callbacks.applyFusionFruitAtCell === 'function') {
+                G.callbacks.applyFusionFruitAtCell(targetIndex);
+            } else if (G.dom && G.dom.msgText) {
+                const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                G.dom.msgText.innerText = isEn
+                    ? 'Drop Universal Fusion Fruit onto a 1★ or 2★ tower to star up.'
+                    : '請將【萬能融合果實】拖曳至場上 1★ 或 2★ 防禦塔上套用升星。';
+            }
+            return;
+        }
 
         if (drag.dragSource === 'shop') {
             const wasDragGesture = Boolean(drag.isDragging || dropDistance > 10 || targetIndex !== null);
@@ -639,6 +746,58 @@
         });
     }
 
+    function bindFusionFruitElement(btnEl, onFruitClick = null) {
+        if (!btnEl) return;
+        btnEl.style.touchAction = 'none';
+        btnEl.setAttribute('draggable', 'false');
+        btnEl.addEventListener('dragstart', e => e.preventDefault());
+        btnEl.addEventListener('drop', e => e.preventDefault());
+
+        btnEl.addEventListener('pointerdown', (e) => {
+            if (e.button !== undefined && e.button !== 0) return;
+            const now = Date.now();
+            lastPointerDownTs = now;
+            lastPointerEventTs = now;
+            if (e.pointerType === 'touch') G.callbacks.activateTouchMode();
+            GameApp.audio.ensureContext();
+            startFruitDrag(btnEl, e.clientX, e.clientY, e.pointerId !== undefined ? e.pointerId : null);
+        });
+
+        btnEl.addEventListener('mousedown', (e) => {
+            const now = Date.now();
+            if (now - lastPointerDownTs < 250 || now - lastPointerEventTs < 250 || (e.button !== undefined && e.button !== 0)) return;
+            if (activeDrag) return;
+            GameApp.audio.ensureContext();
+            startFruitDrag(btnEl, e.clientX, e.clientY, null);
+        });
+
+        btnEl.addEventListener('touchstart', (e) => {
+            const now = Date.now();
+            if (now - lastPointerDownTs < 250 || now - lastPointerEventTs < 250 || e.touches.length !== 1) return;
+            if (activeDrag) return;
+            G.callbacks.activateTouchMode();
+            const t = e.touches[0];
+            GameApp.audio.ensureContext();
+            startFruitDrag(btnEl, t.clientX, t.clientY, null);
+        }, { passive: true });
+
+        btnEl.addEventListener('click', (e) => {
+            if (performance.now() - lastShopDragCompleteTs < 180) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            if (activeDrag && activeDrag.dragSource === 'fruit' && !activeDrag.isDragging && !activeDrag.handled) {
+                cancelActiveDrag({ silent: true });
+            }
+            if (activeDrag && activeDrag.isDragging) return;
+            GameApp.audio.ensureContext();
+            if (typeof onFruitClick === 'function') {
+                onFruitClick(btnEl);
+            }
+        });
+    }
+
     const DragSystem = {
         bind,
         isDragging,
@@ -646,14 +805,17 @@
         resolveCellIndexAtPoint,
         isShopDropValidAt,
         isBoardDropValidAt,
+        isFruitDropValidAt,
         startShopDrag,
         startBoardDrag,
+        startFruitDrag,
         handleMovePoint,
         finishActiveDrag,
         cancelActiveDrag,
         bindShopCardElement,
         bindBoardTowerElement,
-        bindBoardCellElement
+        bindBoardCellElement,
+        bindFusionFruitElement
     };
 
     GameApp.systems = GameApp.systems || {};

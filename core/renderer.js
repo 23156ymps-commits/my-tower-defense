@@ -1371,15 +1371,22 @@
 
         const TerrainSys = GameApp.systems && GameApp.systems.terrain;
         const hasPendingSpawn = Boolean(st.pendingSpawnType);
-        if (hasPendingSpawn !== Boolean(st.lastRenderedPendingSpawn) || !Array.isArray(dirtyIndices) || hasPendingSpawn) {
+        const hasPendingFruit = Boolean(st.isApplyingFusionFruit && (st.fusionFruitCount || 0) > 0);
+        const pendingKey = hasPendingFruit ? 'FRUIT' : (st.pendingSpawnType || null);
+        if (Boolean(pendingKey) !== Boolean(st.lastRenderedPendingSpawn) || !Array.isArray(dirtyIndices) || Boolean(pendingKey)) {
+            const maxTier = getMaxTier();
             for (let idx = 0; idx < boardSize; idx++) {
                 if (!cells[idx]) continue;
                 const canPlaceHere = hasPendingSpawn
                     && st.board[idx] === null
                     && (TerrainSys ? TerrainSys.canBuildAt(idx) : !G.map.pathCellIndices.has(idx));
-                cells[idx].classList.toggle('pending-spawn-valid', canPlaceHere);
+                const canFruitHere = hasPendingFruit
+                    && st.board[idx] !== null
+                    && st.board[idx].tier >= 1
+                    && st.board[idx].tier < maxTier;
+                cells[idx].classList.toggle('pending-spawn-valid', canPlaceHere || canFruitHere);
             }
-            st.lastRenderedPendingSpawn = st.pendingSpawnType || null;
+            st.lastRenderedPendingSpawn = pendingKey;
         }
 
         if (Array.isArray(dirtyIndices)) {

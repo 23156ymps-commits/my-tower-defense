@@ -322,6 +322,120 @@
             </div>
         </section>
 
+        <!-- 世界樹商會 · 波間抽屜（A. 元素股市 / B. 命運種子盲盒 / C. 波次對賭懸賞） -->
+        <section id="world-tree-guild-panel" class="guild-drawer-panel" aria-label="世界樹商會波間抽屜">
+            <div class="guild-drawer-header">
+                <div class="guild-header-left">
+                    <button id="guild-drawer-toggle-btn" class="guild-toggle-btn" type="button" aria-expanded="true">
+                        <span id="guild-drawer-title">世界樹商會 · 波間整備</span>
+                        <span id="guild-drawer-chevron" class="guild-chevron">▴</span>
+                    </button>
+                    <span id="guild-noncombat-cap-badge" class="guild-meta-tag num">本波非戰鬥淨利 0 / 30 💰</span>
+                    <span id="guild-crit-bonus-badge" class="guild-meta-tag num">全隊盲盒暴擊 +0.0%</span>
+                </div>
+                <div class="guild-header-right">
+                    <button id="guild-hold-timer-btn" class="guild-hold-timer-btn num" type="button">
+                        波間暫停倒數：開
+                    </button>
+                </div>
+            </div>
+
+            <div id="guild-drawer-body" class="guild-drawer-body">
+                <!-- A. 元素股市（🔥火股、❄️冰股、⚡雷股） -->
+                <div class="guild-module-card guild-stock-card">
+                    <div class="guild-module-head">
+                        <span id="guild-stock-title" class="guild-module-title">元素股市</span>
+                        <span id="guild-stock-sub" class="guild-module-sub num">上限 10 股 · 單股傷 +2.4% · 賣出 5% 費</span>
+                    </div>
+                    <div id="guild-stock-list" class="guild-stock-list">
+                        <div class="stock-row" data-stock-element="fire">
+                            <div class="stock-info">
+                                <span class="stock-name">🔥 火股</span>
+                                <span id="stock-price-fire" class="stock-price num">20 💰</span>
+                                <span id="stock-trend-fire" class="stock-trend num">持平 33%</span>
+                            </div>
+                            <div class="stock-actions">
+                                <span id="stock-hold-fire" class="stock-hold num">0/10 (+0%)</span>
+                                <button type="button" class="stock-btn stock-buy-btn" data-stock-action="buy" data-stock-el="fire">買入</button>
+                                <button type="button" class="stock-btn stock-sell-btn" data-stock-action="sell" data-stock-el="fire" disabled>賣出</button>
+                            </div>
+                        </div>
+                        <div class="stock-row" data-stock-element="ice">
+                            <div class="stock-info">
+                                <span class="stock-name">❄️ 冰股</span>
+                                <span id="stock-price-ice" class="stock-price num">20 💰</span>
+                                <span id="stock-trend-ice" class="stock-trend num">持平 33%</span>
+                            </div>
+                            <div class="stock-actions">
+                                <span id="stock-hold-ice" class="stock-hold num">0/10 (+0%)</span>
+                                <button type="button" class="stock-btn stock-buy-btn" data-stock-action="buy" data-stock-el="ice">買入</button>
+                                <button type="button" class="stock-btn stock-sell-btn" data-stock-action="sell" data-stock-el="ice" disabled>賣出</button>
+                            </div>
+                        </div>
+                        <div class="stock-row" data-stock-element="thunder">
+                            <div class="stock-info">
+                                <span class="stock-name">⚡ 雷股</span>
+                                <span id="stock-price-thunder" class="stock-price num">20 💰</span>
+                                <span id="stock-trend-thunder" class="stock-trend num">持平 33%</span>
+                            </div>
+                            <div class="stock-actions">
+                                <span id="stock-hold-thunder" class="stock-hold num">0/10 (+0%)</span>
+                                <button type="button" class="stock-btn stock-buy-btn" data-stock-action="buy" data-stock-el="thunder">買入</button>
+                                <button type="button" class="stock-btn stock-sell-btn" data-stock-action="sell" data-stock-el="thunder" disabled>賣出</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- B. 命運種子盲盒（自適應定價 + 4 抽必出保底 + 萬能融合果實） -->
+                <div class="guild-module-card guild-blindbox-card">
+                    <div class="guild-module-head">
+                        <span id="guild-box-title" class="guild-module-title">命運種子盲盒</span>
+                        <span id="guild-box-pity" class="guild-module-sub num">1★ 保底進度 0 / 3（第 4 抽必出 2★+）</span>
+                    </div>
+                    <div id="guild-box-desc" class="guild-box-desc num">
+                        1★ 48% · 2★ 32% · 萬能果實 12% · 3★ 8%（未出 2★+ 全隊暴擊 +1.5%，盲盒塔退費依實付價計）
+                    </div>
+                    <div class="guild-box-actions">
+                        <button id="blind-box-buy-btn" class="guild-cta-btn num" type="button">
+                            開啟命運盲盒 (35 💰)
+                        </button>
+                        <button id="fusion-fruit-slot-btn" class="fusion-fruit-btn num" type="button" disabled>
+                            萬能融合果實 (0/1) · 暫無果實
+                        </button>
+                    </div>
+                </div>
+
+                <!-- C. 波次對賭懸賞（開戰前二選一，不選則正常打） -->
+                <div class="guild-module-card guild-wager-card">
+                    <div class="guild-module-head">
+                        <span id="guild-wager-title" class="guild-module-title">波次對賭懸賞</span>
+                        <span id="guild-wager-sub" class="guild-module-sub num">開戰前二選一 · 不選則正常開波</span>
+                    </div>
+                    <div class="guild-wager-options">
+                        <button id="wager-zero-leak-btn" class="wager-option-btn" type="button" data-wager-type="zero_leak">
+                            <div class="wager-opt-head">
+                                <span id="wager-zero-title" class="wager-opt-name">零封懸賞</span>
+                                <span id="wager-zero-cost" class="wager-opt-badge num">押注 40 💰</span>
+                            </div>
+                            <div id="wager-zero-desc" class="wager-opt-desc num">
+                                本波 0 掉血返還 70 💰（淨賺 +30 💰）；漏怪沒收押金並補償 +15 💧
+                            </div>
+                        </button>
+                        <button id="wager-surge-btn" class="wager-option-btn" type="button" data-wager-type="monster_surge">
+                            <div class="wager-opt-head">
+                                <span id="wager-surge-title" class="wager-opt-name">魔潮加碼</span>
+                                <span id="wager-surge-limit" class="wager-opt-badge num">免押金 · 剩 2/2 次</span>
+                            </div>
+                            <div id="wager-surge-desc" class="wager-opt-desc num">
+                                怪血量 +25% · 移速 +10%；守住後擊殺賞金 ×1.45 ＋ 1 顆萬能果實
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- 精簡底部操作區：左側元素召喚卡 ＋ 右側世界樹主動技能與快捷功能列 -->
         <div class="bottom-action-deck">
             <!-- 屬性等寬拖拉式指定召喚控制區（由 Object.keys 動態掃描生成） -->

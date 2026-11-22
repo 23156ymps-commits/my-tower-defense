@@ -138,8 +138,11 @@
         const baseHpScale = clampNumber(rules.MONSTER_HP_SCALE ?? CONFIG.MONSTER_HP_SCALE ?? 1.0, 0.1, 20.0, 1.0);
         const armorScale = clampNumber(rules.MONSTER_ARMOR_SCALE ?? CONFIG.MONSTER_ARMOR_SCALE ?? 1.0, 0.1, 5.0, 1.0);
         const armorBonus = (Number(rules.MONSTER_ARMOR_BONUS) || 0) + (hasContract('iron_armor') ? 4 : 0);
-        const spdGlobal = baseSpdScale * (hasContract('fast_tide') ? 1.15 : 1.0);
-        const hpGlobal = baseHpScale * (hasContract('frenzied_hp') ? 1.20 : 1.0);
+        const isSurgeWager = Boolean(st.activeWager && st.activeWager.type === 'monster_surge');
+        const surgeHpMult = isSurgeWager ? (Number(st.activeWager.hpMult) || 1.25) : 1.0;
+        const surgeSpeedMult = isSurgeWager ? (Number(st.activeWager.speedMult) || 1.10) : 1.0;
+        const spdGlobal = baseSpdScale * (hasContract('fast_tide') ? 1.15 : 1.0) * surgeSpeedMult;
+        const hpGlobal = baseHpScale * (hasContract('frenzied_hp') ? 1.20 : 1.0) * surgeHpMult;
         const baseSpeedConst = rules.MONSTER_BASE_SPEED ?? CONFIG.MONSTER_BASE_SPEED ?? 2.6;
 
         if (GameApp.systems && GameApp.systems.codex && typeof GameApp.systems.codex.unlockEntry === 'function') {
@@ -1226,6 +1229,13 @@
                 const leakDmg = Math.max(1, m.baseDamage || 1);
                 st.lastBreakerName = m.name || '';
                 st.baseHp = Math.max(0, st.baseHp - leakDmg);
+                const EconSys = GameApp.systems && GameApp.systems.economy;
+                if (EconSys && typeof EconSys.onWaveMonsterLeaked === 'function') {
+                    EconSys.onWaveMonsterLeaked();
+                } else {
+                    st.waveLeakedCount = (st.waveLeakedCount || 0) + 1;
+                    if (st.activeWager) st.activeWager.leakedThisWave = true;
+                }
 
                 if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
                     const wavePad = String(Math.max(1, Number(st.currentWave) || 1)).padStart(2, '0');

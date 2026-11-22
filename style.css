@@ -88,6 +88,7 @@ body.map-frost {
 .hud-sub-slot,
 #tower-inspector,
 #world-tree-root-panel,
+#world-tree-guild-panel,
 .bottom-action-deck,
 #msg-text {
     width: var(--board-width);
@@ -1674,6 +1675,397 @@ body.map-frost .cell.path-cell {
     .tree-root-upgrade-btn {
         width: 100%;
         min-height: 36px;
+    }
+}
+
+/* ==================== 5C. 世界樹商會 · 波間抽屜（A. 元素股市 / B. 命運種子盲盒 / C. 波次對賭懸賞） ==================== */
+.guild-drawer-panel {
+    margin-top: 4px;
+    width: var(--board-width);
+    max-width: 100%;
+    padding: 6px 10px;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.guild-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    min-width: 0;
+}
+
+.guild-header-left,
+.guild-header-right {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+}
+
+.guild-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.guild-toggle-btn:hover {
+    background-color: #35413B;
+    border-color: var(--accent-cta);
+}
+
+.guild-chevron {
+    color: var(--el-lightning);
+    font-size: 12px;
+}
+
+.guild-meta-tag {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.guild-meta-tag.is-active {
+    border-color: var(--accent-cta);
+    color: var(--text-primary);
+}
+
+.guild-hold-timer-btn {
+    min-height: 26px;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.guild-hold-timer-btn.is-holding {
+    background-color: #362B1D;
+    border-color: var(--accent-cta);
+    color: var(--el-lightning);
+}
+
+.guild-hold-timer-btn:hover {
+    border-color: var(--accent-cta);
+    color: var(--text-primary);
+}
+
+.guild-drawer-body {
+    display: grid;
+    grid-template-columns: 1.15fr 0.95fr 1.1fr;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.guild-drawer-body.hidden {
+    display: none;
+}
+
+.guild-module-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 6px;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    min-width: 0;
+}
+
+.guild-module-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.guild-module-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.guild-module-sub {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* A. 元素股市 */
+.guild-stock-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stock-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    min-width: 0;
+}
+
+.stock-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex-wrap: nowrap;
+}
+
+.stock-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.stock-price {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--el-lightning);
+    white-space: nowrap;
+}
+
+.stock-trend {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0 5px;
+    border-radius: 3px;
+    background-color: var(--bg-grid-elevated);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.stock-trend.trend-bull {
+    color: #A8D5B5;
+    border: 1px solid #4E9A68;
+}
+
+.stock-trend.trend-bear {
+    color: #EE9B8F;
+    border: 1px solid var(--el-fire);
+}
+
+.stock-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.stock-hold {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.stock-hold.has-shares {
+    color: var(--el-lightning);
+}
+
+.stock-btn {
+    min-height: 24px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.stock-btn:hover:not(:disabled) {
+    background-color: #38443D;
+    border-color: var(--accent-cta);
+}
+
+.stock-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    color: var(--text-secondary);
+}
+
+/* B. 命運種子盲盒 & 萬能融合果實 */
+.guild-box-desc {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+}
+
+.guild-box-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.guild-cta-btn {
+    width: 100%;
+    min-height: 30px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    background-color: var(--accent-cta);
+    border: 1px solid var(--accent-cta);
+    color: #1B211E;
+    transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.12s ease;
+}
+
+.guild-cta-btn:hover:not(:disabled) {
+    background-color: #E28533;
+}
+
+.guild-cta-btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.guild-cta-btn:disabled {
+    background-color: var(--bg-canvas);
+    border-color: var(--border-subtle);
+    color: var(--text-secondary);
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.fusion-fruit-btn {
+    width: 100%;
+    min-height: 30px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: grab;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.fusion-fruit-btn.has-fruit {
+    background-color: #2B392E;
+    border-color: var(--accent-cta);
+    color: var(--el-lightning);
+}
+
+.fusion-fruit-btn.is-applying {
+    background-color: #362B1D;
+    border: 2px solid var(--accent-cta);
+    color: var(--text-primary);
+}
+
+.fusion-fruit-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    color: var(--text-secondary);
+}
+
+/* C. 波次對賭懸賞 */
+.guild-wager-options {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.wager-option-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.wager-option-btn:hover:not(:disabled) {
+    background-color: #2B3530;
+    border-color: var(--accent-cta);
+}
+
+.wager-option-btn.is-selected {
+    background-color: #342A1C;
+    border: 2px solid var(--accent-cta);
+}
+
+.wager-option-btn:disabled {
+    opacity: 0.52;
+    cursor: not-allowed;
+}
+
+.wager-opt-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.wager-opt-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.wager-opt-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--el-lightning);
+}
+
+.wager-opt-desc {
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--text-secondary);
+    white-space: normal;
+}
+
+@media (max-width: 980px) {
+    .guild-drawer-body {
+        grid-template-columns: 1fr;
     }
 }
 
