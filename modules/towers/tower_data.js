@@ -42,6 +42,44 @@
         ATTACK_COOLDOWN_FLOOR_MS: 120       // 攻擊冷卻下限 120ms
     };
 
+    // 第 3 階段：5 星金字塔（最高 16U）與單位濃縮效率 E(star)
+    const STAR_NUTRITION_U = { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16 };
+    const STAR_CONCENTRATION_EFFICIENCY = { 1: 1.00, 2: 1.075, 3: 1.15, 4: 1.20, 5: 1.24 };
+    const FAMILY_BASE_1STAR_DAMAGE = {
+        fire: 25,
+        ice: 15,
+        thunder: 13,
+        steam: 23,
+        magnet: 15,
+        plasma: 6.5
+    };
+
+    function getUnitConcentrationEfficiency(nutritionU = 1, star = null) {
+        const s = Number.isFinite(star) ? Math.max(1, Math.min(5, Number(star))) : null;
+        if (s === 1) return 1.00;
+        if (s === 2) return 1.075;
+        const u = Math.max(1, Math.min(16, Number(nutritionU) || (s ? (STAR_NUTRITION_U[s] || 1) : 1)));
+        if (u <= 1) return 1.00;
+        if (u <= 2) return 1.00 + (u - 1) * (1.075 - 1.00);
+        if (u <= 4) return 1.075 + ((u - 2) / 2) * (1.15 - 1.075);
+        if (u <= 8) return 1.15 + ((u - 4) / 4) * (1.20 - 1.15);
+        return 1.20 + ((u - 8) / 8) * (1.24 - 1.20);
+    }
+
+    function calculateUnitTierDamage(familyOrCfg, nutritionU = 1, star = 1) {
+        const fam = typeof familyOrCfg === 'string'
+            ? familyOrCfg.replace(/_(bud|trunk|A|B|crown_A|crown_B|twin_AB|scion)$/, '')
+            : ((familyOrCfg && (familyOrCfg.family || familyOrCfg.elementTag)) || 'fire');
+        const d1 = Number.isFinite(FAMILY_BASE_1STAR_DAMAGE[fam]) ? FAMILY_BASE_1STAR_DAMAGE[fam] : 15;
+        const resolvedStar = Math.max(1, Math.min(5, Number(star) || (familyOrCfg && familyOrCfg.nodeTier) || 1));
+        const defaultU = (familyOrCfg && familyOrCfg.isHybrid && resolvedStar <= 2)
+            ? (resolvedStar === 1 ? 2 : 3)
+            : (STAR_NUTRITION_U[resolvedStar] || 1);
+        const effU = Number.isFinite(nutritionU) ? Math.max(1, Number(nutritionU)) : defaultU;
+        const eStar = getUnitConcentrationEfficiency(effU, resolvedStar);
+        return Math.max(1, Math.round(d1 * effU * eStar));
+    }
+
     const ROLE_TAG_PREFIXES = {
         fire: '破甲·中',
         ice: '緩速·中',
@@ -215,9 +253,9 @@
             roleTag: '群緩連鎖·3.2·1.00s',
             roleSummary: '冰雷轉職群體減速彈射塔',
             tooltipSummary: '45% 群體減速 · 2 次彈射（70%）',
-            damage: 29,
-            tierDamage: [0, 29, 62, 86],
-            badges: ['單發 29 · 1.00s', '45% 群體減速', '2 次彈射（70%）'],
+            damage: 30,
+            tierDamage: [0, 30, 48, 69],
+            badges: ['單發 30 · 1.00s', '45% 群體減速', '2 次彈射（70%）'],
             effectParams: {
                 slowRate: 0.45,
                 slowDurationMs: 2200,
@@ -288,9 +326,9 @@
             roleTag: '破甲主幹·2.5·1.15s',
             roleSummary: '純血火系重擊破甲主幹',
             tooltipSummary: '35% 破甲（3.5s）· 單體重擊',
-            damage: 58,
-            tierDamage: [0, 25, 58, 185],
-            badges: ['單發 58 · 1.15s', '射程 2.5 格', '35%破甲 3.5s'],
+            damage: 54,
+            tierDamage: [0, 25, 54, 115, 240, 496],
+            badges: ['單發 54 · 1.15s', '射程 2.5 格', '35% 破甲 3.5s'],
             effectParams: {
                 shredRate: 0.35,
                 shredDurationMs: 3500
@@ -318,12 +356,11 @@
             attacksPerSec: 1.00,
             attackIntervalMs: 1000,
             roleTagPrefix: '霜控主幹·',
-            roleTag: '霜控主幹·3.0·1.00s',
             roleSummary: '純血冰系強效減速主幹',
             tooltipSummary: '50% 強效緩速（2.2s）',
-            damage: 36,
-            tierDamage: [0, 15, 36, 82],
-            badges: ['單發 36 · 1.00s', '射程 3.0 格', '50%減速 2.2s'],
+            damage: 32,
+            tierDamage: [0, 15, 32, 69, 144, 298],
+            badges: ['單發 32 · 1.00s', '射程 3.0 格', '50% 減速 2.2s'],
             effectParams: {
                 slowRate: 0.50,
                 slowDurationMs: 2200
@@ -354,9 +391,9 @@
             roleTag: '連鎖主幹·3.8·0.85s',
             roleSummary: '純血雷系真3體連鎖主幹',
             tooltipSummary: '真·3 體連鎖（100%/65%/45%）',
-            damage: 26,
-            tierDamage: [0, 13, 26, 52],
-            badges: ['單發 26 · 0.85s', '射程 3.8 格', '真3體連鎖 100/65/45%'],
+            damage: 28,
+            tierDamage: [0, 13, 28, 60, 125, 258],
+            badges: ['單發 28 · 0.85s', '射程 3.8 格', '真 3 體連鎖 100/65/45%'],
             effectParams: {
                 boltCount: 3,
                 chainRadiusCells: 2.6,
@@ -386,11 +423,11 @@
             attackIntervalMs: 1100,
             roleTagPrefix: '高階蒸氣·',
             roleTag: '高階蒸氣·2.8·1.10s',
-            roleSummary: '高階火冰穿甲範圍爆裂（1★ 的 2.15×）',
+            roleSummary: '高階火冰穿甲範圍爆裂',
             tooltipSummary: '45% 穿甲 · 1.3 格 70% 濺射',
-            damage: 99,
-            tierDamage: [0, 46, 99, 110],
-            badges: ['單發 99 · 1.10s', '無視 45% 護甲', '1.3 格 70% 濺射'],
+            damage: 74,
+            tierDamage: [0, 46, 74, 106, 221, 456],
+            badges: ['單發 74 · 1.10s', '無視 45% 護甲', '1.3 格 70% 濺射'],
             effectParams: {
                 armorPierce: 0.45,
                 splashRadiusCells: 1.3,
@@ -420,11 +457,11 @@
             attackIntervalMs: 1000,
             roleTagPrefix: '高階磁環·',
             roleTag: '高階磁環·3.3·1.00s',
-            roleSummary: '高階冰雷群體減速彈射（1★ 的 2.15×）',
+            roleSummary: '高階冰雷群體減速彈射',
             tooltipSummary: '45% 群體減速 · 2 次彈射（70%）',
-            damage: 62,
-            tierDamage: [0, 29, 62, 86],
-            badges: ['單發 62 · 1.00s', '45% 群體減速', '2 次彈射（70%）'],
+            damage: 48,
+            tierDamage: [0, 30, 48, 69, 144, 298],
+            badges: ['單發 48 · 1.00s', '45% 群體減速', '2 次彈射（70%）'],
             effectParams: {
                 slowRate: 0.45,
                 slowDurationMs: 2200,
@@ -457,11 +494,11 @@
             attackIntervalMs: 450,
             roleTagPrefix: '高階電漿·',
             roleTag: '高階電漿·3.7·0.45s',
-            roleSummary: '高階火雷穿甲聚焦光束（1★ 的 2.15×）',
+            roleSummary: '高階火雷穿甲聚焦光束',
             tooltipSummary: '15% 穿甲 · 鎖定疊 4 層（+12%/層）',
-            damage: 28,
-            tierDamage: [0, 13, 28, 32],
-            badges: ['單發 28 · 0.45s', '無視 15% 護甲', '最高 4 層（+12%/層）'],
+            damage: 21,
+            tierDamage: [0, 13, 21, 30, 62, 129],
+            badges: ['單發 21 · 0.45s', '無視 15% 護甲', '最高 4 層（+12%/層）'],
             effectParams: {
                 armorPierce: 0.15,
                 stackBonus: 0.12,
@@ -495,11 +532,13 @@
             attackIntervalMs: 1350,
             roleTagPrefix: '重砲群破·',
             roleTag: '重砲群破·2.8·1.35s',
-            roleSummary: '大範圍重砲濺射＋45%群體破甲',
+            roleSummary: '大範圍重砲濺射＋45% 群體破甲',
             tooltipSummary: '1.3 格 60% 濺射 · 45% 群體破甲',
-            damage: 185,
-            tierDamage: [0, 25, 58, 185],
-            badges: ['單發 185 · 1.35s', '1.3格 60%濺射', '45%群體破甲 4s'],
+            damage: 115,
+            tierDamage: [0, 25, 54, 115, 240, 496],
+            badges: ['單發 115 · 1.25s', '1.3 格 60% 濺射', '45% 群體破甲 4s'],
+            attackIntervalMs: 1250,
+            attacksPerSec: Number((1000 / 1250).toFixed(2)),
             effectParams: {
                 splashRadiusCells: 1.3,
                 splashRatio: 0.60,
@@ -532,11 +571,11 @@
             attackIntervalMs: 880,
             roleTagPrefix: '灼燒斬殺·',
             roleTag: '灼燒斬殺·3.0·0.88s',
-            roleSummary: '5層灼燒瘟疫傳染＋重傷與12%斬殺',
+            roleSummary: '5 層灼燒瘟疫傳染＋重傷與 12% 斬殺',
             tooltipSummary: '5 層灼燒傳染 · 50% 重傷 · <12% 斬殺',
-            damage: 100,
-            tierDamage: [0, 25, 58, 100],
-            badges: ['單發 100 · 射程3.0', '5層灼燒+2s傳染', '50%重傷 · <12%處決'],
+            damage: 115,
+            tierDamage: [0, 25, 54, 115, 240, 496],
+            badges: ['單發 115 · 射程 3.0', '5 層灼燒 +2s 傳染', '50% 重傷 · <12% 處決'],
             effectParams: {
                 burnMaxStacks: 5,
                 burnFlatDps: 8,
@@ -575,11 +614,11 @@
             attackIntervalMs: 1100,
             roleTagPrefix: '永凍控場·',
             roleTag: '永凍控場·3.2·1.10s',
-            roleSummary: '1.5格60%群緩＋每4擊觸發凍結定身',
-            tooltipSummary: '1.5 格 60% 群緩 · 每 4 擊凍結 0.9s',
-            damage: 82,
-            tierDamage: [0, 15, 36, 82],
-            badges: ['單發 82 · 1.10s', '1.5格 60%群緩', '4擊0.9s凍結(6s免疫)'],
+            roleSummary: '1.5 格 60% 群緩＋每 4 擊觸發凍結與 1.5x 冰爆傷害',
+            tooltipSummary: '1.5 格 60% 群緩 · 4 擊凍結 ＋ 1.5x 冰爆',
+            damage: 69,
+            tierDamage: [0, 15, 32, 69, 144, 298],
+            badges: ['單發 69 · 1.10s', '1.5 格 60% 群緩', '4 擊凍結 ＋ 1.5x 冰爆'],
             effectParams: {
                 aoeRadiusCells: 1.5,
                 slowRate: 0.60,
@@ -587,7 +626,8 @@
                 hitsToFreeze: 4,
                 freezeDurationMs: 900,
                 bossFreezeMult: 0.50,
-                freezeImmuneMs: 6000
+                freezeImmuneMs: 6000,
+                freezeBurstMult: 1.5
             }
         },
         ice_B: {
@@ -615,11 +655,11 @@
             attackIntervalMs: 900,
             roleTagPrefix: '穿刺碎冰·',
             roleTag: '穿刺碎冰·3.5·0.90s',
-            roleSummary: '直線雙體穿透＋對受控敵人+55%碎冰傷',
+            roleSummary: '直線雙體穿透＋對受控敵人 +55% 碎冰傷',
             tooltipSummary: '直線貫穿 2 體 · 受控目標 +55% 碎冰',
-            damage: 68,
-            tierDamage: [0, 15, 36, 68],
-            badges: ['單發 68 · 0.90s', '直線穿透2體(60%)', '受控目標+55%碎冰'],
+            damage: 69,
+            tierDamage: [0, 15, 32, 69, 144, 298],
+            badges: ['單發 69 · 0.90s', '直線穿透 2 體 (60%)', '受控目標 +55% 碎冰'],
             effectParams: {
                 pierceTargets: 2,
                 secondTargetRatio: 0.60,
@@ -655,11 +695,11 @@
             attackIntervalMs: 850,
             roleTagPrefix: '四連天雷·',
             roleTag: '四連天雷·4.0·0.85s',
-            roleSummary: '高頻真4體不同目標連鎖電網',
+            roleSummary: '高頻真 4 體不同目標連鎖電網',
             tooltipSummary: '真·4 體連鎖（100%/75%/55%/40%）',
-            damage: 52,
-            tierDamage: [0, 13, 26, 52],
-            badges: ['單發 52 · 0.85s', '射程 4.0 格', '真4體連鎖 100/75/55/40%'],
+            damage: 60,
+            tierDamage: [0, 13, 28, 60, 125, 258],
+            badges: ['單發 60 · 0.85s', '射程 4.0 格', '真 4 體連鎖 100/75/55/40%'],
             effectParams: {
                 boltCount: 4,
                 chainRadiusCells: 2.6,
@@ -687,18 +727,18 @@
             defaultLineagePath: ['⚡雷芽', '⚡雷紋', '⚡B 落雷審判'],
             attackStyle: 'thunder_B_judgment',
             range: 4.8,
-            attacksPerSec: Number((1000 / 1300).toFixed(2)),
-            attackIntervalMs: 1300,
+            attacksPerSec: Number((1000 / 1050).toFixed(2)),
+            attackIntervalMs: 1050,
             roleTagPrefix: '天罰狙擊·',
-            roleTag: '天罰狙擊·4.8·1.30s',
-            roleSummary: '超遠距離狙擊＋每第3發2.2x穿甲天罰',
-            tooltipSummary: '超遠狙擊 · 每 3 發 2.2x 穿甲天罰',
-            damage: 105,
-            tierDamage: [0, 13, 26, 105],
-            badges: ['單發 105 · 射程4.8', '每第3發 2.2x天罰', '天罰無視40%護甲'],
+            roleTag: '天罰狙擊·4.8·1.05s',
+            roleSummary: '超遠距離狙擊＋每第 3 發 2.5x 穿甲天罰',
+            tooltipSummary: '超遠狙擊 · 每 3 發 2.5x 穿甲天罰',
+            damage: 60,
+            tierDamage: [0, 13, 28, 60, 125, 258],
+            badges: ['單發 60 · 射程 4.8', '每第 3 發 2.5x 天罰', '天罰無視 40% 護甲'],
             effectParams: {
                 judgmentEveryN: 3,
-                judgmentMult: 2.2,
+                judgmentMult: 2.5,
                 judgmentArmorPierce: 0.40
             }
         },
@@ -728,11 +768,11 @@
             attackIntervalMs: 1100,
             roleTagPrefix: '高壓蒸池·',
             roleTag: '高壓蒸池·2.9·1.10s',
-            roleSummary: '65%高穿甲爆裂＋地面3s滾燙蒸氣池',
+            roleSummary: '65% 高穿甲爆裂＋地面 3s 滾燙蒸氣池',
             tooltipSummary: '65% 穿甲濺射 · 3.0s 蒸氣池（28/s）',
-            damage: 110,
-            tierDamage: [0, 46, 99, 110],
-            badges: ['單發 110 · 65%穿甲', '1.4格 65%濺射', '3s蒸氣池(28/s)'],
+            damage: 106,
+            tierDamage: [0, 46, 74, 106, 221, 456],
+            badges: ['單發 106 · 65% 穿甲', '1.4 格 65% 濺射', '3s 蒸氣池 (28/s)'],
             effectParams: {
                 armorPierce: 0.65,
                 splashRadiusCells: 1.4,
@@ -768,17 +808,18 @@
             attackIntervalMs: 1100,
             roleTagPrefix: '霜霧易傷·',
             roleTag: '霜霧易傷·3.1·1.10s',
-            roleSummary: '1.6格大範圍迷霧減速＋全隊+20%濕冷易傷',
-            tooltipSummary: '1.6 格 35% 群緩 · +20% 全隊易傷',
-            damage: 100,
-            tierDamage: [0, 46, 99, 100],
-            badges: ['單發 100 · 1.6格迷霧', '群體 35%減速', '+20%濕冷易傷 3s'],
+            roleSummary: '1.6 格大範圍迷霧減速＋全隊 +20% 易傷＋迷霧敵擊殺金幣 +15%',
+            tooltipSummary: '1.6 格 35% 群緩 · +20% 易傷 · +15% 掉幣',
+            damage: 106,
+            tierDamage: [0, 46, 74, 106, 221, 456],
+            badges: ['單發 106 · 1.6 格迷霧', '+20% 易傷 · 35% 減速', '迷霧擊殺金幣 +15%'],
             effectParams: {
                 aoeRadiusCells: 1.6,
                 slowRate: 0.35,
                 slowDurationMs: 3000,
                 vulnBonus: 0.20,
-                vulnDurationMs: 3000
+                vulnDurationMs: 3000,
+                mistKillGoldBonusRate: 0.15
             }
         },
         magnet_A: {
@@ -807,11 +848,11 @@
             attackIntervalMs: 1250,
             roleTagPrefix: '黑洞聚怪·',
             roleTag: '黑洞聚怪·3.3·1.25s',
-            roleSummary: '1.5格45%群緩＋每第3擊將敵群沿路徑回拉0.45格',
+            roleSummary: '1.5 格 45% 群緩＋每第 3 擊沿路徑回拉 0.45 格',
             tooltipSummary: '1.5 格 45% 群緩 · 第 3 擊回拉 0.45 格',
-            damage: 86,
-            tierDamage: [0, 29, 62, 86],
-            badges: ['單發 86 · 1.25s', '1.5格 45%群緩', '第3擊回拉0.45格'],
+            damage: 69,
+            tierDamage: [0, 30, 48, 69, 144, 298],
+            badges: ['單發 69 · 1.25s', '1.5 格 45% 群緩', '第 3 擊回拉 0.45 格'],
             effectParams: {
                 aoeRadiusCells: 1.5,
                 slowRate: 0.45,
@@ -846,16 +887,18 @@
             attackIntervalMs: 950,
             roleTagPrefix: '感電超載·',
             roleTag: '感電超載·3.5·0.95s',
-            roleSummary: '3目標不同單位彈射＋3.5s感電協同觸發+12雷傷',
-            tooltipSummary: '3 目標彈射 · 3.5s 感電附傷（+12）',
-            damage: 64,
-            tierDamage: [0, 29, 62, 64],
-            badges: ['單發 64 · 0.95s', '3目標不同怪彈射', '感電3.5s(+12附傷)'],
+            roleSummary: '3 目標不重複彈射＋3.5s 感電協同附傷 (10 + 2.5 × 波數)',
+            tooltipSummary: '3 目標彈射 · 感電附傷 (10 + 2.5 × 波數)',
+            damage: 69,
+            tierDamage: [0, 30, 48, 69, 144, 298],
+            badges: ['單發 69 · 0.95s', '3 目標不同怪彈射', '感電 3.5s (10+2.5/波)'],
             effectParams: {
                 chainTargets: 3,
                 chainRadiusCells: 2.6,
                 chainDamageRatio: 0.75,
                 shockDurationMs: 3500,
+                shockBonusBase: 10,
+                shockBonusPerWave: 2.5,
                 shockBonusDamage: 12,
                 shockIcdMs: 350
             }
@@ -886,11 +929,11 @@
             attackIntervalMs: 400,
             roleTagPrefix: '聚變死光·',
             roleTag: '聚變死光·3.9·0.40s',
-            roleSummary: '8層高倍鎖定(2.44x)＋5層45%穿甲·換怪僅掉2層',
+            roleSummary: '8 層高倍鎖定 (2.44x)＋5 層 45% 穿甲·換怪僅掉 2 層',
             tooltipSummary: '8 層鎖定（2.44x）· 5 層起 45% 穿甲',
-            damage: 32,
-            tierDamage: [0, 13, 28, 32],
-            badges: ['單發 32 · 0.40s', '8層鎖定(+18%/層)', '>=5層45%穿甲·換怪-2層'],
+            damage: 30,
+            tierDamage: [0, 13, 21, 30, 62, 129],
+            badges: ['單發 30 · 0.40s', '8 層鎖定 (+18%/層)', '>=5 層 45% 穿甲·換怪-2 層'],
             effectParams: {
                 maxStacks: 8,
                 stackBonus: 0.18,
@@ -925,11 +968,11 @@
             attackIntervalMs: 500,
             roleTagPrefix: '弧光折射·',
             roleTag: '弧光折射·3.9·0.50s',
-            roleSummary: '主光束4層聚焦＋自動向2.4格內折射2道50%副光束',
+            roleSummary: '主光束 4 層聚焦＋向 2.4 格內折射 2 道 50% 副光束',
             tooltipSummary: '主束 4 層聚焦 · 折射 2 道 50% 副束',
-            damage: 34,
-            tierDamage: [0, 13, 28, 34],
-            badges: ['單發 34 · 0.50s', '主束4層(+15%/層)', '2.4格折射2副束(50%)'],
+            damage: 30,
+            tierDamage: [0, 13, 21, 30, 62, 129],
+            badges: ['單發 30 · 0.50s', '主束 4 層 (+15%/層)', '2.4 格折射 2 副束 (50%)'],
             effectParams: {
                 maxStacks: 4,
                 stackBonus: 0.15,
@@ -940,81 +983,293 @@
         }
     };
 
-    // 建立包含 21 節點與舊版基礎鍵別名（fire/ice/thunder/steam/magnet/plasma）的 TOWERS 字典
+    // ==================== Tier 4（18 座古冠／雙生神冠，8U）與 Tier 5（6 座世界樹神裔，16U） ====================
+    const T4_T5_LINEAGE_SPECS = {
+        fire: {
+            crownAName: '熾陽熔爐古冠', crownAShort: '🔥A 極意古冠',
+            crownBName: '永劫餘燼古冠', crownBShort: '🔥B 極意古冠',
+            twinName: '熾燼雙生神冠', twinShort: '🔥AB 雙生神冠',
+            scionName: '炎煌神裔', scionShort: '🔥世界樹神裔',
+            crownIntervalA: 1120, crownIntervalB: 760, twinInterval: 1000, scionInterval: 880,
+            twinSummary: '1.4 格 65% 濺射破甲 (45%)＋5 層灼燒傳染 (<14% 斬殺)',
+            scionSummary: '雙分支重砲灼燒完全體＋1.5% 聖冠真傷＋2.2 格友軍光環＋全圖脈動'
+        },
+        ice: {
+            crownAName: '極晝冰獄古冠', crownAShort: '❄️A 極意古冠',
+            crownBName: '碎界冰槍古冠', crownBShort: '❄️B 極意古冠',
+            twinName: '霜鋒雙生神冠', twinShort: '❄️AB 雙生神冠',
+            scionName: '極霜神裔', scionShort: '❄️世界樹神裔',
+            crownIntervalA: 960, crownIntervalB: 780, twinInterval: 920, scionInterval: 820,
+            twinSummary: '1.6 格 60% 群緩 4 擊凍結＋直線貫穿 2 體 (+60% 碎冰)',
+            scionSummary: '永凍冰槍雙修＋15% 脆冰易傷＋2.2 格友軍光環＋全圖脈動'
+        },
+        thunder: {
+            crownAName: '滅界天網古冠', crownAShort: '⚡A 極意古冠',
+            crownBName: '終焉聖裁古冠', crownBShort: '⚡B 極意古冠',
+            twinName: '霄霆雙生神冠', twinShort: '⚡AB 雙生神冠',
+            scionName: '雷極神裔', scionShort: '⚡世界樹神裔',
+            crownIntervalA: 740, crownIntervalB: 920, twinInterval: 880, scionInterval: 780,
+            twinSummary: '真 4 體連鎖天雷＋每第 3 發 2.4x 穿甲天罰審判',
+            scionSummary: '天雷審判雙極＋<10% 天罰處決＋2.2 格友軍光環＋全圖脈動'
+        },
+        steam: {
+            crownAName: '深淵鍋爐古冠', crownAShort: '💨A 極意古冠',
+            crownBName: '永霧蝕骨古冠', crownBShort: '💨B 極意古冠',
+            twinName: '蒸霖雙生神冠', twinShort: '💨AB 雙生神冠',
+            scionName: '蒼霧神裔', scionShort: '💨世界樹神裔',
+            crownIntervalA: 960, crownIntervalB: 960, twinInterval: 980, scionInterval: 880,
+            twinSummary: '65% 穿甲濺射＋滾燙蒸氣池 (36/s)＋1.6 格霜霧 (+22% 易傷)',
+            scionSummary: '高壓霜霧完全體＋額外 25% 穿甲與 0.4 格擴散＋友軍光環＋全圖脈動'
+        },
+        magnet: {
+            crownAName: '奇點坍縮古冠', crownAShort: '💠A 極意古冠',
+            crownBName: '超頻雷網古冠', crownBShort: '💠B 極意古冠',
+            twinName: '磁穹雙生神冠', twinShort: '💠AB 雙生神冠',
+            scionName: '星磁神裔', scionShort: '💠世界樹神裔',
+            crownIntervalA: 1080, crownIntervalB: 820, twinInterval: 960, scionInterval: 840,
+            twinSummary: '1.6 格群緩回拉 0.5 格＋3 目標感電 (10 + 2.5 × 波數)',
+            scionSummary: '磁穹超載完全體＋週期定身控場＋2.2 格友軍光環＋全圖脈動'
+        },
+        plasma: {
+            crownAName: '恆星湮滅古冠', crownAShort: '☄️A 極意古冠',
+            crownBName: '萬象稜鏡古冠', crownBShort: '☄️B 極意古冠',
+            twinName: '穹光雙生神冠', twinShort: '☄️AB 雙生神冠',
+            scionName: '曜漿神裔', scionShort: '☄️世界樹神裔',
+            crownIntervalA: 340, crownIntervalB: 430, twinInterval: 410, scionInterval: 360,
+            twinSummary: '8 層聚變鎖定 (≥5 層 45% 穿甲)＋折射 2 道 55% 副束',
+            scionSummary: '聚變稜鏡完全體 (最高 12 層鎖定)＋2.2 格友軍光環＋全圖脈動'
+        }
+    };
+
+    const CROWN_EFFECT_OVERRIDES = {
+        fire_crown_A: { splashRadiusCells: 1.6, splashRatio: 0.72, shredRate: 0.55, shredDurationMs: 4500 },
+        fire_crown_B: { burnMaxStacks: 7, burnFlatDps: 14, burnPctMaxHp: 0.0045, burnBossCapPerStack: 45, grievousRate: 0.60, executeThresholdPct: 0.16 },
+        ice_crown_A: { aoeRadiusCells: 1.8, slowRate: 0.65, hitsToFreeze: 3, freezeDurationMs: 1100, freezeImmuneMs: 5000 },
+        ice_crown_B: { pierceTargets: 3, secondTargetRatio: 0.72, shatterBonus: 0.75, slowRate: 0.50 },
+        thunder_crown_A: { boltCount: 5, chainRadiusCells: 3.0, chainScales: [1.0, 0.80, 0.65, 0.50, 0.38] },
+        thunder_crown_B: { judgmentEveryN: 3, judgmentMult: 2.8, judgmentArmorPierce: 0.55 },
+        steam_crown_A: { armorPierce: 0.75, splashRadiusCells: 1.65, splashRatio: 0.75, poolDurationMs: 3600, poolDps: 52, poolRadiusCells: 1.5 },
+        steam_crown_B: { aoeRadiusCells: 1.9, slowRate: 0.45, vulnBonus: 0.30, vulnDurationMs: 3600 },
+        magnet_crown_A: { aoeRadiusCells: 1.8, slowRate: 0.52, pullEveryN: 2, pullDistanceCells: 0.55 },
+        magnet_crown_B: { chainTargets: 4, chainDamageRatio: 0.82, shockDurationMs: 4200, shockBonusDamage: 24, shockIcdMs: 280 },
+        plasma_crown_A: { maxStacks: 10, stackBonus: 0.20, highStackThreshold: 4, highStackArmorPierce: 0.55, switchDropStacks: 1 },
+        plasma_crown_B: { maxStacks: 5, stackBonus: 0.18, refractTargets: 3, refractRadiusCells: 2.8, refractRatio: 0.62 }
+    };
+
+    Object.keys(T4_T5_LINEAGE_SPECS).forEach((fam) => {
+        const spec = T4_T5_LINEAGE_SPECS[fam];
+        const cfgA = WORLD_TREE_NODES[`${fam}_A`];
+        const cfgB = WORLD_TREE_NODES[`${fam}_B`];
+        if (!cfgA || !cfgB) return;
+
+        const dmg4 = calculateUnitTierDamage(fam, 8, 4);
+        const dmg5 = calculateUnitTierDamage(fam, 16, 5);
+        const cdA = spec.crownIntervalA || Math.max(120, Math.round(cfgA.attackIntervalMs * 0.86));
+        const cdB = spec.crownIntervalB || Math.max(120, Math.round(cfgB.attackIntervalMs * 0.86));
+        const twinRange = Number((Math.max(cfgA.range, cfgB.range) + 0.3).toFixed(2));
+        const scionRange = Number((Math.max(cfgA.range, cfgB.range) + 0.7).toFixed(2));
+
+        const mkPath = (tail) => {
+            const p = (cfgA.defaultLineagePath || []).slice(0, -1);
+            p.push(tail);
+            return p;
+        };
+
+        const cAId = `${fam}_crown_A`;
+        WORLD_TREE_NODES[cAId] = Object.assign({}, cfgA, {
+            id: cAId,
+            family: fam,
+            branchCode: 'A',
+            isCrownMastery: true,
+            isTwinCrown: false,
+            nodeTier: 4,
+            costShare: 8,
+            name: spec.crownAName,
+            shortName: spec.crownAShort,
+            displayBadge: `${cfgA.icon}A ${spec.crownAName}`,
+            range: Number((cfgA.range + 0.3).toFixed(2)),
+            attackIntervalMs: cdA,
+            attacksPerSec: Number((1000 / cdA).toFixed(2)),
+            damage: dmg4,
+            tierDamage: [0, cfgA.tierDamage[1], cfgA.tierDamage[2], cfgA.tierDamage[3], dmg4, dmg5],
+            defaultLineagePath: mkPath(spec.crownAShort),
+            roleSummary: `${cfgA.roleSummary}（4★ 極意特化強化）`,
+            tooltipSummary: `${cfgA.tooltipSummary} · 攻速強化`,
+            badges: [`單發 ${dmg4} · ${(cdA / 1000).toFixed(2)}s`, `射程 ${Number((cfgA.range + 0.3).toFixed(2))} 格`, '極意古冠 A 强化'],
+            effectParams: Object.assign({}, cfgA.effectParams || {}, CROWN_EFFECT_OVERRIDES[cAId] || {})
+        });
+
+        const cBId = `${fam}_crown_B`;
+        WORLD_TREE_NODES[cBId] = Object.assign({}, cfgB, {
+            id: cBId,
+            family: fam,
+            branchCode: 'B',
+            isCrownMastery: true,
+            isTwinCrown: false,
+            nodeTier: 4,
+            costShare: 8,
+            name: spec.crownBName,
+            shortName: spec.crownBShort,
+            displayBadge: `${cfgB.icon}B ${spec.crownBName}`,
+            range: Number((cfgB.range + 0.3).toFixed(2)),
+            attackIntervalMs: cdB,
+            attacksPerSec: Number((1000 / cdB).toFixed(2)),
+            damage: dmg4,
+            tierDamage: [0, cfgB.tierDamage[1], cfgB.tierDamage[2], cfgB.tierDamage[3], dmg4, dmg5],
+            defaultLineagePath: mkPath(spec.crownBShort),
+            roleSummary: `${cfgB.roleSummary}（4★ 極意特化強化）`,
+            tooltipSummary: `${cfgB.tooltipSummary} · 攻速強化`,
+            badges: [`單發 ${dmg4} · ${(cdB / 1000).toFixed(2)}s`, `射程 ${Number((cfgB.range + 0.3).toFixed(2))} 格`, '極意古冠 B 強化'],
+            effectParams: Object.assign({}, cfgB.effectParams || {}, CROWN_EFFECT_OVERRIDES[cBId] || {})
+        });
+
+        const twinId = `${fam}_twin_AB`;
+        const twinParams = Object.assign({}, cfgA.effectParams || {}, cfgB.effectParams || {});
+        WORLD_TREE_NODES[twinId] = {
+            id: twinId,
+            family: fam,
+            branchCode: 'AB',
+            isTwinCrown: true,
+            nodeTier: 4,
+            costShare: 8,
+            isHybrid: cfgA.isHybrid,
+            shopSpawnable: false,
+            icon: cfgA.icon,
+            image: '',
+            color: cfgA.color,
+            palette: cfgA.palette,
+            elementTag: cfgA.elementTag,
+            lineageTags: (cfgA.lineageTags || [fam]).slice(),
+            name: spec.twinName,
+            shortName: spec.twinShort,
+            displayBadge: `${cfgA.icon}AB ${spec.twinName}`,
+            attackStyle: `${fam}_twin`,
+            range: twinRange,
+            attackIntervalMs: spec.twinInterval,
+            attacksPerSec: Number((1000 / spec.twinInterval).toFixed(2)),
+            roleTagPrefix: '雙生神冠·',
+            roleTag: `雙生神冠·${twinRange}·${(spec.twinInterval / 1000).toFixed(2)}s`,
+            roleSummary: spec.twinSummary,
+            tooltipSummary: spec.twinSummary,
+            damage: dmg4,
+            tierDamage: [0, cfgA.tierDamage[1], cfgA.tierDamage[2], cfgA.tierDamage[3], dmg4, dmg5],
+            defaultLineagePath: mkPath(spec.twinShort),
+            badges: [`單發 ${dmg4} · ${(spec.twinInterval / 1000).toFixed(2)}s`, `射程 ${twinRange} 格`, 'A + B 雙分支合體'],
+            effectParams: Object.assign(twinParams, {
+                poolDps: Math.max(twinParams.poolDps || 28, 36),
+                vulnBonus: Math.max(twinParams.vulnBonus || 0.20, 0.22),
+                shockBonusDamage: Math.max(twinParams.shockBonusDamage || 12, 18),
+                refractRatio: Math.max(twinParams.refractRatio || 0.50, 0.55)
+            })
+        };
+
+        const scionId = `${fam}_scion`;
+        WORLD_TREE_NODES[scionId] = {
+            id: scionId,
+            family: fam,
+            branchCode: '神',
+            isScion: true,
+            isTwinCrown: true,
+            nodeTier: 5,
+            costShare: 16,
+            isHybrid: cfgA.isHybrid,
+            shopSpawnable: false,
+            icon: cfgA.icon,
+            image: '',
+            color: '#E0B43C',
+            palette: { rune: cfgA.color, glow: '#E0B43C' },
+            elementTag: cfgA.elementTag,
+            lineageTags: (cfgA.lineageTags || [fam]).slice(),
+            name: spec.scionName,
+            shortName: spec.scionShort,
+            displayBadge: `${cfgA.icon}5★ ${spec.scionName}`,
+            attackStyle: `${fam}_twin`,
+            range: scionRange,
+            attackIntervalMs: spec.scionInterval,
+            attacksPerSec: Number((1000 / spec.scionInterval).toFixed(2)),
+            roleTagPrefix: '世界樹神裔·',
+            roleTag: `世界樹神裔·${scionRange}·${(spec.scionInterval / 1000).toFixed(2)}s`,
+            roleSummary: spec.scionSummary,
+            tooltipSummary: spec.scionSummary,
+            damage: dmg5,
+            tierDamage: [0, cfgA.tierDamage[1], cfgA.tierDamage[2], cfgA.tierDamage[3], dmg4, dmg5],
+            defaultLineagePath: [cfgA.shortName, spec.twinShort, spec.scionShort],
+            badges: [`單發 ${dmg5} · ${(spec.scionInterval / 1000).toFixed(2)}s`, '2.2 格友軍光環', '6.0s 全圖神樹脈動'],
+            effectParams: Object.assign({}, twinParams, CROWN_EFFECT_OVERRIDES[cAId] || {}, CROWN_EFFECT_OVERRIDES[cBId] || {}, {
+                poolDps: 56,
+                shockBonusDamage: 26,
+                refractRatio: 0.65,
+                hasScionAura: true,
+                hasMapPulse: true
+            })
+        };
+    });
+
+    // 建立包含 48 節點與舊版基礎鍵別名（fire/ice/thunder/steam/magnet/plasma）的 TOWERS 字典
     const TOWERS = Object.assign({}, WORLD_TREE_NODES, {
         fire: Object.assign({}, WORLD_TREE_NODES.fire_bud, {
             id: 'fire',
             canonicalId: 'fire_bud',
             isAlias: true,
             shopSpawnable: false,
-            tierRange: [0, 2.3, 2.5, 2.8],
-            tierDamage: [0, 25, 58, 185]
+            tierRange: [0, 2.3, 2.5, 2.8, 3.1, 3.5],
+            tierDamage: [0, 25, 54, 115, 240, 496]
         }),
         ice: Object.assign({}, WORLD_TREE_NODES.ice_bud, {
             id: 'ice',
             canonicalId: 'ice_bud',
             isAlias: true,
             shopSpawnable: false,
-            tierRange: [0, 2.8, 3.0, 3.2],
-            tierDamage: [0, 15, 36, 82]
+            tierRange: [0, 2.8, 3.0, 3.2, 3.5, 3.9],
+            tierDamage: [0, 15, 32, 69, 144, 298]
         }),
         thunder: Object.assign({}, WORLD_TREE_NODES.thunder_bud, {
             id: 'thunder',
             canonicalId: 'thunder_bud',
             isAlias: true,
             shopSpawnable: false,
-            tierRange: [0, 3.6, 3.8, 4.0],
-            tierDamage: [0, 13, 26, 52]
+            tierRange: [0, 3.6, 3.8, 4.0, 4.3, 4.7],
+            tierDamage: [0, 13, 28, 60, 125, 258]
         }),
         steam: Object.assign({}, WORLD_TREE_NODES.steam_bud, {
             id: 'steam',
             canonicalId: 'steam_bud',
             isAlias: true,
             shopSpawnable: false,
-            tierRange: [0, 2.7, 2.8, 2.9],
-            tierDamage: [0, 46, 99, 110]
+            tierRange: [0, 2.7, 2.8, 2.9, 3.2, 3.6],
+            tierDamage: [0, 46, 74, 106, 221, 456]
         }),
         magnet: Object.assign({}, WORLD_TREE_NODES.magnet_bud, {
             id: 'magnet',
             canonicalId: 'magnet_bud',
             isAlias: true,
             shopSpawnable: false,
-            tierRange: [0, 3.2, 3.3, 3.3],
-            tierDamage: [0, 29, 62, 86]
+            tierRange: [0, 3.2, 3.3, 3.3, 3.6, 4.0],
+            tierDamage: [0, 30, 48, 69, 144, 298]
         }),
         plasma: Object.assign({}, WORLD_TREE_NODES.plasma_bud, {
             id: 'plasma',
             canonicalId: 'plasma_bud',
             isAlias: true,
             shopSpawnable: false,
-            tierRange: [0, 3.6, 3.7, 3.9],
-            tierDamage: [0, 13, 28, 32]
+            tierRange: [0, 3.6, 3.7, 3.9, 4.2, 4.6],
+            tierDamage: [0, 13, 21, 30, 62, 129]
         })
     });
 
     /**
-     * 將舊版或簡寫塔型別 + 星級 正規化為 24 節點標準 ID
+     * 將舊版或簡寫塔型別 + 星級 正規化為 48 節點標準 ID（1★～5★）
      */
     function normalizeTowerType(type, tier = 1) {
         const raw = String(type || 'fire_bud');
-        const t = Math.max(1, Math.min(3, Number(tier) || 1));
-        if (raw === 'fire' || raw === 'fire_bud') {
-            return t === 1 ? 'fire_bud' : (t === 2 ? 'fire_trunk' : 'fire_A');
+        const t = Math.max(1, Math.min(5, Number(tier) || 1));
+        const suffix = t === 1 ? 'bud' : (t === 2 ? 'trunk' : (t === 3 ? 'A' : (t === 4 ? 'crown_A' : 'scion')));
+        if (['fire', 'ice', 'thunder', 'steam', 'magnet', 'plasma'].includes(raw)) {
+            return `${raw}_${suffix}`;
         }
-        if (raw === 'ice' || raw === 'ice_bud') {
-            return t === 1 ? 'ice_bud' : (t === 2 ? 'ice_trunk' : 'ice_A');
-        }
-        if (raw === 'thunder' || raw === 'thunder_bud') {
-            return t === 1 ? 'thunder_bud' : (t === 2 ? 'thunder_trunk' : 'thunder_A');
-        }
-        if (raw === 'steam' || raw === 'steam_bud') {
-            return t === 1 ? 'steam_bud' : (t === 2 ? 'steam_trunk' : 'steam_A');
-        }
-        if (raw === 'magnet' || raw === 'magnet_bud') {
-            return t === 1 ? 'magnet_bud' : (t === 2 ? 'magnet_trunk' : 'magnet_A');
-        }
-        if (raw === 'plasma' || raw === 'plasma_bud') {
-            return t === 1 ? 'plasma_bud' : (t === 2 ? 'plasma_trunk' : 'plasma_A');
+        const budMatch = raw.match(/^(fire|ice|thunder|steam|magnet|plasma)_bud$/);
+        if (budMatch) {
+            return `${budMatch[1]}_${suffix}`;
         }
         if (WORLD_TREE_NODES[raw]) return raw;
         return raw;
@@ -1025,9 +1280,8 @@
      */
     function getBaseShopKey(type) {
         const raw = String(type || '');
-        if (raw === 'fire' || raw === 'fire_bud' || raw === 'fire_trunk' || raw === 'fire_A' || raw === 'fire_B') return 'fire';
-        if (raw === 'ice' || raw === 'ice_bud' || raw === 'ice_trunk' || raw === 'ice_A' || raw === 'ice_B') return 'ice';
-        if (raw === 'thunder' || raw === 'thunder_bud' || raw === 'thunder_trunk' || raw === 'thunder_A' || raw === 'thunder_B') return 'thunder';
+        const mPure = raw.match(/^(fire|ice|thunder)(?:_(?:bud|trunk|A|B|crown_A|crown_B|twin_AB|scion))?$/);
+        if (mPure) return mPure[1];
         const cfg = TOWERS[raw];
         return (cfg && (cfg.shopKey || cfg.elementTag)) || raw;
     }
@@ -1049,11 +1303,20 @@
             const bud = WORLD_TREE_NODES[`${baseKey}_bud`];
             const trunk = WORLD_TREE_NODES[`${baseKey}_trunk`];
             const branchA = WORLD_TREE_NODES[`${baseKey}_A`];
+            const crownA = WORLD_TREE_NODES[`${baseKey}_crown_A`];
+            const scion = WORLD_TREE_NODES[`${baseKey}_scion`];
             if (bud && TOWERS[baseKey]) {
                 TOWERS[baseKey].range = bud.range;
                 TOWERS[baseKey].attackIntervalMs = bud.attackIntervalMs;
                 TOWERS[baseKey].damage = bud.damage;
-                TOWERS[baseKey].tierDamage = [0, bud.damage, trunk ? trunk.damage : bud.damage * 2, branchA ? branchA.damage : bud.damage * 4];
+                TOWERS[baseKey].tierDamage = [
+                    0,
+                    bud.damage,
+                    trunk ? trunk.damage : calculateUnitTierDamage(baseKey, 2, 2),
+                    branchA ? branchA.damage : calculateUnitTierDamage(baseKey, 4, 3),
+                    crownA ? crownA.damage : calculateUnitTierDamage(baseKey, 8, 4),
+                    scion ? scion.damage : calculateUnitTierDamage(baseKey, 16, 5)
+                ];
             }
         });
 
@@ -1063,10 +1326,12 @@
             if (Number.isFinite(t.damage)) {
                 const d = t.damage;
                 if (!Array.isArray(t.tierDamage) || !t.isAlias) {
-                    t.tierDamage = [0, d, d, d];
+                    t.tierDamage = Array.isArray(t.tierDamage) && t.tierDamage.length >= 6
+                        ? t.tierDamage
+                        : [0, d, d, d, d, d];
                 }
             }
-            TIER_DAMAGE_TABLE[key] = Array.isArray(t.tierDamage) ? t.tierDamage : [0, 15, 36, 82];
+            TIER_DAMAGE_TABLE[key] = Array.isArray(t.tierDamage) ? t.tierDamage : [0, 15, 32, 69, 144, 298];
 
             if (!t.isAlias && !t.isHybrid && t.shopSpawnable) {
                 BASE_ELEMENT_TYPES.push(key);
@@ -1114,6 +1379,11 @@
         TARGET_MODE_LABELS,
         TIER_DAMAGE_TABLE,
         COMBAT_CONSTANTS,
+        STAR_NUTRITION_U,
+        STAR_CONCENTRATION_EFFICIENCY,
+        FAMILY_BASE_1STAR_DAMAGE,
+        getUnitConcentrationEfficiency,
+        calculateUnitTierDamage,
         normalizeTowerType,
         getBaseShopKey,
         getShopTowerTypes,

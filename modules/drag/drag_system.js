@@ -136,13 +136,13 @@
     }
 
     /**
-     * 判定萬能融合果實拖拉至目標格是否合法（須為場上 1★ 或 2★ 防禦塔）
+     * 判定萬能融合果實拖拉至目標格是否合法（場上 1★～4★ 防禦塔）
      */
     function isFruitDropValidAt(cellIndex) {
         if (cellIndex === null || cellIndex === undefined || !G || !G.state) return false;
         const tower = G.state.board[cellIndex];
         if (!tower) return false;
-        const maxTier = (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || 3;
+        const maxTier = (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || 5;
         return tower.tier >= 1 && tower.tier < maxTier;
     }
 
@@ -220,7 +220,7 @@
                         Renderer.showDragEvolutionPreview(cellIndex, cellIndex, preview.previewLabel, true);
                     } else {
                         const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
-                        Renderer.showDragEvolutionPreview(cellIndex, cellIndex, isEn ? 'Max 3★ reached' : '已達 3★ 上限', false);
+                        Renderer.showDragEvolutionPreview(cellIndex, cellIndex, isEn ? 'Max 5★ reached' : '已達 5★ 上限', false);
                     }
                 }
             } else if (typeof Renderer.clearDragEvolutionPreview === 'function') {
@@ -475,8 +475,8 @@
             } else if (G.dom && G.dom.msgText) {
                 const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
                 G.dom.msgText.innerText = isEn
-                    ? 'Drop Universal Fusion Fruit onto a 1★ or 2★ tower to star up.'
-                    : '請將【萬能融合果實】拖曳至場上 1★ 或 2★ 防禦塔上套用升星。';
+                    ? 'Drop Universal Fusion Fruit onto a 1★-4★ tower to star up or feed +4U.'
+                    : '請將【萬能融合果實】拖曳至場上 1★ ～ 4★ 防禦塔上套用升星或 +4U 充能。';
             }
             return;
         }

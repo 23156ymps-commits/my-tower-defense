@@ -43,13 +43,13 @@
         ['inspectorEmptyEl', 'inspector-empty'], ['inspectorActiveEl', 'inspector-active'], ['inspectorNameEl', 'inspector-name'],
         ['inspectorLineageEl', 'inspector-lineage'],
         ['inspectorDpsEl', 'inspector-dps'], ['inspectorAoeDpsEl', 'inspector-aoe-dps'], ['inspectorTotalDmgEl', 'inspector-total-dmg'],
-        ['inspectorRangeEl', 'inspector-range'], ['inspectorTerrainEl', 'inspector-terrain'],
-        ['inspectorAwakenBtn', 'inspector-awaken-btn'], ['inspectorAwakenTextEl', 'inspector-awaken-text'], ['inspectorTargetBtn', 'inspector-target-btn'], ['inspectorSellBtn', 'inspector-sell-btn'],
+        ['inspectorRangeEl', 'inspector-range'], ['inspectorTerrainEl', 'inspector-terrain'], ['inspectorGrowthBadgeEl', 'inspector-growth-badge'],
+        ['inspectorInfuseBtn', 'inspector-infuse-btn'], ['inspectorInfuseTextEl', 'inspector-infuse-text'], ['inspectorTargetBtn', 'inspector-target-btn'], ['inspectorSellBtn', 'inspector-sell-btn'],
         ['evoConfirmOverlayEl', 'evo-confirm-overlay'], ['evoConfirmTitleEl', 'evo-confirm-title'],
         ['evoConfirmOptionsEl', 'evo-confirm-options'], ['evoCancelBtn', 'evo-cancel-btn'],
         ['codexBtn', 'codex-btn'], ['codexOverlayEl', 'codex-overlay'], ['codexCloseBtn', 'codex-close-btn'],
         ['blessingOverlayEl', 'blessing-overlay'], ['blessingWaveSubtitleEl', 'blessing-wave-subtitle'], ['blessingChoicesEl', 'blessing-choices'],
-        ['skillEntangleBtn', 'skill-entangle-btn'], ['skillFrenzyBtn', 'skill-frenzy-btn'], ['pauseBtn', 'pause-btn'], ['soundBtn', 'sound-btn'], ['langBtn', 'lang-btn'], ['langMenuEl', 'lang-menu'], ['startLangBtn', 'start-lang-btn'], ['startLangMenuEl', 'start-lang-menu'],
+        ['skillEntangleBtn', 'skill-entangle-btn'], ['skillFrenzyBtn', 'skill-frenzy-btn'], ['skillHarvestBtn', 'skill-harvest-btn'], ['guildHarvestBtn', 'guild-harvest-btn'], ['blessingRerollBtn', 'blessing-reroll-btn'], ['metaTreeBtn', 'meta-tree-btn'], ['metaTreeOverlayEl', 'meta-tree-overlay'], ['metaTreeHonorBadgeEl', 'meta-tree-honor-badge'], ['metaTreeBranchesEl', 'meta-tree-branches-grid'], ['metaTreeResetBtn', 'meta-tree-reset-btn'], ['metaTreeCloseBtn', 'meta-tree-close-btn'], ['pauseBtn', 'pause-btn'], ['soundBtn', 'sound-btn'], ['langBtn', 'lang-btn'], ['langMenuEl', 'lang-menu'], ['startLangBtn', 'start-lang-btn'], ['startLangMenuEl', 'start-lang-menu'],
         ['pauseBannerEl', 'pause-banner'], ['pauseResumeBtn', 'pause-resume-btn'], ['pauseMenuBtn', 'pause-menu-btn'],
         ['addGoldBtn', 'add-gold-btn'], ['clearGoldBtn', 'clear-gold-btn'], ['nextWaveBtn', 'next-wave-btn'], ['speedBtn', 'speed-btn'],
         ['goldDisplay', 'gold-display'], ['baseHpDisplay', 'base-hp-display'], ['dewDisplay', 'dew-display'], ['dewBarFillEl', 'dew-bar-fill'],
@@ -72,6 +72,7 @@
         ['helpBtn', 'help-btn'], ['guideOverlayEl', 'guide-overlay'], ['guideXBtn', 'guide-x-btn'], ['guideCloseBtn', 'guide-close-btn'], ['guideMenuBtn', 'guide-menu-btn'],
         ['terrainTooltipEl', 'terrain-tooltip'], ['towerTooltipEl', 'tower-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
         ['forecastToggleBtn', 'forecast-toggle-btn'], ['forecastBarTitleEl', 'forecast-bar-title'],
+        ['forecastWeakChipsEl', 'forecast-weak-chips'],
         ['forecastToggleIndicatorEl', 'forecast-toggle-indicator'], ['forecastInlineSummaryEl', 'forecast-inline-summary'],
         ['forecastDetailDrawerEl', 'forecast-detail-drawer'],
         ['forecastCurrentHeaderEl', 'forecast-current-header'], ['forecastCurrentListEl', 'forecast-current-list'],
@@ -93,9 +94,13 @@
         ['treeRootTiersEl', 'tree-root-tiers'],
         ['guildPanelEl', 'world-tree-guild-panel'], ['guildToggleBtn', 'guild-drawer-toggle-btn'],
         ['guildTitleEl', 'guild-drawer-title'], ['guildChevronEl', 'guild-drawer-chevron'],
+        ['guildRootSummaryBadgeEl', 'guild-root-summary-badge'],
         ['guildNonCombatBadgeEl', 'guild-noncombat-cap-badge'], ['guildCritBadgeEl', 'guild-crit-bonus-badge'],
         ['guildHoldTimerBtn', 'guild-hold-timer-btn'], ['guildBodyEl', 'guild-drawer-body'],
-        ['guildStockListEl', 'guild-stock-list'],
+        ['guildCloseBtn', 'guild-drawer-close-btn'],
+        ['guildTabBtnRoots', 'guild-tab-btn-roots'], ['guildTabBtnStocks', 'guild-tab-btn-stocks'], ['guildTabBtnFate', 'guild-tab-btn-fate'],
+        ['guildTabRootsEl', 'guild-tab-roots'], ['guildTabStocksEl', 'guild-tab-stocks'], ['guildTabFateEl', 'guild-tab-fate'],
+        ['guildStockSubEl', 'guild-stock-sub'], ['guildStockListEl', 'guild-stock-list'],
         ['stockPriceFireEl', 'stock-price-fire'], ['stockTrendFireEl', 'stock-trend-fire'], ['stockHoldFireEl', 'stock-hold-fire'],
         ['stockPriceIceEl', 'stock-price-ice'], ['stockTrendIceEl', 'stock-trend-ice'], ['stockHoldIceEl', 'stock-hold-ice'],
         ['stockPriceThunderEl', 'stock-price-thunder'], ['stockTrendThunderEl', 'stock-trend-thunder'], ['stockHoldThunderEl', 'stock-hold-thunder'],
@@ -121,6 +126,13 @@
         dom.skillFrenzyDewBar = dom.skillFrenzyBtn ? dom.skillFrenzyBtn.querySelector('.skill-dew-bar') : null;
         dom.skillFrenzyLabel = dom.skillFrenzyBtn ? dom.skillFrenzyBtn.querySelector('.skill-label') : null;
         dom.skillFrenzySub = dom.skillFrenzyBtn ? dom.skillFrenzyBtn.querySelector('.skill-sub') : null;
+        dom.skillHarvestMask = dom.skillHarvestBtn ? dom.skillHarvestBtn.querySelector('.skill-cd-mask') : null;
+        dom.skillHarvestDewBar = dom.skillHarvestBtn ? dom.skillHarvestBtn.querySelector('.skill-dew-bar') : null;
+        dom.skillHarvestLabel = dom.skillHarvestBtn ? dom.skillHarvestBtn.querySelector('.skill-label') : null;
+        dom.skillHarvestSub = dom.skillHarvestBtn ? dom.skillHarvestBtn.querySelector('.skill-sub') : null;
+        dom.guildStockCardEl = typeof document !== 'undefined' ? document.querySelector('.guild-stock-card') : null;
+        dom.guildBlindBoxCardEl = typeof document !== 'undefined' ? document.querySelector('.guild-blindbox-card') : null;
+        dom.guildWagerCardEl = typeof document !== 'undefined' ? document.querySelector('.guild-wager-card') : null;
         dom.spawnerBtns = {};
         dom.seedPityBadgeEl = null;
         return dom;
@@ -187,10 +199,13 @@
             surgeWagerUsedCount: 0,
             waveLeakedCount: 0,
             lastWagerSettlement: null,
-            guildDrawerOpen: true,
+            guildDrawerOpen: false,
+            guildActiveTab: 'roots',
             guildAutoHoldTimer: false,
             guildTimerHold: false,
-            entangleCdMs: 0, frenzyCdMs: 0, frenzyActiveMs: 0, dewOverchargeMs: 0,
+            blindBoxTokens: 0,
+            blessingRerollsLeft: (TreeSys && typeof TreeSys.isMetaNodeUnlocked === 'function' && TreeSys.isMetaNodeUnlocked('fate_4')) ? 1 : 0,
+            entangleCdMs: 0, frenzyCdMs: 0, frenzyActiveMs: 0, harvestCdMs: 0, dewOverchargeMs: 0,
             activeBlessings: new Set(), blessingGrantedWaves: new Set(), blessingChoices: [],
             seedPityCount: 0, treeHitShakeTimer: null,
             bestWave: Backend.getMapBestWave(spec.id), currentWave: 1, killsCount: 0,
@@ -246,6 +261,7 @@
             || isOverlayVisible(dom.evoConfirmOverlayEl)
             || Boolean(st.pendingEvolution)
             || isOverlayVisible(dom.blessingOverlayEl)
+            || isOverlayVisible(dom.metaTreeOverlayEl)
             || isOverlayVisible(dom.victoryOverlayEl)
             || isOverlayVisible(dom.gameOverOverlayEl)
             || st.waveState === 'WAITING_START'
@@ -359,6 +375,93 @@
         if (G.dom.mapRecordForestEl) G.dom.mapRecordForestEl.innerText = fmt(records.forest);
         if (G.dom.mapRecordLavaEl) G.dom.mapRecordLavaEl.innerText = fmt(records.lava);
         if (G.dom.mapRecordFrostEl) G.dom.mapRecordFrostEl.innerText = fmt(records.frost);
+        updateMetaTreeEntryUI();
+    }
+
+    function updateMetaTreeEntryUI() {
+        const metaState = Backend && typeof Backend.loadMetaTreeState === 'function'
+            ? Backend.loadMetaTreeState()
+            : { honorPoints: 0, totalHonorEarned: 0, unlockedNodes: [] };
+        const pts = Math.max(0, Math.round(Number(metaState.honorPoints) || 0));
+        const cnt = Array.isArray(metaState.unlockedNodes) ? metaState.unlockedNodes.length : 0;
+        if (G.dom.metaTreeBtn) {
+            G.dom.metaTreeBtn.innerText = L(
+                `世界樹年輪 (${cnt}/12) · 榮譽 ${pts} ★`,
+                `Meta Rings (${cnt}/12) · ${pts} ★`
+            );
+        }
+        if (G.dom.metaTreeHonorBadgeEl) {
+            G.dom.metaTreeHonorBadgeEl.innerText = L(
+                `可用榮譽 ${pts} ★`,
+                `Honor ${pts} ★`
+            );
+        }
+    }
+
+    function renderMetaTreeModal() {
+        updateMetaTreeEntryUI();
+        if (!G.dom.metaTreeBranchesEl) return;
+        const treeData = (GameApp.data && GameApp.data.tree) || {};
+        const branches = Array.isArray(treeData.META_TREE_BRANCHES) ? treeData.META_TREE_BRANCHES : [];
+        const nodesMap = treeData.META_TREE_NODES || {};
+        const metaState = Backend && typeof Backend.loadMetaTreeState === 'function'
+            ? Backend.loadMetaTreeState()
+            : { honorPoints: 0, unlockedNodes: [] };
+        const unlocked = new Set(metaState.unlockedNodes || []);
+
+        G.dom.metaTreeBranchesEl.innerHTML = '';
+        branches.forEach((branch) => {
+            const col = document.createElement('div');
+            col.className = 'meta-branch-col';
+            const bTitle = L(branch.name, branch.nameEn || branch.name);
+            const bSub = L(branch.desc, branch.descEn || branch.desc);
+            col.innerHTML = `<div class="meta-branch-head"><span class="meta-branch-title">${bTitle}</span><span class="meta-branch-sub">${bSub}</span></div>`;
+            const branchNodes = Object.keys(nodesMap)
+                .map(k => nodesMap[k])
+                .filter(n => n && n.branch === branch.id)
+                .sort((a, b) => (a.tier || 0) - (b.tier || 0));
+            branchNodes.forEach((node) => {
+                const isUnlocked = unlocked.has(node.id);
+                const reqMet = !node.requires || unlocked.has(node.requires);
+                const canAfford = (metaState.honorPoints || 0) >= (node.cost || 0);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.dataset.nodeId = node.id;
+                btn.className = `meta-node-btn ${isUnlocked ? 'is-unlocked' : (reqMet ? 'is-next' : 'is-locked')}`;
+                btn.disabled = isUnlocked || !reqMet || !canAfford;
+                const costText = isUnlocked ? L('已解鎖', 'Unlocked') : `${node.cost} ★`;
+                const nName = L(node.name, node.nameEn || node.name);
+                const nDesc = L(node.desc, node.descEn || node.desc);
+                btn.innerHTML = `<div class="meta-node-head"><span class="meta-node-name">${nName}</span><span class="meta-node-cost num">${costText}</span></div><div class="meta-node-desc num">${nDesc}</div>`;
+                col.appendChild(btn);
+            });
+            G.dom.metaTreeBranchesEl.appendChild(col);
+        });
+
+        if (G.dom.metaTreeResetBtn) {
+            G.dom.metaTreeResetBtn.disabled = unlocked.size === 0;
+        }
+    }
+
+    function openMetaTreeModal() {
+        SoundEngine.ensureContext();
+        renderMetaTreeModal();
+        if (G.dom.metaTreeOverlayEl) G.dom.metaTreeOverlayEl.classList.remove('hidden');
+    }
+
+    function closeMetaTreeModal() {
+        if (G.dom.metaTreeOverlayEl) G.dom.metaTreeOverlayEl.classList.add('hidden');
+        updateMetaTreeEntryUI();
+    }
+
+    function handleResetMetaTree() {
+        SoundEngine.ensureContext();
+        if (Backend && typeof Backend.resetMetaTreeNodes === 'function') {
+            Backend.resetMetaTreeNodes();
+            SoundEngine.playMagic('blessing');
+            renderMetaTreeModal();
+            updateHUD();
+        }
     }
 
     function selectMap(mapId) {
@@ -410,9 +513,11 @@
         const liveCfg = towersDict[mvp.type] || {};
         const mvpName = liveCfg.name || mvp.name;
         let tierBadge = Renderer.getTierStars(mvp.tier);
-        if (mvp.isCrowned) {
-            const branchMatch = String(mvp.type || '').match(/_([AB])$/);
-            tierBadge = `${branchMatch ? branchMatch[1] : 'T4'}👑`;
+        if (mvp.tier >= 5) {
+            tierBadge = L('5★ 神裔', '5★ Scion');
+        } else if (mvp.tier === 4) {
+            const bCode = String(mvp.type || '').endsWith('_twin_AB') ? 'AB' : (String(mvp.type || '').endsWith('_crown_A') ? 'A' : 'B');
+            tierBadge = `4★ ${bCode}`;
         }
         const text = `${mvp.icon ? mvp.icon + ' ' : ''}${mvpName} ${tierBadge} — ${mvp.totalDamage.toLocaleString()} ${L('傷害', 'DMG')} (${pct}%)`;
         return { mvp, pct, text };
@@ -756,10 +861,9 @@
         const tierBadge = m.isBoss ? 'Boss' : (m.isElite ? L('菁英', 'Elite') : L('敵軍', 'Foe'));
         const traitText = m.traitDesc || mCfg.traitDesc || (m.isBoss ? L('階段首領 · 留意頭像旁弱點屬性', 'Stage Boss · Check weakness icon') : L('沿路徑前進攻擊世界樹', 'Marches toward the World Tree'));
 
-        if (dom.sideMonsterCardEl && dom.sideWaveCurrentSectionEl) {
+        if (dom.sideMonsterCardEl) {
             dom.sideMonsterCardEl.classList.remove('hidden');
             dom.sideMonsterCardEl.classList.toggle('is-killed', isKilledDisplay);
-            dom.sideWaveCurrentSectionEl.classList.add('hidden');
             const portraitKey = m.bossMechanic === 'void_shift' ? 'void_boss' : m.typeKey;
             if (dom.sideMonsterPortraitEl && lastHoverPortraitKey !== portraitKey && Renderer && typeof Renderer.drawPortrait === 'function') {
                 lastHoverPortraitKey = portraitKey;
@@ -845,15 +949,18 @@
         const tInfo = stats.terrainType ? terrainsDict[stats.terrainType] : null;
         dom.inspectorEmptyEl.classList.add('hidden');
         dom.inspectorActiveEl.classList.remove('hidden');
-        const nameTierTag = towerObj.isCrowned ? L('👑 T4 聖冠', '👑 T4 Crown') : Renderer.getTierStars(towerObj.tier);
-        setDomText(dom.inspectorNameEl, `${cfg.icon} ${cfg.name} ${nameTierTag}`);
+        const starsStr = Renderer.getTierStars(towerObj.tier);
+        const tierSubTag = towerObj.tier >= 5
+            ? L('神裔', 'Scion')
+            : (cfg.isTwinCrown ? L('雙生 AB', 'Twin AB') : (towerObj.tier === 4 ? L('極意', 'Mastery') : ''));
+        setDomText(dom.inspectorNameEl, `${cfg.icon} ${cfg.name} ${starsStr}${tierSubTag ? ` · ${tierSubTag}` : ''}`);
         if (dom.inspectorLineageEl) {
             const lineageText = EvoSys && typeof EvoSys.getTowerLineagePathText === 'function'
                 ? EvoSys.getTowerLineagePathText(towerObj)
                 : (cfg.lineagePath || `${cfg.icon} ${cfg.name}`);
             setDomText(dom.inspectorLineageEl, `${L('血脈：', 'Lineage: ')}${lineageText}`);
         }
-        const isBeamStyle = cfg.attackStyle === 'pierce_beam' || cfg.attackStyle === 'plasma_A_deathray' || cfg.attackStyle === 'plasma_B_refract';
+        const isBeamStyle = cfg.attackStyle === 'pierce_beam' || cfg.attackStyle === 'plasma_A_deathray' || cfg.attackStyle === 'plasma_B_refract' || cfg.attackStyle === 'plasma_twin';
         setDomText(dom.inspectorDpsEl, `${L('單體 DPS', 'Single DPS')} ${stats.dps}${isBeamStyle ? (towerObj.focusStacks > 0 ? L(`(${towerObj.focusStacks}層)`, `(${towerObj.focusStacks}stk)`) : L('(蓄能)', '(Charging)')) : ''}`);
         if (dom.inspectorAoeDpsEl) {
             const hasAoe = Number.isFinite(stats.aoeDps) && stats.aoeDps > 0 && Boolean(stats.aoeLabel);
@@ -866,25 +973,54 @@
         setDomText(dom.inspectorRangeEl, `${L('射程', 'Rng')} ${stats.rangeStr}`);
         if (dom.inspectorTerrainEl) {
             const terrainTag = getTerrainShortTagForCell(st.selectedIndex, tInfo, stats.damageMult);
-            dom.inspectorTerrainEl.classList.toggle('hidden', !terrainTag);
-            dom.inspectorTerrainEl.innerText = terrainTag;
+            const auraSuffix = stats.hasScionAura ? L('神裔光環 +16% 速', 'Scion Aura +16% Spd') : '';
+            const combinedTag = [terrainTag, auraSuffix].filter(Boolean).join(' · ');
+            dom.inspectorTerrainEl.classList.toggle('hidden', !combinedTag);
+            dom.inspectorTerrainEl.innerText = combinedTag;
         }
-        if (dom.inspectorAwakenBtn) {
-            const canShowAwaken = Boolean(st.isEndlessMode && towerObj.tier >= 3 && !towerObj.isCrowned);
-            dom.inspectorAwakenBtn.classList.toggle('hidden', !canShowAwaken);
-            if (canShowAwaken) {
-                const costSpec = EconSys.getCrownAwakenCost ? EconSys.getCrownAwakenCost() : { gold: 220, dew: 60 };
-                const maxCrowns = 2;
-                const usedCrowns = st.crownedUsedCount || 0;
-                const remainCrowns = Math.max(0, maxCrowns - usedCrowns);
-                const canAfford = EconSys.canAffordCrownAwaken ? EconSys.canAffordCrownAwaken() : (st.currentGold >= costSpec.gold && st.dewEnergy >= costSpec.dew);
-                const awakenLabelEl = dom.inspectorAwakenTextEl || dom.inspectorAwakenBtn;
-                if (remainCrowns <= 0) {
-                    awakenLabelEl.innerText = L(`聖冠已滿 (${usedCrowns}/${maxCrowns})`, `Max Crowns (${usedCrowns}/${maxCrowns})`);
-                    dom.inspectorAwakenBtn.disabled = true;
+        if (dom.inspectorGrowthBadgeEl) {
+            const curU = (EvoSys && typeof EvoSys.getTowerNutritionU === 'function')
+                ? EvoSys.getTowerNutritionU(towerObj)
+                : (Number(towerObj.nutritionU) || 1);
+            const nextU = (EvoSys && typeof EvoSys.getNextStarTargetU === 'function')
+                ? EvoSys.getNextStarTargetU(towerObj.tier)
+                : null;
+            const showGrowth = (towerObj.tier === 3 || towerObj.tier === 4) && Boolean(nextU);
+            const showInfused = towerObj.tier >= 5 && (towerObj.infusionCount || 0) > 0;
+            dom.inspectorGrowthBadgeEl.classList.toggle('hidden', !showGrowth && !showInfused);
+            if (showGrowth) {
+                dom.inspectorGrowthBadgeEl.innerText = L(
+                    `充能 ${curU}/${nextU} U · 基礎 ${stats.baseDmg || ''}`,
+                    `Feed ${curU}/${nextU} U · Base ${stats.baseDmg || ''}`
+                );
+            } else if (showInfused) {
+                const infPct = Math.round((AttackSys.b_infusion ? AttackSys.b_infusion(towerObj.infusionCount) : 0) * 100);
+                dom.inspectorGrowthBadgeEl.innerText = L(
+                    `靈脈灌注 +${towerObj.infusionCount} (+${infPct}%)`,
+                    `Infused +${towerObj.infusionCount} (+${infPct}%)`
+                );
+            }
+        }
+        if (dom.inspectorInfuseBtn) {
+            const isScion = towerObj.tier >= 5;
+            const infuseUnlocked = !TreeSys || typeof TreeSys.isMetaNodeUnlocked !== 'function' || TreeSys.isMetaNodeUnlocked('ancient_1');
+            dom.inspectorInfuseBtn.classList.toggle('hidden', !isScion);
+            if (isScion) {
+                const curK = Math.max(0, Math.floor(Number(towerObj.infusionCount) || 0));
+                const nextK = curK + 1;
+                const cost = EconSys.getInfusionCost ? EconSys.getInfusionCost(nextK) : (150 + 75 * nextK);
+                const stepPct = nextK <= 5 ? 12 : 7;
+                const canAfford = st.currentGold >= cost;
+                const labelEl = dom.inspectorInfuseTextEl || dom.inspectorInfuseBtn;
+                if (!infuseUnlocked) {
+                    labelEl.innerText = L('靈脈灌注（需年輪古樹 ①）', 'Vein Infuse (Need Ancient #1)');
+                    dom.inspectorInfuseBtn.disabled = true;
                 } else {
-                    awakenLabelEl.innerText = L(`覺醒聖冠 (${costSpec.gold}G · ${costSpec.dew}露 · ${remainCrowns}/2)`, `Awaken (${costSpec.gold}G · ${costSpec.dew} Dew · ${remainCrowns}/2)`);
-                    dom.inspectorAwakenBtn.disabled = !isGameplayActive() || !canAfford;
+                    labelEl.innerText = L(
+                        `靈脈灌注 #${nextK} (${cost} 💰 · +${stepPct}%)`,
+                        `Vein Infuse #${nextK} (${cost} 💰 · +${stepPct}%)`
+                    );
+                    dom.inspectorInfuseBtn.disabled = !isGameplayActive() || !canAfford;
                 }
             }
         }
@@ -941,13 +1077,30 @@
         const tc = treeData.TREE_CONFIG || {};
         const skills = treeData.ACTIVE_SKILLS || {};
         const dewMax = tc.DEW_MAX || 100;
-        const ent = skills.entangle || { cost: 40, cdMs: 8000, name: L('根鬚纏繞', 'Root Entangle'), hotkey: 'Q' };
-        const frz = skills.frenzy || { cost: 60, cdMs: 12000, name: L('自然狂熱', 'Nature Frenzy'), hotkey: 'W' };
+        if (dom.skillEntangleBtn || dom.skillFrenzyBtn || dom.skillHarvestBtn) {
+            const ent = skills.entangle || { cost: 40, cdMs: 8000, name: L('根鬚纏繞', 'Root Entangle'), hotkey: 'Q' };
+            const frz = skills.frenzy || { cost: 60, cdMs: 12000, name: L('自然狂熱', 'Nature Frenzy'), hotkey: 'W' };
+            const hrv = skills.golden_harvest || { cost: 50, cdMs: 14000, name: L('黃金豐收', 'Golden Harvest'), hotkey: 'E' };
 
-        setDomText(dom.dewDisplay, `${st.dewEnergy}/${dewMax}`);
-        if (dom.dewBarFillEl) dom.dewBarFillEl.style.width = `${Math.max(0, Math.min(100, (st.dewEnergy / dewMax) * 100))}%`;
-        updateSkillBtnVisual(dom.skillEntangleBtn, dom.skillEntangleMask, dom.skillEntangleDewBar, dom.skillEntangleLabel, dom.skillEntangleSub, st.entangleCdMs, ent.cdMs, 0, ent.cost, ent.name, ent.hotkey, null);
-        updateSkillBtnVisual(dom.skillFrenzyBtn, dom.skillFrenzyMask, dom.skillFrenzyDewBar, dom.skillFrenzyLabel, dom.skillFrenzySub, st.frenzyCdMs, frz.cdMs, st.frenzyActiveMs, frz.cost, frz.name, frz.hotkey, L('狂熱中', 'Active'));
+            setDomText(dom.dewDisplay, `${st.dewEnergy}/${dewMax}`);
+            if (dom.dewBarFillEl) dom.dewBarFillEl.style.width = `${Math.max(0, Math.min(100, (st.dewEnergy / dewMax) * 100))}%`;
+            updateSkillBtnVisual(dom.skillEntangleBtn, dom.skillEntangleMask, dom.skillEntangleDewBar, dom.skillEntangleLabel, dom.skillEntangleSub, st.entangleCdMs, ent.cdMs, 0, ent.cost, ent.name, ent.hotkey, null);
+            updateSkillBtnVisual(dom.skillFrenzyBtn, dom.skillFrenzyMask, dom.skillFrenzyDewBar, dom.skillFrenzyLabel, dom.skillFrenzySub, st.frenzyCdMs, frz.cdMs, st.frenzyActiveMs, frz.cost, frz.name, frz.hotkey, L('狂熱中', 'Active'));
+            updateSkillBtnVisual(dom.skillHarvestBtn, dom.skillHarvestMask, dom.skillHarvestDewBar, dom.skillHarvestLabel, dom.skillHarvestSub, st.harvestCdMs || 0, hrv.cdMs, 0, hrv.cost, hrv.name, hrv.hotkey, null);
+
+            if (dom.guildHarvestBtn) {
+                const hCd = st.harvestCdMs || 0;
+                const hMissing = Math.max(0, hrv.cost - st.dewEnergy);
+                if (hCd > 0) {
+                    dom.guildHarvestBtn.innerText = `${hrv.name} (${L('冷卻', 'CD')} ${(hCd / 1000).toFixed(1)}s)`;
+                } else if (hMissing > 0) {
+                    dom.guildHarvestBtn.innerText = `${hrv.name} (${L(`還差 ${hMissing} 💧`, `Need ${hMissing} 💧`)})`;
+                } else {
+                    dom.guildHarvestBtn.innerText = `${hrv.name} (${hrv.cost} ${L('靈露', 'Dew')}) [${hrv.hotkey}]`;
+                }
+                dom.guildHarvestBtn.disabled = !isGameplayActive() || hCd > 0 || hMissing > 0;
+            }
+        }
     }
 
     const WAVE_STATE_TEXT = {
@@ -1081,7 +1234,9 @@
         } else if (plan.eliteCount > 0) {
             parts.push(`${L('菁英', 'Elite')} ×${plan.eliteCount}`);
         }
-        return parts.join(' · ');
+        const crisisPrefix = plan.crisisSpec ? `[⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)}] ` : '';
+        const thiefNote = plan.hasThief ? ` · ${L('含靈脈竊賊', 'Includes Thief')}` : '';
+        return crisisPrefix + parts.join(' · ') + thiefNote;
     }
 
     function renderForecastListInto(headerEl, listEl, waveNum, prefixLabel, isFinalClear = false) {
@@ -1094,7 +1249,8 @@
         const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
         const towersDict = getTowersDict();
         const plan = WaveSys.buildWaveQueue(waveNum);
-        headerEl.innerText = `${prefixLabel} · Wave ${waveNum}`;
+        const crisisSuffix = plan.crisisSpec ? ` · ⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)}` : '';
+        headerEl.innerText = `${prefixLabel} · Wave ${waveNum}${crisisSuffix}`;
         const counts = new Map();
         let normalTotal = 0;
         for (let i = 0; i < plan.queue.length; i++) {
@@ -1104,6 +1260,9 @@
             counts.set(q.typeKey, (counts.get(q.typeKey) || 0) + 1);
         }
         const items = [];
+        if (plan.crisisSpec) {
+            items.push(`<li class="forecast-crisis-item">⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)}：${L(plan.crisisSpec.hintZh, plan.crisisSpec.hintEn)}</li>`);
+        }
         counts.forEach((cnt, key) => {
             const mCfg = monsterDb[key];
             if (!mCfg) return;
@@ -1140,7 +1299,33 @@
         renderForecastListInto(dom.sideNextHeaderEl, dom.sideNextListEl, nextWave, nextLabel, isFinalClear);
 
         if (dom.forecastBarTitleEl) {
-            dom.forecastBarTitleEl.innerText = isPrepPhase ? `${nextLabel} · Wave ${targetWave}` : `${L('戰況預告', 'Intel')} · Wave ${curWave}`;
+            const peekCrisis = (WaveSys && typeof WaveSys.getCrisisWaveSpec === 'function')
+                ? (WaveSys.getCrisisWaveSpec(targetWave) || WaveSys.getCrisisWaveSpec(targetWave + 1))
+                : null;
+            const crisisTag = peekCrisis
+                ? (peekCrisis.wave === targetWave
+                    ? ` · ⚠️ ${L(peekCrisis.title, peekCrisis.titleEn)}`
+                    : ` · ⚠️ W${peekCrisis.wave} ${L(peekCrisis.title, peekCrisis.titleEn)}`)
+                : '';
+            dom.forecastBarTitleEl.innerText = isPrepPhase
+                ? `${nextLabel} · W${targetWave}${crisisTag}`
+                : `${L('情報', 'Intel')} · W${curWave}${crisisTag}`;
+        }
+        if (dom.forecastWeakChipsEl) {
+            if (isFinalClear && !isPrepPhase) {
+                dom.forecastWeakChipsEl.innerText = L('最終決戰', 'Final Wave');
+            } else {
+                const ratioWave = isPrepPhase ? targetWave : nextWave;
+                const ratios = (EconSys && typeof EconSys.getWaveElementWeaknessRatios === 'function')
+                    ? EconSys.getWaveElementWeaknessRatios(ratioWave)
+                    : { fire: 1 / 3, ice: 1 / 3, thunder: 1 / 3 };
+                const rPlan = WaveSys.buildWaveQueue(ratioWave);
+                const fPct = Math.round((ratios.fire || 0) * 100);
+                const iPct = Math.round((ratios.ice || 0) * 100);
+                const tPct = Math.round((ratios.thunder || 0) * 100);
+                const totalCnt = (rPlan && Array.isArray(rPlan.queue)) ? rPlan.queue.length : 0;
+                dom.forecastWeakChipsEl.innerText = `🔥${fPct}% · ❄️${iPct}% · ⚡${tPct}% · ${L(`共 ${totalCnt} 隻`, `${totalCnt} Foes`)}`;
+            }
         }
         if (dom.forecastInlineSummaryEl) {
             if (isPrepPhase) {
@@ -1154,7 +1339,6 @@
             }
         }
         if (dom.waveForecastBarEl) {
-            dom.waveForecastBarEl.classList.toggle('is-combat-collapsed', !isPrepPhase && !st.forecastDrawerOpen);
             dom.waveForecastBarEl.classList.toggle('drawer-open', Boolean(st.forecastDrawerOpen));
         }
         if (dom.forecastToggleBtn) {
@@ -1184,6 +1368,8 @@
         const dom = G.dom, st = G.state;
         if (!dom.treeRootPanelEl) return;
 
+        const rootsUnlocked = !TreeSys || typeof TreeSys.isMetaNodeUnlocked !== 'function' || TreeSys.isMetaNodeUnlocked('wealth_1');
+        dom.treeRootPanelEl.classList.toggle('is-meta-locked', !rootsUnlocked);
         const rootLv = TreeSys && typeof TreeSys.getTreasureRootLevel === 'function' ? TreeSys.getTreasureRootLevel() : (st.rootLevel || 0);
         const curSpec = TreeSys && typeof TreeSys.getTreasureRootSpec === 'function'
             ? TreeSys.getTreasureRootSpec(rootLv)
@@ -1203,6 +1389,12 @@
         if (dom.treeRootTitleEl) {
             dom.treeRootTitleEl.innerText = L('世界樹 · 聚寶根鬚', 'World Tree · Treasure Roots');
         }
+        if (dom.guildRootSummaryBadgeEl) {
+            dom.guildRootSummaryBadgeEl.innerText = rootsUnlocked
+                ? L(`根鬚 Lv.${rootLv} (+${estPayout.totalGain} 💰)`, `Roots Lv.${rootLv} (+${estPayout.totalGain} 💰)`)
+                : L('根鬚未解鎖', 'Roots Locked');
+            dom.guildRootSummaryBadgeEl.classList.toggle('is-active', rootsUnlocked && rootLv > 0);
+        }
         if (dom.treeRootLvBadgeEl) {
             const lvName = L(curSpec.name, curSpec.nameEn || curSpec.name);
             dom.treeRootLvBadgeEl.innerText = `Lv.${rootLv} / Lv.3 · ${lvName}`;
@@ -1213,7 +1405,12 @@
             dom.treeRootRefundBadgeEl.classList.toggle('is-boosted', refundPct >= 80);
         }
         if (dom.treeRootYieldBadgeEl) {
-            if (rootLv >= 3) {
+            if (!rootsUnlocked) {
+                dom.treeRootYieldBadgeEl.innerText = L(
+                    '尚未解鎖 · 請於「世界樹年輪 · 財富枝 ①」解鎖',
+                    'Locked · Unlock Meta Wealth Branch #1'
+                );
+            } else if (rootLv >= 3) {
                 const capHintZh = estPayout.isSoftCapped ? `，已達軟上限 ${estPayout.waveCap} 💰` : `，軟上限 ${estPayout.waveCap} 💰`;
                 const capHintEn = estPayout.isSoftCapped ? `, Capped ${estPayout.waveCap} 💰` : `, Cap ${estPayout.waveCap} 💰`;
                 dom.treeRootYieldBadgeEl.innerText = L(
@@ -1230,7 +1427,10 @@
 
         const canAct = isMatchPhaseActive();
         if (dom.treeRootUpgradeBtn) {
-            if (!nextSpec) {
+            if (!rootsUnlocked) {
+                dom.treeRootUpgradeBtn.innerText = L('需解鎖財富枝 ① (300 ★)', 'Locked: Meta Wealth #1');
+                dom.treeRootUpgradeBtn.disabled = true;
+            } else if (!nextSpec) {
                 dom.treeRootUpgradeBtn.innerText = L('已達最高等級 Lv.3 複利樹心', 'Max Level Lv.3 Compound Heart');
                 dom.treeRootUpgradeBtn.disabled = true;
             } else {
@@ -1252,12 +1452,12 @@
                     ? TreeSys.getTreasureRootSpec(tLv)
                     : { level: tLv, name: `Lv.${tLv}`, cost: 45, shortDesc: '' };
                 const unlocked = rootLv >= tLv;
-                const isNext = rootLv + 1 === tLv;
-                const locked = tLv > rootLv + 1;
+                const isNext = rootsUnlocked && rootLv + 1 === tLv;
+                const locked = !rootsUnlocked || tLv > rootLv + 1;
                 card.classList.toggle('is-unlocked', unlocked);
                 card.classList.toggle('is-next', isNext);
                 card.classList.toggle('is-locked', locked);
-                card.disabled = !canAct || unlocked;
+                card.disabled = !rootsUnlocked || !canAct || unlocked;
 
                 const nameEl = card.querySelector('.root-tier-name');
                 const costEl = card.querySelector('.root-tier-cost');
@@ -1296,10 +1496,12 @@
         const usedNonCombat = Math.max(0, Number(st.waveNonCombatGold) || 0);
 
         if (dom.guildTitleEl) {
-            dom.guildTitleEl.innerText = L('世界樹商會 · 波間整備', 'World Tree Guild · Intermission');
+            dom.guildTitleEl.innerText = st.guildDrawerOpen
+                ? L('世界樹商會 [B] · 點擊收合', 'Guild [B] · Collapse')
+                : L('世界樹商會 [B] · 點擊展開', 'Guild [B] · Expand');
         }
         if (dom.guildChevronEl) {
-            dom.guildChevronEl.innerText = st.guildDrawerOpen ? '▴' : '▾';
+            dom.guildChevronEl.innerText = st.guildDrawerOpen ? '▾' : '▴';
         }
         if (dom.guildToggleBtn) {
             dom.guildToggleBtn.setAttribute('aria-expanded', st.guildDrawerOpen ? 'true' : 'false');
@@ -1307,17 +1509,43 @@
         if (dom.guildBodyEl) {
             dom.guildBodyEl.classList.toggle('hidden', !st.guildDrawerOpen);
         }
+        const activeTab = st.guildActiveTab || 'roots';
+        if (dom.guildTabBtnRoots) {
+            const isRoots = activeTab === 'roots';
+            dom.guildTabBtnRoots.classList.toggle('is-active', isRoots);
+            dom.guildTabBtnRoots.setAttribute('aria-selected', isRoots ? 'true' : 'false');
+            dom.guildTabBtnRoots.innerText = L('聚寶根鬚', 'Treasure Roots');
+        }
+        if (dom.guildTabBtnStocks) {
+            const isStocks = activeTab === 'stocks';
+            dom.guildTabBtnStocks.classList.toggle('is-active', isStocks);
+            dom.guildTabBtnStocks.setAttribute('aria-selected', isStocks ? 'true' : 'false');
+            dom.guildTabBtnStocks.innerText = L('元素股市', 'Element Stocks');
+        }
+        if (dom.guildTabBtnFate) {
+            const isFate = activeTab === 'fate';
+            dom.guildTabBtnFate.classList.toggle('is-active', isFate);
+            dom.guildTabBtnFate.setAttribute('aria-selected', isFate ? 'true' : 'false');
+            dom.guildTabBtnFate.innerText = L('盲盒與對賭', 'Blind Box & Wager');
+        }
+        if (dom.guildCloseBtn) {
+            dom.guildCloseBtn.innerText = L('收合 ×', 'Close ×');
+        }
+        if (dom.guildTabRootsEl) dom.guildTabRootsEl.classList.toggle('hidden', activeTab !== 'roots');
+        if (dom.guildTabStocksEl) dom.guildTabStocksEl.classList.toggle('hidden', activeTab !== 'stocks');
+        if (dom.guildTabFateEl) dom.guildTabFateEl.classList.toggle('hidden', activeTab !== 'fate');
         if (dom.guildNonCombatBadgeEl) {
             dom.guildNonCombatBadgeEl.innerText = L(
-                `本波非戰鬥淨利 ${usedNonCombat} / ${waveCap} 💰`,
-                `Wave Non-Combat Net ${usedNonCombat} / ${waveCap} 💰`
+                `非戰鬥淨利 ${usedNonCombat} / ${waveCap} 💰`,
+                `Non-Combat ${usedNonCombat} / ${waveCap} 💰`
             );
             dom.guildNonCombatBadgeEl.classList.toggle('is-active', usedNonCombat >= waveCap);
         }
         const critPct = ((Number(st.teamCritBonusRate) || 0) * 100).toFixed(1);
         if (dom.guildCritBadgeEl) {
-            dom.guildCritBadgeEl.innerText = L(`全隊盲盒暴擊 +${critPct}%`, `Team Box Crit +${critPct}%`);
-            dom.guildCritBadgeEl.classList.toggle('is-active', (st.teamCritBonusRate || 0) > 0);
+            const fruitBit = (st.fusionFruitCount || 0) > 0 ? L(' · 果實 ★', ' · Fruit ★') : '';
+            dom.guildCritBadgeEl.innerText = L(`盲盒暴擊 +${critPct}%${fruitBit}`, `Box Crit +${critPct}%${fruitBit}`);
+            dom.guildCritBadgeEl.classList.toggle('is-active', (st.teamCritBonusRate || 0) > 0 || (st.fusionFruitCount || 0) > 0);
         }
         if (dom.guildHoldTimerBtn) {
             const holding = Boolean(st.guildTimerHold && isPrepOrInter);
@@ -1336,6 +1564,16 @@
         }
 
         // A. 元素股市 UI
+        const stocksUnlocked = !EconSys || typeof EconSys.canTradeStocks !== 'function' || EconSys.canTradeStocks();
+        const hasInsider = Boolean(TreeSys && typeof TreeSys.hasBlessing === 'function' && TreeSys.hasBlessing('insider_trading'));
+        const perSharePctNum = hasInsider ? 3.0 : 2.4;
+        const sellFeePct = Math.round(((EconSys && typeof EconSys.getStockSellFeeRate === 'function') ? EconSys.getStockSellFeeRate() : 0.05) * 100);
+        if (dom.guildStockCardEl) dom.guildStockCardEl.classList.toggle('is-meta-locked', !stocksUnlocked);
+        if (dom.guildStockSubEl) {
+            dom.guildStockSubEl.innerText = stocksUnlocked
+                ? L(`上限 10 股 · 單股 +${perSharePctNum.toFixed(1)}% · 賣出 ${sellFeePct}% 費`, `Max 10 · +${perSharePctNum.toFixed(1)}%/sh · ${sellFeePct}% fee`)
+                : L('尚未解鎖 · 請於「世界樹年輪 · 財富枝 ②」解鎖', 'Locked · Unlock Meta Wealth #2');
+        }
         const stocks = st.stocks || {};
         const stockMeta = [
             { key: 'fire', priceEl: dom.stockPriceFireEl, trendEl: dom.stockTrendFireEl, holdEl: dom.stockHoldFireEl },
@@ -1360,7 +1598,7 @@
                 }
             }
             if (holdEl) {
-                const divPct = Math.round((rec.shares || 0) * 2.4 * 10) / 10;
+                const divPct = Math.min(24, Math.round((rec.shares || 0) * perSharePctNum * 10) / 10);
                 holdEl.innerText = `${rec.shares || 0}/10 (+${divPct}%)`;
                 holdEl.classList.toggle('has-shares', (rec.shares || 0) > 0);
             }
@@ -1372,32 +1610,48 @@
                 const rec = stocks[elKey] || { price: 20, shares: 0 };
                 if (act === 'buy') {
                     btn.innerText = L('買入', 'Buy');
-                    btn.disabled = !canAct || (rec.shares || 0) >= 10 || st.currentGold < (rec.price || 20);
+                    btn.disabled = !stocksUnlocked || !canAct || (rec.shares || 0) >= 10 || st.currentGold < (rec.price || 20);
                 } else if (act === 'sell') {
                     btn.innerText = L('賣出', 'Sell');
-                    btn.disabled = !canAct || (rec.shares || 0) <= 0;
+                    btn.disabled = !stocksUnlocked || !canAct || (rec.shares || 0) <= 0;
                 }
             });
         }
 
         // B. 命運種子盲盒 & 萬能融合果實 UI
+        const boxUnlocked = !EconSys || typeof EconSys.canOpenBlindBox !== 'function' || EconSys.canOpenBlindBox();
+        const freeTokens = Math.max(0, Number(st.blindBoxTokens) || 0);
         const boxCost = EconSys && typeof EconSys.getBlindBoxCost === 'function' ? EconSys.getBlindBoxCost() : 35;
         const streak = Math.max(0, Number(st.blindBox1StarStreak) || 0);
+        const pityNeed = (EconSys && typeof EconSys.getBlindBoxPityThreshold === 'function') ? EconSys.getBlindBoxPityThreshold() : 3;
+        const hasLeaf = Boolean(TreeSys && typeof TreeSys.hasBlessing === 'function' && TreeSys.hasBlessing('gambler_lucky_leaf'));
+        const missCritLabel = hasLeaf ? '2.0%' : '1.5%';
+        if (dom.guildBlindBoxCardEl) dom.guildBlindBoxCardEl.classList.toggle('is-meta-locked', !boxUnlocked && freeTokens <= 0);
         if (dom.guildBoxTitleEl) dom.guildBoxTitleEl.innerText = L('命運種子盲盒', 'Fate Seed Blind Box');
         if (dom.guildBoxPityEl) {
-            dom.guildBoxPityEl.innerText = streak >= 3
-                ? L('保底已滿 3 / 3（本抽必出 2★+）', 'Pity Ready 3 / 3 (Next 2★+ Guaranteed)')
-                : L(`1★ 保底進度 ${streak} / 3（第 4 抽必出 2★+）`, `1★ Pity ${streak} / 3 (4th Pull 2★+)`);
+            dom.guildBoxPityEl.innerText = streak >= pityNeed
+                ? L(`保底已滿 ${pityNeed} / ${pityNeed}（本抽必出 2★+）`, `Pity Ready ${pityNeed} / ${pityNeed} (2★+ Guaranteed)`)
+                : L(`1★ 保底進度 ${streak} / ${pityNeed}（第 ${pityNeed + 1} 抽必出 2★+）`, `1★ Pity ${streak} / ${pityNeed} (Pull #${pityNeed + 1} 2★+)`);
         }
         if (dom.guildBoxDescEl) {
-            dom.guildBoxDescEl.innerText = L(
-                '1★ 48% · 2★ 32% · 萬能果實 12% · 3★ 8%（未出 2★+ 全隊暴擊 +1.5%，盲盒塔退費依實付價計）',
-                '1★ 48% · 2★ 32% · Fruit 12% · 3★ 8% (Non-2★+ adds +1.5% team crit; refund based on paid box cost)'
-            );
+            dom.guildBoxDescEl.innerText = (!boxUnlocked && freeTokens <= 0)
+                ? L('尚未解鎖 · 請於「世界樹年輪 · 命運枝 ①」解鎖（擊殺竊賊可獲免費代幣）', 'Locked · Unlock Meta Fate #1 (or Thief Free Token)')
+                : L(
+                    `1★ 48% · 2★ 32% · 萬能果實 12% · 3★ 8%（未出 2★+ 全隊暴擊 +${missCritLabel}，盲盒塔退費依實付價計）`,
+                    `1★ 48% · 2★ 32% · Fruit 12% · 3★ 8% (Non-2★+ adds +${missCritLabel} crit; refund by paid cost)`
+                );
         }
         if (dom.blindBoxBuyBtn) {
-            dom.blindBoxBuyBtn.innerText = L(`開啟命運盲盒 (${boxCost} 💰)`, `Open Blind Box (${boxCost} 💰)`);
-            dom.blindBoxBuyBtn.disabled = !isGameplayActive() || st.currentGold < boxCost;
+            if (freeTokens > 0) {
+                dom.blindBoxBuyBtn.innerText = L(`免費開啟盲盒（代幣 ${freeTokens}）`, `Open Free Box (Token ${freeTokens})`);
+                dom.blindBoxBuyBtn.disabled = !isGameplayActive();
+            } else if (!boxUnlocked) {
+                dom.blindBoxBuyBtn.innerText = L('需解鎖命運枝 ① (300 ★)', 'Locked: Meta Fate #1');
+                dom.blindBoxBuyBtn.disabled = true;
+            } else {
+                dom.blindBoxBuyBtn.innerText = L(`開啟命運盲盒 (${boxCost} 💰)`, `Open Blind Box (${boxCost} 💰)`);
+                dom.blindBoxBuyBtn.disabled = !isGameplayActive() || st.currentGold < boxCost;
+            }
         }
         if (dom.fusionFruitSlotBtn) {
             const hasFruit = (st.fusionFruitCount || 0) > 0;
@@ -1414,13 +1668,19 @@
         }
 
         // C. 波次對賭懸賞 UI
+        const wagerUnlocked = !EconSys || typeof EconSys.canUseWager !== 'function' || EconSys.canUseWager();
+        if (dom.guildWagerCardEl) dom.guildWagerCardEl.classList.toggle('is-meta-locked', !wagerUnlocked);
+        const zeroReturn = 70 + (hasLeaf ? 10 : 0);
+        const zeroNet = zeroReturn - 40;
         const activeWagerType = st.activeWager ? st.activeWager.type : null;
         const surgeUsed = st.surgeWagerUsedCount || 0;
         const surgeRemain = Math.max(0, 2 - surgeUsed);
         if (dom.guildWagerTitleEl) dom.guildWagerTitleEl.innerText = L('波次對賭懸賞', 'Wave Wager Bounty');
         if (dom.guildWagerSubEl) {
-            if (activeWagerType === 'zero_leak') {
-                dom.guildWagerSubEl.innerText = L('已選：零封懸賞（0 掉血返還 70 💰）', 'Active: Zero-Leak Bounty (70 💰 on 0 leak)');
+            if (!wagerUnlocked) {
+                dom.guildWagerSubEl.innerText = L('尚未解鎖 · 請於「世界樹年輪 · 命運枝 ②」解鎖', 'Locked · Unlock Meta Fate #2');
+            } else if (activeWagerType === 'zero_leak') {
+                dom.guildWagerSubEl.innerText = L(`已選：零封懸賞（0 掉血返還 ${zeroReturn} 💰）`, `Active: Zero-Leak (${zeroReturn} 💰 on 0 leak)`);
             } else if (activeWagerType === 'monster_surge') {
                 dom.guildWagerSubEl.innerText = L('已選：魔潮加碼（擊殺 ×1.45 ＋ 萬能果實）', 'Active: Monster Surge (×1.45 Kill Gold + Fruit)');
             } else {
@@ -1431,20 +1691,20 @@
             const isSel = activeWagerType === 'zero_leak';
             dom.wagerZeroLeakBtn.classList.toggle('is-selected', isSel);
             const canAffordZero = isSel || st.currentGold >= 40;
-            dom.wagerZeroLeakBtn.disabled = !isPrepOrInter || !canAffordZero;
+            dom.wagerZeroLeakBtn.disabled = !wagerUnlocked || !isPrepOrInter || !canAffordZero;
             if (dom.wagerZeroTitleEl) dom.wagerZeroTitleEl.innerText = L('零封懸賞', 'Zero-Leak Bounty');
             if (dom.wagerZeroCostEl) dom.wagerZeroCostEl.innerText = isSel ? L('已押注 40 💰（點擊取消）', 'Staked 40 💰 (Cancel)') : L('押注 40 💰', 'Stake 40 💰');
             if (dom.wagerZeroDescEl) {
                 dom.wagerZeroDescEl.innerText = L(
-                    '本波 0 掉血返還 70 💰（淨賺 +30 💰）；漏怪沒收押金並補償 +15 💧',
-                    '0 HP lost returns 70 💰 (Net +30 💰); leak forfeits stake & grants +15 💧'
+                    `本波 0 掉血返還 ${zeroReturn} 💰（淨賺 +${zeroNet} 💰）；漏怪沒收押金並補償 +15 💧`,
+                    `0 HP lost returns ${zeroReturn} 💰 (Net +${zeroNet} 💰); leak forfeits stake & grants +15 💧`
                 );
             }
         }
         if (dom.wagerSurgeBtn) {
             const isSel = activeWagerType === 'monster_surge';
             dom.wagerSurgeBtn.classList.toggle('is-selected', isSel);
-            dom.wagerSurgeBtn.disabled = !isPrepOrInter || (!isSel && surgeRemain <= 0);
+            dom.wagerSurgeBtn.disabled = !wagerUnlocked || !isPrepOrInter || (!isSel && surgeRemain <= 0);
             if (dom.wagerSurgeTitleEl) dom.wagerSurgeTitleEl.innerText = L('魔潮加碼', 'Monster Surge');
             if (dom.wagerSurgeLimitEl) {
                 dom.wagerSurgeLimitEl.innerText = isSel
@@ -1992,17 +2252,42 @@
         if (res) {
             const { fusion, bonusHint } = res;
             const cfg = getTowersDict()[fusion.type] || { name: fusion.type };
-            SoundEngine.playMerge(fusion.tier, fusion.isCrossElement);
-            const actionVerb = fusion.mode === 'transfer_t1' ? L('轉職成功', 'Class Transfer') : L('升星成功', 'Star Up');
-            setStatusMsg(
-                `${fusion.mode === 'transfer_t1' ? '轉職成功' : '升星成功'}：【${cfg.name} ${Renderer.getTierStars(fusion.tier)}】${bonusHint || ''}`,
-                `${actionVerb}: ${cfg.name} ${Renderer.getTierStars(fusion.tier)}${bonusHint ? ` ${bonusHint}` : ''}`
-            );
+            SoundEngine.playMerge(fusion.tier, fusion.isCrossElement || fusion.isTwinCrown || fusion.tier >= 5);
+            const fedU = fusion.feedU || 1;
+            const curU = fusion.nextNutritionU || (fusion.tier >= 5 ? 16 : (fusion.tier === 4 ? 8 : 4));
+            const nextTargetU = fusion.tier === 3 ? 8 : 16;
+            if (fusion.isFeedUpgrade && !fusion.isFeedEvolve) {
+                setStatusMsg(
+                    `吞噬充能：【${cfg.name} ${Renderer.getTierStars(fusion.tier)}】吸收 +${fedU}U ➔ ${curU}/${nextTargetU} U，攻擊力即時提升！`,
+                    `Fed +${fedU}U to ${cfg.name} ${Renderer.getTierStars(fusion.tier)} (${curU}/${nextTargetU} U).`
+                );
+            } else if (fusion.isFeedUpgrade && fusion.isFeedEvolve) {
+                setStatusMsg(
+                    `充能達標突破：【${cfg.name} ${Renderer.getTierStars(fusion.tier)}】(${curU}U)${bonusHint || ''}！`,
+                    `Feeding threshold reached: Evolved into ${cfg.name} ${Renderer.getTierStars(fusion.tier)} (${curU}U)${bonusHint || ''}!`
+                );
+            } else if (fusion.isTwinCrown) {
+                setStatusMsg(
+                    `雙生合體成功：【${cfg.name} ★★★★AB】同時掌握雙分支機制！${bonusHint || ''}`,
+                    `Twin Crown Merge: ${cfg.name} ★★★★AB wields both A & B mechanics!${bonusHint || ''}`
+                );
+            } else if (fusion.tier >= 5) {
+                setStatusMsg(
+                    `神裔降臨：【${cfg.name} ★★★★★】已達世界樹頂點！周圍友軍光環與全圖神脈啟動${bonusHint || ''}。`,
+                    `World Tree Scion Awakened: ${cfg.name} ★★★★★! Ally aura & map pulse active.`
+                );
+            } else {
+                const actionVerb = fusion.mode === 'transfer_t1' ? L('轉職成功', 'Class Transfer') : L('升星成功', 'Star Up');
+                setStatusMsg(
+                    `${fusion.mode === 'transfer_t1' ? '轉職成功' : '升星成功'}：【${cfg.name} ${Renderer.getTierStars(fusion.tier)}】${bonusHint || ''}`,
+                    `${actionVerb}: ${cfg.name} ${Renderer.getTierStars(fusion.tier)}${bonusHint ? ` ${bonusHint}` : ''}`
+                );
+            }
             Renderer.renderBoard([fromIndex, toIndex]);
             updateHUD();
             return true;
         }
-        const maxTier = (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || 3;
+        const maxTier = (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || 5;
         if (fromTower.tier >= maxTier || toTower.tier >= maxTier) {
             setStatusMsg(
                 `${Renderer.getTierStars(maxTier)} 已達最高星級，無法繼續融合。`,
@@ -2030,16 +2315,26 @@
         }
     }
 
-    function toggleGuildDrawer() {
+    function toggleGuildDrawer(forceState = null) {
         const st = G.state;
         Backend.recordPlayerAction();
-        st.guildDrawerOpen = !st.guildDrawerOpen;
+        st.guildDrawerOpen = typeof forceState === 'boolean' ? forceState : !st.guildDrawerOpen;
         if (st.guildDrawerOpen && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION')) {
             st.guildTimerHold = true;
         } else if (!st.guildDrawerOpen && st.guildTimerHold) {
             st.guildTimerHold = false;
         }
         updateHUD();
+    }
+
+    function switchGuildTab(tabId) {
+        const st = G.state;
+        if (!['roots', 'stocks', 'fate'].includes(tabId)) return;
+        Backend.recordPlayerAction();
+        st.guildActiveTab = tabId;
+        st.guildDrawerOpen = true;
+        holdIntermissionTimerIfPrep();
+        updateGuildDrawerUI();
     }
 
     function toggleGuildTimerHold() {
@@ -2069,6 +2364,14 @@
     function handleStockTrade(action, elementKey) {
         const st = G.state;
         if (!isMatchPhaseActive() || !EconSys) return { ok: false, reason: 'inactive' };
+        if (EconSys.canTradeStocks && !EconSys.canTradeStocks()) {
+            setStatusMsg(
+                '【元素股市】需於主選單「世界樹年輪・財富枝 ②」解鎖後才可交易。',
+                'Element Stocks require Wealth Branch #2 in the World Tree Meta panel.'
+            );
+            updateHUD();
+            return { ok: false, reason: 'meta_locked' };
+        }
         Backend.recordPlayerAction();
         holdIntermissionTimerIfPrep();
 
@@ -2109,11 +2412,12 @@
             }
             SoundEngine.playSpawn(1);
             const divPct = Math.round(res.dividendBonus * 1000) / 10;
+            const feePct = Math.round((EconSys.getStockSellFeeRate ? EconSys.getStockSellFeeRate() : 0.05) * 100);
             const capNoteZh = res.isSoftCapped ? '（淨利部分已受單波軟上限約束）' : '';
             const capNoteEn = res.isSoftCapped ? ' (net profit capped by wave soft cap)' : '';
             setStatusMsg(
-                `賣出 1 股【${label}】（扣除 5% 手續費 ${res.fee} 💰，實拿 +${res.payout} 💰${capNoteZh}），剩餘 ${res.shares}/10 股（+${divPct}%）。`,
-                `Sold 1 ${label} (5% fee ${res.fee} 💰, received +${res.payout} 💰${capNoteEn}). Remaining ${res.shares}/10 (+${divPct}%).`
+                `賣出 1 股【${label}】（扣除 ${feePct}% 手續費 ${res.fee} 💰，實拿 +${res.payout} 💰${capNoteZh}），剩餘 ${res.shares}/10 股（+${divPct}%）。`,
+                `Sold 1 ${label} (${feePct}% fee ${res.fee} 💰, received +${res.payout} 💰${capNoteEn}). Remaining ${res.shares}/10 (+${divPct}%).`
             );
             updateHUD();
             return res;
@@ -2125,10 +2429,19 @@
         const st = G.state;
         const towersDict = getTowersDict();
         if (!isGameplayActive() || !EconSys) return { ok: false, reason: 'inactive' };
+        const canBox = !EconSys.canOpenBlindBox || EconSys.canOpenBlindBox();
+        const useFreeToken = (st.blindBoxTokens || 0) > 0 && !Number.isFinite(options.costOverride);
+        if (!canBox && !useFreeToken) {
+            setStatusMsg(
+                '【命運種子盲盒】需於主選單「世界樹年輪・命運枝 ①」解鎖（或擊殺靈脈竊賊取得免費代幣）。',
+                'Fate Seed Blind Box requires Fate Branch #1 (or a free token from Vein Thief).'
+            );
+            return { ok: false, reason: 'meta_locked' };
+        }
         Backend.recordPlayerAction();
         holdIntermissionTimerIfPrep();
 
-        const boxCost = Number.isFinite(options.costOverride) ? options.costOverride : EconSys.getBlindBoxCost();
+        const boxCost = useFreeToken ? 0 : (Number.isFinite(options.costOverride) ? options.costOverride : EconSys.getBlindBoxCost());
         if (st.currentGold < boxCost) {
             setStatusMsg(
                 `金幣不足，開啟【命運種子盲盒】需要 ${boxCost} 💰。`,
@@ -2146,16 +2459,21 @@
             return { ok: false, reason: 'board_full', boxCost };
         }
 
-        st.currentGold -= boxCost;
+        if (useFreeToken) {
+            st.blindBoxTokens = Math.max(0, (st.blindBoxTokens || 0) - 1);
+        } else {
+            st.currentGold -= boxCost;
+        }
         const roll = EconSys.rollBlindBoxOutcome(options);
         const critPct = ((st.teamCritBonusRate || 0) * 100).toFixed(1);
 
         if (roll.kind === 'fruit') {
             st.fusionFruitCount = 1;
             SoundEngine.playMerge(2, true);
+            const costLabel = useFreeToken ? L('盲盒代幣', 'Box Token') : `-${boxCost} 💰`;
             setStatusMsg(
-                `命運盲盒（-${boxCost} 💰）開出【萬能融合果實 ★】！已存入槽位 (1/1)，全隊暴擊加成 +${critPct}%。`,
-                `Blind Box (-${boxCost} 💰) yielded [Universal Fusion Fruit ★]! Stored (1/1), Team Crit +${critPct}%.`
+                `命運盲盒（${costLabel}）開出【萬能融合果實 ★】！已存入槽位 (1/1)，全隊暴擊加成 +${critPct}%。`,
+                `Blind Box (${costLabel}) yielded [Universal Fusion Fruit ★]! Stored (1/1), Team Crit +${critPct}%.`
             );
             updateHUD();
             return { ok: true, kind: 'fruit', boxCost, roll };
@@ -2192,12 +2510,15 @@
             );
         }
 
-        const pityNoteZh = roll.isPityTriggered ? '（觸發第 4 抽 2★+ 保底）' : '';
-        const pityNoteEn = roll.isPityTriggered ? ' (4th-pull 2★+ Pity!)' : '';
+        const pityPullCount = (EconSys.getBlindBoxPityThreshold ? EconSys.getBlindBoxPityThreshold() : 3) + 1;
+        const pityNoteZh = roll.isPityTriggered ? `（觸發第 ${pityPullCount} 抽 2★+ 保底）` : '';
+        const pityNoteEn = roll.isPityTriggered ? ` (${pityPullCount}th-pull 2★+ Pity!)` : '';
+        const costTagZh = boxCost > 0 ? `-${boxCost} 💰` : '免費代幣';
+        const costTagEn = boxCost > 0 ? `-${boxCost} 💰` : 'Free Token';
         const refundPreview = EconSys.getTowerSellRefund(spawnedTower);
         setStatusMsg(
-            `命運盲盒（-${boxCost} 💰）${pityNoteZh}於 (${coords.x + 1},${coords.y + 1}) 開出【${cfg.icon} ${cfg.name} ${Renderer.getTierStars(roll.tier)}】（實付鎖定 ${boxCost} 💰，出售退還 ${refundPreview} 💰｜全隊暴擊 +${critPct}%）。`,
-            `Blind Box (-${boxCost} 💰)${pityNoteEn} spawned ${cfg.icon} ${cfg.name} ${Renderer.getTierStars(roll.tier)} at (${coords.x + 1},${coords.y + 1}) (Invested ${boxCost} 💰, Refund ${refundPreview} 💰 | Team Crit +${critPct}%).`
+            `命運盲盒（${costTagZh}）${pityNoteZh}於 (${coords.x + 1},${coords.y + 1}) 開出【${cfg.icon} ${cfg.name} ${Renderer.getTierStars(roll.tier)}】（實付鎖定 ${boxCost} 💰，出售退還 ${refundPreview} 💰｜全隊暴擊 +${critPct}%）。`,
+            `Blind Box (${costTagEn})${pityNoteEn} spawned ${cfg.icon} ${cfg.name} ${Renderer.getTierStars(roll.tier)} at (${coords.x + 1},${coords.y + 1}) (Invested ${boxCost} 💰, Refund ${refundPreview} 💰 | Team Crit +${critPct}%).`
         );
         Renderer.renderBoard([targetIndex]);
         updateHUD();
@@ -2226,8 +2547,8 @@
             : null;
         if (!preview) {
             setStatusMsg(
-                '該防禦塔已達 3★ 最高階級，無法套用萬能融合果實。',
-                'Tower is already at max 3★ tier; cannot apply Universal Fusion Fruit.'
+                '該防禦塔已達 5★ 最高階級，無法套用萬能融合果實。',
+                'Tower is already at max 5★ tier; cannot apply Universal Fusion Fruit.'
             );
             return { ok: false, reason: 'max_tier' };
         }
@@ -2248,10 +2569,20 @@
         st.selectedIndex = cellIndex;
         const cfg = towersDict[res.fusion.type] || { icon: '🔥', name: res.fusion.type };
         SoundEngine.playMerge(res.fusion.tier, true);
-        setStatusMsg(
-            `已套用【萬能融合果實】：【${cfg.icon} ${cfg.name} ${Renderer.getTierStars(res.fusion.tier)}】升星完成${res.bonusHint || ''}！`,
-            `Universal Fusion Fruit applied: ${cfg.icon} ${cfg.name} ${Renderer.getTierStars(res.fusion.tier)} starred up${res.bonusHint || ''}!`
-        );
+        if (res.fusion.isFeedChargeOnly || (res.fusion.isFeedUpgrade && !res.fusion.isFeedEvolve)) {
+            const fedU = res.fusion.feedU || 4;
+            const curU = res.fusion.nextNutritionU || (res.mergedTower && res.mergedTower.nutritionU) || 12;
+            const nextTargetU = res.fusion.tier === 3 ? 8 : 16;
+            setStatusMsg(
+                `已套用萬能融合果實：【${cfg.icon} ${cfg.name} ${Renderer.getTierStars(res.fusion.tier)}】充能 +${fedU}U（${curU}/${nextTargetU} U）！`,
+                `Universal Fusion Fruit applied: +${fedU}U fed to ${cfg.icon} ${cfg.name} (${curU}/${nextTargetU} U)!`
+            );
+        } else {
+            setStatusMsg(
+                `已套用萬能融合果實：【${cfg.icon} ${cfg.name} ${Renderer.getTierStars(res.fusion.tier)}】進化完成${res.bonusHint || ''}！`,
+                `Universal Fusion Fruit applied: Evolved to ${cfg.icon} ${cfg.name} ${Renderer.getTierStars(res.fusion.tier)}${res.bonusHint || ''}!`
+            );
+        }
         Renderer.renderBoard([cellIndex]);
         updateHUD();
         return { ok: true, result: res };
@@ -2259,14 +2590,15 @@
 
     function handleFusionFruitSlotClick() {
         const st = G.state;
+        const maxTier = (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || 5;
         if (!isGameplayActive() || (st.fusionFruitCount || 0) <= 0) return false;
         Backend.recordPlayerAction();
         holdIntermissionTimerIfPrep();
 
-        // 若目前已選取場上 1★ 或 2★ 防禦塔，直接一鍵套用升星！
+        // 若目前已選取場上 1★～4★ 防禦塔，直接一鍵套用升星或 +4U 充能！
         if (st.selectedIndex !== null && st.board[st.selectedIndex] !== null) {
             const selTower = st.board[st.selectedIndex];
-            if (selTower.tier >= 1 && selTower.tier < 3) {
+            if (selTower.tier >= 1 && selTower.tier < maxTier) {
                 applyFusionFruitAtCell(st.selectedIndex);
                 return true;
             }
@@ -2276,8 +2608,8 @@
         st.pendingSpawnType = null;
         if (st.isApplyingFusionFruit) {
             setStatusMsg(
-                '已啟動【萬能融合果實】：請點選場上任一 1★ 或 2★ 防禦塔直接升星（按 Esc 或再點槽位取消）。',
-                'Universal Fusion Fruit active: Click any 1★ or 2★ tower on the board to star up (Esc to cancel).'
+                '已啟動萬能融合果實：請點選場上 1★ ～ 4★ 防禦塔直接升星或充能 +4U（按 Esc 或再點槽位取消）。',
+                'Universal Fusion Fruit active: Click any 1★-4★ tower to star up or feed +4U (Esc to cancel).'
             );
         } else {
             setStatusMsg('已取消萬能融合果實待套用狀態。', 'Cancelled Universal Fusion Fruit placement.');
@@ -2294,7 +2626,12 @@
 
         const res = EconSys.selectWaveWager(wagerType);
         if (!res.ok) {
-            if (res.reason === 'insufficient_gold') {
+            if (res.reason === 'meta_locked') {
+                setStatusMsg(
+                    '【波次對賭懸賞】需於主選單「世界樹年輪・命運枝 ②」解鎖後才可使用。',
+                    'Wave Wager Bounties require Fate Branch #2 unlocked in the World Tree Meta panel.'
+                );
+            } else if (res.reason === 'insufficient_gold') {
                 setStatusMsg(
                     `金幣不足，押注【零封懸賞】需要 ${res.stake || 40} 💰。`,
                     `Not enough Gold: Zero-Leak Bounty requires ${res.stake || 40} 💰.`
@@ -2540,10 +2877,19 @@
         st.waveSpawnAccMs = plan.spawnIntervalMs;
         st.waveState = 'SPAWNING';
         st.forecastDrawerOpen = false;
+        st.guildDrawerOpen = false;
 
         const bonusMsgZh = earlyBonus > 0 ? `（⚡ 早鳥開波 +${earlyBonus} 💰）` : '';
         const bonusMsgEn = earlyBonus > 0 ? ` (⚡ Early Start +${earlyBonus} 💰)` : '';
-        if (plan.bossMeta) {
+        if (plan.crisisSpec) {
+            const thiefSuffixZh = plan.hasThief ? '｜⚠️ 偵測到「🦊 靈脈竊賊」潛入！' : '';
+            const thiefSuffixEn = plan.hasThief ? ' | ⚠️ Vein Thief detected!' : '';
+            setStatusMsg(
+                `⚠️ 危機波 Wave ${waveNum}【${plan.crisisSpec.title}】來襲：${plan.crisisSpec.hintZh}${thiefSuffixZh}${bonusMsgZh}`,
+                `⚠️ Crisis Wave ${waveNum} [${plan.crisisSpec.titleEn}]: ${plan.crisisSpec.hintEn}${thiefSuffixEn}${bonusMsgEn}`
+            );
+            Backend.trackFeel(`Wave:CrisisStart:${plan.crisisSpec.id}`, waveNum, { wave: waveNum, crisisId: plan.crisisSpec.id });
+        } else if (plan.bossMeta) {
             const bWeak = towersDict[plan.bossMeta.weakness] || { icon: '🔥', name: '火' };
             const weakIcon = bWeak.icon + getWeaknessShortName(plan.bossMeta.weakness);
             if (!st.isEndlessMode && waveNum === victoryWave) {
@@ -2563,9 +2909,11 @@
                 `Wave ${waveNum} incoming: Includes armored elites & special foes. Use Fire shred or hybrid fusions${bonusMsgEn}.`
             );
         } else {
+            const thiefSuffixZh = plan.hasThief ? '（偵測到 🦊 靈脈竊賊，擊殺掉厚獎！）' : '';
+            const thiefSuffixEn = plan.hasThief ? ' (Vein Thief spotted—slay for treasure!)' : '';
             setStatusMsg(
-                `第 ${waveNum} 波來襲：共 ${plan.queue.length} 隻敵軍進攻中${bonusMsgZh}。`,
-                `Wave ${waveNum} incoming: ${plan.queue.length} enemies marching${bonusMsgEn}.`
+                `第 ${waveNum} 波來襲：共 ${plan.queue.length} 隻敵軍進攻中${thiefSuffixZh}${bonusMsgZh}。`,
+                `Wave ${waveNum} incoming: ${plan.queue.length} enemies marching${thiefSuffixEn}${bonusMsgEn}.`
             );
         }
         updateHUD();
@@ -2595,7 +2943,8 @@
         Backend.saveMapRecord(st.currentMapId, st.currentWave, starsNum, {
             isClear: true,
             honorScore: honor.honorScore,
-            contractCount: honor.count
+            contractCount: honor.count,
+            awardHonor: true
         });
         st.bestWave = Math.max(st.bestWave, st.currentWave);
         renderMapSelectorUI();
@@ -2624,10 +2973,11 @@
         Backend.saveMapRecord(st.currentMapId, st.currentWave, null, {
             isClear: false,
             honorScore: honor.honorScore,
-            contractCount: honor.count
+            contractCount: honor.count,
+            awardHonor: true
         });
         renderMapSelectorUI();
-        ['startOverlayEl', 'victoryOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl', 'evoConfirmOverlayEl'].forEach(k => {
+        ['startOverlayEl', 'victoryOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl', 'metaTreeOverlayEl', 'evoConfirmOverlayEl'].forEach(k => {
             if (G.dom[k]) G.dom[k].classList.add('hidden');
         });
         finalizeOutcomeScreen('GAMEOVER', 'gameover');
@@ -2674,19 +3024,29 @@
         }
         const mapSpec = WaveSys.getCurrentMapSpec();
         Backend.resetRunTelemetry(G.state.currentMapId, mapSpec.name);
-        ['startOverlayEl', 'victoryOverlayEl', 'gameOverOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl', 'evoConfirmOverlayEl'].forEach(k => {
+        ['startOverlayEl', 'victoryOverlayEl', 'gameOverOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl', 'metaTreeOverlayEl', 'evoConfirmOverlayEl'].forEach(k => {
             if (G.dom[k]) G.dom[k].classList.add('hidden');
         });
         syncPauseUI();
         updateSeedPityUI();
     }
 
+    function applyStartingMetaPerks(st) {
+        if (!st) return;
+        st.blessingRerollsLeft = (TreeSys && typeof TreeSys.isMetaNodeUnlocked === 'function' && TreeSys.isMetaNodeUnlocked('fate_4')) ? 1 : 0;
+        if (TreeSys && typeof TreeSys.isMetaNodeUnlocked === 'function' && TreeSys.isMetaNodeUnlocked('wealth_4')
+            && EconSys && typeof EconSys.grantRandomStockShare === 'function') {
+            EconSys.grantRandomStockShare();
+        }
+    }
+
     function restartGame() {
         resetMatchSession('PREP', 1);
+        applyStartingMetaPerks(G.state);
         const mapSpec = WaveSys.getCurrentMapSpec();
         setStatusMsg(
-            `【${mapSpec.name}】拖曳下方元素卡至棋盤可建格召喚，或按 1/2/3/Q/W/Space 快速操作。`,
-            `[${mapSpec.name}] Drag element cards onto green tiles to build, or press 1/2/3/Q/W/Space.`
+            `【${mapSpec.name}】拖曳下方元素卡至棋盤可建格召喚，或按 1/2/3/Q/W/E/B/Space 快速操作。`,
+            `[${mapSpec.name}] Drag element cards onto green tiles to build, or press 1/2/3/Q/W/E/B/Space.`
         );
         Renderer.renderBoard(); updateHUD(); updateSpeedButtonUI(); startMainLoop();
     }
@@ -2714,6 +3074,7 @@
         if (TreeSys && typeof TreeSys.resetTreasureRoots === 'function') {
             TreeSys.resetTreasureRoots();
         }
+        applyStartingMetaPerks(st);
         if (CodexSys && typeof CodexSys.resetRunCodex === 'function') {
             CodexSys.resetRunCodex();
         }
@@ -2760,6 +3121,7 @@
 
         st.entangleCdMs = Math.max(0, st.entangleCdMs - dtMs);
         st.frenzyCdMs = Math.max(0, st.frenzyCdMs - dtMs);
+        st.harvestCdMs = Math.max(0, (st.harvestCdMs || 0) - dtMs);
         st.dewOverchargeMs = Math.max(0, (st.dewOverchargeMs || 0) - dtMs);
         const wasFrenzy = st.frenzyActiveMs > 0;
         st.frenzyActiveMs = Math.max(0, st.frenzyActiveMs - dtMs);
@@ -2767,7 +3129,7 @@
             for (let i = 0; i < G.towerElements.length; i++) if (G.towerElements[i]) G.towerElements[i].classList.remove('frenzy-active');
             updateTowerInspector();
         }
-        if (st.entangleCdMs > 0 || st.frenzyCdMs > 0 || wasFrenzy) updateSkillButtonsUI();
+        if (st.entangleCdMs > 0 || st.frenzyCdMs > 0 || (st.harvestCdMs || 0) > 0 || wasFrenzy) updateSkillButtonsUI();
 
         const victoryWave = CONFIG.VICTORY_WAVE || 10;
         const blessingInterval = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.BLESSING_INTERVAL_WAVES) || 3;
@@ -2789,6 +3151,12 @@
                 if (st.waveSpawnQueue.length === 0) { st.waveState = 'CLEARING'; updateWavePhaseUI(); }
             }
         } else if (st.waveState === 'CLEARING' && st.monsters.length === 0) {
+            const clearedCrisis = (WaveSys && typeof WaveSys.getCrisisWaveSpec === 'function')
+                ? WaveSys.getCrisisWaveSpec(st.currentWave)
+                : null;
+            if (clearedCrisis && typeof Backend.trackFeel === 'function') {
+                Backend.trackFeel(`Wave:CrisisClear:${clearedCrisis.id}`, st.currentWave, { wave: st.currentWave, crisisId: clearedCrisis.id });
+            }
             const wagerResult = (EconSys && typeof EconSys.settleWaveWager === 'function')
                 ? EconSys.settleWaveWager(st.currentWave)
                 : null;
@@ -2944,45 +3312,47 @@
         Renderer.renderBoard([sellIdx]); updateHUD();
     }
 
-    function awakenSelectedTowerCrown() {
+    function infuseSelectedScionTower() {
         const st = G.state;
-        if (!isGameplayActive() || !st.isEndlessMode || st.selectedIndex === null) return false;
-        const towerObj = st.board[st.selectedIndex];
-        if (!towerObj || towerObj.tier < 3 || towerObj.isCrowned) return false;
-        const maxCrowns = 2;
-        if ((st.crownedUsedCount || 0) >= maxCrowns) {
-            setStatusMsg('每局無盡模式最多僅能覺醒 2 座 T4 聖冠防禦塔。', 'Max 2 T4 Crown awakenings per Endless run.');
+        if (!isGameplayActive() || st.selectedIndex === null) return false;
+        if (TreeSys && typeof TreeSys.isMetaNodeUnlocked === 'function' && !TreeSys.isMetaNodeUnlocked('ancient_1')) {
+            setStatusMsg(
+                '【無盡靈脈灌注】需於主選單「世界樹年輪・古樹枝 ①」解鎖後才可使用。',
+                'Vein Infusion requires Ancient Branch #1 unlocked in the World Tree Meta panel.'
+            );
             return false;
         }
-        const costSpec = EconSys.getCrownAwakenCost ? EconSys.getCrownAwakenCost() : { gold: 220, dew: 60 };
-        if (st.currentGold < costSpec.gold || st.dewEnergy < costSpec.dew) {
+        const towerObj = st.board[st.selectedIndex];
+        if (!towerObj || (Number(towerObj.tier) || 1) < 5) return false;
+
+        const nextK = Math.max(0, Math.floor(Number(towerObj.infusionCount) || 0)) + 1;
+        const cost = EconSys.getInfusionCost ? EconSys.getInfusionCost(nextK) : (150 + 75 * nextK);
+        if (st.currentGold < cost) {
             setStatusMsg(
-                `聖冠覺醒需 ${costSpec.gold} 💰 與 ${costSpec.dew} 💧，資源不足。`,
-                `Crown Awakening requires ${costSpec.gold} 💰 and ${costSpec.dew} 💧.`
+                `靈脈灌注第 ${nextK} 次需花費 ${cost} 💰，金幣不足。`,
+                `Vein Infusion #${nextK} requires ${cost} 💰 (insufficient Gold).`
             );
             return false;
         }
         Backend.recordPlayerAction();
-        st.currentGold -= costSpec.gold;
-        st.dewEnergy -= costSpec.dew;
-        towerObj.investedGold = (towerObj.investedGold || 0) + costSpec.gold;
-        towerObj.isCrowned = true;
-        st.crownedUsedCount = (st.crownedUsedCount || 0) + 1;
+        st.currentGold -= cost;
+        towerObj.infusionCount = nextK;
+        towerObj.investedGold = (towerObj.investedGold || 0) + cost;
 
         const c = indexToCoords(st.selectedIndex);
         const center = Renderer.getCellCenter(c.x, c.y);
-        Renderer.emitRingFX(center.left, center.top, G.boardMetrics.step * 1.45, '#E0B43C', 0.30, 380);
-        Renderer.emitParticleBurst(center.left, center.top, '#E0B43C', 14, 110);
-        SoundEngine.playMerge(3, true);
+        Renderer.emitRingFX(center.left, center.top, G.boardMetrics.step * 1.35, '#D97724', 0.28, 340);
+        Renderer.emitParticleBurst(center.left, center.top, '#E0B43C', 10, 95);
+        SoundEngine.playMerge(5, true);
 
         const cfg = getTowersDict()[towerObj.type] || { name: towerObj.type };
+        const totalBonusPct = Math.round((AttackSys.b_infusion ? AttackSys.b_infusion(nextK) : 0) * 100);
         setStatusMsg(
-            `👑 【${cfg.name}】聖冠覺醒成功！基礎傷害 ×2.2、攻速 +25%、射程 +0.5 格並啟用血脈專屬聖冠被動。`,
-            `👑 ${cfg.name} awakened to T4 Crown! Base DMG ×2.2, ATK Spd +25%, Rng +0.5 & Crown Passive active.`
+            `【${cfg.name} ★★★★★】完成第 ${nextK} 次靈脈灌注（-${cost} 💰），自身戰力桶灌注加成達 +${totalBonusPct}%！`,
+            `${cfg.name} ★★★★★ Vein Infusion #${nextK} (-${cost} 💰): +${totalBonusPct}% power bucket bonus!`
         );
         Renderer.renderCellTower(st.selectedIndex);
         Renderer.renderBoard([]);
-        Renderer.updateRangeIndicator();
         updateHUD();
         return true;
     }
@@ -3106,8 +3476,11 @@
     }
 
     [
-        ['inspectorAwakenBtn', awakenSelectedTowerCrown], ['inspectorTargetBtn', cycleSelectedTowerTargetMode], ['inspectorSellBtn', sellSelectedTower], ['nextWaveBtn', triggerEarlyNextWave],
+        ['inspectorInfuseBtn', infuseSelectedScionTower], ['inspectorTargetBtn', cycleSelectedTowerTargetMode], ['inspectorSellBtn', sellSelectedTower], ['nextWaveBtn', triggerEarlyNextWave],
         ['skillEntangleBtn', () => TreeSys.castEntangleSkill()], ['skillFrenzyBtn', () => TreeSys.castFrenzySkill()],
+        ['skillHarvestBtn', () => TreeSys.castGoldenHarvestSkill()], ['guildHarvestBtn', () => TreeSys.castGoldenHarvestSkill()],
+        ['blessingRerollBtn', () => { SoundEngine.ensureContext(); if (TreeSys && typeof TreeSys.rerollBlessingChoices === 'function') TreeSys.rerollBlessingChoices(); }],
+        ['metaTreeBtn', openMetaTreeModal], ['metaTreeCloseBtn', closeMetaTreeModal], ['metaTreeResetBtn', handleResetMetaTree],
         ['pauseBtn', toggleCombatPause], ['pauseResumeBtn', () => { if (G.state.isPaused) setPauseState(false); }],
         ['pauseMenuBtn', returnToMainMenu], ['soundBtn', () => SoundEngine.toggleMute()],
         ['langBtn', (e) => {
@@ -3123,7 +3496,7 @@
             setLangMenuOpen(isCurrentlyHidden, 'start');
         }],
         ['codexBtn', () => CodexSys.openCodex()], ['codexCloseBtn', () => CodexSys.closeCodex()],
-        ['helpBtn', openGuide], ['guideXBtn', closeGuide], ['guideCloseBtn', closeGuide], ['guideMenuBtn', () => { closeGuide(); returnToMainMenu(); }],
+        ['helpBtn', () => { if (isGuideOpen()) closeGuide(); else openGuide(); }], ['guideXBtn', closeGuide], ['guideCloseBtn', closeGuide], ['guideMenuBtn', () => { closeGuide(); returnToMainMenu(); }],
         ['forecastToggleBtn', toggleForecastDrawer], ['speedBtn', cycleGameSpeed], ['startGameBtn', startGame],
         ['victoryRestartBtn', restartGame], ['victoryMenuBtn', returnToMainMenu], ['endlessBtn', continueEndlessMode],
         ['restartBtn', restartGame], ['gameoverMenuBtn', returnToMainMenu],
@@ -3135,6 +3508,10 @@
             }
         }],
         ['guildToggleBtn', () => { SoundEngine.ensureContext(); toggleGuildDrawer(); }],
+        ['guildCloseBtn', () => { SoundEngine.ensureContext(); toggleGuildDrawer(false); }],
+        ['guildTabBtnRoots', () => { SoundEngine.ensureContext(); switchGuildTab('roots'); }],
+        ['guildTabBtnStocks', () => { SoundEngine.ensureContext(); switchGuildTab('stocks'); }],
+        ['guildTabBtnFate', () => { SoundEngine.ensureContext(); switchGuildTab('fate'); }],
         ['guildHoldTimerBtn', () => { SoundEngine.ensureContext(); toggleGuildTimerHold(); }],
         ['blindBoxBuyBtn', () => { SoundEngine.ensureContext(); openBlindBox(); }],
         ['wagerZeroLeakBtn', () => { SoundEngine.ensureContext(); handleWagerSelect('zero_leak'); }],
@@ -3180,6 +3557,28 @@
     if (G.dom.guideOverlayEl) {
         G.dom.guideOverlayEl.addEventListener('click', (e) => {
             if (e && e.target === G.dom.guideOverlayEl) closeGuide();
+        });
+    }
+
+    if (G.dom.metaTreeOverlayEl) {
+        G.dom.metaTreeOverlayEl.addEventListener('click', (e) => {
+            if (e && e.target === G.dom.metaTreeOverlayEl) closeMetaTreeModal();
+        });
+    }
+
+    if (G.dom.metaTreeBranchesEl) {
+        G.dom.metaTreeBranchesEl.addEventListener('click', (e) => {
+            const btn = e && e.target && e.target.closest ? e.target.closest('.meta-node-btn') : null;
+            if (!btn || btn.disabled || !btn.dataset.nodeId) return;
+            SoundEngine.ensureContext();
+            if (Backend && typeof Backend.purchaseMetaNode === 'function') {
+                const res = Backend.purchaseMetaNode(btn.dataset.nodeId);
+                if (res && res.ok) {
+                    SoundEngine.playMerge(3, true);
+                    renderMetaTreeModal();
+                    updateHUD();
+                }
+            }
         });
     }
 
@@ -3271,6 +3670,13 @@
                     setLangMenuOpen(false);
                 }
             }
+            if (G.state.forecastDrawerOpen && (!tgt || !tgt.closest || !tgt.closest('#wave-forecast-bar'))) {
+                G.state.forecastDrawerOpen = false;
+                updateWaveForecastUI();
+            }
+            if (G.state.guildDrawerOpen && (!tgt || !tgt.closest || (!tgt.closest('#world-tree-guild-panel') && !tgt.closest('#grid-board')))) {
+                toggleGuildDrawer(false);
+            }
             if (e.pointerType === 'touch') {
                 activateTouchMode();
                 if (tgt && typeof tgt.closest === 'function'
@@ -3321,9 +3727,11 @@
                 const hudLangOpen = G.dom.langMenuEl && !G.dom.langMenuEl.classList.contains('hidden');
                 const startLangOpen = G.dom.startLangMenuEl && !G.dom.startLangMenuEl.classList.contains('hidden');
                 if (hudLangOpen || startLangOpen) { e.preventDefault(); setLangMenuOpen(false); return; }
+                if (isOverlayVisible(G.dom.metaTreeOverlayEl)) { e.preventDefault(); closeMetaTreeModal(); return; }
                 if (DragSys.isDragging()) { e.preventDefault(); DragSys.cancelActiveDrag(); }
                 else if (isCodexOpen()) { e.preventDefault(); CodexSys.closeCodex(); }
                 else if (isGuideOpen()) { e.preventDefault(); closeGuide(); }
+                else if (st.guildDrawerOpen) { e.preventDefault(); toggleGuildDrawer(false); }
                 else if (st.forecastDrawerOpen) { e.preventDefault(); st.forecastDrawerOpen = false; updateWaveForecastUI(); }
                 else if (isMatchPhaseActive() && (st.selectedIndex !== null || st.buildTargetIndex !== null || st.pendingSpawnType !== null || st.isApplyingFusionFruit || st.inspectedMonsterId !== null)) {
                     e.preventDefault(); st.selectedIndex = null; st.buildTargetIndex = null; st.pendingSpawnType = null; st.isApplyingFusionFruit = false; st.inspectedMonsterId = null;
@@ -3366,6 +3774,7 @@
                 }
             }
             if (isAnyModalOpen() || !isMatchPhaseActive()) return;
+            if (lowerKey === 'b' && !e.repeat) { e.preventDefault(); SoundEngine.ensureContext(); toggleGuildDrawer(); return; }
             if (key === 'Tab' || lowerKey === 's') { e.preventDefault(); SoundEngine.ensureContext(); cycleGameSpeed(); return; }
             if (!isGameplayActive()) return;
 
@@ -3381,6 +3790,8 @@
                 e.preventDefault(); SoundEngine.ensureContext(); TreeSys.castEntangleSkill();
             } else if (lowerKey === 'w') {
                 e.preventDefault(); SoundEngine.ensureContext(); TreeSys.castFrenzySkill();
+            } else if (lowerKey === 'e') {
+                e.preventDefault(); SoundEngine.ensureContext(); TreeSys.castGoldenHarvestSkill();
             }
         });
     }
@@ -3412,8 +3823,10 @@
         openBlindBox,
         applyFusionFruitAtCell,
         handleFusionFruitSlotClick,
+        infuseSelectedScionTower,
         handleWagerSelect,
         toggleGuildDrawer,
+        switchGuildTab,
         toggleGuildTimerHold,
         inspectMonsterById,
         onMonsterLeaked,
@@ -3471,6 +3884,15 @@
                     if (tEl) tEl.innerText = b.name;
                     if (dEl) dEl.innerText = b.desc;
                 });
+                if (G.dom.blessingRerollBtn) {
+                    const left = Math.max(0, Number(st.blessingRerollsLeft) || 0);
+                    G.dom.blessingRerollBtn.innerText = left > 0
+                        ? L(`重抽賜福（免費剩 ${left} 次）`, `Reroll Blessings (${left} Free)`)
+                        : L('免費重抽已使用 (0/1)', 'Free Reroll Used (0/1)');
+                }
+            }
+            if (isOverlayVisible(G.dom.metaTreeOverlayEl)) {
+                renderMetaTreeModal();
             }
             if (st.waveState === 'VICTORY') populateBattleRecap('victory');
             if (st.isGameOver || st.waveState === 'GAMEOVER') populateBattleRecap('gameover');
@@ -3530,6 +3952,7 @@
     updateSoundButtonUI();
 
     Backend.init();
+    updateMetaTreeEntryUI();
 
     const GameController = {
         runtime: G,
@@ -3545,8 +3968,10 @@
         openBlindBox,
         applyFusionFruitAtCell,
         handleFusionFruitSlotClick,
+        infuseSelectedScionTower,
         handleWagerSelect,
         toggleGuildDrawer,
+        switchGuildTab,
         toggleGuildTimerHold,
         openEvolutionConfirmModal,
         confirmPendingEvolution,

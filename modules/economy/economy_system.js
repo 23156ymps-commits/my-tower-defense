@@ -20,6 +20,50 @@
         return (GameApp.data && GameApp.data.economy) || {};
     }
 
+    function hasMetaNode(nodeId) {
+        const TreeSys = GameApp.systems && GameApp.systems.tree;
+        if (TreeSys && typeof TreeSys.isMetaNodeUnlocked === 'function') {
+            return TreeSys.isMetaNodeUnlocked(nodeId);
+        }
+        const bk = GameApp.backend || (GameApp.core && GameApp.core.backend);
+        if (bk && typeof bk.loadMetaTreeState === 'function') {
+            return bk.loadMetaTreeState().unlockedNodes.includes(nodeId);
+        }
+        return false;
+    }
+
+    function hasBlessingActive(blessingId) {
+        const TreeSys = GameApp.systems && GameApp.systems.tree;
+        return Boolean(TreeSys && typeof TreeSys.hasBlessing === 'function' && TreeSys.hasBlessing(blessingId));
+    }
+
+    function canTradeStocks() {
+        return hasMetaNode('wealth_2');
+    }
+
+    function canOpenBlindBox() {
+        return hasMetaNode('fate_1');
+    }
+
+    function canUseWager() {
+        return hasMetaNode('fate_2');
+    }
+
+    function getStockSellFeeRate() {
+        const d = getData();
+        if (hasBlessingActive('insider_trading')) return 0;
+        if (hasMetaNode('wealth_3')) return Number.isFinite(d.STOCK_SELL_FEE_META) ? d.STOCK_SELL_FEE_META : 0.02;
+        return Number.isFinite(d.STOCK_SELL_FEE) ? d.STOCK_SELL_FEE : 0.05;
+    }
+
+    function getBlindBoxPityThreshold() {
+        const d = getData();
+        if (hasMetaNode('fate_3')) {
+            return Number.isFinite(d.BLIND_BOX_PITY_STREAK_META) ? d.BLIND_BOX_PITY_STREAK_META : 2;
+        }
+        return Number.isFinite(d.BLIND_BOX_PITY_STREAK) ? d.BLIND_BOX_PITY_STREAK : 3;
+    }
+
     function getInitialGold(mapSpec, contractsOverride = null) {
         const d = getData();
         const base = Number.isFinite(d.INITIAL_GOLD) ? d.INITIAL_GOLD : 40;
@@ -335,7 +379,7 @@
 
         for (let i = 0; i < queue.length; i++) {
             const entry = queue[i];
-            if (!entry) continue;
+            if (!entry || entry.isTreasureThief || entry.typeKey === 'thief') continue;
             const mCfg = monsterDb[entry.typeKey] || {};
             const weak = (entry.isBoss && entry.bossSpec && entry.bossSpec.weakness)
                 || mCfg.weakness
@@ -445,8 +489,30 @@
         return changes;
     }
 
+    function grantRandomStockShare(options = {}) {
+        if (!G || !G.state) return { ok: false, reason: 'no_runtime' };
+        const st = G.state;
+        const d = getData();
+        if (!st.stocks) st.stocks = createInitialStockState();
+        const maxShares = Number.isFinite(d.STOCK_MAX_SHARES) ? d.STOCK_MAX_SHARES : 10;
+        const candidates = STOCK_ELEMENTS.filter(el => st.stocks[el] && (st.stocks[el].shares || 0) < maxShares);
+        if (candidates.length === 0) return { ok: false, reason: 'all_max_shares' };
+        const picked = options.elementKey && candidates.includes(options.elementKey)
+            ? options.elementKey
+            : candidates[Math.floor(Math.random() * candidates.length)];
+        const rec = st.stocks[picked];
+        rec.shares += 1;
+        return {
+            ok: true,
+            element: picked,
+            shares: rec.shares,
+            dividendBonus: getElementDividendBonus(picked)
+        };
+    }
+
     function buyStock(elementKey) {
         if (!G || !G.state) return { ok: false, reason: 'no_runtime' };
+        if (!canTradeStocks()) return { ok: false, reason: 'meta_locked', metaNode: 'wealth_2' };
         const st = G.state;
         const d = getData();
         if (!st.stocks) st.stocks = createInitialStockState();
@@ -477,6 +543,7 @@
 
     function sellStock(elementKey, waveNum = null) {
         if (!G || !G.state) return { ok: false, reason: 'no_runtime' };
+        if (!canTradeStocks()) return { ok: false, reason: 'meta_locked', metaNode: 'wealth_2' };
         const st = G.state;
         const d = getData();
         if (!st.stocks) st.stocks = createInitialStockState();
@@ -485,9 +552,9 @@
             return { ok: false, reason: 'no_shares', shares: 0 };
         }
 
-        const feeRate = Number.isFinite(d.STOCK_SELL_FEE) ? d.STOCK_SELL_FEE : 0.05;
+        const feeRate = getStockSellFeeRate();
         const price = Math.max(10, Math.min(60, Math.round(Number(rec.price) || 20)));
-        const fee = Math.max(1, Math.round(price * feeRate));
+        const fee = feeRate <= 0 ? 0 : Math.max(1, Math.round(price * feeRate));
         const grossSell = Math.max(1, price - fee);
         const avgCost = (rec.totalCost || 0) / Math.max(1, rec.shares);
         const principal = Math.min(grossSell, avgCost);
@@ -526,7 +593,9 @@
 
     function getElementDividendBonus(elementKey) {
         const d = getData();
-        const perShare = Number.isFinite(d.STOCK_DIVIDEND_PER_SHARE) ? d.STOCK_DIVIDEND_PER_SHARE : 0.024;
+        const perShare = hasBlessingActive('insider_trading')
+            ? 0.030
+            : (Number.isFinite(d.STOCK_DIVIDEND_PER_SHARE) ? d.STOCK_DIVIDEND_PER_SHARE : 0.024);
         const cap = Number.isFinite(d.STOCK_DIVIDEND_CAP) ? d.STOCK_DIVIDEND_CAP : 0.24;
         const rec = G && G.state && G.state.stocks && G.state.stocks[elementKey];
         const shares = rec ? Math.max(0, Math.min(10, Math.floor(Number(rec.shares) || 0))) : 0;
@@ -594,9 +663,11 @@
     function rollBlindBoxOutcome(options = {}) {
         const d = getData();
         const st = G && G.state;
-        const pityThreshold = Number.isFinite(d.BLIND_BOX_PITY_STREAK) ? d.BLIND_BOX_PITY_STREAK : 3;
+        const pityThreshold = getBlindBoxPityThreshold();
         const pityT3Chance = Number.isFinite(d.BLIND_BOX_PITY_TIER3_CHANCE) ? d.BLIND_BOX_PITY_TIER3_CHANCE : 0.25;
-        const critStep = Number.isFinite(d.BLIND_BOX_CRIT_BONUS_STEP) ? d.BLIND_BOX_CRIT_BONUS_STEP : 0.015;
+        const critStep = hasBlessingActive('gambler_lucky_leaf')
+            ? 0.02
+            : (Number.isFinite(d.BLIND_BOX_CRIT_BONUS_STEP) ? d.BLIND_BOX_CRIT_BONUS_STEP : 0.015);
         const critCap = Number.isFinite(d.BLIND_BOX_CRIT_BONUS_CAP) ? d.BLIND_BOX_CRIT_BONUS_CAP : 0.15;
 
         const t1Pool = ['fire_bud', 'ice_bud', 'thunder_bud'];
@@ -705,6 +776,7 @@
 
     function selectWaveWager(wagerType) {
         if (!G || !G.state) return { ok: false, reason: 'no_runtime' };
+        if (!canUseWager()) return { ok: false, reason: 'meta_locked', metaNode: 'fate_2' };
         const st = G.state;
         const d = getData();
         if (!canSelectWaveWager()) {
@@ -778,7 +850,8 @@
 
         if (wager.type === 'zero_leak') {
             const stake = Number(wager.stake) || 40;
-            const rawNetProfit = Number.isFinite(d.WAGER_ZERO_LEAK_NET_PROFIT) ? d.WAGER_ZERO_LEAK_NET_PROFIT : 30;
+            const luckyBonus = hasBlessingActive('gambler_lucky_leaf') ? 10 : 0;
+            const rawNetProfit = (Number.isFinite(d.WAGER_ZERO_LEAK_NET_PROFIT) ? d.WAGER_ZERO_LEAK_NET_PROFIT : 30) + luckyBonus;
             const failDew = Number.isFinite(d.WAGER_ZERO_LEAK_FAIL_DEW) ? d.WAGER_ZERO_LEAK_FAIL_DEW : 15;
             const leaked = Boolean(wager.leakedThisWave || (st.waveLeakedCount || 0) > 0 || (Number.isFinite(wager.startBaseHp) && st.baseHp < wager.startBaseHp));
 
@@ -858,6 +931,12 @@
         ensureWaveNonCombatLedger,
         getRemainingNonCombatCap,
         recordNonCombatNetGain,
+        canTradeStocks,
+        canOpenBlindBox,
+        canUseWager,
+        getStockSellFeeRate,
+        getBlindBoxPityThreshold,
+        grantRandomStockShare,
         createInitialStockState,
         computeStockIntelSignal,
         getWaveElementWeaknessRatios,

@@ -49,7 +49,7 @@
                         <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5" />
                         <path d="M6.3 6.2a1.8 1.8 0 1 1 2.5 1.7c-.6.3-.8.7-.8 1.3v.3M8 11.8v.2" fill="none"
                             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-                    </svg></button>
+                    </svg><span id="help-btn-label">戰術手冊</span></button>
                 <div class="lang-dropdown" id="lang-dropdown">
                     <button id="lang-btn" class="hud-ctrl-btn hud-lang-btn" type="button" aria-haspopup="true"
                         aria-expanded="false" title="切換語言 / Switch Language">
@@ -77,16 +77,17 @@
             </div>
         </div>
 
-        <!-- 頂部 HUD 下方收折標籤列（備戰展開預告、開波自動收折；暫停時顯示不遮擋戰場之輕量提示條） -->
+        <!-- 頂部 HUD 下方收折標籤列（預設收合僅顯示下波弱點占比與總數，點擊才展開詳細清單） -->
         <div id="hud-sub-slot" class="hud-sub-slot">
             <div id="wave-forecast-bar" class="wave-forecast-bar">
                 <div class="forecast-bar-main">
                     <button id="forecast-toggle-btn" class="forecast-toggle-btn" type="button" aria-expanded="false">
                         <span id="forecast-bar-title" class="num">下波預告 · Wave 1</span>
+                        <span id="forecast-weak-chips" class="forecast-weak-chips num"></span>
                         <span id="forecast-toggle-indicator" class="forecast-chevron">▾</span>
                     </button>
                     <div id="forecast-inline-summary" class="forecast-inline-summary"></div>
-                    <div id="info-legend" class="info-legend-inline">
+                    <div id="info-legend" class="info-legend-inline hidden">
                         <span><svg class="ui-ico ui-ico-fire" viewBox="0 0 16 16" aria-hidden="true">
                                 <path
                                     d="M8.4 1.8c.4 2.4 3.4 4.1 3.4 7.4a3.8 3.8 0 0 1-7.6 0c0-1.9 1-3.3 2.1-4.3.2 1.2 1 1.8 1.6 2-.3-1.8.1-3.5.5-5.1Z"
@@ -176,6 +177,10 @@
                         </li>
                         <li class="side-panel-row"><span>同種 2★ + 2★</span><span class="side-val num">冠枝 3★</span>
                         </li>
+                        <li class="side-panel-row"><span>同脈 3★ / 餵養</span><span class="side-val num">古冠·雙生 4★</span>
+                        </li>
+                        <li class="side-panel-row"><span>同脈 4★ / 16U</span><span class="side-val num">神裔 5★</span>
+                        </li>
                     </ul>
                 </div>
             </aside>
@@ -192,6 +197,28 @@
                 <!-- 特殊地形與防禦塔原位輕量浮動名牌 -->
                 <div id="terrain-tooltip" class="terrain-tooltip hidden" role="status" aria-live="polite"></div>
                 <div id="tower-tooltip" class="tower-tooltip hidden" role="status" aria-live="polite"></div>
+                <!-- 懸停或點選場上怪物時浮現之目標怪物情報卡 -->
+                <div id="side-monster-card" class="side-panel-section side-monster-card floating-monster-card hidden" aria-live="polite">
+                    <div class="smc-title-bar">
+                        <h2 class="side-panel-title">目標敵軍情報</h2>
+                        <span id="side-monster-lock-tag" class="smc-lock-tag num hidden">鎖定檢視</span>
+                    </div>
+                    <div id="side-monster-lock-track" class="smc-lock-track hidden" aria-hidden="true">
+                        <div id="side-monster-lock-fill" class="smc-lock-fill"></div>
+                    </div>
+                    <div class="smc-header">
+                        <canvas id="side-monster-portrait" class="smc-portrait" width="44" height="44" data-size="44"
+                            aria-hidden="true"></canvas>
+                        <div class="smc-title-wrap">
+                            <div id="side-monster-name" class="smc-name"></div>
+                            <div id="side-monster-hp" class="smc-hp num"></div>
+                        </div>
+                    </div>
+                    <div id="side-monster-shield" class="smc-shield num hidden"></div>
+                    <div id="side-monster-stats" class="smc-stats num"></div>
+                    <div id="side-monster-debuffs" class="smc-debuffs num hidden"></div>
+                    <div id="side-monster-trait" class="smc-trait"></div>
+                </div>
                 <div id="mobile-monster-card" class="mobile-monster-card hidden" role="status" aria-live="polite">
                 </div>
                 <div id="boss-status-bar" class="boss-status-bar hidden" aria-live="polite">
@@ -219,28 +246,7 @@
                 </div>
             </div>
 
-            <aside id="side-panel-right" class="side-panel side-panel-right" aria-label="本波與下波出怪詳情">
-                <div id="side-monster-card" class="side-panel-section side-monster-card hidden" aria-live="polite">
-                    <div class="smc-title-bar">
-                        <h2 class="side-panel-title">目標敵軍情報</h2>
-                        <span id="side-monster-lock-tag" class="smc-lock-tag num hidden">鎖定檢視</span>
-                    </div>
-                    <div id="side-monster-lock-track" class="smc-lock-track hidden" aria-hidden="true">
-                        <div id="side-monster-lock-fill" class="smc-lock-fill"></div>
-                    </div>
-                    <div class="smc-header">
-                        <canvas id="side-monster-portrait" class="smc-portrait" width="44" height="44" data-size="44"
-                            aria-hidden="true"></canvas>
-                        <div class="smc-title-wrap">
-                            <div id="side-monster-name" class="smc-name"></div>
-                            <div id="side-monster-hp" class="smc-hp num"></div>
-                        </div>
-                    </div>
-                    <div id="side-monster-shield" class="smc-shield num hidden"></div>
-                    <div id="side-monster-stats" class="smc-stats num"></div>
-                    <div id="side-monster-debuffs" class="smc-debuffs num hidden"></div>
-                    <div id="side-monster-trait" class="smc-trait"></div>
-                </div>
+            <aside id="side-panel-right" class="side-panel side-panel-right hidden" aria-label="本波與下波出怪詳情">
                 <div id="side-wave-current-section" class="side-panel-section">
                     <h2 id="side-current-header" class="side-panel-title num">本波情報 · Wave 1</h2>
                     <ul id="side-current-list" class="forecast-list"></ul>
@@ -262,6 +268,7 @@
                     <span id="inspector-name" class="inspector-badge">🔥 火芽 ★</span>
                     <span id="inspector-lineage" class="inspector-lineage">🔥 火芽</span>
                     <span id="inspector-terrain" class="inspector-terrain hidden"></span>
+                    <span id="inspector-growth-badge" class="inspector-growth-badge num hidden">充能 4 / 8 U</span>
                 </div>
                 <div class="inspector-bottom-row">
                     <div class="inspector-metrics">
@@ -272,10 +279,7 @@
                         <span id="inspector-range" class="inspector-stat num">射程 2.3</span>
                     </div>
                     <div class="inspector-actions">
-                        <button id="inspector-awaken-btn" class="inspector-btn awaken-btn num hidden" type="button">👑
-                            type="button"><svg class="ui-ico ui-ico-crown" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M2.2 12.2L3.3 5.2l3 2.7L8 3.8l1.7 4.1 3-2.7 1.1 7H2.2Z" fill="currentColor" />
-                            </svg><span id="inspector-awaken-text">聖冠覺醒 (220 / 60)</span></button>
+                        <button id="inspector-infuse-btn" class="inspector-btn infuse-btn num hidden" type="button"><span id="inspector-infuse-text">靈脈灌注 (225 💰)</span></button>
                         <button id="inspector-target-btn" class="inspector-btn target-btn" type="button">索敵：最前</button>
                         <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7
                             💰)</button>
@@ -284,153 +288,172 @@
             </div>
         </div>
 
-        <!-- 世界樹「聚寶根鬚（Lv.0 → Lv.3）」互動經營面板（不占棋盤格） -->
-        <section id="world-tree-root-panel" class="tree-root-panel" aria-label="世界樹聚寶根鬚經營系統">
-            <div class="tree-root-header">
-                <div class="tree-root-title-wrap">
-                    <span id="tree-root-title" class="tree-root-title">世界樹 · 聚寶根鬚</span>
-                    <span id="tree-root-lv-badge" class="tree-root-lv-badge num">Lv.0 / Lv.3</span>
-                    <span id="tree-root-refund-badge" class="tree-root-meta-tag num">出售退費 70%</span>
-                    <span id="tree-root-yield-badge" class="tree-root-meta-tag tree-root-yield num">本波預估 +0 💰（軟上限 30 💰）</span>
-                </div>
-                <button id="tree-root-upgrade-btn" class="tree-root-upgrade-btn num" type="button">
-                    升級 Lv.1 汲取根鬚 (45 💰)
-                </button>
-            </div>
-            <div id="tree-root-tiers" class="tree-root-tiers">
-                <button type="button" class="tree-root-tier-card is-next" data-root-tier="1">
-                    <div class="root-tier-head">
-                        <span class="root-tier-name">Lv.1 汲取根鬚</span>
-                        <span class="root-tier-cost num">45 💰</span>
-                    </div>
-                    <div class="root-tier-desc num">每清完 1 波固定額外獲得 +15 💰</div>
-                </button>
-                <button type="button" class="tree-root-tier-card is-locked" data-root-tier="2">
-                    <div class="root-tier-head">
-                        <span class="root-tier-name">Lv.2 黃金根脈</span>
-                        <span class="root-tier-cost num">75 💰</span>
-                    </div>
-                    <div class="root-tier-desc num">每波 +32 💰 · 全場出售退費率 70% → 80%</div>
-                </button>
-                <button type="button" class="tree-root-tier-card is-locked" data-root-tier="3">
-                    <div class="root-tier-head">
-                        <span class="root-tier-name">Lv.3 複利樹心</span>
-                        <span class="root-tier-cost num">110 💰</span>
-                    </div>
-                    <div class="root-tier-desc num">每波 +42 💰 ＋ 現金 8% 利息（上限 +35 💰，軟上限 22 + 8w）</div>
-                </button>
-            </div>
-        </section>
-
-        <!-- 世界樹商會 · 波間抽屜（A. 元素股市 / B. 命運種子盲盒 / C. 波次對賭懸賞） -->
+        <!-- 世界樹商會 · 波間抽屜（預設收合 1 行橫條，點擊或按 [B] 向上展開 3 頁籤浮動抽屜） -->
         <section id="world-tree-guild-panel" class="guild-drawer-panel" aria-label="世界樹商會波間抽屜">
             <div class="guild-drawer-header">
                 <div class="guild-header-left">
-                    <button id="guild-drawer-toggle-btn" class="guild-toggle-btn" type="button" aria-expanded="true">
-                        <span id="guild-drawer-title">世界樹商會 · 波間整備</span>
+                    <button id="guild-drawer-toggle-btn" class="guild-toggle-btn" type="button" aria-expanded="false">
+                        <span id="guild-drawer-title">世界樹商會 [B] · 點擊展開</span>
                         <span id="guild-drawer-chevron" class="guild-chevron">▴</span>
                     </button>
-                    <span id="guild-noncombat-cap-badge" class="guild-meta-tag num">本波非戰鬥淨利 0 / 30 💰</span>
-                    <span id="guild-crit-bonus-badge" class="guild-meta-tag num">全隊盲盒暴擊 +0.0%</span>
+                    <span id="guild-root-summary-badge" class="guild-meta-tag num">根鬚 Lv.0 (+0 💰)</span>
+                    <span id="guild-noncombat-cap-badge" class="guild-meta-tag num">非戰鬥淨利 0 / 30 💰</span>
+                    <span id="guild-crit-bonus-badge" class="guild-meta-tag num">盲盒暴擊 +0.0%</span>
                 </div>
                 <div class="guild-header-right">
+                    <button id="guild-harvest-btn" class="guild-hold-timer-btn guild-harvest-shortcut num" type="button"
+                        title="消耗 50 靈露：立即收穫黃金並刷新全場攻擊冷卻（快捷鍵 [E]）">
+                        黃金豐收 (50 靈露) [E]
+                    </button>
                     <button id="guild-hold-timer-btn" class="guild-hold-timer-btn num" type="button">
-                        波間暫停倒數：開
+                        波間暫停倒數
                     </button>
                 </div>
             </div>
 
-            <div id="guild-drawer-body" class="guild-drawer-body">
-                <!-- A. 元素股市（🔥火股、❄️冰股、⚡雷股） -->
-                <div class="guild-module-card guild-stock-card">
-                    <div class="guild-module-head">
-                        <span id="guild-stock-title" class="guild-module-title">元素股市</span>
-                        <span id="guild-stock-sub" class="guild-module-sub num">上限 10 股 · 單股傷 +2.4% · 賣出 5% 費</span>
+            <div id="guild-drawer-body" class="guild-drawer-body hidden">
+                <div class="guild-tabs-bar" role="tablist" aria-label="世界樹商會分頁">
+                    <button type="button" id="guild-tab-btn-roots" class="guild-tab-btn is-active" data-guild-tab="roots" role="tab" aria-selected="true">聚寶根鬚</button>
+                    <button type="button" id="guild-tab-btn-stocks" class="guild-tab-btn" data-guild-tab="stocks" role="tab" aria-selected="false">元素股市</button>
+                    <button type="button" id="guild-tab-btn-fate" class="guild-tab-btn" data-guild-tab="fate" role="tab" aria-selected="false">盲盒與對賭</button>
+                    <button type="button" id="guild-drawer-close-btn" class="guild-drawer-close-btn" title="收合商會抽屜 [B / Esc]">收合 ×</button>
+                </div>
+
+                <!-- Tab 1：聚寶根鬚（Lv.0 → Lv.3） -->
+                <div id="guild-tab-roots" class="guild-tab-pane" data-guild-pane="roots" role="tabpanel">
+                    <div id="world-tree-root-panel" class="tree-root-panel guild-root-integrated" aria-label="世界樹聚寶根鬚經營系統">
+                        <div class="tree-root-header">
+                            <div class="tree-root-title-wrap">
+                                <span id="tree-root-title" class="tree-root-title">世界樹 · 聚寶根鬚</span>
+                                <span id="tree-root-lv-badge" class="tree-root-lv-badge num">Lv.0 / Lv.3</span>
+                                <span id="tree-root-refund-badge" class="tree-root-meta-tag num">出售退費 70%</span>
+                                <span id="tree-root-yield-badge" class="tree-root-meta-tag tree-root-yield num">本波預估 +0 💰（軟上限 30 💰）</span>
+                            </div>
+                            <button id="tree-root-upgrade-btn" class="tree-root-upgrade-btn num" type="button">
+                                升級 Lv.1 汲取根鬚 (45 💰)
+                            </button>
+                        </div>
+                        <div id="tree-root-tiers" class="tree-root-tiers">
+                            <button type="button" class="tree-root-tier-card is-next" data-root-tier="1">
+                                <div class="root-tier-head">
+                                    <span class="root-tier-name">Lv.1 汲取根鬚</span>
+                                    <span class="root-tier-cost num">45 💰</span>
+                                </div>
+                                <div class="root-tier-desc num">每清完 1 波固定額外獲得 +15 💰</div>
+                            </button>
+                            <button type="button" class="tree-root-tier-card is-locked" data-root-tier="2">
+                                <div class="root-tier-head">
+                                    <span class="root-tier-name">Lv.2 黃金根脈</span>
+                                    <span class="root-tier-cost num">75 💰</span>
+                                </div>
+                                <div class="root-tier-desc num">每波 +32 💰 · 全場出售退費率 70% → 80%</div>
+                            </button>
+                            <button type="button" class="tree-root-tier-card is-locked" data-root-tier="3">
+                                <div class="root-tier-head">
+                                    <span class="root-tier-name">Lv.3 複利樹心</span>
+                                    <span class="root-tier-cost num">110 💰</span>
+                                </div>
+                                <div class="root-tier-desc num">每波 +42 💰 ＋ 現金 8% 利息（上限 +35 💰，軟上限 22 + 8w）</div>
+                            </button>
+                        </div>
                     </div>
-                    <div id="guild-stock-list" class="guild-stock-list">
-                        <div class="stock-row" data-stock-element="fire">
-                            <div class="stock-info">
-                                <span class="stock-name">🔥 火股</span>
-                                <span id="stock-price-fire" class="stock-price num">20 💰</span>
-                                <span id="stock-trend-fire" class="stock-trend num">持平 33%</span>
-                            </div>
-                            <div class="stock-actions">
-                                <span id="stock-hold-fire" class="stock-hold num">0/10 (+0%)</span>
-                                <button type="button" class="stock-btn stock-buy-btn" data-stock-action="buy" data-stock-el="fire">買入</button>
-                                <button type="button" class="stock-btn stock-sell-btn" data-stock-action="sell" data-stock-el="fire" disabled>賣出</button>
-                            </div>
+                </div>
+
+                <!-- Tab 2：元素股市（🔥火股、❄️冰股、⚡雷股） -->
+                <div id="guild-tab-stocks" class="guild-tab-pane hidden" data-guild-pane="stocks" role="tabpanel">
+                    <div class="guild-module-card guild-stock-card">
+                        <div class="guild-module-head">
+                            <span id="guild-stock-title" class="guild-module-title">元素股市</span>
+                            <span id="guild-stock-sub" class="guild-module-sub num">上限 10 股 · 單股傷 +2.4% · 賣出 5% 費</span>
                         </div>
-                        <div class="stock-row" data-stock-element="ice">
-                            <div class="stock-info">
-                                <span class="stock-name">❄️ 冰股</span>
-                                <span id="stock-price-ice" class="stock-price num">20 💰</span>
-                                <span id="stock-trend-ice" class="stock-trend num">持平 33%</span>
+                        <div id="guild-stock-list" class="guild-stock-list">
+                            <div class="stock-row" data-stock-element="fire">
+                                <div class="stock-info">
+                                    <span class="stock-name">🔥 火股</span>
+                                    <span id="stock-price-fire" class="stock-price num">20 💰</span>
+                                    <span id="stock-trend-fire" class="stock-trend num">持平 33%</span>
+                                </div>
+                                <div class="stock-actions">
+                                    <span id="stock-hold-fire" class="stock-hold num">0/10 (+0%)</span>
+                                    <button type="button" class="stock-btn stock-buy-btn" data-stock-action="buy" data-stock-el="fire">買入</button>
+                                    <button type="button" class="stock-btn stock-sell-btn" data-stock-action="sell" data-stock-el="fire" disabled>賣出</button>
+                                </div>
                             </div>
-                            <div class="stock-actions">
-                                <span id="stock-hold-ice" class="stock-hold num">0/10 (+0%)</span>
-                                <button type="button" class="stock-btn stock-buy-btn" data-stock-action="buy" data-stock-el="ice">買入</button>
-                                <button type="button" class="stock-btn stock-sell-btn" data-stock-action="sell" data-stock-el="ice" disabled>賣出</button>
+                            <div class="stock-row" data-stock-element="ice">
+                                <div class="stock-info">
+                                    <span class="stock-name">❄️ 冰股</span>
+                                    <span id="stock-price-ice" class="stock-price num">20 💰</span>
+                                    <span id="stock-trend-ice" class="stock-trend num">持平 33%</span>
+                                </div>
+                                <div class="stock-actions">
+                                    <span id="stock-hold-ice" class="stock-hold num">0/10 (+0%)</span>
+                                    <button type="button" class="stock-btn stock-buy-btn" data-stock-action="buy" data-stock-el="ice">買入</button>
+                                    <button type="button" class="stock-btn stock-sell-btn" data-stock-action="sell" data-stock-el="ice" disabled>賣出</button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="stock-row" data-stock-element="thunder">
-                            <div class="stock-info">
-                                <span class="stock-name">⚡ 雷股</span>
-                                <span id="stock-price-thunder" class="stock-price num">20 💰</span>
-                                <span id="stock-trend-thunder" class="stock-trend num">持平 33%</span>
-                            </div>
-                            <div class="stock-actions">
-                                <span id="stock-hold-thunder" class="stock-hold num">0/10 (+0%)</span>
-                                <button type="button" class="stock-btn stock-buy-btn" data-stock-action="buy" data-stock-el="thunder">買入</button>
-                                <button type="button" class="stock-btn stock-sell-btn" data-stock-action="sell" data-stock-el="thunder" disabled>賣出</button>
+                            <div class="stock-row" data-stock-element="thunder">
+                                <div class="stock-info">
+                                    <span class="stock-name">⚡ 雷股</span>
+                                    <span id="stock-price-thunder" class="stock-price num">20 💰</span>
+                                    <span id="stock-trend-thunder" class="stock-trend num">持平 33%</span>
+                                </div>
+                                <div class="stock-actions">
+                                    <span id="stock-hold-thunder" class="stock-hold num">0/10 (+0%)</span>
+                                    <button type="button" class="stock-btn stock-buy-btn" data-stock-action="buy" data-stock-el="thunder">買入</button>
+                                    <button type="button" class="stock-btn stock-sell-btn" data-stock-action="sell" data-stock-el="thunder" disabled>賣出</button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- B. 命運種子盲盒（自適應定價 + 4 抽必出保底 + 萬能融合果實） -->
-                <div class="guild-module-card guild-blindbox-card">
-                    <div class="guild-module-head">
-                        <span id="guild-box-title" class="guild-module-title">命運種子盲盒</span>
-                        <span id="guild-box-pity" class="guild-module-sub num">1★ 保底進度 0 / 3（第 4 抽必出 2★+）</span>
-                    </div>
-                    <div id="guild-box-desc" class="guild-box-desc num">
-                        1★ 48% · 2★ 32% · 萬能果實 12% · 3★ 8%（未出 2★+ 全隊暴擊 +1.5%，盲盒塔退費依實付價計）
-                    </div>
-                    <div class="guild-box-actions">
-                        <button id="blind-box-buy-btn" class="guild-cta-btn num" type="button">
-                            開啟命運盲盒 (35 💰)
-                        </button>
-                        <button id="fusion-fruit-slot-btn" class="fusion-fruit-btn num" type="button" disabled>
-                            萬能融合果實 (0/1) · 暫無果實
-                        </button>
-                    </div>
-                </div>
+                <!-- Tab 3：盲盒與對賭（命運種子盲盒 + 波次對賭懸賞） -->
+                <div id="guild-tab-fate" class="guild-tab-pane hidden" data-guild-pane="fate" role="tabpanel">
+                    <div class="guild-fate-grid">
+                        <div class="guild-module-card guild-blindbox-card">
+                            <div class="guild-module-head">
+                                <span id="guild-box-title" class="guild-module-title">命運種子盲盒</span>
+                                <span id="guild-box-pity" class="guild-module-sub num">1★ 保底進度 0 / 3（第 4 抽必出 2★+）</span>
+                            </div>
+                            <div id="guild-box-desc" class="guild-box-desc num">
+                                1★ 48% · 2★ 32% · 萬能果實 12% · 3★ 8%（未出 2★+ 全隊暴擊 +1.5%，盲盒塔退費依實付價計）
+                            </div>
+                            <div class="guild-box-actions">
+                                <button id="blind-box-buy-btn" class="guild-cta-btn num" type="button">
+                                    開啟命運盲盒 (35 💰)
+                                </button>
+                                <button id="fusion-fruit-slot-btn" class="fusion-fruit-btn num" type="button" disabled>
+                                    萬能融合果實 (0/1) · 暫無果實
+                                </button>
+                            </div>
+                        </div>
 
-                <!-- C. 波次對賭懸賞（開戰前二選一，不選則正常打） -->
-                <div class="guild-module-card guild-wager-card">
-                    <div class="guild-module-head">
-                        <span id="guild-wager-title" class="guild-module-title">波次對賭懸賞</span>
-                        <span id="guild-wager-sub" class="guild-module-sub num">開戰前二選一 · 不選則正常開波</span>
-                    </div>
-                    <div class="guild-wager-options">
-                        <button id="wager-zero-leak-btn" class="wager-option-btn" type="button" data-wager-type="zero_leak">
-                            <div class="wager-opt-head">
-                                <span id="wager-zero-title" class="wager-opt-name">零封懸賞</span>
-                                <span id="wager-zero-cost" class="wager-opt-badge num">押注 40 💰</span>
+                        <div class="guild-module-card guild-wager-card">
+                            <div class="guild-module-head">
+                                <span id="guild-wager-title" class="guild-module-title">波次對賭懸賞</span>
+                                <span id="guild-wager-sub" class="guild-module-sub num">開戰前二選一 · 不選則正常開波</span>
                             </div>
-                            <div id="wager-zero-desc" class="wager-opt-desc num">
-                                本波 0 掉血返還 70 💰（淨賺 +30 💰）；漏怪沒收押金並補償 +15 💧
+                            <div class="guild-wager-options">
+                                <button id="wager-zero-leak-btn" class="wager-option-btn" type="button" data-wager-type="zero_leak">
+                                    <div class="wager-opt-head">
+                                        <span id="wager-zero-title" class="wager-opt-name">零封懸賞</span>
+                                        <span id="wager-zero-cost" class="wager-opt-badge num">押注 40 💰</span>
+                                    </div>
+                                    <div id="wager-zero-desc" class="wager-opt-desc num">
+                                        本波 0 掉血返還 70 💰（淨賺 +30 💰）；漏怪沒收押金並補償 +15 💧
+                                    </div>
+                                </button>
+                                <button id="wager-surge-btn" class="wager-option-btn" type="button" data-wager-type="monster_surge">
+                                    <div class="wager-opt-head">
+                                        <span id="wager-surge-title" class="wager-opt-name">魔潮加碼</span>
+                                        <span id="wager-surge-limit" class="wager-opt-badge num">免押金 · 剩 2/2 次</span>
+                                    </div>
+                                    <div id="wager-surge-desc" class="wager-opt-desc num">
+                                        怪血量 +25% · 移速 +10%；守住後擊殺賞金 ×1.45 ＋ 1 顆萬能果實
+                                    </div>
+                                </button>
                             </div>
-                        </button>
-                        <button id="wager-surge-btn" class="wager-option-btn" type="button" data-wager-type="monster_surge">
-                            <div class="wager-opt-head">
-                                <span id="wager-surge-title" class="wager-opt-name">魔潮加碼</span>
-                                <span id="wager-surge-limit" class="wager-opt-badge num">免押金 · 剩 2/2 次</span>
-                            </div>
-                            <div id="wager-surge-desc" class="wager-opt-desc num">
-                                怪血量 +25% · 移速 +10%；守住後擊殺賞金 ×1.45 ＋ 1 顆萬能果實
-                            </div>
-                        </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -457,6 +480,13 @@
                     <span class="skill-label">自然狂熱 (<span class="num">60</span> 靈露)</span>
                     <span class="skill-sub num">還差 40 靈露</span>
                 </button>
+                <button id="skill-harvest-btn" class="skill-btn skill-harvest" type="button"
+                    title="消耗 50 靈露：依波次收穫金幣（受軟上限約束）並立即重置全場塔攻擊冷卻（冷卻 14 秒）">
+                    <span class="skill-cd-mask"></span>
+                    <span class="skill-dew-bar"></span>
+                    <span class="skill-label">黃金豐收 (<span class="num">50</span> 靈露)</span>
+                    <span class="skill-sub num">還差 30 靈露</span>
+                </button>
                 <button id="codex-btn" class="codex-btn" type="button">世界樹圖譜</button>
                 <button id="next-wave-btn" class="wave-btn" type="button" disabled><span
                         id="next-wave-label">立即開波</span><span id="next-wave-bonus"
@@ -467,10 +497,9 @@
         </div>
 
         <p id="msg-text">點擊「開始防守」開啟戰局，準備第 1 波防線佈置。</p>
-        ~
     </main>
 
-    <!-- 右上角「？」按需開啟之戰術手冊抽屜彈窗 -->
+    <!-- 右上角「？」按需開啟之戰術手冊抽屜彈窗（整合原左側元素相剋、戰術地形、轉職升星速查） -->
     <div id="guide-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="guide-title">
         <div class="modal-card guide-card">
             <div class="guide-header-bar">
@@ -523,10 +552,18 @@
             </div>
 
             <div class="guide-section">
+                <h2 id="guide-evo-title" class="guide-section-title">轉職與升星金字塔（1★ → 5★ 16U）</h2>
+                <div id="guide-evo-note" class="codex-note guide-evo-note num">
+                    異系 1★+1★ ▸ 轉職混合 1★ (2U) ｜ 同種 1★+1★ ▸ 靈木主幹 2★ ｜ 同種 2★+2★ ▸ 冠枝 A/B 3★ (4U)<br>
+                    同脈 3★+3★（或低星餵養滿 8U）▸ 極意古冠 / 雙生神冠 AB 4★ ｜ 同脈 4★+4★（或滿 16U）▸ 世界樹神裔 5★
+                </div>
+            </div>
+
+            <div class="guide-section">
                 <h2 class="guide-section-title">防線紀要與快捷鍵</h2>
-                <div class="codex-note">
+                <div id="guide-hotkey-note" class="codex-note">
                     每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波迎戰領主魔王。<br>
-                    熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W]</b> 技能 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜
+                    熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W/E]</b> 技能 ｜ <b>[B]</b> 商會 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜
                     <b>[Esc]</b> 取消
                 </div>
             </div>
@@ -545,6 +582,9 @@
             <h1 id="blessing-title" class="blessing-title">世界樹枝枒祝福</h1>
             <p id="blessing-wave-subtitle" class="modal-subtitle">防線捷報，請擇一項世界樹賜福（每局唯一，不重複出現）。</p>
             <div id="blessing-choices" class="blessing-choices"></div>
+            <div class="blessing-reroll-wrap">
+                <button id="blessing-reroll-btn" class="blessing-reroll-btn hidden" type="button">重抽賜福（免費剩 1 次）</button>
+            </div>
         </div>
     </div>
 
@@ -641,7 +681,10 @@
 
             <p id="start-quick-tip" class="start-quick-tip">拖曳元素卡建塔 · 異系轉職／同系升星 · [Q/W] 世界樹技能</p>
 
-            <button id="start-game-btn" class="primary-cta-btn" type="button">開始防守</button>
+            <div class="start-actions-row">
+                <button id="meta-tree-btn" class="secondary-cta-btn num" type="button">世界樹年輪 · 榮譽 0 ★</button>
+                <button id="start-game-btn" class="primary-cta-btn" type="button">開始防守</button>
+            </div>
         </div>
     </div>
 
@@ -780,6 +823,24 @@
     </div>
 
     <!-- 嚴格排位順序載入全專案腳本（禁止使用 ES Module，確保本機雙擊 index.html 可離線執行） -->
+    <!-- 世界樹年輪：局外永久成長彈窗 -->
+    <div id="meta-tree-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="meta-tree-title">
+        <div class="modal-card meta-tree-card">
+            <div class="codex-header-bar">
+                <div>
+                    <h2 id="meta-tree-title" class="codex-title">世界樹年輪</h2>
+                    <p id="meta-tree-subtitle" class="codex-subtitle">消耗對局累積的榮譽點數 ★ 永久擴展商會職能、盲盒命運與神裔上限（離線存檔）。</p>
+                </div>
+                <div class="meta-tree-header-actions">
+                    <span id="meta-tree-honor-badge" class="meta-honor-badge num">可用榮譽 0 ★</span>
+                    <button id="meta-tree-reset-btn" class="codex-close-top-btn" type="button">重置年輪</button>
+                    <button id="meta-tree-close-btn" class="codex-close-top-btn" type="button">關閉</button>
+                </div>
+            </div>
+            <div id="meta-tree-branches-grid" class="meta-tree-branches-grid"></div>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script src="core/i18n.js"></script>
     <script src="core/audio.js"></script>

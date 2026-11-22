@@ -19,6 +19,7 @@
         TIMEOUT_MS: 1500,
         STORAGE_GA_UID_KEY: 'merge_defense_ga_uid',
         STORAGE_GA_SESSION_NUM_KEY: 'merge_defense_ga_session_num',
+        STORAGE_META_TREE_KEY: 'merge_defense_meta_tree',
         GAME_ANALYTICS: {
             enabled: true,
             proxyEndpoint: 'https://green-cake-844e.23156ymps.workers.dev'
@@ -367,7 +368,11 @@
             fusions: {},
             zonePlacements: { front: 0, middle: 0, back: 0, special_terrain: 0 },
             sellCount: 0,
-            skillCasts: { entangle: 0, frenzy: 0 },
+            skillCasts: { entangle: 0, frenzy: 0, golden_harvest: 0 },
+            thiefKills: 0,
+            thiefEscapes: 0,
+            blessingRerollsUsed: 0,
+            crisisWavesCleared: [],
             blessingsPicked: [],
             leaks: [],
             bossKillProgressList: [],
@@ -426,7 +431,7 @@
                     y: coords.y,
                     type: t.type,
                     name: cfg.name || t.type,
-                    tier: t.isCrowned ? 4 : (Number(t.tier) || 1),
+                    tier: Number(t.tier) || (t.isCrowned ? 5 : 1),
                     isCrowned: Boolean(t.isCrowned),
                     totalDamage: Math.round(t.totalDamage)
                 });
@@ -446,7 +451,7 @@
             for (let i = 0; i < board.length; i++) {
                 const t = board[i];
                 if (!t) continue;
-                const effTier = t.isCrowned ? 4 : (Number(t.tier) || 1);
+                const effTier = Math.max(Number(t.tier) || 1, t.isCrowned ? 5 : 1);
                 if (effTier > maxTier) maxTier = effTier;
             }
             return maxTier;
@@ -564,6 +569,17 @@
             } else if (eventKey.startsWith('Tree:SkillCast')) {
                 const sk = (meta && meta.skillId) || eventKey.split(':')[2] || 'entangle';
                 runTelemetry.skillCasts[sk] = (runTelemetry.skillCasts[sk] || 0) + 1;
+            } else if (eventKey === 'Economy:ThiefKill') {
+                runTelemetry.thiefKills = (runTelemetry.thiefKills || 0) + 1;
+            } else if (eventKey === 'Economy:ThiefEscape') {
+                runTelemetry.thiefEscapes = (runTelemetry.thiefEscapes || 0) + 1;
+            } else if (eventKey === 'Tree:BlessingReroll') {
+                runTelemetry.blessingRerollsUsed = (runTelemetry.blessingRerollsUsed || 0) + 1;
+            } else if (eventKey.startsWith('Wave:CrisisClear:')) {
+                const wId = (meta && meta.crisisId) || eventKey.split(':')[2] || '';
+                if (wId && !runTelemetry.crisisWavesCleared.includes(wId)) {
+                    runTelemetry.crisisWavesCleared.push(wId);
+                }
             } else if (eventKey.startsWith('Tree:BlessingPick')) {
                 const bName = (meta && meta.blessingName) || eventKey.split(':')[2] || '';
                 if (bName && !runTelemetry.blessingsPicked.includes(bName)) {
@@ -659,11 +675,14 @@
                 trackFeel(`Wave:Actions:Wave_${wavePad}`, cnt, Object.assign({ wave: w }, baseMeta));
             }
 
-            // 4. 全場總經濟與最高合成階級 (Run:EconomySummary)
+            // 4. 全場總經濟與最高合成階級 + 第 4 階段機制統計
             const totalGoldEarned = Math.round(Number(st.totalGoldEarned) || 0);
             const maxTier = getHighestTierOnBoard(rt);
+            const metaState = loadMetaTreeState();
             trackFeel('Run:EconomySummary:TotalGold', totalGoldEarned, baseMeta);
             trackFeel('Run:EconomySummary:MaxTier', maxTier, baseMeta);
+            trackFeel('Meta:TreeUnlockedCount', metaState.unlockedNodes.length, baseMeta);
+            trackFeel('Economy:ThiefKillsSummary', runTelemetry.thiefKills || 0, baseMeta);
 
             GameAnalyticsTracker.flush();
         } catch (_) {}
@@ -747,8 +766,8 @@
             const waveActionsStr = waveActParts.join(isEn ? ' | ' : '｜');
 
             const maxTier = getHighestTierOnBoard(runtime);
-            const tierLabelZh = maxTier === 4 ? 'T4 聖冠覺醒' : (maxTier === 3 ? '3★ 冠枝' : (maxTier === 2 ? '2★ 主幹' : (maxTier === 1 ? '1★ 根芽' : '無')));
-            const tierLabelEn = maxTier === 4 ? 'T4 Crown Awakened' : (maxTier === 3 ? '3★ Crown' : (maxTier === 2 ? '2★ Trunk' : (maxTier === 1 ? '1★ Bud' : 'None')));
+            const tierLabelZh = maxTier >= 5 ? '5★ 世界樹神裔' : (maxTier === 4 ? '4★ 古冠／雙生' : (maxTier === 3 ? '3★ 冠枝' : (maxTier === 2 ? '2★ 主幹' : (maxTier === 1 ? '1★ 根芽' : '無'))));
+            const tierLabelEn = maxTier >= 5 ? '5★ World Scion' : (maxTier === 4 ? '4★ Crown / Twin' : (maxTier === 3 ? '3★ Crown' : (maxTier === 2 ? '2★ Trunk' : (maxTier === 1 ? '1★ Bud' : 'None'))));
 
             const lines = isEn ? [
                 '[Elemental Frontline: Merge TD — Battle Telemetry Report]',
@@ -764,7 +783,7 @@
                 `🖐️ Drag Cancels: Shop ${runTelemetry.dragCancel.shop} | Board Move ${runTelemetry.dragCancel.board}`,
                 `🔥 Summons: ${summonStr} (Merges ${st.fusionCount || 0} | Sells ${runTelemetry.sellCount})`,
                 `📍 Placement Zones: ${zoneStr}`,
-                `🌳 World Tree: Entangle ${runTelemetry.skillCasts.entangle || 0}, Frenzy ${runTelemetry.skillCasts.frenzy || 0} | Blessings: ${blessingStr}`,
+                `🌳 World Tree: Entangle ${runTelemetry.skillCasts.entangle || 0}, Frenzy ${runTelemetry.skillCasts.frenzy || 0}, Harvest ${runTelemetry.skillCasts.golden_harvest || 0} | Thief Kills ${runTelemetry.thiefKills || 0} | Blessings: ${blessingStr}`,
                 `💰 Economy: End Gold ${st.currentGold || 0} 💰 (Total Earned ${(st.totalGoldEarned || 0).toLocaleString()} 💰 · Kills ${st.killsCount || 0})`,
                 `💬 Quick Rating: ${ratingStr}`
             ] : [
@@ -781,7 +800,7 @@
                 `🖐️ 拖拉取消：商店召喚取消 ${runTelemetry.dragCancel.shop} 次 ／ 棋盤移塔取消 ${runTelemetry.dragCancel.board} 次`,
                 `🔥 召喚統計：${summonStr}（合成融合 ${st.fusionCount || 0} 次 ／ 賣塔 ${runTelemetry.sellCount} 次）`,
                 `📍 佈陣熱區：${zoneStr}`,
-                `🌳 世界樹互動：纏繞 ${runTelemetry.skillCasts.entangle || 0} 次、狂熱 ${runTelemetry.skillCasts.frenzy || 0} 次 ｜ 祝福：${blessingStr}`,
+                `🌳 世界樹互動：纏繞 ${runTelemetry.skillCasts.entangle || 0} 次、狂熱 ${runTelemetry.skillCasts.frenzy || 0} 次、豐收 ${runTelemetry.skillCasts.golden_harvest || 0} 次 ｜ 竊賊擊殺 ${runTelemetry.thiefKills || 0} 隻 ｜ 祝福：${blessingStr}`,
                 `💰 經濟結算：結餘 ${st.currentGold || 0} 💰（累計獲得 ${(st.totalGoldEarned || 0).toLocaleString()} 💰 · 總擊殺 ${st.killsCount || 0} 隻）`,
                 `💬 主觀快評：${ratingStr}`
             ];
@@ -863,6 +882,7 @@
             bestWaveOverall: maxFromMaps,
             totalClears: 0,
             bestHonorScore: 0,
+            totalHonorEarned: 0,
             bestContractCount: 0,
             mapRecords: records
         };
@@ -880,6 +900,11 @@
                     if (Number.isFinite(Number(parsed.bestHonorScore))) {
                         career.bestHonorScore = Math.max(0, Math.floor(Number(parsed.bestHonorScore)));
                     }
+                    if (Number.isFinite(Number(parsed.totalHonorEarned))) {
+                        career.totalHonorEarned = Math.max(0, Math.floor(Number(parsed.totalHonorEarned)));
+                    } else {
+                        career.totalHonorEarned = career.bestHonorScore;
+                    }
                     if (Number.isFinite(Number(parsed.bestContractCount))) {
                         career.bestContractCount = Math.max(0, Math.floor(Number(parsed.bestContractCount)));
                     }
@@ -889,6 +914,105 @@
         const clearedMapCount = Object.keys(records).filter(id => records[id] && (records[id].bestStars || 0) > 0).length;
         career.totalClears = Math.max(career.totalClears, clearedMapCount);
         return career;
+    }
+
+    // ==================== 局外「世界樹年輪（Meta Tree）」持久化與安全合併 ====================
+    function loadMetaTreeState() {
+        const career = loadCareerStats();
+        const fallbackHonor = Math.max(0, Number(career.totalHonorEarned) || Number(career.bestHonorScore) || 0);
+        const defaults = {
+            version: 1,
+            honorPoints: fallbackHonor,
+            totalHonorEarned: fallbackHonor,
+            unlockedNodes: []
+        };
+        try {
+            const raw = safeCloudStorageGet(CLOUD_CONFIG.STORAGE_META_TREE_KEY || 'merge_defense_meta_tree');
+            if (!raw) return defaults;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return defaults;
+            const unlocked = Array.isArray(parsed.unlockedNodes)
+                ? Array.from(new Set(parsed.unlockedNodes.filter(id => typeof id === 'string' && id.length > 0)))
+                : [];
+            return {
+                version: 1,
+                honorPoints: Math.max(0, Math.floor(Number(parsed.honorPoints) || 0)),
+                totalHonorEarned: Math.max(fallbackHonor, Math.floor(Number(parsed.totalHonorEarned) || 0)),
+                unlockedNodes: unlocked
+            };
+        } catch (_) {
+            return defaults;
+        }
+    }
+
+    function saveMetaTreeState(nextState) {
+        const prev = loadMetaTreeState();
+        const merged = {
+            version: 1,
+            honorPoints: Math.max(0, Math.floor(Number(nextState && nextState.honorPoints !== undefined ? nextState.honorPoints : prev.honorPoints) || 0)),
+            totalHonorEarned: Math.max(0, Math.floor(Number(nextState && nextState.totalHonorEarned !== undefined ? nextState.totalHonorEarned : prev.totalHonorEarned) || 0)),
+            unlockedNodes: Array.isArray(nextState && nextState.unlockedNodes)
+                ? Array.from(new Set(nextState.unlockedNodes.filter(id => typeof id === 'string' && id.length > 0)))
+                : prev.unlockedNodes
+        };
+        safeCloudStorageSet(CLOUD_CONFIG.STORAGE_META_TREE_KEY || 'merge_defense_meta_tree', JSON.stringify(merged));
+        return merged;
+    }
+
+    function grantMetaHonorPoints(delta) {
+        const add = Math.max(0, Math.round(Number(delta) || 0));
+        const cur = loadMetaTreeState();
+        if (add <= 0) return cur;
+        return saveMetaTreeState({
+            honorPoints: cur.honorPoints + add,
+            totalHonorEarned: cur.totalHonorEarned + add,
+            unlockedNodes: cur.unlockedNodes
+        });
+    }
+
+    function getMetaTreeNodesCatalog() {
+        return (GameApp.data && GameApp.data.tree && GameApp.data.tree.META_TREE_NODES) || {};
+    }
+
+    function purchaseMetaNode(nodeId) {
+        const nodes = getMetaTreeNodesCatalog();
+        const spec = nodes[nodeId];
+        if (!spec) return { ok: false, reason: 'invalid_node' };
+        const state = loadMetaTreeState();
+        if (state.unlockedNodes.includes(nodeId)) {
+            return { ok: false, reason: 'already_unlocked', state };
+        }
+        if (spec.requires && !state.unlockedNodes.includes(spec.requires)) {
+            return { ok: false, reason: 'prerequisite_locked', requires: spec.requires, state };
+        }
+        const cost = Math.max(0, Math.round(Number(spec.cost) || 0));
+        if (state.honorPoints < cost) {
+            return { ok: false, reason: 'insufficient_honor', cost, honorPoints: state.honorPoints, state };
+        }
+        const nextUnlocked = state.unlockedNodes.concat([nodeId]);
+        const nextState = saveMetaTreeState({
+            honorPoints: state.honorPoints - cost,
+            totalHonorEarned: state.totalHonorEarned,
+            unlockedNodes: nextUnlocked
+        });
+        return { ok: true, node: spec, cost, state: nextState };
+    }
+
+    function resetMetaTreeNodes() {
+        const state = loadMetaTreeState();
+        const nodes = getMetaTreeNodesCatalog();
+        let refund = 0;
+        state.unlockedNodes.forEach((id) => {
+            if (nodes[id] && Number.isFinite(nodes[id].cost)) {
+                refund += Math.max(0, Math.round(nodes[id].cost));
+            }
+        });
+        const nextState = saveMetaTreeState({
+            honorPoints: state.honorPoints + refund,
+            totalHonorEarned: Math.max(state.totalHonorEarned, state.honorPoints + refund),
+            unlockedNodes: []
+        });
+        return { ok: true, refund, state: nextState };
     }
 
     function saveMapRecord(mapId, wave, stars = null, options = {}) {
@@ -911,6 +1035,13 @@
         if (options && options.isClear) {
             career.totalClears = (career.totalClears || 0) + 1;
         }
+        const earnedRunHonor = (options && options.awardHonor && Number.isFinite(options.honorScore))
+            ? Math.max(0, Math.round(options.honorScore))
+            : 0;
+        if (earnedRunHonor > 0) {
+            career.totalHonorEarned = (career.totalHonorEarned || 0) + earnedRunHonor;
+            grantMetaHonorPoints(earnedRunHonor);
+        }
         if (options && Number.isFinite(options.honorScore) && options.honorScore > (career.bestHonorScore || 0)) {
             career.bestHonorScore = Math.round(options.honorScore);
         }
@@ -921,6 +1052,7 @@
             bestWaveOverall: career.bestWaveOverall,
             totalClears: career.totalClears,
             bestHonorScore: career.bestHonorScore,
+            totalHonorEarned: career.totalHonorEarned,
             bestContractCount: career.bestContractCount
         }));
         return records;
@@ -955,6 +1087,11 @@
         copyBattleReportToClipboard,
         loadMapRecords,
         loadCareerStats,
+        loadMetaTreeState,
+        saveMetaTreeState,
+        grantMetaHonorPoints,
+        purchaseMetaNode,
+        resetMetaTreeNodes,
         saveMapRecord,
         getMapBestWave,
         init

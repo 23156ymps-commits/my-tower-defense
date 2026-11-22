@@ -21,8 +21,16 @@
         COST_MAX: 80,                       // 單一元素召喚價格封頂上限 (80 金幣)
         SUMMON_COST_STEPS: [10, 18, 26, 35, 45, 55, 68, 80], // 平滑友善階梯定價曲線
         OBSTACLE_CLEAR_COST: 45,            // 地脈拓荒（爆破岩石障礙）固定花費
-        CROWN_AWAKEN_GOLD_COST: 220,        // 無盡模式 T4 世界樹聖冠覺醒金幣消耗
-        CROWN_AWAKEN_DEW_COST: 60,          // 無盡模式 T4 世界樹聖冠覺醒靈露消耗
+        CROWN_AWAKEN_GOLD_COST: 220,        // （第 3 階段已整合進 5★ 神裔，保留欄位向後相容）
+        CROWN_AWAKEN_DEW_COST: 60,
+        // ==================== 第 3 階段：5 星世界樹金字塔與漸進式吞噬充能 ====================
+        FRUIT_FEED_NUTRITION_U: 4,          // 萬能融合果實用於 3★/4★ 塔時直接提供 +4U 營養
+        SCION_AURA_RADIUS_CELLS: 2.2,       // 5★ 世界樹神裔周圍友軍光環半徑 (2.2 格)
+        SCION_AURA_SPEED_BONUS: 0.16,       // 5★ 光環友軍攻速加成 (+16%，仍受 2.50x 上限約束)
+        SCION_AURA_RANGE_BONUS: 0.30,       // 5★ 光環友軍射程加成 (+0.30 格)
+        SCION_AURA_POWER_BONUS: 0.08,       // 5★ 光環併入 b_blessing 加法桶 (+0.08，受 0.30 上限約束)
+        SCION_PULSE_INTERVAL_MS: 6000,      // 5★ 週期性全圖神樹脈動間隔 (6.0 秒)
+        SCION_PULSE_DAMAGE_RATIO: 0.40,     // 5★ 全圖神樹脈動傷害係數 (0.40 * D_tier)
         SELL_REFUND_RATE: 0.70,             // 出售防禦塔預設退還累計投入金幣比例 (70%)
         SELL_REFUND_RATE_LV2: 0.80,         // 聚寶根鬚 Lv.2 黃金根脈起出售防禦塔退費比例 (80%)
         COMBAT_MOVE_COST: 5,                // 戰鬥出怪/清場期間移塔戰術調度費 (5 金幣)
@@ -40,10 +48,13 @@
         STOCK_MAX_PRICE: 60,                // 股價上限 (60 金)
         STOCK_MAX_SHARES: 10,               // 單一元素最多持倉股數 (10 股)
         STOCK_SELL_FEE: 0.05,               // 賣出股票手續費 (5%)
+        STOCK_SELL_FEE_META: 0.02,          // 世界樹年輪「財富枝 ③」降為 2% 手續費
         STOCK_INTEL_COEFF: 0.24,            // 下波預告內線趨勢係數：mu_intel = 0.24 * (r_e - 1/3)
         STOCK_NOISE_AMP: 0.025,             // 溫和隨機波動幅度（不反轉顯著預告訊號）
         STOCK_DIVIDEND_PER_SHARE: 0.024,    // 每持有 1 股提供對應元素塔 b_dividend +0.024
         STOCK_DIVIDEND_CAP: 0.24,           // 持滿 10 股最高 b_dividend +0.24 (+24%)
+        THIEF_KILL_GOLD_BONUS: 60,          // 靈脈竊賊擊殺額外金幣 (60 金，受單波非戰鬥軟上限約束)
+        STEAM_B_MIST_GOLD_BONUS_RATE: 0.15, // 霜霧迷宮樹範圍內擊殺金幣額外 +15%（受單波非戰鬥軟上限約束）
         BLIND_BOX_COST_MULT: 1.15,          // 盲盒定價係數：round(1.15 * avgShopCost)
         BLIND_BOX_MIN_COST: 35,             // 盲盒最低價格 (35 金)
         BLIND_BOX_MAX_COST: 85,             // 盲盒最高價格 (85 金)
@@ -54,6 +65,7 @@
             TIER_3: 0.08
         },
         BLIND_BOX_PITY_STREAK: 3,           // 連續 3 次只開出 1★ 時，第 4 次必出 2★ 以上
+        BLIND_BOX_PITY_STREAK_META: 2,      // 世界樹年輪「命運枝 ③」保底降為連續 2 次（第 3 抽必出）
         BLIND_BOX_PITY_TIER3_CHANCE: 0.25,  // 第 4 抽保底觸發時，25% 機率直出 3★（75% 出 2★）
         BLIND_BOX_CRIT_BONUS_STEP: 0.015,   // 每次未出 2★ 以上為全隊疊加 +1.5% 暴擊率
         BLIND_BOX_CRIT_BONUS_CAP: 0.15,     // 全隊盲盒保底暴擊率上限 +15%

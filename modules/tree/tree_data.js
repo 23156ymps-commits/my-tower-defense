@@ -128,10 +128,165 @@
             cdMs: 12000,
             durationMs: 5000,
             speedBonus: 0.35
+        },
+        golden_harvest: {
+            id: 'golden_harvest',
+            name: '黃金豐收',
+            nameEn: 'Golden Harvest',
+            hotkey: 'E',
+            cost: 50,
+            cdMs: 14000,
+            baseGold: 25,
+            perWaveGold: 3
         }
     };
 
-    // 世界樹枝枒祝福卡牌池（6 張機制質變卡，Key-Value 結構供 Object.keys 動態掃描抽卡）
+    // 第 4 階段：局外 12 節點「世界樹年輪（Meta Tree）」（3 條機制枝 × 4 節點，無純數值膨脹）
+    const META_TREE_BRANCHES = [
+        { id: 'wealth', name: '財富枝', nameEn: 'Wealth Branch', desc: '聚寶根鬚 · 元素股市 · 經濟底蘊' },
+        { id: 'fate', name: '命運枝', nameEn: 'Fate Branch', desc: '命運盲盒 · 波次對賭 · 賜福重抽' },
+        { id: 'ancient', name: '古樹枝', nameEn: 'Ancient Branch', desc: '靈脈灌注 · 靈脈竊賊 · 高階賜福 · 聖冠上限' }
+    ];
+
+    const META_TREE_NODES = {
+        wealth_1: {
+            id: 'wealth_1',
+            branch: 'wealth',
+            tier: 1,
+            requires: null,
+            cost: 300,
+            name: '解鎖聚寶根鬚',
+            nameEn: 'Unlock Treasure Roots',
+            desc: '於局內世界樹商會開放升級「聚寶根鬚 Lv.1 ～ Lv.3」。',
+            descEn: 'Unlocks Treasure Roots Lv.1-Lv.3 in the Guild drawer.'
+        },
+        wealth_2: {
+            id: 'wealth_2',
+            branch: 'wealth',
+            tier: 2,
+            requires: 'wealth_1',
+            cost: 600,
+            name: '解鎖元素股市',
+            nameEn: 'Unlock Element Stocks',
+            desc: '開放火 / 冰 / 雷元素股市買賣與持倉戰力紅利（最高 +24%）。',
+            descEn: 'Unlocks Fire / Ice / Thunder stock trading & +24% dividend cap.'
+        },
+        wealth_3: {
+            id: 'wealth_3',
+            branch: 'wealth',
+            tier: 3,
+            requires: 'wealth_2',
+            cost: 1000,
+            name: '低稅商道（手續費 5% → 2%）',
+            nameEn: 'Low-Tax Trade (Fee 5% → 2%)',
+            desc: '元素股市賣出股票的手續費從 5% 降低為 2%。',
+            descEn: 'Reduces Element Stock sell fee from 5% to 2%.'
+        },
+        wealth_4: {
+            id: 'wealth_4',
+            branch: 'wealth',
+            tier: 4,
+            requires: 'wealth_3',
+            cost: 1500,
+            name: '創始股東（開局自帶 1 股）',
+            nameEn: 'Founding Shareholder',
+            desc: '每局開局自動獲得 1 股隨機元素股票（含對應元素戰力紅利）。',
+            descEn: 'Starts every match with 1 random elemental stock share.'
+        },
+        fate_1: {
+            id: 'fate_1',
+            branch: 'fate',
+            tier: 1,
+            requires: null,
+            cost: 300,
+            name: '解鎖命運盲盒',
+            nameEn: 'Unlock Fate Blind Box',
+            desc: '開放「命運種子盲盒」抽取與萬能融合果實累積保底暴擊。',
+            descEn: 'Unlocks Fate Seed Blind Box & team crit pity stack.'
+        },
+        fate_2: {
+            id: 'fate_2',
+            branch: 'fate',
+            tier: 2,
+            requires: 'fate_1',
+            cost: 600,
+            name: '解鎖波次對賭',
+            nameEn: 'Unlock Wave Wagers',
+            desc: '開放開波前「零封懸賞」與「魔潮加碼」高風險對賭選項。',
+            descEn: 'Unlocks Zero-Leak Bounty and Monster Surge wagers.'
+        },
+        fate_3: {
+            id: 'fate_3',
+            branch: 'fate',
+            tier: 3,
+            requires: 'fate_2',
+            cost: 1000,
+            name: '命運加護（保底 4 → 3 抽）',
+            nameEn: 'Fate Pity (4 → 3 Pulls)',
+            desc: '命運盲盒 1★ 保底次數由第 4 抽必出提前至第 3 抽必出 2★ 以上。',
+            descEn: 'Guarantees 2★+ on the 3rd blind box pull instead of the 4th.'
+        },
+        fate_4: {
+            id: 'fate_4',
+            branch: 'fate',
+            tier: 4,
+            requires: 'fate_3',
+            cost: 1500,
+            name: '賜福重鑄（每局免費重抽 1 次）',
+            nameEn: 'Blessing Reroll (1/Run)',
+            desc: '每局獲得 1 次免費重抽世界樹三選一賜福卡牌的機會。',
+            descEn: 'Grants 1 free World Tree Blessing reroll per run.'
+        },
+        ancient_1: {
+            id: 'ancient_1',
+            branch: 'ancient',
+            tier: 1,
+            requires: null,
+            cost: 350,
+            name: '解鎖靈脈灌注',
+            nameEn: 'Unlock Vein Infusion',
+            desc: '為 5★ 世界樹神裔開放無盡靈脈灌注，可花費金幣強化 B_power 戰力桶。',
+            descEn: 'Unlocks Endless Vein Infusion for 5★ World Tree Scions.'
+        },
+        ancient_2: {
+            id: 'ancient_2',
+            branch: 'ancient',
+            tier: 2,
+            requires: 'ancient_1',
+            cost: 700,
+            name: '解鎖靈脈竊賊出現',
+            nameEn: 'Unlock Treasure Thieves',
+            desc: 'W3 / W6 / W9 隨機出現「靈脈竊賊」，擊殺額外掉落 +60 金幣與股票／盲盒代幣。',
+            descEn: 'Spawns a Treasure Thief in W3 / W6 / W9 (+60 💰 & random stock or token).'
+        },
+        ancient_3: {
+            id: 'ancient_3',
+            branch: 'ancient',
+            tier: 3,
+            requires: 'ancient_2',
+            cost: 1100,
+            name: '解鎖 4 項秘傳賜福',
+            nameEn: 'Unlock 4 Mythic Blessings',
+            desc: '於賜福池加入「貪婪之根、賭徒幸運葉、內線操盤、血契狂怒」。',
+            descEn: 'Adds Greedy Roots, Gambler Leaf, Insider Trading & Blood Fury to blessings.'
+        },
+        ancient_4: {
+            id: 'ancient_4',
+            branch: 'ancient',
+            tier: 4,
+            requires: 'ancient_3',
+            cost: 1600,
+            name: '聖冠覺醒上限 2 → 3 座',
+            nameEn: 'Scion Crown Limit 2 → 3',
+            desc: '單局場上同時共存的「聖冠／5★ 世界樹神裔」上限由 2 座提升為 3 座。',
+            descEn: 'Raises max simultaneous 5★ Scion Crown towers from 2 to 3.'
+        }
+    };
+
+    const META_MAX_CROWN_BASE = 2;
+    const META_MAX_CROWN_UPGRADED = 3;
+
+    // 世界樹枝枒祝福卡牌池（6 張基礎 ＋ 4 張古樹枝秘傳賜福）
     const BLESSINGS_MAP = {
         abundant_seed: {
             id: 'abundant_seed',
@@ -168,6 +323,34 @@
             icon: '💧',
             name: '靈露超載',
             desc: '施放任一世界樹主動技能後的 3 秒內，全場防禦塔有 40% 機率連續發動雙重射擊。'
+        },
+        greedy_roots: {
+            id: 'greedy_roots',
+            icon: '💰',
+            requiresMetaNode: 'ancient_3',
+            name: '貪婪之根',
+            desc: '每次清波結算時，場上每有 1 種不同元素血脈額外獲得 +5 💰（受單波非戰鬥淨收益軟上限約束）。'
+        },
+        gambler_lucky_leaf: {
+            id: 'gambler_lucky_leaf',
+            icon: '★',
+            requiresMetaNode: 'ancient_3',
+            name: '賭徒幸運葉',
+            desc: '獲得時立即提升全隊 +8% 暴擊率，零封懸賞成功淨利額外 +10 💰，盲盒未出 2★+ 改疊加 +2% 暴擊。'
+        },
+        insider_trading: {
+            id: 'insider_trading',
+            icon: '📈',
+            requiresMetaNode: 'ancient_3',
+            name: '內線操盤',
+            desc: '元素股市賣出免手續費（0%），且持股戰力紅利提升為每股 +3.0%（仍受單塔 +24% 上限約束）。'
+        },
+        blood_pact_fury: {
+            id: 'blood_pact_fury',
+            icon: '❤️',
+            requiresMetaNode: 'ancient_3',
+            name: '血契狂怒',
+            desc: '世界樹每損失 1 點生命，全場塔獲得 +1.5% 戰力（併入賜福上限 30%）；自然狂熱持續時間延長 +1.5 秒。'
         }
     };
 
@@ -214,6 +397,10 @@
         ACTIVE_SKILLS,
         TREASURE_ROOTS_LEVELS,
         getTreasureRootLevelSpec,
+        META_TREE_BRANCHES,
+        META_TREE_NODES,
+        META_MAX_CROWN_BASE,
+        META_MAX_CROWN_UPGRADED,
         BLESSINGS_MAP,
         BLESSINGS_CATALOG,
         getBlessingsCatalog

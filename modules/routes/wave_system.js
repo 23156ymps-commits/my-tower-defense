@@ -242,6 +242,18 @@
         };
     }
 
+    function getCrisisWaveSpec(waveNum) {
+        const crisisMap = getRoutesData().CRISIS_WAVES || {};
+        const w = Math.max(1, Math.floor(Number(waveNum) || 1));
+        return crisisMap[w] || null;
+    }
+
+    function isTreasureThiefWave(waveNum) {
+        const waves = getRoutesData().TREASURE_THIEF_WAVES || [3, 6, 9];
+        const w = Math.max(1, Math.floor(Number(waveNum) || 1));
+        return Array.isArray(waves) && waves.includes(w);
+    }
+
     /**
      * 取得指定波次的出怪池：除讀取 route_data.js 預設池外，自動掃描 monster_data.js 動態新增之怪物
      */
@@ -258,7 +270,7 @@
         const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
         Object.keys(monsterDb).forEach((mKey) => {
             const mCfg = monsterDb[mKey];
-            if (!mCfg || mCfg.isBoss || mCfg.isSplitChild) return;
+            if (!mCfg || mCfg.isBoss || mCfg.isSplitChild || mCfg.isTreasureThief) return;
             const minWave = Number.isFinite(mCfg.minWave) ? mCfg.minWave : 1;
             if (waveNum >= minWave && !baseList.includes(mKey)) {
                 baseList.push(mKey);
@@ -272,10 +284,12 @@
         const wb = getRoutesData().WAVE_BALANCE || {};
         const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
         const monsterRules = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.GLOBAL_MONSTER_RULES) || {};
+        const TreeSys = GameApp.systems && GameApp.systems.tree;
         const victoryWave = CONFIG.VICTORY_WAVE || 10;
         const isEndless = G && G.state && G.state.isEndlessMode;
 
         const pool = getWaveNormalPool(waveNum);
+        const crisisSpec = getCrisisWaveSpec(waveNum);
         const hasBoss = isBossWaveNumber(waveNum);
         const totalCount = (!isEndless && waveNum === victoryWave)
             ? (wb.FINAL_WAVE_ESCORT_COUNT || 14)
@@ -292,11 +306,25 @@
         for (let e = 0; e < eliteCount; e++) eliteSlots.add(Math.min(totalCount - 1, Math.floor(((e + 1) * totalCount) / (eliteCount + 0.5))));
         for (let idxC = totalCount - 1; eliteSlots.size < eliteCount && idxC >= 0; idxC--) eliteSlots.add(idxC);
 
+        const crisisSlots = new Set();
+        if (crisisSpec && Array.isArray(crisisSpec.featuredMonsters) && crisisSpec.featuredMonsters.length > 0) {
+            const focusCount = Math.min(totalCount, Math.max(1, Math.round(totalCount * (crisisSpec.focusRatio || 0.70))));
+            for (let k = 0; k < focusCount; k++) {
+                crisisSlots.add(Math.min(totalCount - 1, Math.floor((k * totalCount) / focusCount)));
+            }
+            for (let idxC = 0; crisisSlots.size < focusCount && idxC < totalCount; idxC++) {
+                crisisSlots.add(idxC);
+            }
+        }
+
         const mapSpec = getCurrentMapSpec();
         const hasAltRoute = Boolean(mapSpec && Array.isArray(mapSpec.altWaypoints) && mapSpec.altWaypoints.length >= 2);
         const queue = [];
+        let crisisSeq = 0;
         for (let i = 0; i < totalCount; i++) {
-            const typeKey = pool[(i + waveNum - 1) % Math.max(1, pool.length)];
+            const typeKey = crisisSlots.has(i)
+                ? crisisSpec.featuredMonsters[crisisSeq++ % crisisSpec.featuredMonsters.length]
+                : pool[(i + waveNum - 1) % Math.max(1, pool.length)];
             const mCfg = monsterDb[typeKey] || {};
             const isElite = eliteSlots.has(i);
             let armor = Number(mCfg.baseArmor) || 0;
@@ -306,6 +334,23 @@
                 armor = Math.max(armor, eliteArmor);
             }
             queue.push({ typeKey, hpScale, rewardBonus, isElite, isBoss: false, armor, useAltRoute: hasAltRoute && (i % 2 === 1) });
+        }
+
+        let hasThief = false;
+        const thiefUnlocked = TreeSys && typeof TreeSys.isMetaNodeUnlocked === 'function' ? TreeSys.isMetaNodeUnlocked('ancient_2') : false;
+        if (thiefUnlocked && isTreasureThiefWave(waveNum) && monsterDb.thief) {
+            const insertIdx = Math.max(1, Math.floor(queue.length * 0.45));
+            queue.splice(insertIdx, 0, {
+                typeKey: 'thief',
+                hpScale,
+                rewardBonus: 0,
+                isElite: false,
+                isBoss: false,
+                isTreasureThief: true,
+                armor: 0,
+                useAltRoute: false
+            });
+            hasThief = true;
         }
 
         let bossMeta = null;
@@ -324,6 +369,8 @@
             eliteCount,
             eliteArmor,
             bossMeta,
+            crisisSpec,
+            hasThief,
             spawnIntervalMs: Math.max(wb.SPAWN_INTERVAL_MIN_MS || 750, (wb.SPAWN_INTERVAL_BASE_MS || 1600) - (waveNum - 1) * (wb.SPAWN_INTERVAL_DECAY_MS || 65))
         };
     }
@@ -335,6 +382,8 @@
         applyMapConfig,
         rebuildRouteFromWaypoints,
         isBossWaveNumber,
+        getCrisisWaveSpec,
+        isTreasureThiefWave,
         computeWaveHpScale,
         M_hp: computeWaveHpScale,
         computeBossHp,

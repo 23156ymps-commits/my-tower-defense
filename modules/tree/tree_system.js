@@ -34,6 +34,46 @@
         return Boolean(G && G.state && G.state.activeBlessings && G.state.activeBlessings.has(blessingId));
     }
 
+    function getMetaTreeState() {
+        const bk = GameApp.backend || (GameApp.core && GameApp.core.backend);
+        if (bk && typeof bk.loadMetaTreeState === 'function') {
+            return bk.loadMetaTreeState();
+        }
+        return { version: 1, honorPoints: 0, totalHonorEarned: 0, unlockedNodes: [] };
+    }
+
+    function isMetaNodeUnlocked(nodeId) {
+        if (!nodeId) return true;
+        const st = getMetaTreeState();
+        return Array.isArray(st.unlockedNodes) && st.unlockedNodes.includes(nodeId);
+    }
+
+    function getMaxScionCrownLimit() {
+        const td = getTreeData();
+        const base = Number.isFinite(td.META_MAX_CROWN_BASE) ? td.META_MAX_CROWN_BASE : 2;
+        const upg = Number.isFinite(td.META_MAX_CROWN_UPGRADED) ? td.META_MAX_CROWN_UPGRADED : 3;
+        return isMetaNodeUnlocked('ancient_4') ? upg : base;
+    }
+
+    function getBloodPactPowerBonus() {
+        if (!G || !G.state || !hasBlessing('blood_pact_fury')) return 0;
+        const maxHp = Math.max(1, Number(G.state.maxBaseHp) || 20);
+        const curHp = Math.max(0, Number(G.state.baseHp) || 0);
+        const missing = Math.max(0, maxHp - curHp);
+        return Number((missing * 0.015).toFixed(4));
+    }
+
+    function getGreedyRootsWaveBonus() {
+        if (!G || !G.state || !Array.isArray(G.state.board) || !hasBlessing('greedy_roots')) return 0;
+        const families = new Set();
+        for (let i = 0; i < G.state.board.length; i++) {
+            const t = G.state.board[i];
+            if (!t) continue;
+            families.add(resolveTowerFamily(t.type));
+        }
+        return families.size * 5;
+    }
+
     function towerHasLineage(towerType, lineageTag) {
         const tCfg = getTowersDict()[towerType];
         if (!tCfg) return towerType === lineageTag;
@@ -230,6 +270,15 @@
 
     function upgradeTreasureRoot(targetLevel = null) {
         if (!G || !G.state) return { ok: false, reason: 'no_runtime' };
+        if (!isMetaNodeUnlocked('wealth_1')) {
+            if (G.dom && G.dom.msgText) {
+                G.dom.msgText.innerText = L(
+                    '尚未解鎖【聚寶根鬚】：請於主選單「世界樹年輪 · 財富枝 ①」以榮譽積分解鎖。',
+                    'Treasure Roots locked: Unlock Wealth Branch ① in the Start Screen World Tree Meta Ring.'
+                );
+            }
+            return { ok: false, reason: 'meta_locked', metaNode: 'wealth_1', level: getTreasureRootLevel() };
+        }
         const st = G.state;
         const isActiveMatch = G.callbacks && typeof G.callbacks.isMatchPhaseActive === 'function'
             ? G.callbacks.isMatchPhaseActive()
@@ -370,16 +419,20 @@
                 totalGain: Math.min(22 + 8 * w, (spec.fixedWaveGold || 0) + (lv >= 3 ? Math.min(35, Math.floor(Math.max(0, st.currentGold) * 0.08 + 1e-9)) : 0))
             };
 
+        const greedyBonus = getGreedyRootsWaveBonus();
+        const combinedRawTotal = (rawPayout.totalGain || 0) + greedyBonus;
         const waveCap = rawPayout.waveCap || (22 + 8 * w);
         if (EconSys && typeof EconSys.ensureWaveNonCombatLedger === 'function') {
             EconSys.ensureWaveNonCombatLedger(w);
         }
         const alreadyNonCombat = Math.max(0, Number(st.waveNonCombatGold) || 0);
         const remainingCap = Math.max(0, waveCap - alreadyNonCombat);
-        const grantedGold = Math.min(remainingCap, rawPayout.totalGain);
-        const baseGain = Math.min(grantedGold, rawPayout.fixedGain || 0);
-        const interestGain = Math.max(0, grantedGold - baseGain);
-        const isSoftCapped = (rawPayout.uncappedGain || rawPayout.totalGain) > remainingCap;
+        const grantedGold = Math.min(remainingCap, combinedRawTotal);
+        const rootPortion = Math.min(grantedGold, rawPayout.totalGain || 0);
+        const greedyGranted = Math.max(0, grantedGold - rootPortion);
+        const baseGain = Math.min(rootPortion, rawPayout.fixedGain || 0);
+        const interestGain = Math.max(0, rootPortion - baseGain);
+        const isSoftCapped = ((rawPayout.uncappedGain || rawPayout.totalGain) + greedyBonus) > remainingCap;
 
         if (grantedGold > 0) {
             st.currentGold += grantedGold;
@@ -399,19 +452,21 @@
             }
         }
 
-        let summaryZh = `聚寶根鬚 Lv.0 產出 +0 💰`;
-        let summaryEn = `Treasure Roots Lv.0: +0 💰`;
+        const greedyTagZh = greedyGranted > 0 ? `＋貪婪之根 +${greedyGranted} 💰` : '';
+        const greedyTagEn = greedyGranted > 0 ? ` + Greedy Roots +${greedyGranted} 💰` : '';
+        let summaryZh = `聚寶根鬚 Lv.0 產出 +${grantedGold} 💰${greedyTagZh}`;
+        let summaryEn = `Treasure Roots Lv.0: +${grantedGold} 💰${greedyTagEn}`;
         if (lv === 1) {
-            summaryZh = `聚寶根鬚 Lv.1（汲取根鬚）產出 +${grantedGold} 💰`;
-            summaryEn = `Treasure Roots Lv.1 (Siphon Roots): +${grantedGold} 💰`;
+            summaryZh = `聚寶根鬚 Lv.1（汲取根鬚）產出 +${grantedGold} 💰${greedyTagZh}`;
+            summaryEn = `Treasure Roots Lv.1 (Siphon Roots): +${grantedGold} 💰${greedyTagEn}`;
         } else if (lv === 2) {
-            summaryZh = `聚寶根鬚 Lv.2（黃金根脈）產出 +${grantedGold} 💰`;
-            summaryEn = `Treasure Roots Lv.2 (Golden Veins): +${grantedGold} 💰`;
+            summaryZh = `聚寶根鬚 Lv.2（黃金根脈）產出 +${grantedGold} 💰${greedyTagZh}`;
+            summaryEn = `Treasure Roots Lv.2 (Golden Veins): +${grantedGold} 💰${greedyTagEn}`;
         } else if (lv >= 3) {
             const capNoteZh = isSoftCapped ? `，已觸發單波軟上限 ${waveCap} 💰` : '';
             const capNoteEn = isSoftCapped ? `, wave soft cap ${waveCap} 💰 applied` : '';
-            summaryZh = `聚寶根鬚 Lv.3（複利樹心）產出 +${grantedGold} 💰（固定 +${baseGain} 💰 ＋ 8% 利息 +${interestGain} 💰${capNoteZh}）`;
-            summaryEn = `Treasure Roots Lv.3 (Compound Heart): +${grantedGold} 💰 (Fixed +${baseGain} 💰 + 8% Interest +${interestGain} 💰${capNoteEn})`;
+            summaryZh = `聚寶根鬚 Lv.3（複利樹心）產出 +${grantedGold} 💰（固定 +${baseGain} 💰 ＋ 8% 利息 +${interestGain} 💰${greedyTagZh}${capNoteZh}）`;
+            summaryEn = `Treasure Roots Lv.3 (Compound Heart): +${grantedGold} 💰 (Fixed +${baseGain} 💰 + 8% Interest +${interestGain} 💰${greedyTagEn}${capNoteEn})`;
         }
 
         const result = {
@@ -497,7 +552,8 @@
             return false;
         }
         st.dewEnergy -= frzCfg.cost;
-        st.frenzyActiveMs = frzCfg.durationMs;
+        const bloodFuryBonusMs = hasBlessing('blood_pact_fury') ? 1500 : 0;
+        st.frenzyActiveMs = (frzCfg.durationMs || 5000) + bloodFuryBonusMs;
         st.frenzyCdMs = frzCfg.cdMs;
 
         const Renderer = GameApp.renderer;
@@ -522,19 +578,115 @@
     }
 
     /**
-     * 透過 Object.keys() 動態掃描 BLESSINGS_MAP 抽取 3 張未獲得的祝福卡
+     * 主動技能 3：[E] 黃金豐收（消耗 50 靈露：立即獲得 25 + 3 * 波數 金幣，受單波軟上限約束，並刷新全場塔攻擊前搖）
      */
-    function triggerBlessingSelection(clearedWave) {
-        const blessingsMap = getTreeData().BLESSINGS_MAP || {};
-        const allKeys = Object.keys(blessingsMap);
-        const pool = allKeys
-            .map(k => blessingsMap[k])
-            .filter(b => b && !G.state.activeBlessings.has(b.id));
+    function castGoldenHarvestSkill() {
+        const st = G.state;
+        const skills = getTreeData().ACTIVE_SKILLS || {};
+        const harvCfg = skills.golden_harvest || { cost: 50, cdMs: 14000, baseGold: 25, perWaveGold: 3 };
+        if (!G.callbacks.isGameplayActive() || (st.harvestCdMs || 0) > 0) return false;
+        if (st.dewEnergy < harvCfg.cost) {
+            G.dom.msgText.innerText = L(`靈露不足，需要 ${harvCfg.cost} 靈露才能施放黃金豐收。`, `Not enough Dew: Golden Harvest requires ${harvCfg.cost} Dew.`);
+            return false;
+        }
+        st.dewEnergy -= harvCfg.cost;
+        st.harvestCdMs = harvCfg.cdMs;
 
+        const w = Math.max(1, Number(st.currentWave) || 1);
+        const rawGold = (harvCfg.baseGold ?? 25) + (harvCfg.perWaveGold ?? 3) * w;
+        const EconSys = GameApp.systems && GameApp.systems.economy;
+        let grantedGold = rawGold;
+        let isSoftCapped = false;
+        if (EconSys && typeof EconSys.recordNonCombatNetGain === 'function') {
+            const capRes = EconSys.recordNonCombatNetGain(rawGold, w);
+            grantedGold = capRes.granted;
+            isSoftCapped = capRes.isSoftCapped;
+        }
+        if (grantedGold > 0) {
+            st.currentGold += grantedGold;
+            st.totalGoldEarned = (st.totalGoldEarned || 0) + grantedGold;
+        }
+
+        const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
+        const refreshedCount = (AttackSys && typeof AttackSys.refreshAllTowerAttackReadiness === 'function')
+            ? AttackSys.refreshAllTowerAttackReadiness()
+            : 0;
+
+        const Renderer = GameApp.renderer;
+        if (Renderer && Array.isArray(st.board)) {
+            for (let idx = 0; idx < st.board.length; idx++) {
+                if (!st.board[idx]) continue;
+                const c = indexToCoords(idx), pos = Renderer.getCellCenter(c.x, c.y);
+                Renderer.emitParticleBurst(pos.left, pos.top, '#E0B43C', 6, 65);
+                Renderer.emitRingFX(pos.left, pos.top, Math.max(15, G.boardMetrics.cellW * 0.62), '#D97724', 0.24, 320);
+            }
+            if (G.map && Array.isArray(G.map.waypoints) && G.map.waypoints.length > 0 && typeof Renderer.spawnFloatingNotice === 'function') {
+                const lastWp = G.map.waypoints[G.map.waypoints.length - 1];
+                const tp = Renderer.getCellCenter(lastWp.x, lastWp.y);
+                Renderer.spawnFloatingNotice(L(`黃金豐收 +${grantedGold} 💰`, `Golden Harvest +${grantedGold} 💰`), tp.left, tp.top, 'pity-seed');
+            }
+        }
+        GameApp.audio.playMagic('frenzy');
+        const overcharged = activateDewOverchargeIfUnlocked();
+        const capNoteZh = isSoftCapped ? '（觸及單波軟上限）' : '';
+        const capNoteEn = isSoftCapped ? ' (wave soft cap)' : '';
+        G.dom.msgText.innerText = L(
+            `施放「黃金豐收」：立即獲得 +${grantedGold} 💰${capNoteZh}，並刷新全場 ${refreshedCount} 座防禦塔攻擊前搖${overcharged ? '（觸發 3 秒靈露超載）' : ''}。`,
+            `Cast Golden Harvest: +${grantedGold} 💰${capNoteEn} & refreshed ${refreshedCount} tower cooldowns${overcharged ? ' (Dew Overcharge 3s!)' : ''}.`
+        );
+        if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
+            GameApp.backend.recordPlayerAction();
+            GameApp.backend.trackFeel('Tree:SkillCast:golden_harvest', grantedGold, { skillId: 'golden_harvest', wave: w, refreshedCount });
+        }
+        G.callbacks.updateHUD();
+        return true;
+    }
+
+    function buildBlessingPool(excludeIdsSet = null) {
+        const blessingsMap = getTreeData().BLESSINGS_MAP || {};
+        const pool = Object.keys(blessingsMap)
+            .map(k => blessingsMap[k])
+            .filter(b => b && !G.state.activeBlessings.has(b.id)
+                && (!b.requiresMetaNode || isMetaNodeUnlocked(b.requiresMetaNode))
+                && (!excludeIdsSet || !excludeIdsSet.has(b.id)));
         for (let i = pool.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [pool[i], pool[j]] = [pool[j], pool[i]];
         }
+        return pool;
+    }
+
+    function renderBlessingChoicesUI(choices) {
+        if (!G || !G.dom) return;
+        const st = G.state;
+        if (G.dom.blessingChoicesEl) {
+            G.dom.blessingChoicesEl.innerHTML = '';
+            choices.forEach(b => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'blessing-choice-btn';
+                card.dataset.blessingId = b.id;
+                card.innerHTML = `<span class="blessing-choice-icon">${b.icon}</span><span class="blessing-choice-title">${b.name}</span><span class="blessing-choice-desc">${b.desc}</span>`;
+                card.addEventListener('click', () => selectBlessing(b.id));
+                G.dom.blessingChoicesEl.appendChild(card);
+            });
+        }
+        if (G.dom.blessingRerollBtn) {
+            const hasPerk = isMetaNodeUnlocked('fate_4');
+            const left = Math.max(0, Number(st.blessingRerollsLeft) || 0);
+            G.dom.blessingRerollBtn.classList.toggle('hidden', !hasPerk);
+            G.dom.blessingRerollBtn.disabled = !hasPerk || left <= 0;
+            G.dom.blessingRerollBtn.innerText = left > 0
+                ? L(`重抽賜福（免費剩 ${left} 次）`, `Reroll Blessings (${left} Free)`)
+                : L('免費重抽已使用 (0/1)', 'Free Reroll Used (0/1)');
+        }
+    }
+
+    /**
+     * 透過 Object.keys() 動態掃描 BLESSINGS_MAP 抽取 3 張未獲得的祝福卡
+     */
+    function triggerBlessingSelection(clearedWave) {
+        const pool = buildBlessingPool();
         const choices = pool.slice(0, Math.min(3, pool.length));
         if (choices.length === 0) return false;
 
@@ -558,22 +710,35 @@
                 `Wave ${clearedWave} cleared${rootNoteEn}! Choose a World Tree Blessing to empower your defense.`
             );
         }
-        if (G.dom.blessingChoicesEl) {
-            G.dom.blessingChoicesEl.innerHTML = '';
-            choices.forEach(b => {
-                const card = document.createElement('button');
-                card.type = 'button';
-                card.className = 'blessing-choice-btn';
-                card.dataset.blessingId = b.id;
-                card.innerHTML = `<span class="blessing-choice-icon">${b.icon}</span><span class="blessing-choice-title">${b.name}</span><span class="blessing-choice-desc">${b.desc}</span>`;
-                card.addEventListener('click', () => selectBlessing(b.id));
-                G.dom.blessingChoicesEl.appendChild(card);
-            });
-        }
+        renderBlessingChoicesUI(choices);
         if (G.dom.blessingOverlayEl) G.dom.blessingOverlayEl.classList.remove('hidden');
         GameApp.audio.playMagic('blessing');
         G.callbacks.updateHUD();
         return true;
+    }
+
+    function rerollBlessingChoices() {
+        const st = G && G.state;
+        if (!st || st.waveState !== 'BLESSING_SELECT' || !isMetaNodeUnlocked('fate_4') || (st.blessingRerollsLeft || 0) <= 0) {
+            return { ok: false };
+        }
+        const prevIds = new Set((st.blessingChoices || []).map(b => b.id));
+        let nextPool = buildBlessingPool(prevIds);
+        if (nextPool.length < 3) {
+            const fillPool = buildBlessingPool().filter(b => !nextPool.some(n => n.id === b.id));
+            nextPool = nextPool.concat(fillPool);
+        }
+        const nextChoices = nextPool.slice(0, Math.min(3, nextPool.length));
+        if (nextChoices.length === 0) return { ok: false };
+
+        st.blessingRerollsLeft = Math.max(0, (st.blessingRerollsLeft || 1) - 1);
+        st.blessingChoices = nextChoices;
+        renderBlessingChoicesUI(nextChoices);
+        if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
+            GameApp.backend.trackFeel('Tree:BlessingReroll', st.currentWave, { wave: st.currentWave });
+        }
+        GameApp.audio.playMagic('blessing');
+        return { ok: true, choices: nextChoices, rerollsLeft: st.blessingRerollsLeft };
     }
 
     function selectBlessing(blessingId) {
@@ -594,6 +759,8 @@
 
         if (blessingId === 'abundant_seed') {
             st.seedPityCount = 0;
+        } else if (blessingId === 'gambler_lucky_leaf') {
+            st.teamCritBonusRate = Math.min(0.40, Number(((st.teamCritBonusRate || 0) + 0.08).toFixed(4)));
         }
 
         if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
@@ -622,6 +789,11 @@
     const TreeSystem = {
         bind,
         hasBlessing,
+        getMetaTreeState,
+        isMetaNodeUnlocked,
+        getMaxScionCrownLimit,
+        getBloodPactPowerBonus,
+        getGreedyRootsWaveBonus,
         towerHasLineage,
         resolveTowerFamily,
         computeKillDewGain,
@@ -635,6 +807,7 @@
         shouldTriggerDewOvercharge,
         castEntangleSkill,
         castFrenzySkill,
+        castGoldenHarvestSkill,
         getTreasureRootLevel,
         getTreasureRootSpec,
         getNextTreasureRootSpec,
@@ -643,6 +816,7 @@
         upgradeTreasureRoot,
         settleWaveRootIncome,
         triggerBlessingSelection,
+        rerollBlessingChoices,
         selectBlessing
     };
 

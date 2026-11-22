@@ -184,6 +184,42 @@
         ]
     };
 
+    // 第 4 階段：固定 3 個主題危機波（提前 1 波於預告顯示並連動股市趨勢）與靈脈竊賊出現波次
+    const CRISIS_WAVES = {
+        4: {
+            wave: 4,
+            id: 'crisis_wind_hunt',
+            title: '疾風狩獵潮',
+            titleEn: 'Gale Hunter Surge',
+            focusRatio: 0.70,
+            featuredMonsters: ['hound', 'air'],
+            counterHint: '約 70% 高速／飛行單位（檢驗減速與防快攻）',
+            counterHintEn: '~70% high-speed & flying units (tests slow & anti-rush)'
+        },
+        7: {
+            wave: 7,
+            id: 'crisis_iron_phalanx',
+            title: '重甲鋼鐵陣',
+            titleEn: 'Iron Phalanx March',
+            focusRatio: 0.70,
+            featuredMonsters: ['golem', 'guardian'],
+            counterHint: '約 70% 高護甲／護盾單位（檢驗破甲與破盾）',
+            counterHintEn: '~70% high-armor & shielded units (tests shred & shield break)'
+        },
+        9: {
+            wave: 9,
+            id: 'crisis_bloom_detonation',
+            title: '繁花自爆潮',
+            titleEn: 'Bloom & Detonation Tide',
+            focusRatio: 0.70,
+            featuredMonsters: ['healer', 'bomber'],
+            counterHint: '癒合花妖 × 熔核自爆蟲（檢驗重傷減療與凍結抑爆）',
+            counterHintEn: 'Healer × Molten Bomber mix (tests grievous wound & bomb suppression)'
+        }
+    };
+
+    const TREASURE_THIEF_WAVES = [3, 6, 9];
+
     Object.assign(CONFIG, {
         BOARD_COLS: BOARD_DIMENSIONS.BOARD_COLS,
         BOARD_ROWS: BOARD_DIMENSIONS.BOARD_ROWS,
@@ -197,7 +233,9 @@
         BOARD_DIMENSIONS,
         WAVE_BALANCE,
         MAPS_CONFIG,
-        WAVES
+        WAVES,
+        CRISIS_WAVES,
+        TREASURE_THIEF_WAVES
     };
 
     if (global.GameConfig) {

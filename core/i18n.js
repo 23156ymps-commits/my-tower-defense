@@ -116,8 +116,8 @@
         },
         ice_A: {
             name: 'Permafrost Domain', shortName: 'A Permafrost',
-            roleSummary: '1.5-Cell 60% Slow + 4-Hit Freeze',
-            tooltipSummary: '1.5-cell 60% slow; every 4th hit freezes 0.9s',
+            roleSummary: '1.5-Cell 60% Slow + 1.5x Freeze Burst',
+            tooltipSummary: '1.5-cell 60% slow; 4th hit freezes 0.9s + 1.5x Ice Burst',
             lineagePath: '❄️ Frost 2★ ▸ A Permafrost Domain'
         },
         ice_B: {
@@ -146,8 +146,8 @@
         },
         steam_B: {
             name: 'Frostmist Maze', shortName: 'B Frostmist',
-            roleSummary: '1.6-Cell Mist + 20% Team Vuln',
-            tooltipSummary: '1.6-cell mist slow 35% + +20% all dmg taken (3s)',
+            roleSummary: 'Mist +20% Vuln +15% Kill Gold',
+            tooltipSummary: '1.6-cell mist slow 35% + +20% dmg taken + +15% kill gold',
             lineagePath: '💨 Hi-Steam 2★ ▸ B Frostmist Maze'
         },
         magnet_A: {
@@ -158,8 +158,8 @@
         },
         magnet_B: {
             name: 'Volt Overload', shortName: 'B Overload',
-            roleSummary: '3-Bounce + 3.5s Shock Synergy',
-            tooltipSummary: '3 bounces + 3.5s Shock (+12 Thunder on ally hit)',
+            roleSummary: '3-Bounce + Scaling Shock',
+            tooltipSummary: '3 bounces + 3.5s Shock (10+2.5*Wave Thunder on ally hit)',
             lineagePath: '💠 Hi-Magnet 2★ ▸ B Volt Overload'
         },
         plasma_A: {
@@ -199,7 +199,8 @@
         guardian: { name: 'Rune Guardian', traitDesc: '45% MaxHP blue shield; +40% shield break from Thunder/Magnet/Plasma.' },
         healer: { name: 'Bloom Healer', traitDesc: 'Heals 1.5-cell allies 6% MaxHP every 3s; halved by Grievous Wound.' },
         panther: { name: 'Shadow Panther', traitDesc: 'At <50% HP gains 2.2s Stealth (+65% spd); revealed by AoE or Freeze.' },
-        bomber: { name: 'Molten Bomber', traitDesc: 'On death stuns 1.4-cell towers for 1.5s unless killed Slowed/Frozen.' }
+        bomber: { name: 'Molten Bomber', traitDesc: 'On death stuns 1.4-cell towers for 1.5s unless killed Slowed/Frozen.' },
+        thief: { name: 'Vein Thief', traitDesc: 'Fast treasure carrier; escaping deals 0 Tree DMG. Drops +60 💰 + Stock/Box Token on kill.' }
     };
 
     const EN_BOSSES = {
@@ -215,7 +216,11 @@
         chain_storm: { name: 'Chain Storm', desc: 'Lightning/Magnet bounces that kill a target gain +1 extra chain bounce (+1 cell range).' },
         glacial_shatter: { name: 'Glacial Shatter', desc: 'Ice/Steam/Magnet instantly shatter slowed/frozen targets below 15% HP.' },
         scorched_brand: { name: 'Scorched Brand', desc: 'Fire/Steam shred or crit hits leave a 2.5s burning trail (22 DPS).' },
-        dew_overcharge: { name: 'Dew Overcharge', desc: 'Casting a World Tree skill grants all towers 40% double-shot chance for 3s.' }
+        dew_overcharge: { name: 'Dew Overcharge', desc: 'Casting a World Tree skill grants all towers 40% double-shot chance for 3s.' },
+        greedy_roots: { name: 'Greedy Roots', desc: 'On wave clear, gain +5 💰 per distinct tower bloodline on the board (subject to wave non-combat soft cap).' },
+        gambler_lucky_leaf: { name: 'Gambler Lucky Leaf', desc: 'Grants +8% team Crit immediately; Zero-Leak bounty nets +10 💰 extra; Blind Box 1★ miss grants +2% Crit.' },
+        insider_trading: { name: 'Insider Trading', desc: '0% Element Stock sell fee; Stock dividend scales to +3.0%/share (single-tower +24% cap still applies).' },
+        blood_pact_fury: { name: 'Blood Pact Fury', desc: 'Each 1 World Tree HP lost grants +1.5% team power (inside 30% blessing cap); Nature Frenzy lasts +1.5s longer.' }
     };
 
     const EN_CONTRACTS = {
@@ -400,6 +405,7 @@
             if (d.tree.ACTIVE_SKILLS && snapshots.skills) {
                 if (d.tree.ACTIVE_SKILLS.entangle) d.tree.ACTIVE_SKILLS.entangle.name = isEn ? 'Root Entangle' : snapshots.skills.entangle.name;
                 if (d.tree.ACTIVE_SKILLS.frenzy) d.tree.ACTIVE_SKILLS.frenzy.name = isEn ? 'Nature Frenzy' : snapshots.skills.frenzy.name;
+                if (d.tree.ACTIVE_SKILLS.golden_harvest) d.tree.ACTIVE_SKILLS.golden_harvest.name = isEn ? 'Golden Harvest' : snapshots.skills.golden_harvest.name;
             }
         }
 
@@ -586,6 +592,8 @@
 
             // 底部與彈窗固定鈕
             setElText('codex-btn', isEn ? 'World Tree' : '世界樹圖譜');
+            setElText('help-btn-label', isEn ? 'Guide' : '戰術手冊');
+            setElText('guide-evo-title', isEn ? 'Evolution Pyramid (1★ → 5★ 16U)' : '轉職與升星金字塔（1★ → 5★ 16U）');
             const nextWaveLabelEl = document.getElementById('next-wave-label');
             if (nextWaveLabelEl) nextWaveLabelEl.innerText = isEn ? 'Start Wave' : '立即開波';
             else setElText('next-wave-btn', isEn ? 'Start Wave' : '立即開波');
@@ -604,6 +612,12 @@
             setElText('side-monster-lock-tag', isEn ? 'Locked' : '鎖定檢視');
             setElText('start-title', isEn ? 'Elemental Frontline: Merge TD' : '元素陣線：合成塔防');
             setElText('start-game-btn', isEn ? 'Start Defense' : '開始防守');
+            setElText('meta-tree-title', isEn ? 'World Tree Meta Rings' : '世界樹年輪');
+            setElText('meta-tree-subtitle', isEn
+                ? 'Spend Honor ★ earned across runs to permanently expand Guild systems, Fate Blind Box perks & Scion cap (saved offline).'
+                : '消耗對局累積的榮譽點數 ★ 永久擴展商會職能、盲盒命運與神裔上限（離線存檔）。');
+            setElText('meta-tree-reset-btn', isEn ? 'Reset Rings' : '重置年輪');
+            setElText('meta-tree-close-btn', isEn ? 'Close' : '關閉');
             setElText('guide-title', isEn ? 'Tactical Field Guide' : '戰術手冊與地形速查');
             setElText('guide-close-btn', isEn ? 'Back to Battle' : '返回戰場');
             setElText('guide-menu-btn', isEn ? 'Change Map / Main Menu' : '切換地圖 / 返回封面');
@@ -657,8 +671,8 @@
             if (smcTitle) smcTitle.innerText = isEn ? 'Target Enemy Info' : '目標敵軍情報';
 
             setElText('start-quick-tip', isEn
-                ? 'Drag cards to build · Cross-merge transfers / Same-merge stars up · [Q/W] Tree skills'
-                : '拖曳元素卡建塔 · 異系轉職／同系升星 · [Q/W] 世界樹技能');
+                ? 'Drag cards to build · Cross-merge transfers / Same-merge stars up · [Q/W/E] Tree skills · [B] Guild'
+                : '拖曳元素卡建塔 · 異系轉職／同系升星 · [Q/W/E] 世界樹技能 · [B] 商會');
 
             // 圖鑑副標題與祝福副標題
             const codexSub = document.querySelector('#codex-overlay .codex-subtitle');
@@ -672,7 +686,8 @@
             const guideTitles = document.querySelectorAll('#guide-overlay .guide-section-title');
             if (guideTitles[0]) guideTitles[0].innerText = isEn ? 'Elemental Counters' : '元素相剋速查';
             if (guideTitles[1]) guideTitles[1].innerText = isEn ? 'Terrain Bonuses (Hover tile on board)' : '戰術地形加成（懸停棋盤特殊格可檢視）';
-            if (guideTitles[2]) guideTitles[2].innerText = isEn ? 'Summary & Hotkeys' : '防線紀要與快捷鍵';
+            if (guideTitles[2]) guideTitles[2].innerText = isEn ? 'Evolution Pyramid (1★ → 5★ 16U)' : '轉職與升星金字塔（1★ → 5★ 16U）';
+            if (guideTitles[3]) guideTitles[3].innerText = isEn ? 'Summary & Hotkeys' : '防線紀要與快捷鍵';
             const guideRows = document.querySelectorAll('#guide-overlay .panel-row');
             const zhGuideRows = [
                 ['🔥 火塔 ▸ 蔓藤巨魔 / 史萊姆', '175% 暴擊 · 破甲 30%'],
@@ -700,10 +715,14 @@
                 if (kEl) kEl.innerText = pair[0];
                 if (vEl) vEl.innerText = pair[1];
             });
-            const guideNote = document.querySelector('#guide-overlay .codex-note');
+            const guideEvoNote = document.getElementById('guide-evo-note');
+            if (guideEvoNote) guideEvoNote.innerHTML = isEn
+                ? 'Cross 1★+1★ ▸ Hybrid 1★ (2U) | Same 1★+1★ ▸ Trunk 2★ | Same 2★+2★ ▸ Crown Branch A/B 3★ (4U)<br>Same-Lineage 3★+3★ (or feed 8U) ▸ Mastery / Twin AB 4★ | 4★+4★ (or 16U) ▸ World Tree Scion 5★'
+                : '異系 1★+1★ ▸ 轉職混合 1★ (2U) ｜ 同種 1★+1★ ▸ 靈木主幹 2★ ｜ 同種 2★+2★ ▸ 冠枝 A/B 3★ (4U)<br>同脈 3★+3★（或低星餵養滿 8U）▸ 極意古冠 / 雙生神冠 AB 4★ ｜ 同脈 4★+4★（或滿 16U）▸ 世界樹神裔 5★';
+            const guideNote = document.getElementById('guide-hotkey-note') || document.querySelector('#guide-overlay .codex-note');
             if (guideNote) guideNote.innerHTML = isEn
-                ? 'Choose a World Tree Blessing every 3 waves; Bosses arrive on Wave 5 &amp; 10.<br>Hotkeys: <b>[1/2/3]</b> Summon | <b>[Q/W]</b> Skills | <b>[T]</b> World Tree | <b>[Space]</b> Pause | <b>[Tab/S]</b> Speed | <b>[Esc]</b> Cancel'
-                : '每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波迎戰領主魔王。<br>熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W]</b> 技能 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消';
+                ? 'Choose a World Tree Blessing every 3 waves; Bosses arrive on Wave 5 &amp; 10.<br>Hotkeys: <b>[1/2/3]</b> Summon | <b>[Q/W/E]</b> Skills | <b>[B]</b> Guild | <b>[T]</b> World Tree | <b>[Space]</b> Pause | <b>[Tab/S]</b> Speed | <b>[Esc]</b> Cancel'
+                : '每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波迎戰領主魔王。<br>熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W/E]</b> 技能 ｜ <b>[B]</b> 商會 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消';
 
             // 勝敗結算彈窗靜態欄位 (#victory-overlay & #game-over-overlay)
             const goSub = document.querySelector('#game-over-overlay .modal-subtitle');

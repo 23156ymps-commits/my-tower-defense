@@ -630,10 +630,20 @@
         if (!monster || monster.hp <= 0 || monster.isTargetable === false) return;
         const st = ensureMonsterStatus(monster);
         const sh = st.shock;
+        const curWave = Math.max(1, Number(G && G.state && G.state.currentWave) || 1);
+        const base = Number.isFinite(shockParams.shockBonusBase) ? Number(shockParams.shockBonusBase) : 10;
+        const perWave = Number.isFinite(shockParams.shockBonusPerWave) ? Number(shockParams.shockBonusPerWave) : 2.5;
+        const dynamicBonus = Number((base + perWave * curWave).toFixed(1));
         sh.durationMs = Math.max(sh.durationMs || 0, Number(shockParams.shockDurationMs) || 3500);
-        sh.bonusDamage = Number(shockParams.shockBonusDamage) || 12;
+        sh.bonusDamage = Math.max(dynamicBonus, Number(shockParams.shockBonusDamage) || 0);
         sh.icdMaxMs = Number(shockParams.shockIcdMs) || 350;
         if (sourceTower) sh.sourceTower = sourceTower;
+    }
+
+    function isMonsterInFrostMist(monster) {
+        if (!monster || !monster.status || !monster.status.vuln) return false;
+        const v = monster.status.vuln;
+        return Boolean((v.steam_B_fog && v.steam_B_fog.durationMs > 0) || (v.frost_mist && v.frost_mist.durationMs > 0) || (v.mist_fog && v.mist_fog.durationMs > 0));
     }
 
     /**
@@ -804,6 +814,67 @@
         st.totalGoldEarned += killGold;
         st.killsCount++;
 
+        // 💨B 霜霧迷宮樹：站在其迷霧範圍內的敵人，擊殺額外掉落 +15% 金幣（受單波非戰鬥軟上限約束）
+        let mistExtraGold = 0;
+        if (killGold > 0 && isMonsterInFrostMist(monster) && EconSys && typeof EconSys.recordNonCombatNetGain === 'function') {
+            const econData = (GameApp.data && GameApp.data.economy) || {};
+            const mistRate = Number.isFinite(econData.STEAM_B_MIST_GOLD_BONUS_RATE) ? econData.STEAM_B_MIST_GOLD_BONUS_RATE : 0.15;
+            const rawMistExtra = Math.max(1, Math.round(killGold * mistRate));
+            const capRes = EconSys.recordNonCombatNetGain(rawMistExtra, st.currentWave);
+            mistExtraGold = capRes.granted || 0;
+            if (mistExtraGold > 0) {
+                st.currentGold += mistExtraGold;
+                st.totalGoldEarned += mistExtraGold;
+            }
+        }
+
+        // 🦊 靈脈竊賊擊殺驚喜掉落：+60 金幣（受單波軟上限約束）＋ 1 股隨機股票或 1 枚盲盒代幣
+        let thiefGoldGranted = 0;
+        let thiefBonusLabelZh = '';
+        let thiefBonusLabelEn = '';
+        const isEnKill = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+        if (monster.typeKey === 'thief' || monster.isTreasureThief) {
+            const econData = (GameApp.data && GameApp.data.economy) || {};
+            const rawThiefGold = Number.isFinite(econData.THIEF_KILL_GOLD_BONUS) ? econData.THIEF_KILL_GOLD_BONUS : 60;
+            if (EconSys && typeof EconSys.recordNonCombatNetGain === 'function') {
+                const capRes = EconSys.recordNonCombatNetGain(rawThiefGold, st.currentWave);
+                thiefGoldGranted = capRes.granted || 0;
+            } else {
+                thiefGoldGranted = rawThiefGold;
+            }
+            if (thiefGoldGranted > 0) {
+                st.currentGold += thiefGoldGranted;
+                st.totalGoldEarned += thiefGoldGranted;
+            }
+            const stocksAvailable = EconSys && typeof EconSys.canTradeStocks === 'function' ? EconSys.canTradeStocks() : true;
+            const preferStock = stocksAvailable && Math.random() < 0.5;
+            let gotStock = null;
+            if (preferStock && EconSys && typeof EconSys.grantRandomStockShare === 'function') {
+                gotStock = EconSys.grantRandomStockShare();
+            }
+            if (gotStock && gotStock.ok) {
+                const elLabelZh = gotStock.element === 'fire' ? '🔥火股' : (gotStock.element === 'ice' ? '❄️冰股' : '⚡雷股');
+                const elLabelEn = gotStock.element === 'fire' ? '🔥Fire' : (gotStock.element === 'ice' ? '❄️Ice' : '⚡Thunder');
+                thiefBonusLabelZh = ` ＋ 隨機 ${elLabelZh} 1 股`;
+                thiefBonusLabelEn = ` + 1 ${elLabelEn} Share`;
+            } else {
+                st.blindBoxTokens = (st.blindBoxTokens || 0) + 1;
+                thiefBonusLabelZh = ' ＋ 盲盒代幣 ×1';
+                thiefBonusLabelEn = ' + 1 Blind Box Token';
+            }
+            if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
+                GameApp.backend.trackFeel('Economy:ThiefKill', thiefGoldGranted, { wave: st.currentWave });
+            }
+            if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
+                GameApp.renderer.spawnFloatingNotice(
+                    isEnKill ? `🦊 +${thiefGoldGranted} 💰${thiefBonusLabelEn}` : `🦊 +${thiefGoldGranted} 💰${thiefBonusLabelZh}`,
+                    monster.pixelX,
+                    monster.pixelY,
+                    'pity-seed'
+                );
+            }
+        }
+
         const dewGain = TreeSys ? TreeSys.computeKillDewGain(monster) : 0;
         const dewMax = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.DEW_MAX) || 100;
         if (dewGain > 0) st.dewEnergy = Math.min(dewMax, st.dewEnergy + dewGain);
@@ -825,7 +896,6 @@
         GameApp.renderer.removeMonsterDom(monster.id);
         GameApp.audio.playKill();
 
-        const isEnKill = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         if (monster.splitsOnDeath) {
             spawnSplitMiniSlimes(monster);
             const splitCnt = monster.splitCount || getRules().SLIME_SPLIT_COUNT || 2;
@@ -833,10 +903,17 @@
             G.dom.msgText.innerText = isEnKill
                 ? `${monster.name} split into ${splitCnt} ${childLabel}!`
                 : `【${monster.name}】分裂為 ${splitCnt} 隻${childLabel}。`;
-        } else if (killGold > 0 && !options.isEmberSplash && !options.isDotKill) {
+        } else if (thiefGoldGranted > 0 || thiefBonusLabelZh) {
             G.dom.msgText.innerText = isEnKill
-                ? `Slain ${monster.name}: +${killGold} 💰${dewGain > 0 ? `, +${dewGain} 💧` : ''}`
-                : `擊殺【${monster.name}】，獲得 +${killGold} 💰${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
+                ? `Caught ${monster.name}! +${thiefGoldGranted} 💰${thiefBonusLabelEn}`
+                : `捕獲【${monster.name}】！獲得 +${thiefGoldGranted} 💰${thiefBonusLabelZh}。`;
+        } else if (killGold > 0 && !options.isEmberSplash && !options.isDotKill) {
+            const totalShowGold = killGold + mistExtraGold;
+            const mistSuffixZh = mistExtraGold > 0 ? `（含霜霧 +${mistExtraGold}）` : '';
+            const mistSuffixEn = mistExtraGold > 0 ? ` (Mist +${mistExtraGold})` : '';
+            G.dom.msgText.innerText = isEnKill
+                ? `Slain ${monster.name}: +${totalShowGold} 💰${mistSuffixEn}${dewGain > 0 ? `, +${dewGain} 💧` : ''}`
+                : `擊殺【${monster.name}】，獲得 +${totalShowGold} 💰${mistSuffixZh}${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
         }
 
         // 🔥 熔核自爆蟲：非減速且非凍結狀態死亡時癱瘓 1.4 格內防禦塔 1.5s
@@ -1226,6 +1303,25 @@
 
             if (reachedEnd) {
                 m.isTargetable = false;
+                if (m.typeKey === 'thief' || m.isTreasureThief || m.noBaseDamage) {
+                    const isEnEsc = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                    if (G.dom.msgText) {
+                        G.dom.msgText.innerText = isEnEsc
+                            ? `${m.name} escaped! World Tree took no damage.`
+                            : `【${m.name}】已攜帶寶物逃離跑道（未扣除世界樹生命）。`;
+                    }
+                    if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
+                        GameApp.backend.trackFeel('Economy:ThiefEscape', 1, { wave: st.currentWave });
+                    }
+                    m.hp = 0;
+                    m._dead = true;
+                    m._killHandled = true;
+                    Renderer.removeMonsterDom(m.id);
+                    if (G.callbacks && typeof G.callbacks.onMonsterLeaked === 'function') {
+                        G.callbacks.onMonsterLeaked(m.id);
+                    }
+                    continue;
+                }
                 const leakDmg = Math.max(1, m.baseDamage || 1);
                 st.lastBreakerName = m.name || '';
                 st.baseHp = Math.max(0, st.baseHp - leakDmg);
@@ -1307,6 +1403,7 @@
         applyHealToMonster,
         applyShockToMonster,
         tryTriggerShockBonusDamage,
+        isMonsterInFrostMist,
         applyVulnerabilityToMonster,
         computeVulnerabilityBucket,
         getMonsterVulnerabilityBonus,

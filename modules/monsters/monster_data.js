@@ -252,6 +252,29 @@
                 shape: 'bomber',
                 sizeScale: 1.02
             }
+        },
+        thief: {
+            id: 'thief',
+            name: '靈脈竊賊',
+            icon: '🦊',
+            image: '',
+            weakness: 'thunder',
+            baseHp: 175,
+            baseReward: 0,
+            speedMult: 1.55,
+            baseArmor: 0,
+            minWave: 999,
+            isSpecialMechanic: true,
+            isTreasureThief: true,
+            noBaseDamage: true,
+            splitsOnDeath: false,
+            traitDesc: '高速逃竄的經濟驚喜怪，逃脫不扣除世界樹生命；擊殺額外獲得 +60 金幣與隨機 1 股或盲盒代幣。',
+            visual: {
+                primaryColor: '#7A421D',
+                accentColor: '#E0B43C',
+                shape: 'beast',
+                sizeScale: 0.96
+            }
         }
     };
 

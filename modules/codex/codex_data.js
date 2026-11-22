@@ -101,7 +101,7 @@
                 nodeTier: 2,
                 family: 'fire',
                 formula: '🔥 火芽 (1★) + 🔥 火芽 (1★)（或豐饒種子 ★★ 保底）',
-                mech: '射程 2.5 格｜攻速 1.15s｜單發 58｜命中施加 35% 破甲（持續 3.5s）。',
+                mech: '射程 2.5 格｜攻速 1.15s｜單發 54｜命中施加 35% 破甲（持續 3.5s）。',
                 synergy: '兩座炎核樹幹 (2★) 相融可觸發冠枝分岔（A 熔核轟擊 / B 焚世餘燼）。',
                 unlockRule: '於戰場合成「🔥 火芽 + 🔥 火芽」解鎖',
                 defaultUnlocked: false,
@@ -112,7 +112,7 @@
                 nodeTier: 2,
                 family: 'ice',
                 formula: '❄️ 冰芽 (1★) + ❄️ 冰芽 (1★)（或豐饒種子 ★★ 保底）',
-                mech: '射程 3.0 格｜攻速 1.00s｜單發 36｜命中施加 50% 強效緩速（持續 2.2s）。',
+                mech: '射程 3.0 格｜攻速 1.00s｜單發 32｜命中施加 50% 強效緩速（持續 2.2s）。',
                 synergy: '兩座霜晶樹幹 (2★) 相融可觸發冠枝分岔（A 永凍領域 / B 冰錐穿刺）。',
                 unlockRule: '於戰場合成「❄️ 冰芽 + ❄️ 冰芽」解鎖',
                 defaultUnlocked: false,
@@ -123,7 +123,7 @@
                 nodeTier: 2,
                 family: 'thunder',
                 formula: '⚡ 雷芽 (1★) + ⚡ 雷芽 (1★)（或豐饒種子 ★★ 保底）',
-                mech: '射程 3.8 格｜攻速 0.85s｜單發 26｜真 3 體不重複閃電連鎖（100% / 65% / 45%）。',
+                mech: '射程 3.8 格｜攻速 0.85s｜單發 28｜真 3 體不重複閃電連鎖（100% / 65% / 45%）。',
                 synergy: '兩座雷紋樹幹 (2★) 相融可觸發冠枝分岔（A 連鎖天雷 / B 落雷審判）。',
                 unlockRule: '於戰場合成「⚡ 雷芽 + ⚡ 雷芽」解鎖',
                 defaultUnlocked: false,
@@ -134,7 +134,7 @@
                 nodeTier: 2,
                 family: 'steam',
                 formula: '💨 蒸氣噴泉 (1★) × 2｜或 💨 蒸氣 (1★) + 🔥 火芽／❄️ 冰芽灌注',
-                mech: '射程 2.8 格｜攻速 1.10s｜單發 99｜無視 45% 護甲並產生 1.3 格 70% 濺射，傷害為 1★ 的 2.15 倍。',
+                mech: '射程 2.8 格｜攻速 1.10s｜單發 74（3U）｜無視 45% 護甲並產生 1.3 格 70% 濺射。',
                 synergy: '兩座高階蒸氣 (2★) 相融可觸發冠枝分岔（A 焦熱蒸壓 / B 霜霧迷宮）。',
                 unlockRule: '將兩座蒸氣噴泉 (1★) 升星或以火／冰芽灌注解鎖',
                 defaultUnlocked: false,
@@ -145,7 +145,7 @@
                 nodeTier: 2,
                 family: 'magnet',
                 formula: '💠 極地磁環 (1★) × 2｜或 💠 磁環 (1★) + ❄️ 冰芽／⚡ 雷芽灌注',
-                mech: '射程 3.3 格｜攻速 1.00s｜單發 62｜1.3 格 45% 群緩並彈射 2 名敵人（70%），傷害為 1★ 的 2.15 倍。',
+                mech: '射程 3.3 格｜攻速 1.00s｜單發 48（3U）｜1.3 格 45% 群緩並彈射 2 名敵人（70%）。',
                 synergy: '兩座高階磁環 (2★) 相融可觸發冠枝分岔（A 引力黑洞 / B 電磁超載）。',
                 unlockRule: '將兩座極地磁環 (1★) 升星或以冰／雷芽灌注解鎖',
                 defaultUnlocked: false,
@@ -156,7 +156,7 @@
                 nodeTier: 2,
                 family: 'plasma',
                 formula: '☄️ 電漿導管 (1★) × 2｜或 ☄️ 電漿 (1★) + 🔥 火芽／⚡ 雷芽灌注',
-                mech: '射程 3.7 格｜攻速 0.45s｜單發 28｜無視 15% 護甲，鎖定疊滿 4 層（+12%/層），傷害為 1★ 的 2.15 倍。',
+                mech: '射程 3.7 格｜攻速 0.45s｜單發 21（3U）｜無視 15% 護甲，鎖定疊滿 4 層（+12%/層）。',
                 synergy: '兩座高階電漿 (2★) 相融可觸發冠枝分岔（A 聚變死光 / B 弧光折射）。',
                 unlockRule: '將兩座電漿導管 (1★) 升星或以火／雷芽灌注解鎖',
                 defaultUnlocked: false,
@@ -170,8 +170,8 @@
                 family: 'fire',
                 branchCode: 'A',
                 formula: '🔥 炎核樹幹 × 2（選擇分支 A）',
-                mech: '射程 2.8 格｜攻速 1.35s｜單發 185｜1.3 格範圍 60% 爆裂濺射，同時對範圍敵軍施加 45% 群體破甲（持續 4.0s）。',
-                synergy: '搭配 💠A 引力黑洞樹聚怪或 ❄️A 永凍領域樹定身後一砲重創，重裝魔像群剋星。',
+                mech: '射程 2.8 格｜攻速 1.25s｜單發 115（4U）｜1.3 格範圍 60% 爆裂濺射，同時對範圍敵軍施加 45% 群體破甲（持續 4.0s）。',
+                synergy: '搭配 💠A 引力黑洞樹聚怪或 ❄️A 永凍領域樹定身後一砲重創；可再融合或吞噬升至 4★ 極意／雙生。',
                 unlockRule: '合成兩座 🔥 炎核樹幹並選擇分支 A 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-plasma'
@@ -182,8 +182,8 @@
                 family: 'fire',
                 branchCode: 'B',
                 formula: '🔥 炎核樹幹 × 2（選擇分支 B）',
-                mech: '射程 3.0 格｜攻速 0.88s｜單發 100｜最高 5 層灼燒（每層 8 + 0.35% MaxHP/s，離射程仍燒滿 5s 且每 2s 向 1.2 格傳染 1 層），附 50% 重傷減療與 <12% 生命處決。',
-                synergy: '適合前置點火讓灼燒瘟疫一路擴散，配合 💨B 霜霧迷宮樹易傷將持續傷害推向極限。',
+                mech: '射程 3.0 格｜攻速 0.88s｜單發 115（4U）｜最高 5 層灼燒（每層 8 + 0.35% MaxHP/s，每 2s 傳染 1 層），附 50% 重傷減療與 <12% 生命處決。',
+                synergy: '適合前置點火讓灼燒瘟疫擴散；與 🔥A 相融可合體為 4★ 雙生神冠。',
                 unlockRule: '合成兩座 🔥 炎核樹幹並選擇分支 B 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-plasma'
@@ -194,8 +194,8 @@
                 family: 'ice',
                 branchCode: 'A',
                 formula: '❄️ 霜晶樹幹 × 2（選擇分支 A）',
-                mech: '射程 3.2 格｜攻速 1.10s｜單發 82｜1.5 格範圍 60% 群體緩速；對緩速目標每第 4 擊觸發 0.9s 凍結（Boss 0.45s，解凍後 6s 冰凍免疫）。',
-                synergy: '強控鎖門核心！配合 ❄️B 冰錐穿刺樹與 💨A 焦熱蒸壓樹蒸氣池可封鎖整條迴廊。',
+                mech: '射程 3.2 格｜攻速 1.10s｜單發 69（4U）｜1.5 格範圍 60% 群體緩速；第 4 擊觸發 0.9s 凍結並額外爆出 1.5× 冰爆傷害。',
+                synergy: '強控鎖門核心！配合 ❄️B 冰錐穿刺或兩者合體為 4★ 雙生寒獄同時兼顧凍結與碎冰暴擊。',
                 unlockRule: '合成兩座 ❄️ 霜晶樹幹並選擇分支 A 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-magnet'
@@ -206,8 +206,8 @@
                 family: 'ice',
                 branchCode: 'B',
                 formula: '❄️ 霜晶樹幹 × 2（選擇分支 B）',
-                mech: '射程 3.5 格｜攻速 0.90s｜單發 68｜直線貫穿 2 名敵人（第 2 目標 60% 傷害），對緩速／凍結／定身敵人造成 +55% 碎冰暴擊傷害。',
-                synergy: '置於直線長跑道末端效果最佳，配合 ❄️A 永凍領域或 💨B 霜霧迷宮全程觸發 55% 碎冰增傷。',
+                mech: '射程 3.5 格｜攻速 0.90s｜單發 69（4U）｜直線貫穿 2 名敵人（第 2 目標 60%），對緩速／凍結／定身敵人造成 +55% 碎冰暴擊。',
+                synergy: '置於直線長跑道效果最佳；可餵養同血脈低星芽或萬能果實逐步充能至 8U 升 4★。',
                 unlockRule: '合成兩座 ❄️ 霜晶樹幹並選擇分支 B 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-magnet'
@@ -218,8 +218,8 @@
                 family: 'thunder',
                 branchCode: 'A',
                 formula: '⚡ 雷紋樹幹 × 2（選擇分支 A）',
-                mech: '射程 4.0 格｜攻速 0.85s｜單發 52｜真 4 體不重複閃電連鎖（100% / 75% / 55% / 40%），大範圍穩定削血與清場。',
-                synergy: '搭配 💠B 電磁超載樹感電附傷或世界樹「超導雷網」祝福，迅速瓦解分裂史萊姆海。',
+                mech: '射程 4.0 格｜攻速 0.85s｜單發 60（4U）｜真 4 體不重複閃電連鎖（100% / 75% / 55% / 40%），大範圍穩定削血與清場。',
+                synergy: '搭配 💠B 電磁超載感電或與 ⚡B 相融合體為雙生天殛。',
                 unlockRule: '合成兩座 ⚡ 雷紋樹幹並選擇分支 A 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-steam'
@@ -230,8 +230,8 @@
                 family: 'thunder',
                 branchCode: 'B',
                 formula: '⚡ 雷紋樹幹 × 2（選擇分支 B）',
-                mech: '射程 4.8 格｜攻速 1.30s｜單發 105｜超遠全場威懾，每第 3 發召喚 2.2x 審判落雷並無視 40% 目標護甲。',
-                synergy: '佔領制高點可覆蓋近 6.2 格半徑，與 ☄️A 聚變死光樹合力瞬殺 Wave 5／10 領主魔王。',
+                mech: '射程 4.8 格｜攻速 1.05s｜單發 60（4U）｜超遠全場威懾，每第 3 發召喚 2.5x 審判落雷並無視 40% 目標護甲。',
+                synergy: '佔領制高點覆蓋全場，與 ☄️A 聚變死光合力迅速擊潰領主。',
                 unlockRule: '合成兩座 ⚡ 雷紋樹幹並選擇分支 B 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-steam'
@@ -242,8 +242,8 @@
                 family: 'steam',
                 branchCode: 'A',
                 formula: '💨 高階蒸氣 (2★) × 2（選擇分支 A）',
-                mech: '射程 2.9 格｜攻速 1.10s｜單發 110｜無視 65% 護甲 ＋ 1.4 格 65% 爆裂濺射，命中點留下 3.0s 滾燙蒸氣池（每秒 28 點持續傷害）。',
-                synergy: '陣地型高穿甲火力核心！極度契合 💠A 引力黑洞樹或世界樹「根鬚纏繞」，將敵群留置蒸氣池內灼毀。',
+                mech: '射程 2.9 格｜攻速 1.10s｜單發 106（4U）｜無視 65% 護甲 ＋ 1.4 格 65% 爆裂濺射，落點留下 3.0s 滾燙蒸氣池（28/s）。',
+                synergy: '陣地高穿甲火力核心！可與 💨B 合體為雙生蒸霧或繼續充能至 16U 成為世界樹神裔。',
                 unlockRule: '合成兩座 💨 高階蒸氣 (2★) 並選擇分支 A 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-steam'
@@ -254,8 +254,8 @@
                 family: 'steam',
                 branchCode: 'B',
                 formula: '💨 高階蒸氣 (2★) × 2（選擇分支 B）',
-                mech: '射程 3.1 格｜攻速 1.10s｜單發 90｜1.6 格大範圍霜霧覆蓋，群體 35% 緩速並施加 +20% 濕冷易傷（持續 3.0s，全隊共享增益）。',
-                synergy: '全遊戲最強團隊輔助節點之一，能同時放大 🔥B 焚世灼燒、☄️A 死光與 ❄️B 碎冰傷害。',
+                mech: '射程 3.1 格｜攻速 1.10s｜單發 106（4U）｜1.6 格霜霧 35% 緩速與 +20% 易傷，範圍內敵人擊殺額外 +15% 金幣（受單波軟上限約束）。',
+                synergy: '全隊核心輔助節點，同時放大 🔥B 焚世灼燒、☄️A 死光與 ❄️B 碎冰傷害。',
                 unlockRule: '合成兩座 💨 高階蒸氣 (2★) 並選擇分支 B 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-magnet'
@@ -266,8 +266,8 @@
                 family: 'magnet',
                 branchCode: 'A',
                 formula: '💠 高階磁環 (2★) × 2（選擇分支 A）',
-                mech: '射程 3.3 格｜攻速 1.25s｜單發 86｜1.5 格 45% 群體緩速，每第 3 次脈衝將範圍內非 Boss 敵人沿路徑往回拉扯 0.45 格（底線為起點）。',
-                synergy: '控場引擎核心！把突防獵犬與史萊姆拉回 🔥A 熔核與 💨A 蒸氣池交火重疊區。',
+                mech: '射程 3.3 格｜攻速 1.25s｜單發 69（4U）｜1.5 格 45% 群體緩速，每第 3 次脈衝將範圍非 Boss 敵人沿路徑回拉 0.45 格。',
+                synergy: '控場聚怪引擎，與 💠B 合體可兼具引力拉扯與 3 目標感電彈跳。',
                 unlockRule: '合成兩座 💠 高階磁環 (2★) 並選擇分支 A 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-magnet'
@@ -278,8 +278,8 @@
                 family: 'magnet',
                 branchCode: 'B',
                 formula: '💠 高階磁環 (2★) × 2（選擇分支 B）',
-                mech: '射程 3.5 格｜攻速 0.95s｜單發 64｜3 目標不重複電磁彈跳（75%），施加 3.5s 感電：任何防禦塔命中感電怪皆額外觸發 +12 雷電附傷（0.35s 單體冷卻）。',
-                synergy: '高攻速流派催化劑！搭配 ☄️ 雙電漿塔與 ⚡A 連鎖天雷可每秒連續引爆多輪感電火花。',
+                mech: '射程 3.5 格｜攻速 0.95s｜單發 69（4U）｜3 目標不重複彈跳（75%），施加 3.5s 感電：任何塔命中觸發 +（10 + 2.5 × 波數）雷傷。',
+                synergy: '高攻速流派催化劑！搭配 ☄️ 雙電漿與 ⚡A 連鎖天雷連續引爆感電火花。',
                 unlockRule: '合成兩座 💠 高階磁環 (2★) 並選擇分支 B 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-steam'
@@ -290,8 +290,8 @@
                 family: 'plasma',
                 branchCode: 'A',
                 formula: '☄️ 高階電漿 (2★) × 2（選擇分支 A）',
-                mech: '射程 3.9 格｜攻速 0.40s｜單發 32｜鎖定單目標最高疊滿 8 層（每層 +18%，最高 2.44x），達 5 層以上附加 45% 穿甲，切換目標僅退 2 層。',
-                synergy: '魔王與重甲魔像專武！置於元素靈脈或搭配「自然狂熱」狂飆攻速，迅速打穿高血量領主。',
+                mech: '射程 3.9 格｜攻速 0.40s｜單發 30（4U）｜鎖定單目標最高疊滿 8 層（每層 +18%），達 5 層附加 45% 穿甲，換怪僅退 2 層。',
+                synergy: '重裝魔像與魔王剋星；充能至 5★ 神裔後疊層上限更可突破至 12 層。',
                 unlockRule: '合成兩座 ☄️ 高階電漿 (2★) 並選擇分支 A 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-plasma'
@@ -302,8 +302,8 @@
                 family: 'plasma',
                 branchCode: 'B',
                 formula: '☄️ 高階電漿 (2★) × 2（選擇分支 B）',
-                mech: '射程 3.9 格｜攻速 0.50s｜單發 34｜主光束最高 4 層聚焦（每層 +15%），射擊時自動向主目標 2.4 格內最多 2 名敵人折射 50% 副光束。',
-                synergy: '兼顧蓄能打王與雙線散射，配合 💠B 電磁超載感電能同時對三名敵人觸發附傷。',
+                mech: '射程 3.9 格｜攻速 0.50s｜單發 30（4U）｜主光束最高 4 層聚焦（每層 +15%），自動向 2.4 格內最多 2 名敵人折射 50% 副光束。',
+                synergy: '兼顧蓄能與雙線散射，與 ☄️A 合體成為終極聚變雙生冠。',
                 unlockRule: '合成兩座 ☄️ 高階電漿 (2★) 並選擇分支 B 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-steam'
@@ -379,6 +379,13 @@
                 desc: '若未在減速或凍結狀態下擊殺，死亡時將震爆並癱瘓周圍 1.4 格防禦塔 1.5 秒。',
                 unlockRule: '推進至第 9 波遭遇「自爆蟲王」後自動解鎖',
                 defaultUnlocked: false
+            },
+            thief: {
+                title: '🦊 靈脈竊賊',
+                subtitle: '弱點：⚡ 雷屬性｜經濟驚喜怪（不扣世界樹生命）',
+                desc: '於 W3 / W6 / W9 沿跑道高速逃竄（高血量無護甲）；逃出終點不會扣血，擊殺可獲 +60 金幣與隨機 1 股或盲盒代幣（受單波軟上限約束）。',
+                unlockRule: '於世界樹年輪解鎖「古樹枝 ②」並在 W3 / W6 / W9 遭遇後解鎖',
+                defaultUnlocked: false
             }
         },
         terrain: {
@@ -426,11 +433,17 @@
         magnet_B_overload: '3 目標彈跳與感電引爆',
         pierce_beam: '高頻聚焦疊傷光束',
         plasma_A_deathray: '8 層超載聚變死光',
-        plasma_B_refract: '主束蓄能雙弧光折射'
+        plasma_B_refract: '主束蓄能雙弧光折射',
+        fire_twin: '重砲群破＋焚世灼燒斬殺雙極',
+        ice_twin: '永凍領域凍結＋貫穿碎冰雙極',
+        thunder_twin: '連鎖天雷電網＋2.4x 穿甲落雷雙極',
+        steam_twin: '高壓蒸氣池＋霜霧群緩易傷雙極',
+        magnet_twin: '奇點回拉聚怪＋電磁感電超載雙極',
+        plasma_twin: '8 層聚變死光＋雙副束折射雙極'
     };
 
     /**
-     * 為未在 codex_data.js 填寫文案的新增防禦塔自動生成預設圖鑑卡
+     * 為未在 codex_data.js 填寫文案的新增防禦塔（含 4★ 極意／雙生與 5★ 世界樹神裔）自動生成完整圖鑑卡
      */
     function buildFallbackTowerCard(towerKey, towerCfg) {
         const tierNum = Number(towerCfg.nodeTier || towerCfg.tier) || 1;
@@ -442,19 +455,36 @@
         const badgesText = Array.isArray(towerCfg.badges) && towerCfg.badges.length > 0
             ? towerCfg.badges.join(' · ')
             : styleText;
-        const lineage = towerCfg.lineagePath || `${towerCfg.icon || '✨'} ${towerCfg.name || towerKey}`;
+        const lineage = Array.isArray(towerCfg.defaultLineagePath)
+            ? towerCfg.defaultLineagePath.join(' ▸ ')
+            : (towerCfg.lineagePath || `${towerCfg.icon || '🔥'} ${towerCfg.name || towerKey}`);
+        let formulaText = lineage;
+        let synergyText = towerCfg.roleSummary || '可自由搭配減速或易傷節點放大輸出。';
+        let unlockText = towerCfg.isHybrid ? '於戰場中合成此共生節點後解鎖' : '於戰場中召喚或進化至此節點後解鎖';
+        if (tierNum === 4) {
+            formulaText = towerCfg.isTwinCrown
+                ? '同血脈 3★ A + 3★ B 雙生合體（或餵養充滿 8U）'
+                : `同血脈 3★ ${towerCfg.branchCode || ''} × 2 極意進化（或餵養充滿 8U）`;
+            unlockText = towerCfg.isTwinCrown
+                ? '於戰場合成同血脈異分支「3★ A + 3★ B」解鎖雙生神冠'
+                : `於戰場合成同血脈同分支「3★ ${towerCfg.branchCode || ''} × 2」或餵養滿 8U 解鎖`;
+        } else if (tierNum === 5) {
+            formulaText = '同血脈任意 4★ × 2（或 4★ 餵養充能滿 16U）';
+            synergyText = '整合周圍 2.2 格友軍光環（攻速 +16% · 射程 +0.3 格）與 6.0s 全圖神樹脈動；選取後可進行無盡靈脈灌注。';
+            unlockText = '於戰場晉升同血脈雙 4★ 或漸進吞噬達 16U 解鎖世界樹神裔';
+        }
         return {
-            title: `${towerCfg.icon || '✨'} ${towerCfg.name || towerKey}`,
+            title: `${towerCfg.icon || '🔥'} ${towerCfg.name || towerKey}`,
             nodeTier: tierNum,
             family: towerCfg.family || towerCfg.elementTag || 'steam',
             branchCode: towerCfg.branchCode || null,
-            formula: lineage,
-            mech: `射程 ${towerCfg.range || 2.5} 格｜攻速 ${sec}s｜單發傷害 ${dmgVal}｜特性：${badgesText}。`,
-            synergy: towerCfg.roleSummary || '可自由搭配減速或易傷節點放大輸出。',
-            recipeText: `${towerCfg.icon || '✨'} <strong>${towerCfg.name || towerKey}</strong> <span class="num" style="font-size:12px;color:#B8C2BC;">｜${lineage}</span>`,
-            lockedRecipeText: `<strong>？？？ · 未知世界樹節點</strong> <span class="num" style="font-size:12px;color:#B8C2BC;">｜${lineage}</span>`,
-            desc: `射程 ${towerCfg.range || 2.5} 格｜攻速 ${sec}s｜單發傷害 ${dmgVal}｜特性：${badgesText}。`,
-            unlockRule: towerCfg.isHybrid ? '於戰場中合成此共生節點後解鎖' : '於戰場中召喚或進化至此節點後解鎖',
+            formula: formulaText,
+            mech: `射程 ${towerCfg.range || 2.5} 格｜攻速 ${sec}s｜單發 ${dmgVal}｜特性：${badgesText}。`,
+            synergy: synergyText,
+            recipeText: `${towerCfg.icon || '🔥'} <strong>${towerCfg.name || towerKey}</strong> <span class="num" style="font-size:12px;color:#B8C2BC;">｜${formulaText}</span>`,
+            lockedRecipeText: `<strong>？？？ · 未知世界樹節點</strong> <span class="num" style="font-size:12px;color:#B8C2BC;">｜${formulaText}</span>`,
+            desc: `射程 ${towerCfg.range || 2.5} 格｜攻速 ${sec}s｜單發 ${dmgVal}｜特性：${badgesText}。`,
+            unlockRule: unlockText,
             defaultUnlocked: tierNum <= 1 && !towerCfg.isHybrid,
             cardClass: 'codex-steam'
         };

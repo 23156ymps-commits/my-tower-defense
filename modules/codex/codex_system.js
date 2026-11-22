@@ -30,7 +30,13 @@
         magnet_trunk: 'Hi-Magnet', thunder_trunk: 'Volt 2★', plasma_trunk: 'Hi-Plasma',
         fire_A: 'A Bombard', fire_B: 'B Cinder', steam_A: 'A Pressure', steam_B: 'B Frostmist',
         ice_A: 'A Permafrost', ice_B: 'B Icicle', magnet_A: 'A Gravity', magnet_B: 'B Overload',
-        thunder_A: 'A Tempest', thunder_B: 'B Judgment', plasma_A: 'A Deathray', plasma_B: 'B Prism'
+        thunder_A: 'A Tempest', thunder_B: 'B Judgment', plasma_A: 'A Deathray', plasma_B: 'B Prism',
+        fire_crown_A: '4★A', fire_crown_B: '4★B', fire_twin_AB: '4★ Twin', fire_scion: '5★ Scion',
+        steam_crown_A: '4★A', steam_crown_B: '4★B', steam_twin_AB: '4★ Twin', steam_scion: '5★ Scion',
+        ice_crown_A: '4★A', ice_crown_B: '4★B', ice_twin_AB: '4★ Twin', ice_scion: '5★ Scion',
+        magnet_crown_A: '4★A', magnet_crown_B: '4★B', magnet_twin_AB: '4★ Twin', magnet_scion: '5★ Scion',
+        thunder_crown_A: '4★A', thunder_crown_B: '4★B', thunder_twin_AB: '4★ Twin', thunder_scion: '5★ Scion',
+        plasma_crown_A: '4★A', plasma_crown_B: '4★B', plasma_twin_AB: '4★ Twin', plasma_scion: '5★ Scion'
     };
 
     function L(zh, en) {
@@ -44,63 +50,50 @@
         return (meta && meta.label) || nodeId;
     }
 
-    // SVG 世界樹演化圖譜畫布與扇形樹冠座標拓撲（1320 × 680，自底向上：原核 → 3 基礎 1★ → 3 轉職 1★ → 6 主幹 2★ → 12 冠枝 3★）
-    const TREE_VIEW_W = 1320;
-    const TREE_VIEW_H = 680;
+    // SVG 世界樹演化圖譜畫布與扇形樹冠座標拓撲（1760 × 960，自底向上：原核 → 1★ → 2★ → 3★ → 4★ 極意/雙生 → 5★ 世界樹神裔）
+    const TREE_VIEW_W = 1760;
+    const TREE_VIEW_H = 960;
+
+    const FAMILY_TREE_COLUMNS = [
+        { family: 'fire', x: 165, branchA: '熔核', branchB: '焚世', twinLabel: '雙生4★', scionLabel: '炎燼神裔' },
+        { family: 'steam', x: 455, branchA: '蒸壓', branchB: '霜霧', twinLabel: '雙生4★', scionLabel: '霧湧神裔' },
+        { family: 'ice', x: 745, branchA: '永凍', branchB: '冰錐', twinLabel: '雙生4★', scionLabel: '永霜神裔' },
+        { family: 'magnet', x: 1035, branchA: '黑洞', branchB: '電磁', twinLabel: '雙生4★', scionLabel: '星磁神裔' },
+        { family: 'thunder', x: 1325, branchA: '連鎖', branchB: '審判', twinLabel: '雙生4★', scionLabel: '天穹神裔' },
+        { family: 'plasma', x: 1605, branchA: '死光', branchB: '折射', twinLabel: '雙生4★', scionLabel: '聚變神裔' }
+    ];
 
     const WORLD_TREE_LAYOUT = {
-        // Row 4 (Bottom): 世界樹原核
-        world_core: { x: 660, y: 602, tier: 0, family: 'core', label: '世界樹原核' },
+        world_core: { x: 880, y: 880, tier: 0, family: 'core', label: '世界樹原核' },
 
-        // Row 3: 3 基礎根芽 (1★)
-        fire_bud: { x: 220, y: 472, tier: 1, family: 'fire', label: '火芽 1★' },
-        ice_bud: { x: 660, y: 472, tier: 1, family: 'ice', label: '冰芽 1★' },
-        thunder_bud: { x: 1100, y: 472, tier: 1, family: 'thunder', label: '雷芽 1★' },
+        fire_bud: { x: 290, y: 760, tier: 1, family: 'fire', label: '火芽 1★' },
+        ice_bud: { x: 880, y: 760, tier: 1, family: 'ice', label: '冰芽 1★' },
+        thunder_bud: { x: 1470, y: 760, tier: 1, family: 'thunder', label: '雷芽 1★' },
 
-        // Row 2: 3 異系轉職物種 (1★)
-        steam_bud: { x: 342, y: 340, tier: 1, family: 'steam', isTransfer: true, label: '蒸氣 1★' },
-        magnet_bud: { x: 768, y: 340, tier: 1, family: 'magnet', isTransfer: true, label: '磁環 1★' },
-        plasma_bud: { x: 1188, y: 340, tier: 1, family: 'plasma', isTransfer: true, label: '電漿 1★' },
+        steam_bud: { x: 455, y: 638, tier: 1, family: 'steam', isTransfer: true, label: '蒸氣 1★' },
+        magnet_bud: { x: 1035, y: 638, tier: 1, family: 'magnet', isTransfer: true, label: '磁環 1★' },
+        plasma_bud: { x: 1605, y: 638, tier: 1, family: 'plasma', isTransfer: true, label: '電漿 1★' },
 
-        // Row 1: 6 進階主幹 (2★)
-        fire_trunk: { x: 132, y: 210, tier: 2, family: 'fire', label: '炎核 2★' },
-        steam_trunk: { x: 342, y: 210, tier: 2, family: 'steam', label: '高階蒸氣' },
-        ice_trunk: { x: 552, y: 210, tier: 2, family: 'ice', label: '霜晶 2★' },
-        magnet_trunk: { x: 768, y: 210, tier: 2, family: 'magnet', label: '高階磁環' },
-        thunder_trunk: { x: 978, y: 210, tier: 2, family: 'thunder', label: '雷紋 2★' },
-        plasma_trunk: { x: 1188, y: 210, tier: 2, family: 'plasma', label: '高階電漿' },
-
-        // Row 0 (Top Canopy): 12 終極冠枝 (3★ A / B)
-        fire_A: { x: 80, y: 78, tier: 3, family: 'fire', branch: 'A', label: 'A 熔核' },
-        fire_B: { x: 185, y: 78, tier: 3, family: 'fire', branch: 'B', label: 'B 焚世' },
-        steam_A: { x: 290, y: 78, tier: 3, family: 'steam', branch: 'A', label: 'A 蒸壓' },
-        steam_B: { x: 395, y: 78, tier: 3, family: 'steam', branch: 'B', label: 'B 霜霧' },
-        ice_A: { x: 500, y: 78, tier: 3, family: 'ice', branch: 'A', label: 'A 永凍' },
-        ice_B: { x: 605, y: 78, tier: 3, family: 'ice', branch: 'B', label: 'B 冰錐' },
-        magnet_A: { x: 715, y: 78, tier: 3, family: 'magnet', branch: 'A', label: 'A 黑洞' },
-        magnet_B: { x: 820, y: 78, tier: 3, family: 'magnet', branch: 'B', label: 'B 電磁' },
-        thunder_A: { x: 925, y: 78, tier: 3, family: 'thunder', branch: 'A', label: 'A 連鎖' },
-        thunder_B: { x: 1030, y: 78, tier: 3, family: 'thunder', branch: 'B', label: 'B 審判' },
-        plasma_A: { x: 1135, y: 78, tier: 3, family: 'plasma', branch: 'A', label: 'A 死光' },
-        plasma_B: { x: 1240, y: 78, tier: 3, family: 'plasma', branch: 'B', label: 'B 折射' }
+        fire_trunk: { x: 165, y: 515, tier: 2, family: 'fire', label: '炎核 2★' },
+        steam_trunk: { x: 455, y: 515, tier: 2, family: 'steam', label: '高階蒸氣' },
+        ice_trunk: { x: 745, y: 515, tier: 2, family: 'ice', label: '霜晶 2★' },
+        magnet_trunk: { x: 1035, y: 515, tier: 2, family: 'magnet', label: '高階磁環' },
+        thunder_trunk: { x: 1325, y: 515, tier: 2, family: 'thunder', label: '雷紋 2★' },
+        plasma_trunk: { x: 1605, y: 515, tier: 2, family: 'plasma', label: '高階電漿' }
     };
 
-    // 樹枝連線定義：core / sym (1★ 異系轉職) / primary (同物種升星與冠枝) / directed (基礎芽元素灌注轉職 1★ 升 2★)
     const WORLD_TREE_EDGES = [
-        // 原核 -> 3 基礎根芽 (1★)
         { from: 'world_core', to: 'fire_bud', family: 'fire', kind: 'core' },
         { from: 'world_core', to: 'ice_bud', family: 'ice', kind: 'core' },
         { from: 'world_core', to: 'thunder_bud', family: 'thunder', kind: 'core' },
 
-        // 3 基礎根芽 (1★) 交叉轉職 -> 3 轉職新物種 (1★)
         { from: 'fire_bud', to: 'steam_bud', family: 'steam', kind: 'sym' },
         { from: 'ice_bud', to: 'steam_bud', family: 'steam', kind: 'sym' },
         { from: 'ice_bud', to: 'magnet_bud', family: 'magnet', kind: 'sym' },
         { from: 'thunder_bud', to: 'magnet_bud', family: 'magnet', kind: 'sym' },
-        { from: 'fire_bud', to: 'plasma_bud', family: 'plasma', kind: 'sym', arcOffsetY: 115 },
+        { from: 'fire_bud', to: 'plasma_bud', family: 'plasma', kind: 'sym', arcOffsetY: 130 },
         { from: 'thunder_bud', to: 'plasma_bud', family: 'plasma', kind: 'sym' },
 
-        // 6 大物種 1★ -> 2★ 同物種升星
         { from: 'fire_bud', to: 'fire_trunk', family: 'fire', kind: 'primary' },
         { from: 'steam_bud', to: 'steam_trunk', family: 'steam', kind: 'primary' },
         { from: 'ice_bud', to: 'ice_trunk', family: 'ice', kind: 'primary' },
@@ -108,28 +101,35 @@
         { from: 'thunder_bud', to: 'thunder_trunk', family: 'thunder', kind: 'primary' },
         { from: 'plasma_bud', to: 'plasma_trunk', family: 'plasma', kind: 'primary' },
 
-        // 基礎 1★ 芽快捷灌注轉職 1★ -> 2★（虛線輔助脈絡）
         { from: 'fire_bud', to: 'steam_trunk', family: 'fire', kind: 'directed' },
         { from: 'ice_bud', to: 'steam_trunk', family: 'ice', kind: 'directed' },
         { from: 'ice_bud', to: 'magnet_trunk', family: 'ice', kind: 'directed' },
         { from: 'thunder_bud', to: 'magnet_trunk', family: 'thunder', kind: 'directed' },
         { from: 'fire_bud', to: 'plasma_trunk', family: 'fire', kind: 'directed', arcOffsetY: -45 },
-        { from: 'thunder_bud', to: 'plasma_trunk', family: 'thunder', kind: 'directed' },
-
-        // 6 大物種 2★ -> 12 冠枝 3★ (A / B)
-        { from: 'fire_trunk', to: 'fire_A', family: 'fire', kind: 'primary' },
-        { from: 'fire_trunk', to: 'fire_B', family: 'fire', kind: 'primary' },
-        { from: 'steam_trunk', to: 'steam_A', family: 'steam', kind: 'primary' },
-        { from: 'steam_trunk', to: 'steam_B', family: 'steam', kind: 'primary' },
-        { from: 'ice_trunk', to: 'ice_A', family: 'ice', kind: 'primary' },
-        { from: 'ice_trunk', to: 'ice_B', family: 'ice', kind: 'primary' },
-        { from: 'magnet_trunk', to: 'magnet_A', family: 'magnet', kind: 'primary' },
-        { from: 'magnet_trunk', to: 'magnet_B', family: 'magnet', kind: 'primary' },
-        { from: 'thunder_trunk', to: 'thunder_A', family: 'thunder', kind: 'primary' },
-        { from: 'thunder_trunk', to: 'thunder_B', family: 'thunder', kind: 'primary' },
-        { from: 'plasma_trunk', to: 'plasma_A', family: 'plasma', kind: 'primary' },
-        { from: 'plasma_trunk', to: 'plasma_B', family: 'plasma', kind: 'primary' }
+        { from: 'thunder_bud', to: 'plasma_trunk', family: 'thunder', kind: 'directed' }
     ];
+
+    FAMILY_TREE_COLUMNS.forEach((col) => {
+        const fam = col.family;
+        WORLD_TREE_LAYOUT[`${fam}_A`] = { x: col.x - 62, y: 378, tier: 3, family: fam, branch: 'A', label: `A ${col.branchA}` };
+        WORLD_TREE_LAYOUT[`${fam}_B`] = { x: col.x + 62, y: 378, tier: 3, family: fam, branch: 'B', label: `B ${col.branchB}` };
+        WORLD_TREE_LAYOUT[`${fam}_crown_A`] = { x: col.x - 88, y: 230, tier: 4, family: fam, branch: 'A', label: `4★A` };
+        WORLD_TREE_LAYOUT[`${fam}_twin_AB`] = { x: col.x, y: 230, tier: 4, family: fam, branch: 'AB', label: col.twinLabel };
+        WORLD_TREE_LAYOUT[`${fam}_crown_B`] = { x: col.x + 88, y: 230, tier: 4, family: fam, branch: 'B', label: `4★B` };
+        WORLD_TREE_LAYOUT[`${fam}_scion`] = { x: col.x, y: 88, tier: 5, family: fam, branch: '神', label: col.scionLabel };
+
+        WORLD_TREE_EDGES.push(
+            { from: `${fam}_trunk`, to: `${fam}_A`, family: fam, kind: 'primary' },
+            { from: `${fam}_trunk`, to: `${fam}_B`, family: fam, kind: 'primary' },
+            { from: `${fam}_A`, to: `${fam}_crown_A`, family: fam, kind: 'primary' },
+            { from: `${fam}_B`, to: `${fam}_crown_B`, family: fam, kind: 'primary' },
+            { from: `${fam}_A`, to: `${fam}_twin_AB`, family: fam, kind: 'sym' },
+            { from: `${fam}_B`, to: `${fam}_twin_AB`, family: fam, kind: 'sym' },
+            { from: `${fam}_crown_A`, to: `${fam}_scion`, family: fam, kind: 'primary' },
+            { from: `${fam}_twin_AB`, to: `${fam}_scion`, family: fam, kind: 'sym' },
+            { from: `${fam}_crown_B`, to: `${fam}_scion`, family: fam, kind: 'primary' }
+        );
+    });
 
     const FAMILY_STROKE_COLORS = {
         core: '#B8C2BC',
@@ -201,7 +201,7 @@
     }
 
     /**
-     * 掃描目前棋盤上的 1★ 與 2★ 塔，判斷哪些轉職 1★／進階 2★／終極 3★ 已被「部分滿足」或「雙素材就緒」
+     * 掃描目前棋盤上的 1★～4★ 塔，判斷 1★～5★ 節點哪些已被「部分滿足」或「素材就緒」
      */
     function scanBoardCraftableState() {
         const boardNodeCounts = {};
@@ -214,6 +214,8 @@
         const evoData = (GameApp.data && GameApp.data.evolutions) || {};
         const t1Rules = evoData.T1_RECIPES || evoData.T1_TO_T2_RECIPES || {};
         const t2Rules = evoData.T2_TO_T3_RULES || {};
+        const t3Rules = evoData.T3_TO_T4_RULES || {};
+        const t4Rules = evoData.T4_TO_T5_RULES || {};
 
         if (st && Array.isArray(st.board) && !st.isGameOver && st.waveState !== 'WAITING_START') {
             for (let i = 0; i < st.board.length; i++) {
@@ -227,35 +229,29 @@
             }
         }
 
-        Object.keys(t1Rules).forEach((ruleKey) => {
-            const rule = t1Rules[ruleKey];
-            if (!rule || !rule.resultType) return;
-            const [ingA, ingB] = ruleKey.split('+');
-            const cntA = boardNodeCounts[ingA] || 0;
-            const cntB = boardNodeCounts[ingB] || 0;
-            const isFullReady = ingA === ingB ? cntA >= 2 : (cntA >= 1 && cntB >= 1);
-            if (isFullReady) {
-                craftableNodeSet.add(rule.resultType);
-                readyNowNodeSet.add(rule.resultType);
-            }
-        });
+        const scanPairRules = (rulesDict, isMultiOption = false) => {
+            Object.keys(rulesDict).forEach((ruleKey) => {
+                const rule = rulesDict[ruleKey];
+                const targets = isMultiOption ? (rule && rule.options) : (rule && rule.resultType ? [rule.resultType] : null);
+                if (!Array.isArray(targets) || targets.length === 0) return;
+                const [ingA, ingB] = ruleKey.split('+');
+                const cntA = boardNodeCounts[ingA] || 0;
+                const cntB = boardNodeCounts[ingB] || 0;
+                const hasPartial = cntA > 0 || cntB > 0;
+                const isFullReady = ingA === ingB ? cntA >= 2 : (cntA >= 1 && cntB >= 1);
+                if (isMultiOption ? hasPartial : (isFullReady || hasPartial)) {
+                    targets.forEach((tid) => {
+                        if (isMultiOption || hasPartial) craftableNodeSet.add(tid);
+                        if (isFullReady) readyNowNodeSet.add(tid);
+                    });
+                }
+            });
+        };
 
-        Object.keys(t2Rules).forEach((ruleKey) => {
-            const rule = t2Rules[ruleKey];
-            if (!rule || !Array.isArray(rule.options)) return;
-            const [ingA, ingB] = ruleKey.split('+');
-            const cntA = boardNodeCounts[ingA] || 0;
-            const cntB = boardNodeCounts[ingB] || 0;
-            const hasPartial = cntA > 0 || cntB > 0;
-            const isFullReady = ingA === ingB ? cntA >= 2 : (cntA >= 1 && cntB >= 1);
-
-            if (hasPartial) {
-                rule.options.forEach((optId) => {
-                    craftableNodeSet.add(optId);
-                    if (isFullReady) readyNowNodeSet.add(optId);
-                });
-            }
-        });
+        scanPairRules(t1Rules, false);
+        scanPairRules(t2Rules, true);
+        scanPairRules(t3Rules, false);
+        scanPairRules(t4Rules, false);
 
         return {
             boardNodeCounts,
@@ -321,7 +317,7 @@
                         <span class="wt-detail-tag num">${L(`聚寶根鬚 Lv.${rootLv} / Lv.3`, `Treasure Roots Lv.${rootLv} / Lv.3`)}</span>
                         <span class="wt-detail-tag num">${L(`出售退費 ${refundPct}%`, `Sell Refund ${refundPct}%`)}</span>
                         <span class="wt-detail-tag num">${L(`本波預估 +${estIncome.totalGain} 💰（軟上限 ${estIncome.waveCap} 💰）`, `Est. +${estIncome.totalGain} 💰 (Cap ${estIncome.waveCap} 💰)`)}</span>
-                        <span class="wt-detail-tag num">${L(`已喚醒枝脈：${totalUnlocked} / 24`, `Awakened Nodes: ${totalUnlocked} / 24`)}</span>
+                        <span class="wt-detail-tag num">${L(`已喚醒枝脈：${totalUnlocked} / 48`, `Awakened Nodes: ${totalUnlocked} / 48`)}</span>
                     </div>
                     <div class="wt-detail-row">${L(
                         '<strong>聚寶根鬚（Lv.0 → Lv.3）：</strong>Lv.1 汲取根鬚（45 💰 ➔ 每波 +15 💰）｜Lv.2 黃金根脈（75 💰 ➔ 每波 +32 💰 · 退費 80%）｜Lv.3 複利樹心（110 💰 ➔ 每波 +42 💰 ＋ 8% 利息，上限 +35 💰，單波軟上限 22 + 8w）',
@@ -355,8 +351,9 @@
         const isReadyNow = scanState.readyNowNodeSet.has(nodeId);
         const isCraftable = scanState.craftableNodeSet.has(nodeId);
         const tierNum = nodeMeta.tier || Number(tCfg.nodeTier) || 1;
-        const costMult = tCfg.costShare ? `${tCfg.costShare}x` : (tierNum === 1 ? '1x' : (tierNum === 2 ? '2x' : '4x'));
-        const starStr = tierNum === 1 ? '★' : (tierNum === 2 ? '★★' : '★★★');
+        const defaultShares = [1, 1, 2, 4, 8, 16];
+        const costMult = tCfg.costShare ? `${tCfg.costShare}U` : `${defaultShares[tierNum] || 1}U`;
+        const starStr = '★'.repeat(Math.max(1, Math.min(5, tierNum)));
 
         detailEl.className = `wt-detail-card family-${nodeMeta.family}${unlocked ? '' : ' is-locked'}${isCraftable ? ' is-craftable' : ''}`;
 
@@ -645,7 +642,7 @@
 
                 const canvasWrap = document.createElement('span');
                 canvasWrap.className = 'wt-node-icon-box';
-                const cSize = meta.tier === 3 ? 34 : 38;
+                const cSize = meta.tier >= 3 ? 34 : 38;
                 const canvasEl = document.createElement('canvas');
                 canvasEl.width = cSize;
                 canvasEl.height = cSize;
@@ -706,8 +703,8 @@
         viewportEl.appendChild(worldCanvasEl);
         treeShellEl.appendChild(viewportEl);
 
-        // 平移與縮放視窗狀態（支援滑鼠拖曳、觸控拖曳與滾輪 0.75x ~ 1.45x）
-        const viewState = { scale: 0.75, panX: 0, panY: 0, dragging: false, startX: 0, startY: 0, origPanX: 0, origPanY: 0 };
+        // 平移與縮放視窗狀態（支援滑鼠拖曳、觸控拖曳與滾輪 0.50x ~ 1.45x）
+        const viewState = { scale: 0.55, panX: 0, panY: 0, dragging: false, startX: 0, startY: 0, origPanX: 0, origPanY: 0 };
 
         const clampView = () => {
             const vpW = viewportEl.clientWidth || 860;
@@ -738,7 +735,7 @@
             const vpW = viewportEl.clientWidth || 860;
             const vpH = viewportEl.clientHeight || 420;
             const fitScale = Math.min(vpW / TREE_VIEW_W, vpH / TREE_VIEW_H);
-            viewState.scale = Math.max(0.75, Math.min(1.45, fitScale));
+            viewState.scale = Math.max(0.50, Math.min(1.45, fitScale));
             viewState.panX = (vpW - TREE_VIEW_W * viewState.scale) * 0.5;
             viewState.panY = (vpH - TREE_VIEW_H * viewState.scale) * 0.5;
             applyViewTransform();
@@ -808,7 +805,7 @@
             const mouseY = e.clientY - rect.top;
             const prevScale = viewState.scale;
             const factor = e.deltaY < 0 ? 1.1 : 0.9;
-            const nextScale = Math.max(0.75, Math.min(1.45, prevScale * factor));
+            const nextScale = Math.max(0.50, Math.min(1.45, prevScale * factor));
             if (Math.abs(nextScale - prevScale) < 1e-4) return;
             const worldX = (mouseX - viewState.panX) / prevScale;
             const worldY = (mouseY - viewState.panY) / prevScale;

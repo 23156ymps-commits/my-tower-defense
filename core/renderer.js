@@ -20,7 +20,7 @@
     function bind(ctx) { G = ctx; }
 
     function getMaxTier() {
-        return (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || CONFIG.MAX_TIER || 3;
+        return (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || CONFIG.MAX_TIER || 5;
     }
 
     function getTierStars(tier) {
@@ -79,10 +79,34 @@
     function resolveTowerVisualFamily(type) {
         const raw = String(type || 'fire_bud');
         const tCfg = getTowersDict()[raw] || {};
-        const branchCode = tCfg.branchCode || (raw.endsWith('_A') ? 'A' : (raw.endsWith('_B') ? 'B' : null));
-        const fam = tCfg.family || tCfg.elementTag || raw.replace(/_(bud|trunk|A|B)$/, '');
+        let branchCode = tCfg.branchCode || null;
+        if (!branchCode) {
+            if (raw.endsWith('_twin_AB')) branchCode = 'AB';
+            else if (raw.endsWith('_scion')) branchCode = '神';
+            else if (raw.endsWith('_crown_A') || raw.endsWith('_A')) branchCode = 'A';
+            else if (raw.endsWith('_crown_B') || raw.endsWith('_B')) branchCode = 'B';
+        }
+        const fam = tCfg.family || tCfg.elementTag || raw.replace(/_(bud|trunk|crown_A|crown_B|twin_AB|scion|A|B)$/, '');
         const family = ['fire', 'ice', 'thunder', 'steam', 'magnet', 'plasma'].includes(fam) ? fam : 'fire';
-        return { family, branchCode, nodeTier: tCfg.nodeTier || 1 };
+        return {
+            family,
+            branchCode,
+            nodeTier: tCfg.nodeTier || 1,
+            isTwinCrown: Boolean(tCfg.isTwinCrown || raw.endsWith('_twin_AB')),
+            isScion: Boolean(tCfg.isScion || raw.endsWith('_scion'))
+        };
+    }
+
+    function resolveTowerHeadStyleKey(type, family, branchCode) {
+        const raw = String(type || 'fire_bud');
+        if (TOWER_HEAD_TEMPLATES[raw]) return raw;
+        if (raw.endsWith('_crown_B') && TOWER_HEAD_TEMPLATES[`${family}_B`]) return `${family}_B`;
+        if ((raw.endsWith('_crown_A') || raw.endsWith('_twin_AB') || raw.endsWith('_scion')) && TOWER_HEAD_TEMPLATES[`${family}_A`]) {
+            return `${family}_A`;
+        }
+        if (branchCode === 'B' && TOWER_HEAD_TEMPLATES[`${family}_B`]) return `${family}_B`;
+        if (branchCode === 'A' && TOWER_HEAD_TEMPLATES[`${family}_A`]) return `${family}_A`;
+        return family;
     }
 
     function getTowerPaletteForType(type, tk) {
@@ -195,17 +219,24 @@
     function createTowerSvgParts(type, tier = 1) {
         const tk = getThemeTokens();
         const pal = getTowerPaletteForType(type, tk);
-        const { family, branchCode, nodeTier } = resolveTowerVisualFamily(type);
+        const { family, branchCode, nodeTier, isTwinCrown, isScion } = resolveTowerVisualFamily(type);
         const effTier = Math.max(tier || 1, nodeTier || 1);
         const baseSvgHtml = buildLineageBaseSvg(family, pal, effTier, branchCode, tk);
-        const headBuilder = TOWER_HEAD_TEMPLATES[type] || TOWER_HEAD_TEMPLATES[family] || ((t, tokens) => buildParametricTowerHeadSvg(type, t, tokens));
-        return { baseSvgHtml, headSvgHtml: `<svg class="tower-head-svg" viewBox="0 0 64 64" aria-hidden="true">${headBuilder(effTier, tk, branchCode)}</svg>` };
+        const headKey = resolveTowerHeadStyleKey(type, family, branchCode);
+        const headBuilder = TOWER_HEAD_TEMPLATES[headKey] || TOWER_HEAD_TEMPLATES[family] || ((t, tokens) => buildParametricTowerHeadSvg(type, t, tokens));
+        const crestSvg = effTier >= 5 || isScion
+            ? `<circle cx="32" cy="32" r="28" fill="none" stroke="#E0B43C" stroke-width="1.6" stroke-dasharray="6 3"/><polygon points="24,8 28,13 32,4 36,13 40,8 38,16 26,16" fill="#E0B43C" stroke="#1B211E" stroke-width="1.2"/>`
+            : (effTier >= 4
+                ? `<circle cx="32" cy="32" r="27" fill="none" stroke="${isTwinCrown ? '#D97724' : '#E0B43C'}" stroke-width="1.3" stroke-dasharray="${isTwinCrown ? '4 2' : '8 3'}"/>`
+                : '');
+        return { baseSvgHtml, headSvgHtml: `<svg class="tower-head-svg" viewBox="0 0 64 64" aria-hidden="true">${headBuilder(effTier, tk, branchCode)}${crestSvg}</svg>` };
     }
 
     const BOSS_SVG_BY_TYPE = {
         lava: '<polygon points="10,44 16,18 27,22 32,12 37,22 48,18 54,44 45,54 19,54" fill="#3A1D18" stroke="#180D0B" stroke-width="2"/><polygon points="16,18 9,8 22,15" fill="#7D2B1F" stroke="#180D0B" stroke-width="1.5"/><polygon points="48,18 55,8 42,15" fill="#7D2B1F" stroke="#180D0B" stroke-width="1.5"/><polygon points="21,26 32,20 43,26 45,42 32,50 19,42" fill="#542119"/><polygon points="25,31 32,27 39,31 36,42 32,46 28,42" fill="#C94A38"/><polygon points="28,33 32,30 36,33 32,40" fill="#E0B43C"/><polygon points="23,23 29,25 24,27" fill="#F4F1EA"/><polygon points="41,23 35,25 40,27" fill="#F4F1EA"/>',
         air: '<polygon points="11,34 22,16 42,16 53,34 45,49 19,49" fill="#233036" stroke="#12191C" stroke-width="2"/><rect x="7" y="26" width="9" height="15" rx="3" fill="#3E5059" stroke="#12191C" stroke-width="1.5"/><rect x="48" y="26" width="9" height="15" rx="3" fill="#3E5059" stroke="#12191C" stroke-width="1.5"/><polygon points="20,17 44,17 48,29 16,29" fill="#33424A"/><circle cx="32" cy="34" r="9.5" fill="#4A9EBF" stroke="#F4F1EA" stroke-width="1.5"/><circle cx="32" cy="34" r="4.5" fill="#F4F1EA"/><polygon points="26,46 32,54 38,46" fill="#E0B43C"/>',
         wood: '<polygon points="14,19 8,7 22,14 27,21" fill="#3D3126" stroke="#18130E" stroke-width="1.5"/><polygon points="50,19 56,7 42,14 37,21" fill="#3D3126" stroke="#18130E" stroke-width="1.5"/><polygon points="15,48 20,21 44,21 49,48 41,55 23,55" fill="#4B3B2D" stroke="#18130E" stroke-width="2"/><polygon points="19,21 32,12 45,21 38,28 26,28" fill="#2D5A3D" stroke="#132A1B" stroke-width="1.5"/><polygon points="27,34 32,29 37,34 34,43 30,43" fill="#D97724" stroke="#E0B43C" stroke-width="1.5"/><circle cx="25" cy="27" r="2.6" fill="#E0B43C"/><circle cx="39" cy="27" r="2.6" fill="#E0B43C"/>',
+        thief: '<path d="M16,24 L12,10 L26,18 L38,18 L52,10 L48,24 Z" fill="#C97324" stroke="#1E1710" stroke-width="1.6"/><ellipse cx="32" cy="34" rx="16" ry="13" fill="#D97724" stroke="#1E1710" stroke-width="1.8"/><polygon points="22,30 32,33 27,36" fill="#F4F1EA"/><polygon points="42,30 32,33 37,36" fill="#F4F1EA"/><circle cx="26" cy="31" r="2.2" fill="#1B211E"/><circle cx="38" cy="31" r="2.2" fill="#1B211E"/><polygon points="24,42 40,42 44,54 20,54" fill="#2C3530" stroke="#E0B43C" stroke-width="1.6"/><circle cx="32" cy="48" r="3.2" fill="#E0B43C"/>',
         void_boss: '<polygon points="11,45 15,17 26,12 32,6 38,12 49,17 53,45 43,55 21,55" fill="#1E2723" stroke="#E0B43C" stroke-width="2"/><polygon points="19,22 32,15 45,22 43,43 32,50 21,43" fill="#2C3530" stroke="#46544C" stroke-width="1.4"/><polygon points="32,19 40,32 32,45 24,32" fill="#D97724" stroke="#E0B43C" stroke-width="1.6"/><circle cx="23" cy="28" r="2.6" fill="#E0B43C"/><circle cx="41" cy="28" r="2.6" fill="#E0B43C"/><circle cx="32" cy="32" r="3.4" fill="#F4F1EA"/>'
     };
 
@@ -282,8 +313,9 @@
 
     function drawTowerPortrait2D(ctx, type, tier, tk) {
         const pal = getTowerPaletteForType(type, tk);
-        const { family, branchCode, nodeTier } = resolveTowerVisualFamily(type);
+        const { family, branchCode, nodeTier, isTwinCrown, isScion } = resolveTowerVisualFamily(type);
         const effTier = Math.max(tier || 1, nodeTier || 1);
+        const visualType = resolveTowerHeadStyleKey(type, family, branchCode);
 
         // 1. 樹幹底座（依血脈區分：純冰六角晶柱 / 純雷黃銅線圈 / 共生雙色藤蔓 / 純火熔岩裂紋）
         ellipse2D(ctx, 32, 53, 23, 8, 'rgba(0,0,0,0.42)');
@@ -313,8 +345,8 @@
         const gemCoords = effTier >= 2 ? [[32, 17], [48, 30], [32, 42], [16, 30]] : [[20, 20], [44, 20], [20, 40], [44, 40]];
         gemCoords.forEach(([gx, gy]) => circle2D(ctx, gx, gy, effTier >= 2 ? 2.1 : 1.5, effTier >= 2 ? pal.glow : tk.textSecondary));
 
-        // 2. 砲塔樹冠結構（12 座 T3 冠枝與 T1/T2 家族與戰場 SVG 一致）
-        if (type === 'fire_A') {
+        // 2. 砲塔樹冠結構（12 座 T3 冠枝與 T4/T5 高階外觀一致）
+        if (visualType === 'fire_A') {
             poly2D(ctx, [[8, 36], [18, 22], [21, 45], [10, 44]], '#8C2F23', '#1B211E', 1.5);
             poly2D(ctx, [[56, 36], [46, 22], [43, 45], [54, 44]], '#8C2F23', '#1B211E', 1.5);
             poly2D(ctx, [[21, 6], [43, 6], [45, 29], [19, 29]], '#591F17', '#1B211E', 1.7);
@@ -323,36 +355,36 @@
             poly2D(ctx, [[18, 27], [46, 27], [49, 40], [40, 48], [24, 48], [15, 40]], tk.elFire, '#1B211E', 1.7);
             circle2D(ctx, 32, 37, 6.5, tk.accentCta, '#1B211E', 1.5);
             circle2D(ctx, 32, 37, 2.8, tk.textPrimary);
-        } else if (type === 'fire_B') {
+        } else if (visualType === 'fire_B') {
             poly2D(ctx, [[12, 31], [17, 15], [22, 22], [16, 35]], tk.accentCta, '#1B211E', 1.4);
             poly2D(ctx, [[52, 31], [47, 15], [42, 22], [48, 35]], tk.elFire, '#1B211E', 1.4);
             poly2D(ctx, [[32, 2], [37, 18], [35, 28], [29, 28], [27, 18]], tk.elLightning, '#1B211E', 1.5);
             poly2D(ctx, [[24, 25], [40, 25], [42, 38], [32, 48], [22, 38]], tk.elFire, '#1B211E', 1.6);
             circle2D(ctx, 32, 35, 4.6, tk.elLightning, '#1B211E', 1.3);
-        } else if (type === 'ice_A') {
+        } else if (visualType === 'ice_A') {
             poly2D(ctx, [[32, 8], [52, 19], [52, 41], [32, 52], [12, 41], [12, 19]], null, tk.elIce, 3.2);
             poly2D(ctx, [[25, 6], [39, 6], [41, 25], [23, 25]], '#2B6780', '#143240', 1.5);
             poly2D(ctx, [[20, 24], [44, 24], [46, 38], [32, 47], [18, 38]], tk.elIce, '#143240', 1.6);
             poly2D(ctx, [[32, 27], [38, 35], [32, 43], [26, 35]], tk.textPrimary, '#143240', 1.3);
-        } else if (type === 'ice_B') {
+        } else if (visualType === 'ice_B') {
             poly2D(ctx, [[13, 12], [24, 25], [20, 38], [11, 31]], tk.elIce, '#143240', 1.5);
             poly2D(ctx, [[51, 12], [40, 25], [44, 38], [53, 31]], '#2E6F8A', '#143240', 1.5);
             poly2D(ctx, [[32, 1], [37.5, 27], [32, 33], [26.5, 27]], tk.textPrimary, '#143240', 1.6);
             poly2D(ctx, [[22, 28], [42, 28], [44, 39], [32, 48], [20, 39]], '#21556B', '#143240', 1.6);
             poly2D(ctx, [[32, 29], [36, 36], [32, 43], [28, 36]], tk.elLightning, '#143240', 1.2);
-        } else if (type === 'thunder_A') {
+        } else if (visualType === 'thunder_A') {
             circle2D(ctx, 32, 32, 19, null, tk.elLightning, 2.4);
             rect2D(ctx, 17, 13, 6, 22, '#463A1A', '#1B211E', 1.4);
             rect2D(ctx, 41, 13, 6, 22, '#463A1A', '#1B211E', 1.4);
             poly2D(ctx, [[19, 27], [45, 27], [47, 40], [39, 47], [25, 47], [17, 40]], '#3D341E', '#1B211E', 1.6);
             circle2D(ctx, 32, 36, 5.8, tk.elLightning, '#1B211E', 1.5);
-        } else if (type === 'thunder_B') {
+        } else if (visualType === 'thunder_B') {
             poly2D(ctx, [[32, 1], [36, 26], [28, 26]], tk.elLightning, '#1B211E', 1.5);
             rect2D(ctx, 24, 11, 16, 3.5, tk.accentCta, '#1B211E', 1.2);
             rect2D(ctx, 21, 18, 22, 3.8, tk.elLightning, '#1B211E', 1.2);
             poly2D(ctx, [[21, 26], [43, 26], [45, 39], [38, 47], [26, 47], [19, 39]], '#3D341E', '#1B211E', 1.6);
             poly2D(ctx, [[32, 28], [36, 36], [32, 44], [28, 36]], tk.textPrimary, '#1B211E', 1.2);
-        } else if (type === 'steam_A') {
+        } else if (visualType === 'steam_A') {
             rect2D(ctx, 11, 25, 7, 17, tk.accentCta, '#1B211E', 1.4);
             rect2D(ctx, 46, 25, 7, 17, '#2D6A82', '#1B211E', 1.4);
             rect2D(ctx, 20, 6, 9, 22, '#8C3326', '#1B211E', 1.5);
@@ -360,26 +392,26 @@
             poly2D(ctx, [[16, 25], [48, 25], [50, 39], [42, 47], [22, 47], [14, 39]], '#5E2D24', '#1B211E', 1.6);
             circle2D(ctx, 32, 36, 6, tk.textPrimary, '#1B211E', 1.4);
             circle2D(ctx, 32, 36, 2.8, tk.elFire);
-        } else if (type === 'steam_B') {
+        } else if (visualType === 'steam_B') {
             poly2D(ctx, [[32, 2], [38, 16], [32, 22], [26, 16]], tk.elIce, '#143240', 1.4);
             poly2D(ctx, [[12, 17], [25, 22], [22, 31], [11, 26]], tk.textPrimary, '#143240', 1.4);
             poly2D(ctx, [[52, 17], [39, 22], [42, 31], [53, 26]], tk.accentCta, '#1B211E', 1.4);
             poly2D(ctx, [[21, 26], [43, 26], [46, 38], [32, 47], [18, 38]], '#2D6A82', '#1B211E', 1.5);
             poly2D(ctx, [[32, 27], [39, 35], [32, 44], [25, 35]], tk.elIce, '#1B211E', 1.3);
-        } else if (type === 'magnet_A') {
+        } else if (visualType === 'magnet_A') {
             circle2D(ctx, 32, 30, 18, null, tk.elIce, 2.8);
             circle2D(ctx, 32, 30, 13, null, tk.elLightning, 1.6);
             poly2D(ctx, [[12, 18], [22, 22], [20, 38], [11, 36]], '#2D6A82', '#1B211E', 1.4);
             poly2D(ctx, [[52, 18], [42, 22], [44, 38], [53, 36]], '#9E7E26', '#1B211E', 1.4);
             circle2D(ctx, 32, 30, 8, tk.bgCanvas, tk.elIce, 2);
             circle2D(ctx, 32, 30, 3, tk.textPrimary);
-        } else if (type === 'magnet_B') {
+        } else if (visualType === 'magnet_B') {
             poly2D(ctx, [[32, 1], [36, 24], [28, 24]], tk.elLightning, '#1B211E', 1.4);
             poly2D(ctx, [[10, 16], [25, 25], [19, 32]], tk.elIce, '#1B211E', 1.4);
             poly2D(ctx, [[54, 16], [39, 25], [45, 32]], tk.elIce, '#1B211E', 1.4);
             poly2D(ctx, [[21, 26], [43, 26], [46, 39], [38, 47], [26, 47], [18, 39]], tk.bgSurface, tk.elLightning, 1.6);
             circle2D(ctx, 32, 36, 5.4, tk.elLightning, '#1B211E', 1.4);
-        } else if (type === 'plasma_A') {
+        } else if (visualType === 'plasma_A') {
             poly2D(ctx, [[10, 33], [21, 18], [23, 43], [12, 44]], '#8C2F23', '#1B211E', 1.5);
             poly2D(ctx, [[54, 33], [43, 18], [41, 43], [52, 44]], '#8C2F23', '#1B211E', 1.5);
             poly2D(ctx, [[25, 4], [39, 4], [41, 28], [23, 28]], tk.elFire, '#1B211E', 1.6);
@@ -387,7 +419,7 @@
             ellipse2D(ctx, 32, 14, 10, 3.2, null, tk.elLightning, 1.6);
             poly2D(ctx, [[20, 26], [44, 26], [46, 40], [32, 48], [18, 40]], '#6E281E', tk.elLightning, 1.6);
             circle2D(ctx, 32, 36, 6, tk.accentCta, tk.elLightning, 1.4);
-        } else if (type === 'plasma_B') {
+        } else if (visualType === 'plasma_B') {
             poly2D(ctx, [[32, 1], [38, 17], [32, 26], [26, 17]], tk.textPrimary, '#1B211E', 1.4);
             poly2D(ctx, [[11, 19], [25, 20], [23, 31], [12, 28]], tk.elLightning, '#1B211E', 1.4);
             poly2D(ctx, [[53, 19], [39, 20], [41, 31], [52, 28]], tk.elFire, '#1B211E', 1.4);
@@ -435,6 +467,13 @@
             ellipse2D(ctx, 32, 20, 8, 3.2, null, tk.accentCta, 1.5);
             poly2D(ctx, [[22, 27], [42, 27], [44, 39], [32, 48], [20, 39]], '#7D2B1F', tk.elLightning, 1.5);
             circle2D(ctx, 32, 36, 5.2, tk.accentCta, tk.elLightning, 1.5);
+        }
+
+        if (effTier >= 4) {
+            circle2D(ctx, 32, 32, 27.5, null, (effTier >= 5 || isScion) ? '#E0B43C' : (isTwinCrown ? '#D97724' : '#B8C2BC'), effTier >= 5 ? 2.2 : 1.5);
+            if (effTier >= 5 || isScion) {
+                poly2D(ctx, [[23, 8], [28, 13], [32, 4], [36, 13], [41, 8], [39, 16], [25, 16]], '#E0B43C', '#1B211E', 1.2);
+            }
         }
     }
 
@@ -498,6 +537,48 @@
             poly2D(ctx, [[32, 5], [36, 12], [28, 12]], tk.elLightning);
             circle2D(ctx, 32, 37, 7.5, tk.elFire, tk.elLightning, 1.6);
             circle2D(ctx, 32, 37, 3, tk.elLightning);
+        } else if (id === 'thief') {
+            ctx.fillStyle = '#D97724';
+            ctx.strokeStyle = '#1E1710';
+            ctx.lineWidth = s * 0.05;
+            ctx.beginPath();
+            ctx.moveTo(cx - s * 0.28, cy - s * 0.14);
+            ctx.lineTo(cx - s * 0.34, cy - s * 0.38);
+            ctx.lineTo(cx - s * 0.10, cy - s * 0.22);
+            ctx.lineTo(cx + s * 0.10, cy - s * 0.22);
+            ctx.lineTo(cx + s * 0.34, cy - s * 0.38);
+            ctx.lineTo(cx + s * 0.28, cy - s * 0.14);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#E08B35';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy - s * 0.02, s * 0.26, s * 0.20, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#F4F1EA';
+            ctx.beginPath();
+            ctx.arc(cx - s * 0.10, cy - s * 0.04, s * 0.055, 0, Math.PI * 2);
+            ctx.arc(cx + s * 0.10, cy - s * 0.04, s * 0.055, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1B211E';
+            ctx.beginPath();
+            ctx.arc(cx - s * 0.09, cy - s * 0.04, s * 0.026, 0, Math.PI * 2);
+            ctx.arc(cx + s * 0.09, cy - s * 0.04, s * 0.026, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#2C3530';
+            ctx.strokeStyle = '#E0B43C';
+            ctx.beginPath();
+            ctx.roundRect(cx - s * 0.18, cy + s * 0.14, s * 0.36, s * 0.22, s * 0.06);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#E0B43C';
+            ctx.beginPath();
+            ctx.arc(cx, cy + s * 0.25, s * 0.06, 0, Math.PI * 2);
+            ctx.fill();
         } else if (id === 'void_boss') {
             poly2D(ctx, [[11, 45], [15, 17], [26, 12], [32, 6], [38, 12], [49, 17], [53, 45], [43, 55], [21, 55]], '#1E2723', tk.elLightning, 2);
             poly2D(ctx, [[32, 19], [40, 32], [32, 45], [24, 32]], tk.accentCta, tk.elLightning, 1.6);
@@ -1181,23 +1262,49 @@
 
     function createTowerElement(towerObj, index) {
         const st = G.state;
-        const { family, branchCode } = resolveTowerVisualFamily(towerObj.type);
+        const { family, branchCode, isTwinCrown } = resolveTowerVisualFamily(towerObj.type);
+        const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
+        const EvoSys = GameApp.systems && GameApp.systems.evolution;
+        const scionAura = (AttackSys && typeof AttackSys.getScionAuraAtCell === 'function')
+            ? AttackSys.getScionAuraAtCell(index)
+            : { active: false };
         const tower = document.createElement('div');
         tower.classList.add('tower', `type-${family}`, `node-${towerObj.type}`, `lv-${towerObj.tier}`);
         tower.dataset.towerIndex = String(index);
         if (st.frenzyActiveMs > 0) tower.classList.add('frenzy-active');
         if (towerObj.isCrowned) tower.classList.add('is-crowned');
+        if (towerObj.tier >= 5) tower.classList.add('is-scion');
+        if (isTwinCrown) tower.classList.add('is-twin-crown');
+        if (scionAura && scionAura.active) tower.classList.add('has-scion-aura');
         if ((towerObj.stunnedMs || 0) > 0) tower.classList.add('stunned');
 
         const { baseSvgHtml, headSvgHtml } = createTowerSvgParts(towerObj.type, towerObj.tier);
         const baseLayer = document.createElement('div'); baseLayer.classList.add('tower-base-layer'); baseLayer.innerHTML = baseSvgHtml;
-        if (towerObj.isCrowned) {
+        if (towerObj.isCrowned || towerObj.tier >= 5) {
             const haloEl = document.createElement('div');
             haloEl.className = 'tower-crown-halo';
             haloEl.setAttribute('aria-hidden', 'true');
             haloEl.innerHTML = '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="none" stroke="#E0B43C" stroke-width="2" stroke-dasharray="6 3"/><polygon points="24,9 28,15 32,6 36,15 40,9 38,18 26,18" fill="#E0B43C" stroke="#1B211E" stroke-width="1.2"/></svg>';
             tower.appendChild(haloEl);
         }
+
+        // 3★→4★ 與 4★→5★ 漸進式吞噬充能進度環
+        if (towerObj.tier === 3 || towerObj.tier === 4) {
+            const baseU = towerObj.tier === 3 ? 4 : 8;
+            const targetU = towerObj.tier === 3 ? 8 : 16;
+            const curU = (EvoSys && typeof EvoSys.getTowerNutritionU === 'function')
+                ? EvoSys.getTowerNutritionU(towerObj)
+                : (Number(towerObj.nutritionU) || baseU);
+            const ratio = Math.max(0, Math.min(1, (curU - baseU) / Math.max(1, targetU - baseU)));
+            const circumference = 176;
+            const dashOffset = Number((circumference * (1 - ratio)).toFixed(2));
+            const growthRing = document.createElement('div');
+            growthRing.className = 'tower-growth-ring';
+            growthRing.setAttribute('aria-hidden', 'true');
+            growthRing.innerHTML = `<svg viewBox="0 0 64 64"><circle class="growth-track" cx="32" cy="32" r="28" fill="none" stroke="#1B211E" stroke-opacity="0.82" stroke-width="3.4"/><circle class="growth-fill" cx="32" cy="32" r="28" fill="none" stroke="#D97724" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}" transform="rotate(-90 32 32)"/></svg>`;
+            tower.appendChild(growthRing);
+        }
+
         const headRotator = document.createElement('div'); headRotator.classList.add('tower-head-rotator'); headRotator.style.transform = `rotate(${towerObj.aimAngleDeg || 0}deg)`;
         const headRecoil = document.createElement('div'); headRecoil.classList.add('tower-head-recoil'); headRecoil.innerHTML = headSvgHtml;
         headRotator.appendChild(headRecoil);
@@ -1205,10 +1312,18 @@
         elDot.className = 'tower-el-dot';
         elDot.setAttribute('aria-hidden', 'true');
         const name = document.createElement('div'); name.classList.add('tower-name');
-        const starLabel = towerObj.isCrowned ? '👑' : getTierStars(towerObj.tier);
-        name.innerText = branchCode ? `${branchCode}${starLabel}` : starLabel;
+        let labelText = '';
+        if (towerObj.tier >= 5) {
+            labelText = '5★神';
+        } else if (towerObj.tier === 4) {
+            labelText = `${branchCode || ''}4★`;
+        } else {
+            const starLabel = getTierStars(towerObj.tier);
+            labelText = branchCode ? `${branchCode}${starLabel}` : starLabel;
+        }
+        name.innerText = labelText;
         const cellW = (G && G.boardMetrics && G.boardMetrics.cellW) || 34;
-        if (name.innerText.length >= 4 || cellW <= 32) {
+        if (name.innerText.length >= 4 || towerObj.tier >= 4 || cellW <= 32) {
             name.classList.add('is-compact');
         }
         name.style.maxWidth = `${Math.max(14, cellW - 2)}px`;
@@ -1216,6 +1331,13 @@
         tower._rotator = headRotator;
         tower._recoilEl = headRecoil;
         tower.appendChild(elDot); tower.appendChild(baseLayer); tower.appendChild(headRotator); tower.appendChild(name);
+
+        if ((towerObj.infusionCount || 0) > 0) {
+            const infBadge = document.createElement('span');
+            infBadge.className = 'tower-infusion-badge num';
+            infBadge.innerText = `+${towerObj.infusionCount}`;
+            tower.appendChild(infBadge);
+        }
 
         if (GameApp.systems && GameApp.systems.drag && typeof GameApp.systems.drag.bindBoardTowerElement === 'function') {
             GameApp.systems.drag.bindBoardTowerElement(tower, index, towerObj);
