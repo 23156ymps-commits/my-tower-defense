@@ -84,23 +84,29 @@
             const isEnBranch = Boolean(GameApp.i18n && typeof GameApp.i18n.isEnglish === 'function' && GameApp.i18n.isEnglish());
             if (raw.endsWith('_twin_AB')) branchCode = 'AB';
             else if (raw.endsWith('_scion')) branchCode = isEnBranch ? 'S' : '神';
+            else if (raw === 'primal_core') branchCode = isEnBranch ? 'C' : '核';
+            else if (raw.endsWith('_4')) branchCode = '4★';
             else if (raw.endsWith('_crown_A') || raw.endsWith('_A')) branchCode = 'A';
             else if (raw.endsWith('_crown_B') || raw.endsWith('_B')) branchCode = 'B';
         }
-        const fam = tCfg.family || tCfg.elementTag || raw.replace(/_(bud|trunk|crown_A|crown_B|twin_AB|scion|A|B)$/, '');
-        const family = ['fire', 'ice', 'thunder', 'steam', 'magnet', 'plasma'].includes(fam) ? fam : 'fire';
+        const fam = tCfg.family || tCfg.elementTag || raw.replace(/_(bud|trunk|crown_A|crown_B|twin_AB|scion|A|B|4)$/, '');
+        const allowedFams = ['fire', 'ice', 'thunder', 'steam', 'magnet', 'plasma', 'storm_tri', 'starforge_tri', 'prism_tri', 'primal_core'];
+        const family = allowedFams.includes(fam) ? fam : 'fire';
         return {
             family,
             branchCode,
             nodeTier: tCfg.nodeTier || 1,
             isTwinCrown: Boolean(tCfg.isTwinCrown || raw.endsWith('_twin_AB')),
-            isScion: Boolean(tCfg.isScion || raw.endsWith('_scion'))
+            isScion: Boolean(tCfg.isScion || raw.endsWith('_scion') || raw === 'primal_core'),
+            isTriElement: Boolean(tCfg.isTriElement),
+            isPrimalCore: Boolean(tCfg.isPrimalCore || raw === 'primal_core')
         };
     }
 
     function resolveTowerHeadStyleKey(type, family, branchCode) {
         const raw = String(type || 'fire_bud');
         if (TOWER_HEAD_TEMPLATES[raw]) return raw;
+        if (TOWER_HEAD_TEMPLATES[family]) return family;
         if (raw.endsWith('_crown_B') && TOWER_HEAD_TEMPLATES[`${family}_B`]) return `${family}_B`;
         if ((raw.endsWith('_crown_A') || raw.endsWith('_twin_AB') || raw.endsWith('_scion')) && TOWER_HEAD_TEMPLATES[`${family}_A`]) {
             return `${family}_A`;
@@ -120,7 +126,11 @@
             thunder: { rune: tk.elLightning, glow: '#F7EAC0' },
             steam: { rune: tk.accentCta, glow: tk.elIce },
             magnet: { rune: tk.elIce, glow: tk.elLightning },
-            plasma: { rune: tk.elFire, glow: tk.elLightning }
+            plasma: { rune: tk.elFire, glow: tk.elLightning },
+            storm_tri: { rune: tk.elIce, glow: tk.elLightning },
+            starforge_tri: { rune: tk.elFire, glow: tk.elIce },
+            prism_tri: { rune: tk.elIce, glow: '#F4F1EA' },
+            primal_core: { rune: tk.elLightning, glow: '#F4F1EA' }
         };
         if (defaults[family]) return defaults[family];
         const mainColor = (tCfg && tCfg.color) || tk.accentCta;
@@ -151,8 +161,12 @@
             return `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="23" ry="8" fill="rgba(0,0,0,0.42)"/><polygon points="15,21 49,21 55,32 55,44 47,53 17,53 9,44 9,32" fill="#322A16" stroke="${tk.bgCanvas}" stroke-width="2"/><polygon points="18,14 46,14 52,24 52,36 45,45 19,45 12,36 12,24" fill="#463A1B" stroke="#9E7E26" stroke-width="1.5"/>${crownOutline}${coils}${cornerGems}</svg>`;
         }
 
-        // 3. 共生血脈（蒸氣／磁環／電漿）：雙色交織藤蔓根須底座
-        if (family === 'steam' || family === 'magnet' || family === 'plasma') {
+        // 3. 共生血脈與三元創世／原初之核底座
+        if (family === 'primal_core') {
+            const triVines = `<path d="M11,36 Q32,12 53,36" fill="none" stroke="${tk.elFire}" stroke-width="2"/><path d="M11,28 Q32,52 53,28" fill="none" stroke="${tk.elIce}" stroke-width="2"/><circle cx="32" cy="30" r="18" fill="none" stroke="${tk.elLightning}" stroke-width="2" stroke-dasharray="5 3"/>`;
+            return `<svg class="tower-base-svg" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="53" rx="24" ry="8.5" fill="rgba(0,0,0,0.46)"/><polygon points="15,20 49,20 56,32 56,44 47,53 17,53 8,44 8,32" fill="#232D26" stroke="#E0B43C" stroke-width="2"/><polygon points="18,12 46,12 52,24 52,36 45,45 19,45 12,36 12,24" fill="#2F3D34" stroke="#D97724" stroke-width="1.6"/>${triVines}<circle cx="32" cy="30" r="12.5" fill="#1B211E" stroke="#E0B43C" stroke-width="2"/>${cornerGems}</svg>`;
+        }
+        if (family === 'steam' || family === 'magnet' || family === 'plasma' || family === 'storm_tri' || family === 'starforge_tri' || family === 'prism_tri') {
             const vineA = family === 'magnet' ? tk.elIce : tk.elFire;
             const vineB = family === 'steam' ? tk.elIce : tk.elLightning;
             const vines = `<path d="M11,38 Q16,18 32,16 Q48,18 53,38" fill="none" stroke="${vineA}" stroke-width="2.4" stroke-linecap="round"/><path d="M12,26 Q22,47 32,48 Q42,47 52,26" fill="none" stroke="${vineB}" stroke-width="2.4" stroke-linecap="round"/><path d="M15,44 L22,39 M49,44 L42,39" stroke="${vineA}" stroke-width="1.6" stroke-linecap="round"/>`;
@@ -214,7 +228,20 @@
             `<ellipse cx="32" cy="37" rx="16" ry="12" fill="rgba(0,0,0,0.34)"/><polygon points="10,33 21,18 23,43 12,44" fill="#8C2F23" stroke="#1B211E" stroke-width="1.6"/><polygon points="54,33 43,18 41,43 52,44" fill="#8C2F23" stroke="#1B211E" stroke-width="1.6"/><polygon points="25,4 39,4 41,28 23,28" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.7"/><rect x="28" y="4" width="8" height="23" fill="${tk.elLightning}"/><ellipse cx="32" cy="14" rx="10" ry="3.4" fill="none" stroke="${tk.elLightning}" stroke-width="1.8"/><polygon points="20,26 44,26 46,40 32,48 18,40" fill="#6E281E" stroke="${tk.elLightning}" stroke-width="1.7"/><circle cx="32" cy="36" r="6.4" fill="${tk.accentCta}" stroke="${tk.elLightning}" stroke-width="1.5"/>`,
 
         plasma_B: (_, tk) => // 多面折射稜鏡
-            `<ellipse cx="32" cy="38" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="32,1 38,17 32,26 26,17" fill="${tk.textPrimary}" stroke="#1B211E" stroke-width="1.5"/><polygon points="11,19 25,20 23,31 12,28" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.5"/><polygon points="53,19 39,20 41,31 52,28" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.5"/><polygon points="22,26 42,26 44,39 32,48 20,39" fill="#7D2B1F" stroke="${tk.elLightning}" stroke-width="1.6"/><polygon points="32,27 38,36 32,44 26,36" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.3"/>`
+            `<ellipse cx="32" cy="38" rx="14" ry="11" fill="rgba(0,0,0,0.32)"/><polygon points="32,1 38,17 32,26 26,17" fill="${tk.textPrimary}" stroke="#1B211E" stroke-width="1.5"/><polygon points="11,19 25,20 23,31 12,28" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.5"/><polygon points="53,19 39,20 41,31 52,28" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.5"/><polygon points="22,26 42,26 44,39 32,48 20,39" fill="#7D2B1F" stroke="${tk.elLightning}" stroke-width="1.6"/><polygon points="32,27 38,36 32,44 26,36" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.3"/>`,
+
+        // ---------- Stage 2：三元創世傳奇 & 唯一 5★ 原初之核 ----------
+        storm_tri: (_, tk) => // ⛈️ 天災風暴樹（蒸氣＋雷）
+            `<ellipse cx="32" cy="38" rx="16" ry="12" fill="rgba(0,0,0,0.36)"/><path d="M12,25 Q22,12 32,17 Q42,12 52,25 Q54,37 42,41 L22,41 Q10,37 12,25 Z" fill="#234857" stroke="${tk.elIce}" stroke-width="1.7"/><polyline points="19,12 29,22 24,25 35,36" fill="none" stroke="${tk.elLightning}" stroke-width="2.2" stroke-linecap="round"/><polyline points="45,12 37,22 41,25 32,35" fill="none" stroke="${tk.accentCta}" stroke-width="2" stroke-linecap="round"/><circle cx="32" cy="36" r="6" fill="${tk.elIce}" stroke="${tk.elLightning}" stroke-width="1.6"/><circle cx="32" cy="36" r="2.6" fill="#F4F1EA"/>`,
+
+        starforge_tri: (_, tk) => // 🌋 星界熔爐樹（磁暴＋火）
+            `<ellipse cx="32" cy="38" rx="16" ry="12" fill="rgba(0,0,0,0.36)"/><circle cx="32" cy="32" r="19" fill="none" stroke="${tk.elIce}" stroke-width="2.2" stroke-dasharray="6 3"/><polygon points="15,24 32,8 49,24 44,44 20,44" fill="#6E281E" stroke="${tk.accentCta}" stroke-width="1.8"/><polygon points="24,18 32,4 40,18 32,27" fill="${tk.elFire}" stroke="${tk.elLightning}" stroke-width="1.5"/><circle cx="32" cy="34" r="6.8" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.5"/><circle cx="32" cy="34" r="3" fill="${tk.elIce}"/>`,
+
+        prism_tri: (_, tk) => // ❄️ 絕對零度稜鏡（電漿＋冰）
+            `<ellipse cx="32" cy="38" rx="15" ry="11.5" fill="rgba(0,0,0,0.34)"/><polygon points="32,2 44,22 32,46 20,22" fill="#D6EEF7" stroke="${tk.elIce}" stroke-width="1.7"/><polygon points="32,2 32,46 20,22" fill="#4A9EBF" fill-opacity="0.55"/><polygon points="10,18 22,25 18,36 9,30" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.4"/><polygon points="54,18 42,25 46,36 55,30" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.4"/><circle cx="32" cy="24" r="4.6" fill="#F4F1EA" stroke="#1B211E" stroke-width="1.4"/>`,
+
+        primal_core: (_, tk) => // 🌳 創世世界樹·原初之核
+            `<ellipse cx="32" cy="38" rx="17" ry="12" fill="rgba(0,0,0,0.38)"/><circle cx="32" cy="28" r="20" fill="none" stroke="#E0B43C" stroke-width="2"/><path d="M22,46 Q25,28 32,12 Q39,28 42,46 Z" fill="#2D5A3D" stroke="#E0B43C" stroke-width="1.6"/><circle cx="32" cy="21" r="7.5" fill="#E0B43C" stroke="#1B211E" stroke-width="1.5"/><circle cx="21" cy="29" r="3.6" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.2"/><circle cx="43" cy="29" r="3.6" fill="${tk.elIce}" stroke="#1B211E" stroke-width="1.2"/><circle cx="32" cy="38" r="3.8" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.2"/>`
     };
 
     function createTowerSvgParts(type, tier = 1) {
@@ -329,7 +356,7 @@
             poly2D(ctx, [[18, 14], [46, 14], [52, 24], [52, 36], [45, 45], [19, 45], [12, 36], [12, 24]], '#463A1B', '#9E7E26', 1.5);
             circle2D(ctx, 32, 30, 17, null, '#9E7E26', 2);
             circle2D(ctx, 32, 30, 13, tk.bgCanvas, tk.elLightning, effTier >= 3 ? 2.1 : 1.5);
-        } else if (family === 'steam' || family === 'magnet' || family === 'plasma') {
+        } else if (family === 'steam' || family === 'magnet' || family === 'plasma' || family === 'storm_tri' || family === 'starforge_tri' || family === 'prism_tri' || family === 'primal_core') {
             poly2D(ctx, [[15, 22], [49, 22], [55, 33], [55, 44], [47, 53], [17, 53], [9, 44], [9, 33]], '#202B25', tk.bgCanvas, 2);
             poly2D(ctx, [[18, 14], [46, 14], [52, 24], [52, 36], [45, 45], [19, 45], [12, 36], [12, 24]], '#2C3A32', tk.borderSubtle, 1.5);
             ctx.beginPath(); ctx.moveTo(11, 38); ctx.quadraticCurveTo(32, 14, 53, 38);
@@ -461,6 +488,27 @@
             circle2D(ctx, 32, 16, 5, tk.elIce, tk.elLightning, 1.5);
             poly2D(ctx, [[21, 30], [43, 30], [47, 39], [39, 47], [25, 47], [17, 39]], tk.bgSurface, tk.elIce, 1.5);
             circle2D(ctx, 32, 38, 5.2, tk.elLightning, '#142C36', 1.5);
+        } else if (visualType === 'storm_tri') {
+            circle2D(ctx, 32, 31, 15, '#234857', tk.elIce, 1.8);
+            circle2D(ctx, 32, 33, 6.5, tk.elLightning, '#1B211E', 1.5);
+            circle2D(ctx, 32, 33, 2.8, '#F4F1EA');
+        } else if (visualType === 'starforge_tri') {
+            circle2D(ctx, 32, 32, 18.5, null, tk.elIce, 2);
+            poly2D(ctx, [[15, 24], [32, 7], [49, 24], [44, 44], [20, 44]], '#6E281E', tk.accentCta, 1.7);
+            circle2D(ctx, 32, 33, 6.5, tk.elLightning, '#1B211E', 1.4);
+            circle2D(ctx, 32, 33, 3, tk.elIce);
+        } else if (visualType === 'prism_tri') {
+            poly2D(ctx, [[32, 2], [44, 22], [32, 46], [20, 22]], '#D6EEF7', tk.elIce, 1.7);
+            poly2D(ctx, [[10, 18], [22, 25], [18, 36], [9, 30]], tk.elFire, '#1B211E', 1.3);
+            poly2D(ctx, [[54, 18], [42, 25], [46, 36], [55, 30]], tk.elLightning, '#1B211E', 1.3);
+            circle2D(ctx, 32, 24, 4.5, '#F4F1EA', '#1B211E', 1.3);
+        } else if (visualType === 'primal_core') {
+            circle2D(ctx, 32, 28, 19, null, '#E0B43C', 2);
+            poly2D(ctx, [[22, 46], [32, 10], [42, 46]], '#2D5A3D', '#E0B43C', 1.6);
+            circle2D(ctx, 32, 21, 7.2, '#E0B43C', '#1B211E', 1.4);
+            circle2D(ctx, 21, 29, 3.4, tk.elFire, '#1B211E', 1.2);
+            circle2D(ctx, 43, 29, 3.4, tk.elIce, '#1B211E', 1.2);
+            circle2D(ctx, 32, 38, 3.6, tk.elLightning, '#1B211E', 1.2);
         } else {
             poly2D(ctx, [[14, 34], [25, 21], [26, 41], [18, 43]], tk.elFire, '#2B1410', 1.5);
             poly2D(ctx, [[50, 34], [39, 21], [38, 41], [46, 43]], '#8C2F23', '#2B1410', 1.5);
@@ -780,6 +828,9 @@
         if (!G) return;
         const fx = G.fxEntities;
         fx.projectiles.length = fx.bolts.length = fx.beams.length = fx.rings.length = fx.particles.length = fx.flashes.length = fx.leaves.length = 0;
+        if (Array.isArray(fx.weatherParticles)) fx.weatherParticles.length = 0;
+        fx.stormFlashMs = 0;
+        fx.stormFlashCdMs = 5200;
         fx.leafEmitAccMs = 0; fx.frenzyFxAccMs = 0;
         const { fxCtx, fxCanvasEl } = G.dom;
         if (fxCtx && fxCanvasEl) fxCtx.clearRect(0, 0, fxCanvasEl.width || G.boardMetrics.stageW, fxCanvasEl.height || G.boardMetrics.stageH);
@@ -860,6 +911,41 @@
         const tCfg = getTowersDict()[fxType];
         const style = (tCfg && tCfg.attackStyle) || fxType;
 
+        if (fxType === 'storm_tri') {
+            const pts = [{ x: sx, y: sy }];
+            for (let s = 1; s < 4; s++) {
+                const t = s / 4;
+                pts.push({ x: sx + (ex - sx) * t + (Math.random() - 0.5) * 22, y: sy + (ey - sy) * t + (Math.random() - 0.5) * 22 });
+            }
+            pts.push({ x: ex, y: ey });
+            fx.bolts.push({ points: pts, color: tk.elIce, coreColor: tk.elLightning, width: 2.3, ageMs: 0, durationMs: 220 });
+            if (options.frostRadiusPx > 0) emitRingFX(ex, ey, options.frostRadiusPx, tk.elIce, 0.16, 300);
+            emitParticleBurst(ex, ey, tk.elLightning, 7, 80);
+            emitHitFlash(ex, ey, tk.textPrimary);
+            return;
+        }
+        if (fxType === 'starforge_tri') {
+            fx.projectiles.push({ fxType, x1: sx, y1: sy, x2: ex, y2: ey, color: tk.accentCta, radius: 5.0, ageMs: 0, durationMs: 140 });
+            const rad = options.splashRadiusPx || (G.boardMetrics.step * 1.8);
+            emitRingFX(ex, ey, rad, tk.elFire, 0.25, 320);
+            emitRingFX(ex, ey, rad * 0.65, tk.elIce, 0.22, 280);
+            emitParticleBurst(ex, ey, tk.elLightning, 12, 110);
+            emitHitFlash(ex, ey, tk.elLightning);
+            return;
+        }
+        if (fxType === 'prism_tri') {
+            fx.beams.push({ x1: sx, y1: sy, x2: ex, y2: ey, width: 2.6, color: '#8EE8FF', coreColor: tk.textPrimary, ageMs: 0, durationMs: 185 });
+            emitParticleBurst(ex, ey, '#8EE8FF', 6, 72);
+            emitHitFlash(ex, ey, tk.textPrimary);
+            return;
+        }
+        if (fxType === 'primal_core') {
+            fx.beams.push({ x1: sx, y1: sy, x2: ex, y2: ey, width: 3.2, color: '#E0B43C', coreColor: '#F4F1EA', ageMs: 0, durationMs: 210 });
+            if (options.splashRadiusPx > 0) emitRingFX(ex, ey, options.splashRadiusPx, '#E0B43C', 0.26, 320);
+            emitParticleBurst(ex, ey, '#E0B43C', 11, 100);
+            emitHitFlash(ex, ey, '#F4F1EA');
+            return;
+        }
         if (fxType === 'thunder' || fxType === 'magnet-arc' || style === 'chain_lightning' || style === 'stun_pulse') {
             const isMagnet = fxType === 'magnet-arc' || style === 'stun_pulse';
             const jitter = isMagnet ? 10 : 13;
@@ -966,11 +1052,30 @@
         if (!fxCtx || !fxCanvasEl) return;
         fxCtx.clearRect(0, 0, m.stageW, m.stageH);
 
-        // 地面持續傷害區域（如 steam_A 滾燙蒸氣池 與 scorched_brand 焦土烙印燃燒路徑）
+        // 地面持續傷害區域（steam_A 蒸氣池、scorched_brand 焦土烙印、storm_tri 熾凍雷雲）
         if (Array.isArray(st.groundHazards)) {
             for (let i = 0; i < st.groundHazards.length; i++) {
                 const hz = st.groundHazards[i];
-                const alpha = Math.max(0.15, Math.min(0.85, (hz.remainingMs || 0) / (hz.maxDurationMs || 3000)));
+                const alpha = Math.max(0.18, Math.min(0.88, (hz.remainingMs || 0) / (hz.maxDurationMs || 3000)));
+                if (hz.type === 'storm_cloud') {
+                    fxCtx.save();
+                    fillCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx, '#264352', alpha * 0.26);
+                    fxCtx.globalAlpha = alpha * 0.78;
+                    fxCtx.strokeStyle = tk.elIce;
+                    fxCtx.lineWidth = 1.6;
+                    fxCtx.setLineDash([7, 4]);
+                    fxCtx.beginPath();
+                    fxCtx.arc(hz.x, hz.y, hz.radiusPx, 0, Math.PI * 2);
+                    fxCtx.stroke();
+                    fxCtx.strokeStyle = tk.elLightning;
+                    fxCtx.lineWidth = 1.1;
+                    fxCtx.setLineDash([3, 5]);
+                    fxCtx.beginPath();
+                    fxCtx.arc(hz.x, hz.y, hz.radiusPx * 0.62, 0, Math.PI * 2);
+                    fxCtx.stroke();
+                    fxCtx.restore();
+                    continue;
+                }
                 const isScorch = hz.type === 'scorch_trail';
                 fxCtx.save();
                 fillCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx, isScorch ? tk.elFire : tk.accentCta, alpha * (isScorch ? 0.28 : 0.22));
@@ -981,6 +1086,32 @@
                 fxCtx.beginPath();
                 fxCtx.arc(hz.x, hz.y, hz.radiusPx, 0, Math.PI * 2);
                 fxCtx.stroke();
+                fxCtx.restore();
+            }
+        }
+
+        // 唯一 5★ 創世世界樹·原初之核：周圍 8 格友軍金色靈脈連線
+        const AttackSysLey = GameApp.systems && GameApp.systems.towerAttack;
+        if (G.callbacks.isGameplayActive() && Array.isArray(st.board) && AttackSysLey && typeof AttackSysLey.getPrimalCoreLinkedNeighbors === 'function') {
+            for (let idx = 0; idx < st.board.length; idx++) {
+                const t = st.board[idx];
+                if (!t || t.type !== 'primal_core') continue;
+                const linkedNeighbors = AttackSysLey.getPrimalCoreLinkedNeighbors(idx);
+                if (linkedNeighbors.length === 0) continue;
+                const cCore = indexToCoords(idx);
+                const pCore = getCellCenter(cCore.x, cCore.y);
+                const flowPhase = ((st.elapsedPlayMs || 0) % 1400) / 1400;
+                fxCtx.save();
+                for (let ni = 0; ni < linkedNeighbors.length; ni++) {
+                    const nIdx = linkedNeighbors[ni];
+                    const cn = indexToCoords(nIdx);
+                    const pn = getCellCenter(cn.x, cn.y);
+                    strokeLine2D(fxCtx, pCore.left, pCore.top, pn.left, pn.top, '#E0B43C', 2.4, 0.56);
+                    strokeLine2D(fxCtx, pCore.left, pCore.top, pn.left, pn.top, '#F4F1EA', 1.0, 0.72);
+                    const bx = pCore.left + (pn.left - pCore.left) * flowPhase;
+                    const by = pCore.top + (pn.top - pCore.top) * flowPhase;
+                    fillCircle2D(fxCtx, bx, by, 2.6, '#E0B43C', 0.92);
+                }
                 fxCtx.restore();
             }
         }
@@ -1063,6 +1194,64 @@
             if ((mon.rootTimer || 0) <= 0) continue;
             fxCtx.save(); fxCtx.strokeStyle = 'rgba(78, 154, 104, 0.85)'; fxCtx.lineWidth = 2; fxCtx.setLineDash([4, 3]);
             fxCtx.beginPath(); fxCtx.arc(mon.pixelX, mon.pixelY + 4, Math.max(12, m.cellW * 0.42), 0, Math.PI * 2); fxCtx.stroke(); fxCtx.restore();
+        }
+
+        // 動態天氣環境粒子與偶發雷暴 80ms 微閃（僅視覺裝飾，不影響戰鬥隨機數）
+        const weather = st.weatherType;
+        if (G.callbacks.isGameplayActive() && weather && m.stageW > 0 && m.stageH > 0) {
+            if (!Array.isArray(fx.weatherParticles)) fx.weatherParticles = [];
+            const targetCount = weather === 'storm' ? 28 : (weather === 'snow' ? 22 : 16);
+            while (fx.weatherParticles.length < targetCount) {
+                fx.weatherParticles.push({
+                    x: Math.random() * m.stageW,
+                    y: Math.random() * m.stageH,
+                    phase: Math.random() * Math.PI * 2,
+                    scale: 0.7 + Math.random() * 0.7
+                });
+            }
+            if (fx.weatherParticles.length > targetCount) {
+                fx.weatherParticles.length = targetCount;
+            }
+            fxCtx.save();
+            for (let i = 0; i < fx.weatherParticles.length; i++) {
+                const wp = fx.weatherParticles[i];
+                if (weather === 'snow') {
+                    wp.x += (Math.sin((st.elapsedPlayMs || 0) * 0.002 + wp.phase) * 14 - 8) * dtSec;
+                    wp.y += (24 * wp.scale) * dtSec;
+                    if (wp.y > m.stageH + 4) { wp.y = -4; wp.x = Math.random() * m.stageW; }
+                    if (wp.x < -4) wp.x = m.stageW + 4;
+                    if (wp.x > m.stageW + 4) wp.x = -4;
+                    fillCircle2D(fxCtx, wp.x, wp.y, 1.8 * wp.scale, '#DCECF2', 0.44);
+                } else if (weather === 'storm') {
+                    wp.x -= (78 * wp.scale) * dtSec;
+                    wp.y += (175 * wp.scale) * dtSec;
+                    if (wp.y > m.stageH + 10 || wp.x < -10) {
+                        wp.y = -10;
+                        wp.x = Math.random() * (m.stageW + 60);
+                    }
+                    strokeLine2D(fxCtx, wp.x, wp.y, wp.x + 5, wp.y - 12, '#B6CFD9', 1.1, 0.28);
+                } else {
+                    wp.x += Math.sin((st.elapsedPlayMs || 0) * 0.0018 + wp.phase) * 9 * dtSec;
+                    wp.y -= (14 * wp.scale) * dtSec;
+                    if (wp.y < -6) { wp.y = m.stageH + 6; wp.x = Math.random() * m.stageW; }
+                    fillCircle2D(fxCtx, wp.x, wp.y, 1.9 * wp.scale, '#E0B43C', 0.30);
+                }
+            }
+            if (weather === 'storm') {
+                fx.stormFlashCdMs = (fx.stormFlashCdMs ?? 5200) - dtMs;
+                if (fx.stormFlashCdMs <= 0) {
+                    fx.stormFlashMs = 80;
+                    fx.stormFlashCdMs = 5200 + Math.random() * 4200;
+                }
+                if ((fx.stormFlashMs || 0) > 0) {
+                    const flashAlpha = Math.max(0, Math.min(0.14, (fx.stormFlashMs / 80) * 0.14));
+                    fx.stormFlashMs = Math.max(0, fx.stormFlashMs - dtMs);
+                    fxCtx.globalAlpha = flashAlpha;
+                    fxCtx.fillStyle = '#E6F1F5';
+                    fxCtx.fillRect(0, 0, m.stageW, m.stageH);
+                }
+            }
+            fxCtx.restore();
         }
     }
 
@@ -1270,7 +1459,7 @@
 
     function createTowerElement(towerObj, index) {
         const st = G.state;
-        const { family, branchCode, isTwinCrown } = resolveTowerVisualFamily(towerObj.type);
+        const { family, branchCode, isTwinCrown, isTriElement, isPrimalCore } = resolveTowerVisualFamily(towerObj.type);
         const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
         const EvoSys = GameApp.systems && GameApp.systems.evolution;
         const scionAura = (AttackSys && typeof AttackSys.getScionAuraAtCell === 'function')
@@ -1283,8 +1472,27 @@
         if (towerObj.isCrowned) tower.classList.add('is-crowned');
         if (towerObj.tier >= 5) tower.classList.add('is-scion');
         if (isTwinCrown) tower.classList.add('is-twin-crown');
+        if (isTriElement) tower.classList.add('is-tri-element');
+        if (isPrimalCore) tower.classList.add('is-primal-core');
         if (scionAura && scionAura.active) tower.classList.add('has-scion-aura');
         if ((towerObj.stunnedMs || 0) > 0) tower.classList.add('stunned');
+
+        const palTier = getTowerPaletteForType(towerObj.type, getThemeTokens());
+        if (towerObj.tier === 3 || towerObj.tier === 4) {
+            const tierRing = document.createElement('div');
+            tierRing.className = `tower-tier-ring tier-ring-${towerObj.tier}${isTwinCrown ? ' is-twin' : ''}`;
+            tierRing.setAttribute('aria-hidden', 'true');
+            tierRing.style.setProperty('--tier-ring-color', (palTier && palTier.rune) || '#D97724');
+            tierRing.style.setProperty('--tier-ring-secondary', (palTier && palTier.glow) || '#E0B43C');
+            tower.appendChild(tierRing);
+        }
+        if (towerObj.tier >= 5) {
+            const scionCircle = document.createElement('div');
+            scionCircle.className = 'tower-scion-circle';
+            scionCircle.setAttribute('aria-hidden', 'true');
+            scionCircle.innerHTML = '<svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="37" fill="none" stroke="#E0B43C" stroke-width="1.3" stroke-dasharray="5 3"/><circle cx="40" cy="40" r="30" fill="none" stroke="#D97724" stroke-width="1.1" opacity="0.85"/><polygon points="40,5 48,32 75,40 48,48 40,75 32,48 5,40 32,32" fill="none" stroke="#E0B43C" stroke-width="1.1" opacity="0.72"/><polygon points="16,16 40,26 64,16 54,40 64,64 40,54 16,64 26,40" fill="none" stroke="#D97724" stroke-width="1" opacity="0.6"/></svg>';
+            tower.appendChild(scionCircle);
+        }
 
         const { baseSvgHtml, headSvgHtml } = createTowerSvgParts(towerObj.type, towerObj.tier);
         const baseLayer = document.createElement('div'); baseLayer.classList.add('tower-base-layer'); baseLayer.innerHTML = baseSvgHtml;
@@ -1322,8 +1530,12 @@
         const name = document.createElement('div'); name.classList.add('tower-name');
         let labelText = '';
         const isEnBadge = Boolean(GameApp.i18n && typeof GameApp.i18n.isEnglish === 'function' && GameApp.i18n.isEnglish());
-        if (towerObj.tier >= 5) {
+        if (isPrimalCore) {
+            labelText = isEnBadge ? '5★C' : '5★核';
+        } else if (towerObj.tier >= 5) {
             labelText = isEnBadge ? '5★S' : '5★神';
+        } else if (isTriElement && towerObj.tier === 4) {
+            labelText = isEnBadge ? 'Tri4★' : '三4★';
         } else if (towerObj.tier === 4) {
             labelText = `${branchCode || ''}4★`;
         } else {
@@ -1768,8 +1980,212 @@
         st.treeHitShakeTimer = G.callbacks.scheduleTimeout(() => {
             if (G.dom.boardStageEl) G.dom.boardStageEl.classList.remove('tree-hit-shake');
             st.treeHitShakeTimer = null;
-    }, 160);
-}
+        }, 160);
+    }
+
+    function emitAscendRuneFX(cellIndex, tier = 4) {
+        if (!G || !Number.isFinite(cellIndex)) return;
+        const c = indexToCoords(cellIndex);
+        const pos = getCellCenter(c.x, c.y);
+        const m = G.boardMetrics || { cellW: 36 };
+        const isTier5 = Number(tier) >= 5;
+        const radiusOuter = Math.max(30, m.cellW * (isTier5 ? 1.55 : 1.25));
+        const radiusInner = Math.max(18, m.cellW * (isTier5 ? 0.95 : 0.78));
+        emitRingFX(pos.left, pos.top, radiusOuter, '#E0B43C', 0.34, isTier5 ? 520 : 400);
+        emitRingFX(pos.left, pos.top, radiusInner, '#F4F1EA', 0.25, isTier5 ? 380 : 300);
+        emitParticleBurst(pos.left, pos.top, '#E0B43C', isTier5 ? 24 : 16, isTier5 ? 140 : 105);
+        emitHitFlash(pos.left, pos.top, '#E0B43C');
+        const stage = G.dom.boardStageEl;
+        if (stage) {
+            stage.classList.remove('ascend-shake');
+            void stage.offsetWidth;
+            stage.classList.add('ascend-shake');
+            if (G.callbacks && typeof G.callbacks.scheduleTimeout === 'function') {
+                G.callbacks.scheduleTimeout(() => {
+                    if (G.dom.boardStageEl) G.dom.boardStageEl.classList.remove('ascend-shake');
+                }, 120);
+            } else {
+                setTimeout(() => { if (stage) stage.classList.remove('ascend-shake'); }, 120);
+            }
+        }
+    }
+
+    let bossBannerTimer = null;
+    function triggerBossEntranceBanner(bossMeta, waveNum) {
+        if (!G || !G.dom || !G.dom.bossEntranceBannerEl || !bossMeta) return;
+        const banner = G.dom.bossEntranceBannerEl;
+        const isEn = Boolean(GameApp.i18n && typeof GameApp.i18n.isEnglish === 'function' && GameApp.i18n.isEnglish());
+        if (G.dom.bossEntranceKickerEl) {
+            G.dom.bossEntranceKickerEl.innerText = isEn
+                ? `Wave ${waveNum} Boss Warning`
+                : `第 ${waveNum} 波 領主降臨`;
+        }
+        if (G.dom.bossEntranceTitleEl) {
+            G.dom.bossEntranceTitleEl.innerText = bossMeta.name || (isEn ? 'Apex Boss' : '領主魔王');
+        }
+        if (G.dom.bossEntranceSubEl) {
+            const weakLabel = (GameApp.i18n && typeof GameApp.i18n.getWeaknessLabel === 'function')
+                ? GameApp.i18n.getWeaknessLabel(bossMeta.weakness)
+                : (bossMeta.weakness || '');
+            G.dom.bossEntranceSubEl.innerText = isEn
+                ? `Weak: ${weakLabel} · ARM ${bossMeta.armor || 0} · HP ${bossMeta.hp || 0}`
+                : `弱點：${weakLabel} · 護甲 ${bossMeta.armor || 0} · 生命 ${bossMeta.hp || 0}`;
+        }
+        banner.classList.remove('hidden', 'is-showing', 'weak-fire', 'weak-ice', 'weak-thunder');
+        if (bossMeta.weakness) banner.classList.add(`weak-${bossMeta.weakness}`);
+        void banner.offsetWidth;
+        banner.classList.add('is-showing');
+        if (bossBannerTimer) clearTimeout(bossBannerTimer);
+        const scheduleFn = (G.callbacks && typeof G.callbacks.scheduleTimeout === 'function')
+            ? G.callbacks.scheduleTimeout
+            : setTimeout;
+        bossBannerTimer = scheduleFn(() => {
+            if (G.dom.bossEntranceBannerEl) {
+                G.dom.bossEntranceBannerEl.classList.remove('is-showing');
+                G.dom.bossEntranceBannerEl.classList.add('hidden');
+            }
+            bossBannerTimer = null;
+        }, 820);
+    }
+
+    function applyWeatherVisualClass(weatherType) {
+        if (!G || !G.dom || !G.dom.boardStageEl) return;
+        const stage = G.dom.boardStageEl;
+        stage.classList.remove('weather-sun', 'weather-snow', 'weather-storm');
+        if (weatherType === 'sun' || weatherType === 'snow' || weatherType === 'storm') {
+            stage.classList.add(`weather-${weatherType}`);
+        }
+    }
+
+    let lobbyBgRafId = null;
+    let lobbyAmbientParticles = null;
+    function stopLobbyAmbientCanvas() {
+        if (lobbyBgRafId !== null) {
+            cancelAnimationFrame(lobbyBgRafId);
+            lobbyBgRafId = null;
+        }
+    }
+
+    function startLobbyAmbientCanvas() {
+        if (typeof document === 'undefined') return;
+        const canvas = document.getElementById('lobby-bg-canvas');
+        if (!canvas || !canvas.getContext) return;
+        stopLobbyAmbientCanvas();
+        if (!lobbyAmbientParticles) {
+            lobbyAmbientParticles = Array.from({ length: 34 }, (_, i) => ({
+                x: Math.random(),
+                y: Math.random(),
+                vx: (Math.random() - 0.5) * 0.018,
+                vy: i % 3 === 0 ? -(0.012 + Math.random() * 0.014) : (0.014 + Math.random() * 0.016),
+                phase: Math.random() * Math.PI * 2,
+                size: 2.2 + Math.random() * 3.0,
+                isSpore: i % 3 === 0
+            }));
+        }
+        let prevTs = 0;
+        const renderFrame = (ts) => {
+            if (!G || !G.dom || !G.dom.startOverlayEl || G.dom.startOverlayEl.classList.contains('hidden')) {
+                lobbyBgRafId = null;
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const w = Math.max(320, Math.round(rect.width || window.innerWidth || 1280));
+            const h = Math.max(240, Math.round(rect.height || window.innerHeight || 720));
+            if (canvas.width !== w || canvas.height !== h) {
+                canvas.width = w;
+                canvas.height = h;
+            }
+            const dt = prevTs ? Math.min(0.08, (ts - prevTs) / 1000) : 0.016;
+            prevTs = ts;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            ctx.clearRect(0, 0, w, h);
+            const pulse = 0.5 + 0.5 * Math.sin(ts * 0.0014);
+            const cx = w * 0.5;
+            const cy = h * 0.44;
+            const canopyR = Math.min(w, h) * 0.34;
+
+            // 世界樹樹冠呼吸暖光與剪影
+            const halo = ctx.createRadialGradient(cx, cy, canopyR * 0.08, cx, cy, canopyR * 1.15);
+            halo.addColorStop(0, `rgba(217, 119, 36, ${0.14 + pulse * 0.08})`);
+            halo.addColorStop(0.5, `rgba(46, 86, 62, ${0.18 + pulse * 0.06})`);
+            halo.addColorStop(1, 'rgba(27, 33, 30, 0)');
+            ctx.fillStyle = halo;
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.save();
+            ctx.translate(cx, h * 0.86);
+            const treeH = Math.min(h * 0.62, 420);
+            ctx.fillStyle = 'rgba(20, 28, 24, 0.72)';
+            ctx.beginPath();
+            ctx.moveTo(-treeH * 0.24, 0);
+            ctx.quadraticCurveTo(-treeH * 0.08, -treeH * 0.26, -treeH * 0.06, -treeH * 0.62);
+            ctx.lineTo(-treeH * 0.26, -treeH * 0.84);
+            ctx.lineTo(-treeH * 0.09, -treeH * 0.78);
+            ctx.lineTo(0, -treeH);
+            ctx.lineTo(treeH * 0.09, -treeH * 0.78);
+            ctx.lineTo(treeH * 0.26, -treeH * 0.84);
+            ctx.lineTo(treeH * 0.06, -treeH * 0.62);
+            ctx.quadraticCurveTo(treeH * 0.08, -treeH * 0.26, treeH * 0.24, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            // 呼吸樹冠葉群
+            ctx.fillStyle = `rgba(42, 74, 54, ${0.34 + pulse * 0.08})`;
+            const lobes = [
+                [-0.22, -0.78, 0.24], [0.22, -0.78, 0.24],
+                [-0.12, -0.92, 0.26], [0.12, -0.92, 0.26],
+                [0, -0.84, 0.30]
+            ];
+            for (let i = 0; i < lobes.length; i++) {
+                ctx.beginPath();
+                ctx.arc(treeH * lobes[i][0], treeH * lobes[i][1], treeH * lobes[i][2], 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 年輪核心微光點
+            ctx.fillStyle = `rgba(224, 180, 60, ${0.42 + pulse * 0.32})`;
+            ctx.beginPath();
+            ctx.arc(0, -treeH * 0.52, 5 + pulse * 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // 飄落林葉與金孢子粒子
+            ctx.save();
+            for (let i = 0; i < lobbyAmbientParticles.length; i++) {
+                const pt = lobbyAmbientParticles[i];
+                pt.x += (pt.vx + Math.sin(ts * 0.0012 + pt.phase) * 0.008) * dt;
+                pt.y += pt.vy * dt;
+                if (pt.y > 1.06) { pt.y = -0.05; pt.x = Math.random(); }
+                if (pt.y < -0.06) { pt.y = 1.05; pt.x = Math.random(); }
+                if (pt.x < -0.05) pt.x = 1.04;
+                if (pt.x > 1.05) pt.x = -0.04;
+                const px = pt.x * w;
+                const py = pt.y * h;
+                ctx.save();
+                if (pt.isSpore) {
+                    ctx.globalAlpha = 0.45 + 0.3 * Math.sin(ts * 0.004 + pt.phase);
+                    ctx.fillStyle = '#E0B43C';
+                    ctx.beginPath();
+                    ctx.arc(px, py, pt.size * 0.65, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.globalAlpha = 0.38;
+                    ctx.fillStyle = i % 2 === 0 ? '#4E9A68' : '#74B88A';
+                    ctx.translate(px, py);
+                    ctx.rotate(pt.phase + ts * 0.0008);
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, pt.size, pt.size * 0.48, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+            ctx.restore();
+            lobbyBgRafId = requestAnimationFrame(renderFrame);
+        };
+        lobbyBgRafId = requestAnimationFrame(renderFrame);
+    }
 
     const RendererModule = {
     bind,
@@ -1810,7 +2226,12 @@
     showDragRangePreview,
     updateRangeIndicator,
     updateWorldTreeVisualState,
-    triggerWorldTreeShake
+    triggerWorldTreeShake,
+    emitAscendRuneFX,
+    triggerBossEntranceBanner,
+    applyWeatherVisualClass,
+    startLobbyAmbientCanvas,
+    stopLobbyAmbientCanvas
 };
 
 GameApp.core = GameApp.core || {};

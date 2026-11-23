@@ -307,6 +307,90 @@
                 unlockRule: '合成兩座 ☄️ 高階電漿 (2★) 並選擇分支 B 解鎖',
                 defaultUnlocked: false,
                 cardClass: 'codex-steam'
+            },
+            storm_tri: {
+                title: '⛈️ 天災風暴樹',
+                nodeTier: 3,
+                family: 'storm_tri',
+                branchCode: '三',
+                formula: '💨 高階蒸氣 (2★) ＋ ⚡ 雷紋 (2★)（共 4U，三元融合）',
+                mech: '射程 3.5 格｜攻速 1.00s｜主炮 110 ＋雲傷 60.3/s（4U，多目標 291 DPS）｜全體恆享 1.26× 親和｜生成 2.2 格漂移熾凍雷雲（45% 穿甲＋35% 緩速），雲內死亡觸發 15% 最大生命殉爆。',
+                synergy: '融合蒸氣破甲與雷雲持續群傷，對 100% 怪物（含無盡輪換魔王）無屬性盲區。',
+                unlockRule: '以任意 2★ 蒸氣 ＋ 2★ 雷紋拖拉融合解鎖（3★／4U）',
+                defaultUnlocked: false,
+                cardClass: 'codex-thunder'
+            },
+            storm_tri_4: {
+                title: '⛈️ 太古天災風暴樹',
+                nodeTier: 4,
+                family: 'storm_tri',
+                branchCode: '4★',
+                formula: '💨 蒸氣冠枝 (3★) ＋ ⚡ 雷冠枝 (3★) 或餵滿 8U',
+                mech: '射程 3.8 格｜攻速 0.90s｜主炮 230 ＋雲傷 115/s（8U）｜全體 1.26× 親和｜2.2 格熾凍雷雲 45% 穿甲與 42% 緩速，雲內擊殺持續引發 15% 殉爆。',
+                synergy: '餵滿 16U 或與另一座異種 4★ 三元塔互合可覺醒唯一 5★ 原初之核。',
+                unlockRule: '3★ 蒸氣冠枝 ＋ 3★ 雷冠枝融合，或將天災風暴樹餵滿 8U 解鎖',
+                defaultUnlocked: false,
+                cardClass: 'codex-thunder'
+            },
+            starforge_tri: {
+                title: '🌋 星界熔爐樹',
+                nodeTier: 3,
+                family: 'starforge_tri',
+                branchCode: '三',
+                formula: '💠 高階磁環 (2★) ＋ 🔥 炎核 (2★)（共 4U，三元融合）',
+                mech: '射程 3.4 格｜攻速 1.15s｜單發 101（4U）｜全體恆享 1.26× 親和｜超新星爆發：1.8 格引力聚怪＋0.5s 凍結（受首領減半與冷卻免疫約束）＋40% 破甲＋50% 重傷。',
+                synergy: '強控聚怪兼重裝破防核心，大幅放大群攻陣線的清場效率。',
+                unlockRule: '以任意 2★ 磁環 ＋ 2★ 炎核拖拉融合解鎖（3★／4U）',
+                defaultUnlocked: false,
+                cardClass: 'codex-fire'
+            },
+            starforge_tri_4: {
+                title: '🌋 太古星界熔爐樹',
+                nodeTier: 4,
+                family: 'starforge_tri',
+                branchCode: '4★',
+                formula: '💠 磁環冠枝 (3★) ＋ 🔥 火冠枝 (3★) 或餵滿 8U',
+                mech: '射程 3.7 格｜攻速 1.00s｜單發 211（8U）｜全體 1.26× 親和｜2.0 格超新星聚怪＋0.55s 凍結＋48% 破甲＋55% 重傷。',
+                synergy: '餵滿 16U 或與另一座異種 4★ 三元塔互合可覺醒唯一 5★ 原初之核。',
+                unlockRule: '3★ 磁環冠枝 ＋ 3★ 火冠枝融合，或將星界熔爐樹餵滿 8U 解鎖',
+                defaultUnlocked: false,
+                cardClass: 'codex-fire'
+            },
+            prism_tri: {
+                title: '❄️ 絕對零度稜鏡',
+                nodeTier: 3,
+                family: 'prism_tri',
+                branchCode: '三',
+                formula: '☄️ 高階電漿 (2★) ＋ ❄️ 霜晶 (2★)（共 4U，三元融合）',
+                mech: '射程 3.9 格｜攻速 0.40s｜單束 38（4U，單體 95 / 3 束 199 DPS）｜全體恆享 1.26× 親和｜1 主＋2 副折射光束，疊滿 5 層熱脹冷縮脆化觸發 2.0× 碎晶爆發並冰封 0.8s。',
+                synergy: '兼顧多線連擊與週期冰封爆發，對高護甲或高機動突圍單位俱佳。',
+                unlockRule: '以任意 2★ 電漿 ＋ 2★ 霜晶拖拉融合解鎖（3★／4U）',
+                defaultUnlocked: false,
+                cardClass: 'codex-ice'
+            },
+            prism_tri_4: {
+                title: '❄️ 太古絕對零度稜鏡',
+                nodeTier: 4,
+                family: 'prism_tri',
+                branchCode: '4★',
+                formula: '☄️ 電漿冠枝 (3★) ＋ ❄️ 冰冠枝 (3★) 或餵滿 8U',
+                mech: '射程 4.2 格｜攻速 0.36s｜單束 79（8U）｜全體 1.26× 親和｜3 光束 62% 折射疊層加速，滿 5 層觸發 2.25× 碎晶爆發與 0.9s 冰封。',
+                synergy: '餵滿 16U 或與另一座異種 4★ 三元塔互合可覺醒唯一 5★ 原初之核。',
+                unlockRule: '3★ 電漿冠枝 ＋ 3★ 冰冠枝融合，或將絕對零度稜鏡餵滿 8U 解鎖',
+                defaultUnlocked: false,
+                cardClass: 'codex-ice'
+            },
+            primal_core: {
+                title: '✦ 創世世界樹·原初之核',
+                nodeTier: 5,
+                family: 'primal_core',
+                branchCode: '核',
+                formula: '任意三元塔餵滿 16U，或兩座不同 4★ 三元塔互合（全圖唯一限 1 座）',
+                mech: '射程 4.6 格｜攻速 0.85s｜單發 476（16U，30% 穿甲＋1.6 格 72% 濺射）｜全體恆享 1.26× 親和｜牽引周圍 8 格友塔金色靈脈，每 5 秒彙整全元素釋放一次創世脈動。',
+                synergy: '戰場中樞唯一奇觀！場上已存在 1 座時，系統將禁止再合成或升級第 2 座原初之核。',
+                unlockRule: '將任意三元塔充能至 16U，或兩座不同 4★ 三元塔融合覺醒',
+                defaultUnlocked: false,
+                cardClass: 'codex-plasma'
             }
         },
         monsters: {
@@ -439,7 +523,11 @@
         thunder_twin: '連鎖天雷電網＋2.4x 穿甲落雷雙極',
         steam_twin: '高壓蒸氣池＋霜霧群緩易傷雙極',
         magnet_twin: '奇點回拉聚怪＋電磁感電超載雙極',
-        plasma_twin: '8 層聚變死光＋雙副束折射雙極'
+        plasma_twin: '8 層聚變死光＋雙副束折射雙極',
+        tri_storm_cloud: '2.2 格漂移熾凍雷雲＋45% 穿甲＋15% 殉爆',
+        tri_starforge_nova: '1.8 格聚怪凍結＋40% 破甲超新星＋重傷',
+        tri_prism_zero: '3 束折射＋5 層脆化碎晶爆發冰封',
+        primal_genesis: '8 鄰金色靈脈＋5s 全元素創世脈動'
     };
 
     const ATTACK_STYLE_LABELS_EN = {
@@ -465,7 +553,11 @@
         thunder_twin: 'Dual Chain Grid + 2.4x Verdict',
         steam_twin: 'Dual Steam Pool + Chilling Fog Vuln',
         magnet_twin: 'Dual Gravity Pull + Shock Overload',
-        plasma_twin: 'Dual 8-Stack Deathray + Refract Beams'
+        plasma_twin: 'Dual 8-Stack Deathray + Refract Beams',
+        tri_storm_cloud: '2.2-Cell Storm Cloud + 45% Pierce + 15% Martyr Burst',
+        tri_starforge_nova: '1.8-Cell Vortex Freeze + 40% Shred Nova + Wound',
+        tri_prism_zero: '3-Beam Refract + 5-Stack Shatter Freeze',
+        primal_genesis: '8-Neighbor Ley-Lines + 5s Genesis Pulse'
     };
 
     /**

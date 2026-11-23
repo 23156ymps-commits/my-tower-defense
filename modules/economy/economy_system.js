@@ -453,7 +453,7 @@
             const prevPrice = Number(rec.price) || 20;
             const r_e = Number.isFinite(ratios[el]) ? ratios[el] : (1 / 3);
             const mu_intel = computeStockIntelSignal(r_e);
-            const rawNoise = options.deterministic ? 0 : ((Math.random() * 2 - 1) * noiseAmp);
+            const rawNoise = options.deterministic ? 0 : (((((GameApp.helpers && GameApp.helpers.nextRunRandom) ? GameApp.helpers.nextRunRandom() : Math.random())) * 2 - 1) * noiseAmp);
             let effectiveRate = mu_intel + rawNoise;
             // 控制噪聲幅度，避免預告訊號反轉失靈
             if (mu_intel > 0.012) {
@@ -500,7 +500,7 @@
         if (candidates.length === 0) return { ok: false, reason: 'all_max_shares' };
         const picked = options.elementKey && candidates.includes(options.elementKey)
             ? options.elementKey
-            : candidates[Math.floor(Math.random() * candidates.length)];
+            : candidates[Math.floor(((GameApp.helpers && GameApp.helpers.nextRunRandom) ? GameApp.helpers.nextRunRandom() : Math.random()) * candidates.length)];
         const rec = st.stocks[picked];
         rec.shares += 1;
         return {
@@ -651,7 +651,7 @@
 
     function pickRandomFromArray(arr, randVal = null) {
         if (!Array.isArray(arr) || arr.length === 0) return null;
-        const r = Number.isFinite(randVal) ? Math.max(0, Math.min(0.999999, randVal)) : Math.random();
+        const r = Number.isFinite(randVal) ? Math.max(0, Math.min(0.999999, randVal)) : ((GameApp.helpers && GameApp.helpers.nextRunRandom) ? GameApp.helpers.nextRunRandom() : Math.random());
         return arr[Math.floor(r * arr.length)];
     }
 
@@ -677,7 +677,7 @@
 
         const streak = st ? Math.max(0, Number(st.blindBox1StarStreak) || 0) : 0;
         const isPityTriggered = Boolean(options.forcePity || streak >= pityThreshold);
-        const r = Number.isFinite(options.rollValue) ? options.rollValue : Math.random();
+        const r = Number.isFinite(options.rollValue) ? options.rollValue : ((GameApp.helpers && GameApp.helpers.nextRunRandom) ? GameApp.helpers.nextRunRandom() : Math.random());
 
         let kind = 'tower';
         let tier = 1;

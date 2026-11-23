@@ -56,6 +56,25 @@
         ['waveDisplay', 'wave-display'], ['wavePhaseTagEl', 'wave-phase-tag'], ['bestWaveDisplay', 'best-wave-display'], ['msgText', 'msg-text'],
         ['startOverlayEl', 'start-overlay'], ['mapSelectorGridEl', 'map-selector-grid'], ['mapRecordForestEl', 'map-record-forest'],
         ['mapRecordLavaEl', 'map-record-lava'], ['mapRecordFrostEl', 'map-record-frost'], ['startGameBtn', 'start-game-btn'],
+        ['bossEntranceBannerEl', 'boss-entrance-banner'], ['bossEntranceKickerEl', 'boss-entrance-kicker'],
+        ['bossEntranceTitleEl', 'boss-entrance-title'], ['bossEntranceSubEl', 'boss-entrance-sub'],
+        ['lobbyHonorBadgeEl', 'lobby-honor-badge'], ['lobbySoundBtn', 'lobby-sound-btn'],
+        ['lobbyStepHubEl', 'lobby-step-hub'], ['lobbyModeGridEl', 'lobby-mode-grid'],
+        ['modeCardCampaignEl', 'mode-card-campaign'], ['modeCardEndlessEl', 'mode-card-endless'],
+        ['modeCardDailyEl', 'mode-card-daily'], ['modeCardPuzzleEl', 'mode-card-puzzle'],
+        ['modeMetaCampaignEl', 'mode-meta-campaign'], ['modeMetaEndlessEl', 'mode-meta-endless'],
+        ['modeEnterEndlessEl', 'mode-enter-endless'], ['modeMetaDailyEl', 'mode-meta-daily'],
+        ['modeMetaPuzzleEl', 'mode-meta-puzzle'], ['lobbyStepSetupEl', 'lobby-step-setup'],
+        ['lobbySetupBackBtn', 'lobby-setup-back-btn'], ['lobbySetupModeTitleEl', 'lobby-setup-mode-title'],
+        ['lobbySetupModeBadgeEl', 'lobby-setup-mode-badge'], ['setupCampaignPaneEl', 'setup-campaign-pane'],
+        ['setupDailyPaneEl', 'setup-daily-pane'], ['setupPuzzlePaneEl', 'setup-puzzle-pane'],
+        ['dailyDateLabelEl', 'daily-date-label'], ['dailySeedLabelEl', 'daily-seed-label'],
+        ['dailyMapLabelEl', 'daily-map-label'], ['dailyWeatherLabelEl', 'daily-weather-label'],
+        ['dailyStatusLabelEl', 'daily-status-label'], ['puzzleSelectorGridEl', 'puzzle-selector-grid'],
+        ['puzzleDetailTitleEl', 'puzzle-detail-title'], ['puzzleDetailMetaEl', 'puzzle-detail-meta'],
+        ['puzzleDetailDescEl', 'puzzle-detail-desc'], ['puzzleDetailHintEl', 'puzzle-detail-hint'],
+        ['lobbyCodexBtn', 'lobby-codex-btn'], ['lobbyGuideBtn', 'lobby-guide-btn'],
+        ['victoryModeBannerEl', 'victory-mode-banner'], ['gameoverModeBannerEl', 'gameover-mode-banner'],
         ['victoryOverlayEl', 'victory-overlay'], ['victoryStarsEl', 'victory-stars'], ['victoryRankTextEl', 'victory-rank-text'],
         ['victoryMapTextEl', 'victory-map-text'], ['victoryKillsTextEl', 'victory-kills-text'], ['victoryHpTextEl', 'victory-hp-text'],
         ['victoryGoldTextEl', 'victory-gold-text'], ['victoryMvpTextEl', 'victory-mvp-text'], ['victoryGoldEarnedTextEl', 'victory-gold-earned-text'],
@@ -158,6 +177,80 @@
 
     const selectedContracts = new Set();
 
+    let selectedGameMode = 'campaign';
+    let selectedPuzzleId = (Array.isArray(CONFIG.PUZZLE_TRIALS) && CONFIG.PUZZLE_TRIALS[0]) ? CONFIG.PUZZLE_TRIALS[0].id : 'puzzle_armor_breach';
+    let lobbyViewStep = 'hub';
+
+    function resolveDefaultWeatherForMap(mapId) {
+        if (mapId === 'frost') return 'snow';
+        if (mapId === 'lava') return 'storm';
+        return 'sun';
+    }
+
+    function getWeatherLabel(weatherType) {
+        if (weatherType === 'snow') return L('霜雪寒林（微雪飄降）', 'Frost Drift (Light Snow)');
+        if (weatherType === 'storm') return L('雷暴微雨（偶發電閃）', 'Tempest Mist (Lightning)');
+        return L('熾陽暖森（金孢晨曦）', 'Sunlit Canopy (Amber Spores)');
+    }
+
+    function getPuzzleTrialById(puzzleId) {
+        const list = Array.isArray(CONFIG.PUZZLE_TRIALS) ? CONFIG.PUZZLE_TRIALS : [];
+        return list.find(p => p && p.id === puzzleId) || list[0] || null;
+    }
+
+    function buildPuzzleWavePlan(trialSpec) {
+        const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
+        const queue = [];
+        let bossMeta = null;
+        let spawnIntervalMs = 950;
+        const specs = (trialSpec && Array.isArray(trialSpec.queueSpecs)) ? trialSpec.queueSpecs : [];
+        const mapSpec = WaveSys && typeof WaveSys.getCurrentMapSpec === 'function' ? WaveSys.getCurrentMapSpec() : null;
+        const hasAltRoute = Boolean(mapSpec && Array.isArray(mapSpec.altWaypoints) && mapSpec.altWaypoints.length >= 2);
+        specs.forEach((sp, spIdx) => {
+            const refWave = Math.max(1, Number(sp.waveLevel) || Number(trialSpec && trialSpec.wave) || 5);
+            const refPlan = WaveSys && typeof WaveSys.buildWaveQueue === 'function' ? WaveSys.buildWaveQueue(refWave) : null;
+            if (refPlan && refPlan.spawnIntervalMs) spawnIntervalMs = refPlan.spawnIntervalMs;
+            const refNormal = (refPlan && Array.isArray(refPlan.queue)) ? refPlan.queue.find(q => !q.isBoss) : null;
+            const refBoss = (refPlan && Array.isArray(refPlan.queue)) ? refPlan.queue.find(q => q.isBoss) : null;
+            const mCfg = monsterDb[sp.type] || {};
+            const cnt = Math.max(1, Math.floor(Number(sp.count) || 1));
+            if (sp.isBoss && refBoss) {
+                queue.push(Object.assign({}, refBoss, { useAltRoute: false }));
+                bossMeta = refPlan.bossMeta || {
+                    name: refBoss.bossName || mCfg.name || 'Boss',
+                    weakness: (refBoss.bossSpec && refBoss.bossSpec.weakness) || mCfg.weakness || 'ice',
+                    armor: refBoss.armor || 16,
+                    hp: refBoss.bossHp || 2978
+                };
+                return;
+            }
+            let armor = Number(mCfg.baseArmor) || 0;
+            if (armor > 0 && Number.isFinite(mCfg.armorGrowthPerWave)) {
+                armor = Math.min(mCfg.maxArmor || 20, armor + Math.max(0, refWave - (mCfg.minWave || 4)) * mCfg.armorGrowthPerWave);
+            }
+            for (let i = 0; i < cnt; i++) {
+                queue.push({
+                    typeKey: sp.type,
+                    hpScale: refNormal ? refNormal.hpScale : 1,
+                    rewardBonus: refNormal ? refNormal.rewardBonus : 0,
+                    isElite: false,
+                    isBoss: false,
+                    armor,
+                    useAltRoute: hasAltRoute && ((i + spIdx) % 2 === 1)
+                });
+            }
+        });
+        return {
+            queue,
+            eliteCount: 0,
+            eliteArmor: 0,
+            bossMeta,
+            crisisSpec: null,
+            hasThief: false,
+            spawnIntervalMs
+        };
+    }
+
     function createInitialMatchState(mapId = 'forest', initialWaveState = 'WAITING_START', nextSessionId = 1, keepSpeed = 1, contractsOverride = null) {
         const maps = getMapsConfig();
         const spec = maps[mapId] || maps.forest || { id: 'forest', name: L('晨光森林', 'Sunlit Woods'), startGoldBonus: 0 };
@@ -212,6 +305,12 @@
             activeBlessings: new Set(), blessingGrantedWaves: new Set(), blessingChoices: [],
             seedPityCount: 0, treeHitShakeTimer: null,
             bestWave: Backend.getMapBestWave(spec.id), currentWave: 1, killsCount: 0,
+            gameMode: selectedGameMode || 'campaign',
+            dailyDateKey: null,
+            dailySeedCode: null,
+            puzzleId: null,
+            puzzleSpec: null,
+            weatherType: resolveDefaultWeatherForMap(spec.id),
             towerUidCounter: 1, totalTeamDamage: 0, totalGoldEarned: 0, fusionCount: 0,
             crownedUsedCount: 0, elapsedPlayMs: 0,
             peakTowerSnapshot: null, lastBreakerName: '',
@@ -247,7 +346,7 @@
         cellElements: [],
         towerElements: Array(CONFIG.BOARD_SIZE || 150).fill(null),
         monsterDomMap: new Map(),
-        fxEntities: { projectiles: [], bolts: [], beams: [], rings: [], particles: [], flashes: [], leaves: [], leafEmitAccMs: 0, frenzyFxAccMs: 0 },
+        fxEntities: { projectiles: [], bolts: [], beams: [], rings: [], particles: [], flashes: [], leaves: [], weatherParticles: [], stormFlashMs: 0, stormFlashCdMs: 5200, leafEmitAccMs: 0, frenzyFxAccMs: 0 },
         callbacks: {}
     };
 
@@ -360,9 +459,12 @@
         const records = Backend.loadMapRecords();
         const career = Backend.loadCareerStats ? Backend.loadCareerStats() : { bestWaveOverall: 1, totalClears: 0 };
         if (G.dom.startCareerBannerEl) {
+            const endlessSuffix = (career.endlessBestWave || 0) > 0
+                ? L(` · 無盡最高第 ${career.endlessBestWave} 波`, ` · Endless W${career.endlessBestWave}`)
+                : '';
             G.dom.startCareerBannerEl.innerText = L(
-                `全圖最高第 ${career.bestWaveOverall || 1} 波 · 累計通關 ${career.totalClears || 0} 次`,
-                `Best Wave ${career.bestWaveOverall || 1} · Total Clears ${career.totalClears || 0}`
+                `全圖最高第 ${career.bestWaveOverall || 1} 波 · 累計通關 ${career.totalClears || 0} 次${endlessSuffix}`,
+                `Best Wave ${career.bestWaveOverall || 1} · Clears ${career.totalClears || 0}${endlessSuffix}`
             );
         }
         if (G.dom.mapSelectorGridEl) {
@@ -394,12 +496,198 @@
                 `Meta Rings (${cnt}/12) · ${pts} ★`
             );
         }
+        if (G.dom.lobbyHonorBadgeEl) {
+            G.dom.lobbyHonorBadgeEl.innerText = L(`榮譽 ${pts} ★`, `Honor ${pts} ★`);
+        }
         if (G.dom.metaTreeHonorBadgeEl) {
             G.dom.metaTreeHonorBadgeEl.innerText = L(
                 `可用榮譽 ${pts} ★`,
                 `Honor ${pts} ★`
             );
         }
+    }
+
+    function getDailySpecSafe() {
+        if (GameApp.helpers && typeof GameApp.helpers.getDailyChallengeSpec === 'function') {
+            return GameApp.helpers.getDailyChallengeSpec();
+        }
+        return { dateKey: '2026-01-01', seedString: 'daily:2026-01-01', seedCode: 123456, mapId: 'forest', weather: 'sun' };
+    }
+
+    function renderDailyBriefingUI() {
+        const spec = getDailySpecSafe();
+        const maps = getMapsConfig();
+        const mapName = (maps[spec.mapId] && maps[spec.mapId].name) || spec.mapId;
+        const dailyRecs = (Backend && typeof Backend.loadDailyRecords === 'function') ? Backend.loadDailyRecords() : {};
+        const rec = dailyRecs[spec.dateKey];
+        if (G.dom.dailyDateLabelEl) G.dom.dailyDateLabelEl.innerText = spec.dateKey;
+        if (G.dom.dailySeedLabelEl) G.dom.dailySeedLabelEl.innerText = `#${Number(spec.seedCode || 0).toString(16).toUpperCase().padStart(8, '0')}`;
+        if (G.dom.dailyMapLabelEl) G.dom.dailyMapLabelEl.innerText = mapName;
+        if (G.dom.dailyWeatherLabelEl) G.dom.dailyWeatherLabelEl.innerText = getWeatherLabel(spec.weather);
+        if (G.dom.dailyStatusLabelEl) {
+            if (!rec) {
+                G.dom.dailyStatusLabelEl.innerText = L('今日尚未出戰', 'Not attempted yet');
+            } else if (rec.cleared) {
+                G.dom.dailyStatusLabelEl.innerText = L(
+                    `已通關 ${'★'.repeat(Math.max(1, rec.bestStars || 1))} · 最高榮譽 ${rec.honorScore || 0}`,
+                    `Cleared ${'★'.repeat(Math.max(1, rec.bestStars || 1))} · Honor ${rec.honorScore || 0}`
+                );
+            } else {
+                G.dom.dailyStatusLabelEl.innerText = L(
+                    `最佳第 ${rec.bestWave || 1} / ${CONFIG.VICTORY_WAVE || 10} 波`,
+                    `Best W${rec.bestWave || 1}/${CONFIG.VICTORY_WAVE || 10}`
+                );
+            }
+        }
+    }
+
+    function renderPuzzleSelectorUI() {
+        const trials = Array.isArray(CONFIG.PUZZLE_TRIALS) ? CONFIG.PUZZLE_TRIALS : [];
+        const records = (Backend && typeof Backend.loadPuzzleRecords === 'function') ? Backend.loadPuzzleRecords() : {};
+        const cur = getPuzzleTrialById(selectedPuzzleId);
+        if (G.dom.puzzleSelectorGridEl) {
+            G.dom.puzzleSelectorGridEl.innerHTML = '';
+            trials.forEach((tr) => {
+                const isSel = cur && cur.id === tr.id;
+                const rec = records[tr.id];
+                const isCleared = Boolean(rec && rec.cleared);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `puzzle-trial-btn${isSel ? ' selected' : ''}${isCleared ? ' is-cleared' : ''}`;
+                btn.dataset.puzzleId = tr.id;
+                btn.innerHTML = `<span class="puzzle-btn-title">${L(tr.titleZh, tr.titleEn)}</span><span class="puzzle-btn-status">${isCleared ? L(`已破局 · 餘 ${rec.bestRemainingGold || 0} 💰`, `Cleared · ${rec.bestRemainingGold || 0} 💰`) : `${tr.startGold} 💰 · 1 ❤️`}</span>`;
+                G.dom.puzzleSelectorGridEl.appendChild(btn);
+            });
+        }
+        if (cur) {
+            const maps = getMapsConfig();
+            const mapName = (maps[cur.mapId] && maps[cur.mapId].name) || cur.mapId;
+            if (G.dom.puzzleDetailTitleEl) G.dom.puzzleDetailTitleEl.innerText = `${L(cur.titleZh, cur.titleEn)} · ${mapName}`;
+            if (G.dom.puzzleDetailMetaEl) G.dom.puzzleDetailMetaEl.innerText = `${cur.startGold} 💰 · ${cur.startLives} ❤️`;
+            if (G.dom.puzzleDetailDescEl) G.dom.puzzleDetailDescEl.innerText = L(cur.descZh, cur.descEn);
+            if (G.dom.puzzleDetailHintEl) G.dom.puzzleDetailHintEl.innerText = L(cur.hintZh, cur.hintEn);
+        }
+    }
+
+    function updateLobbySetupHeader() {
+        const modeTitleEl = G.dom.lobbySetupModeTitleEl;
+        const modeBadgeEl = G.dom.lobbySetupModeBadgeEl;
+        const startBtn = G.dom.startGameBtn;
+        const tipEl = G.dom.startQuickTipEl || document.getElementById('start-quick-tip');
+        if (selectedGameMode === 'endless') {
+            if (modeTitleEl) modeTitleEl.innerText = L('無盡試煉', 'Endless Trial');
+            if (modeBadgeEl) modeBadgeEl.innerText = L('無限波次', 'Infinite Waves');
+            if (startBtn) startBtn.innerText = L('踏入無盡', 'Enter Endless');
+        } else if (selectedGameMode === 'daily') {
+            const spec = getDailySpecSafe();
+            if (modeTitleEl) modeTitleEl.innerText = L('每日種子挑戰', 'Daily Seed Challenge');
+            if (modeBadgeEl) modeBadgeEl.innerText = spec.dateKey;
+            if (startBtn) startBtn.innerText = L('接受今日挑戰', 'Start Daily Run');
+        } else if (selectedGameMode === 'puzzle') {
+            const cur = getPuzzleTrialById(selectedPuzzleId);
+            if (modeTitleEl) modeTitleEl.innerText = L('世界樹殘局試煉', 'World Tree Trials');
+            if (modeBadgeEl) modeBadgeEl.innerText = cur ? `${cur.order || 1} / 5` : '1 / 5';
+            if (startBtn) startBtn.innerText = L('進入殘局', 'Start Trial');
+        } else {
+            if (modeTitleEl) modeTitleEl.innerText = L('戰役關卡', 'Campaign');
+            if (modeBadgeEl) modeBadgeEl.innerText = L('標準 10 波', '10 Waves');
+            if (startBtn) startBtn.innerText = L('開始防守', 'Start Defense');
+        }
+        if (tipEl && selectedGameMode === 'puzzle') {
+            tipEl.innerText = L('固定資金單波試煉 · 可先預覽本波情報並完成建塔／合成，再點「立即開波」', 'Fixed gold single-wave trial · Inspect wave intel, build/merge towers, then launch wave.');
+        } else if (tipEl) {
+            tipEl.innerText = L('拖曳元素卡建塔 · 異系轉職／同系升星 · [Q/W/E] 世界樹技能 · [B] 商會', 'Drag cards to build · Cross-merge transfers / Same-merge stars up · [Q/W/E] Tree skills · [B] Guild');
+        }
+    }
+
+    function renderLobbyHubUI() {
+        const records = Backend.loadMapRecords();
+        const clearedMaps = ['forest', 'lava', 'frost'].filter(id => records[id] && (records[id].bestStars || 0) > 0).length;
+        const endlessUnlocked = Backend && typeof Backend.isEndlessUnlocked === 'function' ? Backend.isEndlessUnlocked() : clearedMaps > 0;
+        const career = Backend.loadCareerStats ? Backend.loadCareerStats() : { endlessBestWave: 0 };
+        const dailySpec = getDailySpecSafe();
+        const dailyRecs = (Backend && typeof Backend.loadDailyRecords === 'function') ? Backend.loadDailyRecords() : {};
+        const dailyRec = dailyRecs[dailySpec.dateKey];
+        const puzzleRecs = (Backend && typeof Backend.loadPuzzleRecords === 'function') ? Backend.loadPuzzleRecords() : {};
+        const puzzleClearedCnt = (Array.isArray(CONFIG.PUZZLE_TRIALS) ? CONFIG.PUZZLE_TRIALS : []).filter(t => puzzleRecs[t.id] && puzzleRecs[t.id].cleared).length;
+
+        if (G.dom.modeMetaCampaignEl) G.dom.modeMetaCampaignEl.innerText = L(`已通關 ${clearedMaps} / 3 戰場`, `Cleared ${clearedMaps} / 3 Maps`);
+        if (G.dom.modeCardEndlessEl) {
+            G.dom.modeCardEndlessEl.classList.toggle('is-locked', !endlessUnlocked);
+            G.dom.modeCardEndlessEl.disabled = !endlessUnlocked;
+        }
+        if (G.dom.modeMetaEndlessEl) {
+            G.dom.modeMetaEndlessEl.innerText = !endlessUnlocked
+                ? L('任意戰役通關 1 次解鎖', 'Clear any Campaign map once')
+                : ((career.endlessBestWave || 0) > 0
+                    ? L(`無盡最佳 第 ${career.endlessBestWave} 波`, `Endless Best W${career.endlessBestWave}`)
+                    : L('已解鎖 · 直通波次無限試煉', 'Unlocked · Straight Infinite Run'));
+        }
+        if (G.dom.modeEnterEndlessEl) {
+            G.dom.modeEnterEndlessEl.innerText = !endlessUnlocked ? L('未解鎖', 'Locked') : L('進入無盡 ▸', 'Enter ▸');
+        }
+        if (G.dom.modeMetaDailyEl) {
+            G.dom.modeMetaDailyEl.innerText = dailyRec && dailyRec.cleared
+                ? L(`${dailySpec.dateKey} · 已通關`, `${dailySpec.dateKey} · Cleared`)
+                : `${dailySpec.dateKey} · ${getWeatherLabel(dailySpec.weather).split('（')[0]}`;
+        }
+        if (G.dom.modeMetaPuzzleEl) {
+            G.dom.modeMetaPuzzleEl.innerText = L(`已完成 ${puzzleClearedCnt} / 5 關`, `Solved ${puzzleClearedCnt} / 5`);
+        }
+
+        const cards = [
+            ['campaign', G.dom.modeCardCampaignEl],
+            ['endless', G.dom.modeCardEndlessEl],
+            ['daily', G.dom.modeCardDailyEl],
+            ['puzzle', G.dom.modeCardPuzzleEl]
+        ];
+        cards.forEach(([m, el]) => {
+            if (el) el.classList.toggle('selected', selectedGameMode === m);
+        });
+
+        const inSetup = lobbyViewStep === 'setup';
+        if (G.dom.lobbyStepHubEl) G.dom.lobbyStepHubEl.classList.toggle('hidden', inSetup);
+        if (G.dom.lobbyStepSetupEl) G.dom.lobbyStepSetupEl.classList.toggle('hidden', !inSetup);
+        if (G.dom.setupCampaignPaneEl) G.dom.setupCampaignPaneEl.classList.toggle('hidden', !(selectedGameMode === 'campaign' || selectedGameMode === 'endless'));
+        if (G.dom.setupDailyPaneEl) G.dom.setupDailyPaneEl.classList.toggle('hidden', selectedGameMode !== 'daily');
+        if (G.dom.setupPuzzlePaneEl) G.dom.setupPuzzlePaneEl.classList.toggle('hidden', selectedGameMode !== 'puzzle');
+        updateLobbySetupHeader();
+        updateMetaTreeEntryUI();
+    }
+
+    function showLobbyHub() {
+        lobbyViewStep = 'hub';
+        renderLobbyHubUI();
+    }
+
+    function openLobbyModeSetup(mode) {
+        if (mode === 'endless' && Backend && typeof Backend.isEndlessUnlocked === 'function' && !Backend.isEndlessUnlocked()) {
+            setStatusMsg('任意戰役通關 1 次即可解鎖「無盡試煉」直通入口！', 'Clear any Campaign map once to unlock Endless Trial!');
+            return false;
+        }
+        selectedGameMode = ['campaign', 'endless', 'daily', 'puzzle'].includes(mode) ? mode : 'campaign';
+        lobbyViewStep = 'setup';
+        if (selectedGameMode === 'daily') {
+            const spec = getDailySpecSafe();
+            WaveSys.applyMapConfig(spec.mapId);
+            G.state.weatherType = spec.weather;
+            renderDailyBriefingUI();
+        } else if (selectedGameMode === 'puzzle') {
+            const trial = getPuzzleTrialById(selectedPuzzleId);
+            if (trial) {
+                WaveSys.applyMapConfig(trial.mapId);
+                G.state.weatherType = resolveDefaultWeatherForMap(trial.mapId);
+            }
+            renderPuzzleSelectorUI();
+        } else {
+            G.state.weatherType = resolveDefaultWeatherForMap(G.state.currentMapId);
+        }
+        Renderer.initBoard();
+        Renderer.renderBoard();
+        renderMapSelectorUI();
+        renderContractSelectorUI();
+        renderLobbyHubUI();
+        return true;
     }
 
     function renderMetaTreeModal() {
@@ -481,6 +769,7 @@
         st.activeContracts = new Set(selectedContracts);
         st.currentGold = EconSys.getInitialGold(mapSpec, st.activeContracts);
         st.selectedIndex = null; st.buildTargetIndex = null; st.hoveredIndex = null;
+        st.weatherType = resolveDefaultWeatherForMap(mapId);
         Renderer.initBoard();
         Renderer.renderBoard();
         renderMapSelectorUI();
@@ -979,7 +1268,10 @@
         if (dom.inspectorTerrainEl) {
             const terrainTag = getTerrainShortTagForCell(st.selectedIndex, tInfo, stats.damageMult);
             const auraSuffix = stats.hasScionAura ? L('光環 +16%', 'Aura +16%') : '';
-            const combinedTag = [terrainTag, auraSuffix].filter(Boolean).join(' · ');
+            const triTag = tInfo && tInfo.isPrimalCore
+                ? L('全圖唯一 · 1.26x', 'Unique 1 · 1.26x')
+                : (tInfo && tInfo.isTriElement ? L('三元 1.26x', 'Tri 1.26x') : '');
+            const combinedTag = [terrainTag, auraSuffix, triTag].filter(Boolean).join(' · ');
             dom.inspectorTerrainEl.classList.toggle('hidden', !combinedTag);
             dom.inspectorTerrainEl.innerText = combinedTag;
         }
@@ -1216,9 +1508,14 @@
     }
 
     function updateSoundButtonUI() {
-        if (!G.dom.soundBtn) return;
-        G.dom.soundBtn.classList.toggle('muted', SoundEngine.isMuted);
-        G.dom.soundBtn.innerText = SoundEngine.isMuted ? L('靜音', 'Muted') : L('音效', 'Audio');
+        if (G.dom.soundBtn) {
+            G.dom.soundBtn.classList.toggle('muted', SoundEngine.isMuted);
+            G.dom.soundBtn.innerText = SoundEngine.isMuted ? L('靜音', 'Muted') : L('音效', 'Audio');
+        }
+        if (G.dom.lobbySoundBtn) {
+            G.dom.lobbySoundBtn.classList.toggle('muted', SoundEngine.isMuted);
+            G.dom.lobbySoundBtn.innerText = SoundEngine.isMuted ? L('音效：關', 'Audio: Off') : L('音效：開', 'Audio: On');
+        }
     }
 
     function summarizePlanInline(plan) {
@@ -1234,11 +1531,17 @@
             const mCfg = monsterDb[key];
             if (!mCfg) return;
             const wCfg = towersDict[mCfg.weakness];
-            parts.push(`${mCfg.name} ×${cnt}${wCfg ? ` (${L('弱', 'Weak: ')}${getWeaknessShortName(mCfg.weakness)})` : ''}`);
+            const weakSummary = wCfg
+                ? ` (${L(`弱${getWeaknessShortName(mCfg.weakness)}`, wCfg.icon || getWeaknessShortName(mCfg.weakness))})`
+                : '';
+            parts.push(`${mCfg.name} ×${cnt}${weakSummary}`);
         });
         if (plan.bossMeta) {
             const bWeak = towersDict[plan.bossMeta.weakness];
-            parts.push(`${L('王', 'Boss')} · ${plan.bossMeta.name}${bWeak ? ` (${L('弱', 'Weak: ')}${getWeaknessShortName(plan.bossMeta.weakness)})` : ''}`);
+            const bossWeakSummary = bWeak
+                ? ` (${L(`弱${getWeaknessShortName(plan.bossMeta.weakness)}`, bWeak.icon || getWeaknessShortName(plan.bossMeta.weakness))})`
+                : '';
+            parts.push(`${L('王', 'Boss')} · ${plan.bossMeta.name}${bossWeakSummary}`);
         } else if (plan.eliteCount > 0) {
             parts.push(`${L('菁英', 'Elite')} ×${plan.eliteCount}`);
         }
@@ -1256,7 +1559,7 @@
         }
         const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
         const towersDict = getTowersDict();
-        const plan = WaveSys.buildWaveQueue(waveNum);
+        const plan = resolveWaveForecastPlan(waveNum);
         const crisisSuffix = plan.crisisSpec ? ` · ⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)}` : '';
         headerEl.innerText = `${prefixLabel} · ${L(`第 ${waveNum} 波`, `Wave ${waveNum}`)}${crisisSuffix}`;
         const counts = new Map();
@@ -1291,23 +1594,39 @@
         listEl.innerHTML = items.join('');
     }
 
+    function resolveWaveForecastPlan(waveNum) {
+        const st = G && G.state;
+        if (st && st.gameMode === 'puzzle' && st.puzzleSpec) {
+            return buildPuzzleWavePlan(st.puzzleSpec);
+        }
+        return WaveSys.buildWaveQueue(waveNum);
+    }
+
     function updateWaveForecastUI() {
         const dom = G.dom, st = G.state;
+        const isPuzzleMode = st.gameMode === 'puzzle';
         const curWave = Math.max(1, st.currentWave || 1);
         const isPrepPhase = st.waveState === 'PREP' || st.waveState === 'INTERMISSION' || st.waveState === 'WAITING_START';
-        const targetWave = st.waveState === 'INTERMISSION' ? curWave + 1 : curWave;
+        const targetWave = isPuzzleMode ? 1 : (st.waveState === 'INTERMISSION' ? curWave + 1 : curWave);
         const nextWave = curWave + 1;
-        const isFinalClear = !st.isEndlessMode && curWave >= (CONFIG.VICTORY_WAVE || 10);
+        const isFinalClear = isPuzzleMode ? true : (!st.isEndlessMode && curWave >= (CONFIG.VICTORY_WAVE || 10));
 
         const curLabel = L('本波情報', 'Current');
         const nextLabel = L('下波預告', 'Next');
-        renderForecastListInto(dom.forecastCurrentHeaderEl, dom.forecastCurrentListEl, curWave, curLabel);
-        renderForecastListInto(dom.forecastNextHeaderEl, dom.forecastNextListEl, nextWave, nextLabel, isFinalClear);
-        renderForecastListInto(dom.sideCurrentHeaderEl, dom.sideCurrentListEl, curWave, curLabel);
-        renderForecastListInto(dom.sideNextHeaderEl, dom.sideNextListEl, nextWave, nextLabel, isFinalClear);
+        if (isPuzzleMode) {
+            renderForecastListInto(dom.forecastCurrentHeaderEl, dom.forecastCurrentListEl, targetWave, curLabel);
+            renderForecastListInto(dom.forecastNextHeaderEl, dom.forecastNextListEl, nextWave, nextLabel, true);
+            renderForecastListInto(dom.sideCurrentHeaderEl, dom.sideCurrentListEl, targetWave, curLabel);
+            renderForecastListInto(dom.sideNextHeaderEl, dom.sideNextListEl, nextWave, nextLabel, true);
+        } else {
+            renderForecastListInto(dom.forecastCurrentHeaderEl, dom.forecastCurrentListEl, curWave, curLabel);
+            renderForecastListInto(dom.forecastNextHeaderEl, dom.forecastNextListEl, nextWave, nextLabel, isFinalClear);
+            renderForecastListInto(dom.sideCurrentHeaderEl, dom.sideCurrentListEl, curWave, curLabel);
+            renderForecastListInto(dom.sideNextHeaderEl, dom.sideNextListEl, nextWave, nextLabel, isFinalClear);
+        }
 
         if (dom.forecastBarTitleEl) {
-            const peekCrisis = (WaveSys && typeof WaveSys.getCrisisWaveSpec === 'function')
+            const peekCrisis = !isPuzzleMode && (WaveSys && typeof WaveSys.getCrisisWaveSpec === 'function')
                 ? (WaveSys.getCrisisWaveSpec(targetWave) || WaveSys.getCrisisWaveSpec(targetWave + 1))
                 : null;
             const crisisTag = peekCrisis
@@ -1315,36 +1634,57 @@
                     ? ` · ⚠️ ${L(peekCrisis.title, peekCrisis.titleEn)}`
                     : ` · ⚠️ ${L(`第 ${peekCrisis.wave} 波`, `W${peekCrisis.wave}`)} ${L(peekCrisis.title, peekCrisis.titleEn)}`)
                 : '';
-            dom.forecastBarTitleEl.innerText = isPrepPhase
-                ? `${nextLabel} · ${L(`第 ${targetWave} 波`, `W${targetWave}`)}${crisisTag}`
-                : `${L('情報', 'Intel')} · ${L(`第 ${curWave} 波`, `W${curWave}`)}${crisisTag}`;
+            dom.forecastBarTitleEl.innerText = isPuzzleMode
+                ? `${L('殘局目標', 'Trial Target')} · ${st.puzzleSpec ? L(st.puzzleSpec.titleZh, st.puzzleSpec.titleEn) : '1/1'}`
+                : (isPrepPhase
+                    ? `${nextLabel} · ${L(`第 ${targetWave} 波`, `W${targetWave}`)}${crisisTag}`
+                    : `${L('情報', 'Intel')} · ${L(`第 ${curWave} 波`, `W${curWave}`)}${crisisTag}`);
         }
         if (dom.forecastWeakChipsEl) {
-            if (isFinalClear && !isPrepPhase) {
+            if (!isPuzzleMode && isFinalClear && !isPrepPhase) {
                 dom.forecastWeakChipsEl.innerText = L('最終決戰', 'Final Wave');
             } else {
                 const ratioWave = isPrepPhase ? targetWave : nextWave;
-                const ratios = (EconSys && typeof EconSys.getWaveElementWeaknessRatios === 'function')
-                    ? EconSys.getWaveElementWeaknessRatios(ratioWave)
-                    : { fire: 1 / 3, ice: 1 / 3, thunder: 1 / 3 };
-                const rPlan = WaveSys.buildWaveQueue(ratioWave);
+                const rPlan = resolveWaveForecastPlan(ratioWave);
+                const ratios = isPuzzleMode
+                    ? { fire: 0, ice: 0, thunder: 0 }
+                    : ((EconSys && typeof EconSys.getWaveElementWeaknessRatios === 'function')
+                        ? EconSys.getWaveElementWeaknessRatios(ratioWave)
+                        : { fire: 1 / 3, ice: 1 / 3, thunder: 1 / 3 });
+                const totalCnt = (rPlan && Array.isArray(rPlan.queue)) ? rPlan.queue.length : 0;
+                if (isPuzzleMode && totalCnt > 0) {
+                    const mDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
+                    const counts = { fire: 0, ice: 0, thunder: 0 };
+                    rPlan.queue.forEach(q => {
+                        const w = (q.bossSpec && q.bossSpec.weakness) || (mDb[q.typeKey] && mDb[q.typeKey].weakness) || 'fire';
+                        if (counts[w] !== undefined) counts[w] += 1;
+                    });
+                    ratios.fire = counts.fire / totalCnt;
+                    ratios.ice = counts.ice / totalCnt;
+                    ratios.thunder = counts.thunder / totalCnt;
+                }
                 const fPct = Math.round((ratios.fire || 0) * 100);
                 const iPct = Math.round((ratios.ice || 0) * 100);
                 const tPct = Math.round((ratios.thunder || 0) * 100);
-                const totalCnt = (rPlan && Array.isArray(rPlan.queue)) ? rPlan.queue.length : 0;
-                dom.forecastWeakChipsEl.innerText = `🔥${fPct}% · ❄️${iPct}% · ⚡${tPct}% · ${L(`共 ${totalCnt} 隻`, `${totalCnt} Foes`)}`;
+                dom.forecastWeakChipsEl.innerText = L(
+                    `🔥${fPct}% · ❄️${iPct}% · ⚡${tPct}% · 共 ${totalCnt} 隻`,
+                    `🔥${fPct}% ❄️${iPct}% ⚡${tPct}% · ${totalCnt} Foes`
+                );
             }
         }
         if (dom.forecastInlineSummaryEl) {
-            if (isPrepPhase) {
-                const plan = WaveSys.buildWaveQueue(targetWave);
+            if (isPuzzleMode) {
+                dom.forecastInlineSummaryEl.innerText = summarizePlanInline(resolveWaveForecastPlan(1));
+            } else if (isPrepPhase) {
+                const plan = resolveWaveForecastPlan(targetWave);
                 dom.forecastInlineSummaryEl.innerText = summarizePlanInline(plan);
             } else {
-                const nextPlan = !isFinalClear ? WaveSys.buildWaveQueue(nextWave) : null;
+                const nextPlan = !isFinalClear ? resolveWaveForecastPlan(nextWave) : null;
                 dom.forecastInlineSummaryEl.innerText = nextPlan
                     ? `${L(`下波 第 ${nextWave} 波：`, `Next W${nextWave}: `)}${summarizePlanInline(nextPlan)}`
                     : L('最終魔王決戰進行中', 'Final Boss Battle in Progress');
             }
+            dom.forecastInlineSummaryEl.title = dom.forecastInlineSummaryEl.innerText;
         }
         if (dom.waveForecastBarEl) {
             dom.waveForecastBarEl.classList.toggle('drawer-open', Boolean(st.forecastDrawerOpen));
@@ -1491,6 +1831,7 @@
     }
 
     const STORAGE_ONBOARDING_KEY = 'merge_defense_onboarding_v1';
+    let onboardingMemCache = null;
 
     function getUnlockedMetaNodesList() {
         const meta = (Backend && typeof Backend.loadMetaTreeState === 'function') ? Backend.loadMetaTreeState() : null;
@@ -1527,6 +1868,7 @@
     }
 
     function loadOnboardingState() {
+        if (onboardingMemCache) return onboardingMemCache;
         const fallback = {
             completed: false,
             firstRunStarted: false,
@@ -1550,7 +1892,7 @@
             const parsed = JSON.parse(raw);
             if (!parsed || typeof parsed !== 'object') return fallback;
             const s = (parsed.shown && typeof parsed.shown === 'object') ? parsed.shown : {};
-            return {
+            const normalized = {
                 completed: Boolean(parsed.completed),
                 firstRunStarted: Boolean(parsed.firstRunStarted),
                 shown: {
@@ -1559,23 +1901,28 @@
                     feed: Boolean(s.feed)
                 }
             };
+            onboardingMemCache = normalized;
+            return normalized;
         } catch (_) {
-            return fallback;
+            return onboardingMemCache || fallback;
         }
     }
 
     function saveOnboardingState(next) {
+        if (!next) return;
+        const normalized = {
+            completed: Boolean(next.completed),
+            firstRunStarted: Boolean(next.firstRunStarted),
+            shown: {
+                build: Boolean(next.shown && next.shown.build),
+                merge: Boolean(next.shown && next.shown.merge),
+                feed: Boolean(next.shown && next.shown.feed)
+            }
+        };
+        onboardingMemCache = normalized;
         try {
-            if (typeof localStorage !== 'undefined' && next) {
-                localStorage.setItem(STORAGE_ONBOARDING_KEY, JSON.stringify({
-                    completed: Boolean(next.completed),
-                    firstRunStarted: Boolean(next.firstRunStarted),
-                    shown: {
-                        build: Boolean(next.shown && next.shown.build),
-                        merge: Boolean(next.shown && next.shown.merge),
-                        feed: Boolean(next.shown && next.shown.feed)
-                    }
-                }));
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem(STORAGE_ONBOARDING_KEY, JSON.stringify(normalized));
             }
         } catch (_) { }
     }
@@ -2049,9 +2396,13 @@
         setDomText(dom.goldDisplay, formatCompactGold(st.currentGold));
         if (dom.goldDisplay) dom.goldDisplay.title = String(st.currentGold);
         setDomText(dom.baseHpDisplay, `${st.baseHp}/${maxHp}`);
-        setDomText(dom.waveDisplay, st.isEndlessMode
-            ? L(`第 ${st.currentWave} 波 (無盡)`, `Wave ${st.currentWave} (Endless)`)
-            : L(`第 ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10} 波`, `Wave ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10}`));
+        setDomText(dom.waveDisplay, st.gameMode === 'puzzle'
+            ? L(`殘局 ${st.puzzleSpec ? st.puzzleSpec.order : 1}/5`, `Trial ${st.puzzleSpec ? st.puzzleSpec.order : 1}/5`)
+            : (st.isEndlessMode
+                ? L(`第 ${st.currentWave} 波 (無盡)`, `W${st.currentWave} (Endless)`)
+                : (st.gameMode === 'daily'
+                    ? L(`每日 W${st.currentWave}/${CONFIG.VICTORY_WAVE || 10}`, `Daily W${st.currentWave}/${CONFIG.VICTORY_WAVE || 10}`)
+                    : L(`第 ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10} 波`, `Wave ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10}`))));
         setDomText(dom.bestWaveDisplay, L(`第 ${st.bestWave} 波`, `W${st.bestWave}`));
         updateWavePhaseUI(); Renderer.updateWorldTreeVisualState(); updateSkillButtonsUI();
         updateSeedPityUI(); updateTreasureRootUI(); updateGuildDrawerUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
@@ -2563,11 +2914,6 @@
             st.board[toIndex] = fromTower;
             st.board[fromIndex] = null;
             recordZonePlacementTelemetry(toIndex);
-            if (fusion.isFeedUpgrade) {
-                completeOnboardingStep('feed');
-            } else {
-                completeOnboardingStep('merge');
-            }
             evaluateContextualOnboarding();
             Renderer.renderBoard([fromIndex, toIndex]);
             updateHUD();
@@ -2585,6 +2931,7 @@
             const { fusion, bonusHint } = res;
             const cfg = getTowersDict()[fusion.type] || { name: fusion.type };
             SoundEngine.playMerge(fusion.tier, fusion.isCrossElement || fusion.isTwinCrown || fusion.tier >= 5);
+            triggerHighTierMergeJuice(toIndex, fusion.tier);
             const fedU = fusion.feedU || 1;
             const curU = fusion.nextNutritionU || (fusion.tier >= 5 ? 16 : (fusion.tier === 4 ? 8 : 4));
             const nextTargetU = fusion.tier === 3 ? 8 : 16;
@@ -2602,6 +2949,16 @@
                 setStatusMsg(
                     `雙生合體成功：【${cfg.name} ★★★★AB】同時掌握雙分支機制！${bonusHint || ''}`,
                     `Twin Crown Merge: ${cfg.name} ★★★★AB wields both A & B mechanics!${bonusHint || ''}`
+                );
+            } else if (fusion.isPrimalCore || cfg.isPrimalCore) {
+                setStatusMsg(
+                    `創世覺醒：【${cfg.name} ★★★★★】唯一原初之核降臨！牽引周圍 8 格友塔金色靈脈，每 5 秒釋放創世脈動${bonusHint || ''}。`,
+                    `Genesis Awakened: Unique ${cfg.name} ★★★★★! Links 8 neighbors with 5s Genesis Pulse.`
+                );
+            } else if (fusion.isTriElement || cfg.isTriElement) {
+                setStatusMsg(
+                    `三元創世融合：【${cfg.name} ${Renderer.getTierStars(fusion.tier)}】成形！對全體敵軍恆享 1.26× 親和${bonusHint || ''}。`,
+                    `Tri-Element Genesis: ${cfg.name} ${Renderer.getTierStars(fusion.tier)} forged! Constant 1.26x affinity vs all foes.`
                 );
             } else if (fusion.tier >= 5) {
                 setStatusMsg(
@@ -2904,6 +3261,23 @@
             ? EvoSys.getFruitUpgradePreview(targetTower)
             : null;
         if (!preview) {
+            const targetCfg = towersDict[targetTower.type] || {};
+            const isBlockedSecondPrimal = Boolean(
+                EvoSys &&
+                typeof EvoSys.hasPrimalCoreOnBoard === 'function' &&
+                EvoSys.hasPrimalCoreOnBoard() &&
+                EvoSys.isTriElementTower &&
+                EvoSys.isTriElementTower(targetTower) &&
+                targetTower.tier === 4 &&
+                !targetCfg.isPrimalCore
+            );
+            if (isBlockedSecondPrimal) {
+                setStatusMsg(
+                    '【創世世界樹·原初之核】全圖唯一限 1 座，場上已存在原初之核，無法再以果實進化出第 2 座。',
+                    'Genesis World Tree: Primal Core is unique (max 1 on board); cannot upgrade another with Fruit.'
+                );
+                return { ok: false, reason: 'primal_core_unique' };
+            }
             setStatusMsg(
                 '該防禦塔已達 5★ 最高階級，無法套用萬能融合果實。',
                 'Tower is already at max 5★ tier; cannot apply Universal Fusion Fruit.'
@@ -2927,6 +3301,7 @@
         st.selectedIndex = cellIndex;
         const cfg = towersDict[res.fusion.type] || { icon: '🔥', name: res.fusion.type };
         SoundEngine.playMerge(res.fusion.tier, true);
+        triggerHighTierMergeJuice(cellIndex, res.fusion.tier);
         if (res.fusion.isFeedChargeOnly || (res.fusion.isFeedUpgrade && !res.fusion.isFeedEvolve)) {
             const fedU = res.fusion.feedU || 4;
             const curU = res.fusion.nextNutritionU || (res.mergedTower && res.mergedTower.nutritionU) || 12;
@@ -3161,6 +3536,7 @@
             const cfg = getTowersDict()[fusion.type] || { name: fusion.type };
             st.selectedIndex = pending.toIndex;
             SoundEngine.playMerge(fusion.tier, fusion.isCrossElement);
+            triggerHighTierMergeJuice(pending.toIndex, fusion.tier);
             setStatusMsg(
                 `${fusion.tier === 2 ? '元素灌注升星完成' : '冠枝開花完成'}：【${cfg.icon || ''} ${cfg.name} ${Renderer.getTierStars(fusion.tier)}】${bonusHint || ''}`,
                 `${fusion.tier === 2 ? 'Elemental Infusion complete' : 'Crown Blossom complete'}: ${cfg.icon || ''} ${cfg.name} ${Renderer.getTierStars(fusion.tier)}${bonusHint ? ` ${bonusHint}` : ''}`
@@ -3215,6 +3591,16 @@
         return true;
     }
 
+    function triggerHighTierMergeJuice(cellIndex, tier) {
+        if ((Number(tier) || 0) < 4) return;
+        if (SoundEngine && typeof SoundEngine.playAscendChord === 'function') {
+            SoundEngine.playAscendChord(tier);
+        }
+        if (Renderer && typeof Renderer.emitAscendRuneFX === 'function') {
+            Renderer.emitAscendRuneFX(cellIndex, tier);
+        }
+    }
+
     // ==================== 6. 波次、勝負結算與主迴圈 ====================
     function startWave(waveNum, earlyBonus = 0) {
         if (!isGameplayActive()) return;
@@ -3233,19 +3619,28 @@
             st.activeWager.leakedThisWave = false;
             st.activeWager.startBaseHp = st.baseHp;
         }
-        if (st.currentWave > st.bestWave) {
+        if (st.gameMode !== 'puzzle' && st.currentWave > st.bestWave) {
             st.bestWave = st.currentWave;
-            Backend.saveMapRecord(st.currentMapId, st.bestWave);
+            Backend.saveMapRecord(st.currentMapId, st.bestWave, null, { isEndless: st.isEndlessMode, gameMode: st.gameMode });
             st.isNewRecordThisRun = true;
         }
 
-        const plan = WaveSys.buildWaveQueue(waveNum);
+        const plan = resolveWaveForecastPlan(waveNum);
         st.waveSpawnQueue = plan.queue;
         st.waveSpawnIntervalMs = plan.spawnIntervalMs;
         st.waveSpawnAccMs = plan.spawnIntervalMs;
         st.waveState = 'SPAWNING';
         st.forecastDrawerOpen = false;
         st.guildDrawerOpen = false;
+
+        if (plan && plan.bossMeta) {
+            if (SoundEngine && typeof SoundEngine.playBossHorn === 'function') {
+                SoundEngine.playBossHorn();
+            }
+            if (Renderer && typeof Renderer.triggerBossEntranceBanner === 'function') {
+                Renderer.triggerBossEntranceBanner(plan.bossMeta, waveNum);
+            }
+        }
 
         const bonusMsgZh = earlyBonus > 0 ? `（⚡ 早鳥開波 +${earlyBonus} 💰）` : '';
         const bonusMsgEn = earlyBonus > 0 ? ` (⚡ Early Start +${earlyBonus} 💰)` : '';
@@ -3297,25 +3692,97 @@
         Renderer.updateRangeIndicator(); updateHUD(); SoundEngine.playOutcome(soundKind);
     }
 
+    function setOutcomeModeBanner(el, text) {
+        if (!el) return;
+        if (text) {
+            el.innerText = text;
+            el.classList.remove('hidden');
+        } else {
+            el.innerText = '';
+            el.classList.add('hidden');
+        }
+    }
+
     function triggerVictory() {
         const st = G.state;
         if (st.isGameOver || st.waveState === 'VICTORY') return;
         const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
         const maxHp = st.maxBaseHp || treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
         let starsNum = 1, stars = '★', rankText = L('驚險死守，於危急時刻擊退腐朽古樹王。', 'Close victory—repelled the Blighted Treant King.');
-        if (st.baseHp >= maxHp) { starsNum = 3; stars = '★★★'; rankText = L('完美防守，世界樹滿血守護通關第 10 波。', 'Flawless defense—cleared Wave 10 with full World Tree HP.'); }
-        else if (st.baseHp >= Math.ceil(maxHp * 0.5)) { starsNum = 2; stars = '★★'; rankText = L('穩固防線，成功守護世界樹擊敗腐朽古樹王。', 'Solid defense—World Tree protected and Treant King defeated.'); }
+        if (st.gameMode === 'puzzle') {
+            starsNum = 3;
+            stars = '★★★';
+            const trTitle = st.puzzleSpec ? L(st.puzzleSpec.titleZh, st.puzzleSpec.titleEn) : L('殘局試煉', 'Trial');
+            rankText = L(
+                `殘局破解成功！通過【${trTitle}】，剩餘資金 ${st.currentGold} 💰。`,
+                `Trial solved! Cleared [${trTitle}] with ${st.currentGold} 💰 remaining.`
+            );
+        } else if (st.baseHp >= maxHp) {
+            starsNum = 3;
+            stars = '★★★';
+            rankText = L('完美防守，世界樹滿血守護通關第 10 波。', 'Flawless defense—cleared Wave 10 with full World Tree HP.');
+        } else if (st.baseHp >= Math.ceil(maxHp * 0.5)) {
+            starsNum = 2;
+            stars = '★★';
+            rankText = L('穩固防線，成功守護世界樹擊敗腐朽古樹王。', 'Solid defense—World Tree protected and Treant King defeated.');
+        }
 
         const honor = computeRunHonorSummary(st);
         Backend.finalizeWaveFeel(st.currentWave);
-        Backend.saveMapRecord(st.currentMapId, st.currentWave, starsNum, {
-            isClear: true,
-            honorScore: honor.honorScore,
-            contractCount: honor.count,
-            awardHonor: true
-        });
-        st.bestWave = Math.max(st.bestWave, st.currentWave);
+        let bannerText = '';
+        if (st.gameMode === 'puzzle') {
+            if (Backend && typeof Backend.savePuzzleClear === 'function') {
+                Backend.savePuzzleClear(st.puzzleId, st.currentGold);
+            }
+            bannerText = L(
+                `世界樹殘局通關 · 剩餘金幣 ${st.currentGold} 💰`,
+                `Trial Cleared · Remaining Gold ${st.currentGold} 💰`
+            );
+        } else {
+            const isFirstMapClear = (st.gameMode === 'campaign' && Backend.wasMapCleared)
+                ? !Backend.wasMapCleared(st.currentMapId)
+                : false;
+            Backend.saveMapRecord(st.currentMapId, st.currentWave, starsNum, {
+                isClear: true,
+                honorScore: honor.honorScore,
+                contractCount: honor.count,
+                awardHonor: true,
+                gameMode: st.gameMode
+            });
+            st.bestWave = Math.max(st.bestWave, st.currentWave);
+            if (st.gameMode === 'daily') {
+                if (Backend && typeof Backend.saveDailyRecord === 'function') {
+                    Backend.saveDailyRecord(st.dailyDateKey, {
+                        wave: st.currentWave,
+                        stars: starsNum,
+                        cleared: true,
+                        honorScore: honor.honorScore,
+                        mapId: st.currentMapId,
+                        weather: st.weatherType
+                    });
+                }
+                const seedHex = Number(st.dailySeedCode || 0).toString(16).toUpperCase().padStart(8, '0');
+                const wName = getWeatherLabel(st.weatherType).split('（')[0];
+                bannerText = L(
+                    `每日戰績卡 · ${st.dailyDateKey} · 種子 #${seedHex} · ${wName} · 榮譽 ${honor.honorScore.toLocaleString()} ★`,
+                    `Daily Scorecard · ${st.dailyDateKey} · #${seedHex} · Honor ${honor.honorScore.toLocaleString()} ★`
+                );
+            } else if (isFirstMapClear) {
+                bannerText = L(
+                    `首通獎勵：+${CONFIG.FIRST_CLEAR_HONOR_BONUS || 200} ★ 榮譽已入帳！`,
+                    `First Clear Bonus: +${CONFIG.FIRST_CLEAR_HONOR_BONUS || 200} ★ Honor granted!`
+                );
+            }
+        }
+
+        if (G.dom.endlessBtn) {
+            G.dom.endlessBtn.classList.toggle('hidden', st.gameMode === 'puzzle' || st.gameMode === 'daily');
+        }
+        setOutcomeModeBanner(G.dom.victoryModeBannerEl, bannerText);
         renderMapSelectorUI();
+        renderDailyBriefingUI();
+        renderPuzzleSelectorUI();
+        renderLobbyHubUI();
         finalizeOutcomeScreen('VICTORY', 'victory');
         Backend.trackFeel('Progression:Complete', st.currentGold, { wave: st.currentWave, mapId: st.currentMapId, contracts: honor.count });
         Backend.trackFeel(`Run:Victory:${st.currentMapId}:Wave_${st.currentWave}`, st.baseHp);
@@ -3338,13 +3805,46 @@
         st.isGameOver = true;
         const honor = computeRunHonorSummary(st);
         Backend.finalizeWaveFeel(st.currentWave);
-        Backend.saveMapRecord(st.currentMapId, st.currentWave, null, {
-            isClear: false,
-            honorScore: honor.honorScore,
-            contractCount: honor.count,
-            awardHonor: true
-        });
+        let bannerText = '';
+        if (st.gameMode === 'puzzle') {
+            bannerText = L('殘局試煉未通過 · 可點擊「重新開始」立即重試本關', 'Trial failed · Click Restart to retry immediately');
+        } else {
+            Backend.saveMapRecord(st.currentMapId, st.currentWave, null, {
+                isClear: false,
+                isEndless: st.isEndlessMode,
+                gameMode: st.gameMode,
+                honorScore: honor.honorScore,
+                contractCount: honor.count,
+                awardHonor: true
+            });
+            if (st.gameMode === 'daily') {
+                if (Backend && typeof Backend.saveDailyRecord === 'function') {
+                    Backend.saveDailyRecord(st.dailyDateKey, {
+                        wave: st.currentWave,
+                        stars: 0,
+                        cleared: false,
+                        honorScore: honor.honorScore,
+                        mapId: st.currentMapId,
+                        weather: st.weatherType
+                    });
+                }
+                const seedHex = Number(st.dailySeedCode || 0).toString(16).toUpperCase().padStart(8, '0');
+                bannerText = L(
+                    `每日戰績卡 · ${st.dailyDateKey} · 種子 #${seedHex} · 抵達第 ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10} 波`,
+                    `Daily Scorecard · ${st.dailyDateKey} · #${seedHex} · Wave ${st.currentWave}/${CONFIG.VICTORY_WAVE || 10}`
+                );
+            } else if (st.isEndlessMode) {
+                bannerText = L(
+                    `無盡試煉結算 · 抵達第 ${st.currentWave} 波`,
+                    `Endless Trial Ended · Reached Wave ${st.currentWave}`
+                );
+            }
+        }
+        setOutcomeModeBanner(G.dom.gameoverModeBannerEl, bannerText);
         renderMapSelectorUI();
+        renderDailyBriefingUI();
+        renderPuzzleSelectorUI();
+        renderLobbyHubUI();
         ['startOverlayEl', 'victoryOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl', 'metaTreeOverlayEl', 'evoConfirmOverlayEl'].forEach(k => {
             if (G.dom[k]) G.dom[k].classList.add('hidden');
         });
@@ -3360,7 +3860,7 @@
             Backend.finalizeRunFeel('gameover', { wave: st.currentWave, mapId: st.currentMapId, contracts: honor.count });
         }
         populateBattleRecap('gameover');
-        if (G.dom.newRecordBadgeEl) G.dom.newRecordBadgeEl.classList.toggle('hidden', !st.isNewRecordThisRun);
+        if (G.dom.newRecordBadgeEl) G.dom.newRecordBadgeEl.classList.toggle('hidden', st.gameMode === 'puzzle' || !st.isNewRecordThisRun);
         if (G.dom.gameOverOverlayEl) G.dom.gameOverOverlayEl.classList.remove('hidden');
     }
 
@@ -3412,66 +3912,156 @@
         }
     }
 
+    function configureRunModeState(st, prevState = null) {
+        const mode = (prevState && prevState.gameMode) || selectedGameMode || 'campaign';
+        const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
+        const setRng = (GameApp.helpers && typeof GameApp.helpers.setActiveRunRng === 'function')
+            ? GameApp.helpers.setActiveRunRng
+            : () => { };
+        st.gameMode = mode;
+        st.isEndlessMode = mode === 'endless';
+        if (mode === 'daily') {
+            const spec = (prevState && prevState.dailyDateKey && GameApp.helpers && typeof GameApp.helpers.getDailyChallengeSpec === 'function')
+                ? GameApp.helpers.getDailyChallengeSpec(prevState.dailyDateKey)
+                : getDailySpecSafe();
+            WaveSys.applyMapConfig(spec.mapId);
+            st.currentMapId = spec.mapId;
+            st.dailyDateKey = spec.dateKey;
+            st.dailySeedCode = spec.seedCode;
+            st.weatherType = spec.weather;
+            st.activeContracts = new Set();
+            setRng(spec.seedString);
+            const mapSpec = WaveSys.getCurrentMapSpec();
+            st.maxBaseHp = treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
+            st.baseHp = st.maxBaseHp;
+            st.dewEnergy = treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20;
+            st.currentGold = EconSys ? EconSys.getInitialGold(mapSpec, st.activeContracts) : 40;
+            if (EconSys && typeof EconSys.resetRunEconomyState === 'function') EconSys.resetRunEconomyState();
+            if (TreeSys && typeof TreeSys.resetTreasureRoots === 'function') TreeSys.resetTreasureRoots();
+            applyStartingMetaPerks(st);
+            return mapSpec;
+        }
+        if (mode === 'puzzle') {
+            const trial = getPuzzleTrialById((prevState && prevState.puzzleId) || selectedPuzzleId);
+            if (trial) {
+                WaveSys.applyMapConfig(trial.mapId);
+                st.currentMapId = trial.mapId;
+                st.puzzleId = trial.id;
+                st.puzzleSpec = trial;
+                st.weatherType = resolveDefaultWeatherForMap(trial.mapId);
+                st.activeContracts = new Set();
+                setRng(`puzzle:${trial.id}`);
+                st.maxBaseHp = Math.max(1, Number(trial.startLives) || 1);
+                st.baseHp = st.maxBaseHp;
+                st.dewEnergy = 0;
+                st.currentGold = Math.max(10, Number(trial.startGold) || 180);
+                if (EconSys && typeof EconSys.resetRunEconomyState === 'function') EconSys.resetRunEconomyState();
+                if (TreeSys && typeof TreeSys.resetTreasureRoots === 'function') TreeSys.resetTreasureRoots();
+            }
+            return WaveSys.getCurrentMapSpec();
+        }
+        setRng(null);
+        WaveSys.applyMapConfig(st.currentMapId);
+        const mapSpec = WaveSys.getCurrentMapSpec();
+        st.activeContracts = new Set(selectedContracts);
+        st.weatherType = resolveDefaultWeatherForMap(st.currentMapId);
+        st.maxBaseHp = st.activeContracts.has('fragile_heart') ? 12 : (treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20);
+        st.baseHp = st.maxBaseHp;
+        st.dewEnergy = st.activeContracts.has('dew_drought') ? 0 : (treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20);
+        st.currentGold = EconSys ? EconSys.getInitialGold(mapSpec, st.activeContracts) : st.currentGold;
+        if (EconSys && typeof EconSys.resetRunEconomyState === 'function') EconSys.resetRunEconomyState();
+        if (TreeSys && typeof TreeSys.resetTreasureRoots === 'function') TreeSys.resetTreasureRoots();
+        applyStartingMetaPerks(st);
+        return mapSpec;
+    }
+
     function restartGame() {
+        const prevSnapshot = {
+            gameMode: (G.state && G.state.gameMode) || selectedGameMode || 'campaign',
+            dailyDateKey: G.state && G.state.dailyDateKey,
+            puzzleId: (G.state && G.state.puzzleId) || selectedPuzzleId
+        };
         resetMatchSession('PREP', 1);
-        applyStartingMetaPerks(G.state);
+        const mapSpec = configureRunModeState(G.state, prevSnapshot);
+        G.state.waveTimerMs = G.state.gameMode === 'puzzle' ? 15000 : G.state.waveTimerMs;
+        if (CodexSys && typeof CodexSys.resetRunCodex === 'function') CodexSys.resetRunCodex();
+        Backend.resetRunTelemetry(G.state.currentMapId, mapSpec.name);
+        if (Renderer && typeof Renderer.applyWeatherVisualClass === 'function') {
+            Renderer.applyWeatherVisualClass(G.state.weatherType);
+        }
+        if (Renderer && typeof Renderer.stopLobbyAmbientCanvas === 'function') {
+            Renderer.stopLobbyAmbientCanvas();
+        }
         const ob = loadOnboardingState();
         ob.completed = true;
         ob.firstRunStarted = true;
         saveOnboardingState(ob);
         G.state.onboardingActive = false;
         hideOnboardingToast();
-        const mapSpec = WaveSys.getCurrentMapSpec();
         setStatusMsg(
             `【${mapSpec.name}】拖曳下方元素卡至棋盤可建格召喚，或按 1/2/3/Q/W/E/B/Space 快速操作。`,
             `[${mapSpec.name}] Drag element cards onto green tiles to build, or press 1/2/3/Q/W/E/B/Space.`
         );
-        Renderer.renderBoard(); updateHUD(); updateSpeedButtonUI(); startMainLoop();
+        Renderer.initBoard(); Renderer.renderBoard(); updateHUD(); updateSpeedButtonUI(); startMainLoop();
     }
 
     function returnToMainMenu() {
+        if (GameApp.helpers && typeof GameApp.helpers.setActiveRunRng === 'function') {
+            GameApp.helpers.setActiveRunRng(null);
+        }
         resetMatchSession('WAITING_START', 1);
         WaveSys.applyMapConfig(G.state.currentMapId);
+        if (Renderer && typeof Renderer.applyWeatherVisualClass === 'function') {
+            Renderer.applyWeatherVisualClass(null);
+        }
+        showLobbyHub();
         renderMapSelectorUI();
         renderContractSelectorUI();
+        renderDailyBriefingUI();
+        renderPuzzleSelectorUI();
         if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.remove('hidden');
-        setStatusMsg('請選擇戰場地圖，點擊「開始防守」進入第 1 波備戰。', 'Select a battlefield map and click "Start Defense" to begin.');
+        if (Renderer && typeof Renderer.startLobbyAmbientCanvas === 'function') {
+            Renderer.startLobbyAmbientCanvas();
+        }
+        setStatusMsg('請於大廳選擇模式與戰場，點擊出戰進入防線。', 'Select a mode and battlefield in the lobby to begin.');
         Renderer.initBoard(); Renderer.renderBoard(); updateHUD(); updateSpeedButtonUI();
     }
 
     function startGame() {
         const st = G.state;
         if (st.waveState !== 'WAITING_START') return;
-        const mapSpec = WaveSys.getCurrentMapSpec();
-        st.activeContracts = new Set(selectedContracts);
-        const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
-        st.maxBaseHp = st.activeContracts.has('fragile_heart') ? 12 : (treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20);
-        st.baseHp = st.maxBaseHp;
-        st.dewEnergy = st.activeContracts.has('dew_drought') ? 0 : (treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20);
-        st.currentGold = EconSys ? EconSys.getInitialGold(mapSpec, st.activeContracts) : st.currentGold;
-        if (EconSys && typeof EconSys.resetRunEconomyState === 'function') {
-            EconSys.resetRunEconomyState();
-        }
-        if (TreeSys && typeof TreeSys.resetTreasureRoots === 'function') {
-            TreeSys.resetTreasureRoots();
-        }
-        applyStartingMetaPerks(st);
+        const mapSpec = configureRunModeState(st, null);
         if (CodexSys && typeof CodexSys.resetRunCodex === 'function') {
             CodexSys.resetRunCodex();
         }
         Backend.resetRunTelemetry(st.currentMapId, mapSpec.name);
         if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.add('hidden');
-        const basePrepMs = CONFIG.INITIAL_PREP_MS || 6000;
+        if (Renderer && typeof Renderer.stopLobbyAmbientCanvas === 'function') {
+            Renderer.stopLobbyAmbientCanvas();
+        }
+        if (Renderer && typeof Renderer.applyWeatherVisualClass === 'function') {
+            Renderer.applyWeatherVisualClass(st.weatherType);
+        }
+        const basePrepMs = st.gameMode === 'puzzle' ? 15000 : (CONFIG.INITIAL_PREP_MS || 6000);
         st.waveState = 'PREP';
         st.waveTimerMs = st.activeContracts.has('rapid_waves') ? Math.round(basePrepMs * 0.5) : basePrepMs;
+        Renderer.initBoard();
+        Renderer.renderBoard();
         const contractTagZh = st.activeContracts.size > 0 ? `（契約 ×${st.activeContracts.size}）` : '';
         const contractTagEn = st.activeContracts.size > 0 ? ` (Contracts ×${st.activeContracts.size})` : '';
-        setStatusMsg(
-            `【${mapSpec.name}】${contractTagZh}第 1 波備戰開始，拖曳下方元素卡至空地佈置防線。`,
-            `[${mapSpec.name}]${contractTagEn} Wave 1 prep started. Drag element cards onto open tiles to build.`
-        );
+        if (st.gameMode === 'puzzle' && st.puzzleSpec) {
+            setStatusMsg(
+                `【${L(st.puzzleSpec.titleZh, st.puzzleSpec.titleEn)}】資金 ${st.currentGold} 💰，佈陣後點「立即開波」迎接單波挑戰！`,
+                `[${L(st.puzzleSpec.titleZh, st.puzzleSpec.titleEn)}] Gold ${st.currentGold} 💰 — build your defense and press Start Wave!`
+            );
+        } else {
+            setStatusMsg(
+                `【${mapSpec.name}】${contractTagZh}第 1 波備戰開始，拖曳下方元素卡至空地佈置防線。`,
+                `[${mapSpec.name}]${contractTagEn} Wave 1 prep started. Drag element cards onto open tiles to build.`
+            );
+        }
         const ob = loadOnboardingState();
-        if (!ob.completed && !ob.firstRunStarted) {
+        if (st.gameMode !== 'puzzle' && !ob.completed && !ob.firstRunStarted) {
             ob.firstRunStarted = true;
             saveOnboardingState(ob);
             st.onboardingActive = true;
@@ -3573,7 +4163,7 @@
             }
             const rootMsgZh = extraSummariesZh.length > 0 ? `（${extraSummariesZh.join('｜')}）` : '';
             const rootMsgEn = extraSummariesEn.length > 0 ? ` (${extraSummariesEn.join(' | ')})` : '';
-            if (!st.isEndlessMode && st.currentWave === victoryWave) {
+            if (st.gameMode === 'puzzle' || (!st.isEndlessMode && st.currentWave === victoryWave)) {
                 if (rootMsgZh) {
                     setStatusMsg(
                         `第 ${st.currentWave} 波最終防禦完成${rootMsgZh}！`,
@@ -3877,6 +4467,10 @@
         ['skillHarvestBtn', () => TreeSys.castGoldenHarvestSkill()], ['guildHarvestBtn', () => TreeSys.castGoldenHarvestSkill()],
         ['blessingRerollBtn', () => { SoundEngine.ensureContext(); if (TreeSys && typeof TreeSys.rerollBlessingChoices === 'function') TreeSys.rerollBlessingChoices(); }],
         ['metaTreeBtn', openMetaTreeModal], ['metaTreeCloseBtn', closeMetaTreeModal], ['metaTreeResetBtn', handleResetMetaTree],
+        ['lobbyHonorBadgeEl', openMetaTreeModal], ['lobbySoundBtn', () => SoundEngine.toggleMute()],
+        ['lobbySetupBackBtn', () => { SoundEngine.ensureContext(); showLobbyHub(); }],
+        ['lobbyCodexBtn', () => { SoundEngine.ensureContext(); CodexSys.openCodex(); }],
+        ['lobbyGuideBtn', () => { SoundEngine.ensureContext(); if (isGuideOpen()) closeGuide(); else openGuide(); }],
         ['pauseBtn', toggleCombatPause], ['pauseResumeBtn', () => { if (G.state.isPaused) setPauseState(false); }],
         ['pauseMenuBtn', returnToMainMenu], ['soundBtn', () => SoundEngine.toggleMute()],
         ['langBtn', (e) => {
@@ -4027,6 +4621,33 @@
         G.dom.mapSelectorGridEl.addEventListener('click', (e) => {
             const card = e.target && e.target.closest ? e.target.closest('.map-card') : null;
             if (card && card.dataset.mapId) { SoundEngine.ensureContext(); selectMap(card.dataset.mapId); }
+        });
+    }
+
+    if (G.dom.lobbyModeGridEl) {
+        G.dom.lobbyModeGridEl.addEventListener('click', (e) => {
+            const card = e && e.target && e.target.closest ? e.target.closest('.lobby-mode-card') : null;
+            if (!card || !card.dataset.mode) return;
+            SoundEngine.ensureContext();
+            openLobbyModeSetup(card.dataset.mode);
+        });
+    }
+
+    if (G.dom.puzzleSelectorGridEl) {
+        G.dom.puzzleSelectorGridEl.addEventListener('click', (e) => {
+            const btn = e && e.target && e.target.closest ? e.target.closest('.puzzle-trial-btn') : null;
+            if (!btn || !btn.dataset.puzzleId) return;
+            SoundEngine.ensureContext();
+            selectedPuzzleId = btn.dataset.puzzleId;
+            const trial = getPuzzleTrialById(selectedPuzzleId);
+            if (trial) {
+                WaveSys.applyMapConfig(trial.mapId);
+                G.state.weatherType = resolveDefaultWeatherForMap(trial.mapId);
+                Renderer.initBoard();
+                Renderer.renderBoard();
+            }
+            renderPuzzleSelectorUI();
+            updateLobbySetupHeader();
         });
     }
 
@@ -4283,6 +4904,9 @@
             Renderer.renderMonsterLayer();
             renderMapSelectorUI();
             renderContractSelectorUI();
+            renderDailyBriefingUI();
+            renderPuzzleSelectorUI();
+            renderLobbyHubUI();
             if (CodexSys && typeof CodexSys.isCodexOpen === 'function' && CodexSys.isCodexOpen()) {
                 CodexSys.renderCodexModal();
             }
@@ -4366,6 +4990,12 @@
     Renderer.renderBoard();
     renderMapSelectorUI();
     renderContractSelectorUI();
+    renderDailyBriefingUI();
+    renderPuzzleSelectorUI();
+    renderLobbyHubUI();
+    if (Renderer && typeof Renderer.startLobbyAmbientCanvas === 'function') {
+        Renderer.startLobbyAmbientCanvas();
+    }
     updateHUD();
     updateSpeedButtonUI();
     updateSoundButtonUI();

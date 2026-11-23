@@ -318,6 +318,48 @@
             roleSummary: 'Full Beam + Prism Scion (Max 12 Stacks) · 2.2 Aura + Pulse',
             tooltipSummary: 'Full Beam + Prism Scion (Max 12 Stacks) · 2.2 Aura + Pulse',
             lineagePath: '☄️ Plasma 2★ ▸ Twin Arcprism 4★ ▸ Radiantbeam Scion 5★'
+        },
+        storm_tri: {
+            name: 'Cataclysm Stormtree', shortName: '⛈️Stormtree',
+            roleSummary: '2.2-Cell Drifting Storm Cloud · 45% Armor Pierce + 15% MaxHP Martyr Burst',
+            tooltipSummary: '2.2-Cell Drifting Storm Cloud · 45% Pierce + 15% Martyr Burst · 1.26x Affinity',
+            lineagePath: '💨 Steam 2★ + ⚡ Thunder 2★ ▸ ⛈️ Cataclysm Stormtree 3★ (4U)'
+        },
+        storm_tri_4: {
+            name: 'Ancient Cataclysm Stormtree', shortName: '⛈️Storm 4★',
+            roleSummary: 'Ascended 2.2-Cell Drifting Storm Cloud · 45% Pierce + 15% Martyr Burst',
+            tooltipSummary: 'Ascended Storm Cloud · 45% Pierce + 15% Martyr Burst · 1.26x Affinity',
+            lineagePath: '💨 Steam 3★ + ⚡ Thunder 3★ (or 8U) ▸ ⛈️ Ancient Stormtree 4★'
+        },
+        starforge_tri: {
+            name: 'Astral Forged Tree', shortName: '🌋Starforge',
+            roleSummary: '1.8-Cell Vortex Pull + 0.5s Freeze + 40% Shred Nova + Grievous Wound',
+            tooltipSummary: '1.8-Cell Pull + 0.5s Freeze + 40% Shred + Wound · 1.26x Affinity',
+            lineagePath: '💠 Magnet 2★ + 🔥 Fire 2★ ▸ 🌋 Astral Forged Tree 3★ (4U)'
+        },
+        starforge_tri_4: {
+            name: 'Ancient Astral Forged Tree', shortName: '🌋Forge 4★',
+            roleSummary: 'Ascended 1.8-Cell Vortex Pull + 0.5s Freeze + 40% Shred Nova + Wound',
+            tooltipSummary: 'Ascended Vortex Pull + 0.5s Freeze + 40% Shred + Wound · 1.26x Affinity',
+            lineagePath: '💠 Magnet 3★ + 🔥 Fire 3★ (or 8U) ▸ 🌋 Ancient Starforge 4★'
+        },
+        prism_tri: {
+            name: 'Absolute Zero Prism', shortName: '❄️Zero Prism',
+            roleSummary: '1 Main + 2 Refract Beams · 5-Stack Thermal Brittle -> Shatter Burst + 0.8s Freeze',
+            tooltipSummary: '3-Beam Refraction · 5-Stack Thermal Brittle Shatter + 0.8s Freeze · 1.26x Affinity',
+            lineagePath: '☄️ Plasma 2★ + ❄️ Ice 2★ ▸ ❄️ Absolute Zero Prism 3★ (4U)'
+        },
+        prism_tri_4: {
+            name: 'Ancient Zero Prism', shortName: '❄️Zero 4★',
+            roleSummary: 'Ascended 3-Beam Refraction · 5-Stack Thermal Brittle -> Shatter Burst + 0.8s Freeze',
+            tooltipSummary: 'Ascended 3-Beam · 5-Stack Thermal Brittle Shatter + 0.8s Freeze · 1.26x Affinity',
+            lineagePath: '☄️ Plasma 3★ + ❄️ Ice 3★ (or 8U) ▸ ❄️ Ancient Zero Prism 4★'
+        },
+        primal_core: {
+            name: 'Genesis World Tree: Primal Core', shortName: '✦Primal Core',
+            roleSummary: 'Board Unique (Max 1) · Links 8 Adjacent Allies + 5s Full-Element Genesis Pulse',
+            tooltipSummary: 'Unique 5★ Core · 8-Neighbor Golden Ley-Lines + 5s Genesis Pulse · 1.26x Affinity',
+            lineagePath: 'Any Tri-Element 4★ (16U) or 2 Distinct Tri 4★ ▸ ✦ Primal Core 5★'
         }
     };
     // 兼容 fire / ice / thunder / steam / magnet / plasma 舊鍵別名（供怪物弱點標籤與相剋查詢同步顯示英文）
@@ -643,7 +685,7 @@
             langBtn.title = isEn ? 'Switch Language / 切換語言' : '切換語言 / Switch Language';
             langBtn.setAttribute('aria-label', isEn ? 'Switch Language' : '切換語言');
             const lbl = document.getElementById('lang-btn-label') || langBtn.querySelector('span');
-            if (lbl) lbl.innerText = isEn ? 'Language ▾' : '語言 ▾';
+            if (lbl) lbl.innerText = isEn ? 'Lang ▾' : '語言 ▾';
         }
         const startLangBtn = document.getElementById('start-lang-btn');
         if (startLangBtn) {
@@ -806,6 +848,41 @@
             setElText('side-monster-lock-tag', isEn ? 'Locked' : '鎖定檢視');
             setElText('start-title', isEn ? 'Elemental Frontline: Merge TD' : '元素陣線：合成塔防');
             setElText('start-game-btn', isEn ? 'Start Defense' : '開始防守');
+            setElText('mode-title-campaign', isEn ? 'Campaign' : '戰役關卡');
+            setElText('mode-badge-campaign', isEn ? 'Story Maps' : '主線推進');
+            setElText('mode-desc-campaign', isEn
+                ? 'Conquer Sunlit, Magma & Frost lanes across 10 waves for ★ ratings and +200 ★ first-clear bonus.'
+                : '推進晨光、熔岩與永凍三線戰場，挑戰 10 波魔王並贏取星級與首通 +200 ★ 榮譽。');
+            setElText('mode-enter-campaign', isEn ? 'Select Map ▸' : '選擇戰場 ▸');
+            setElText('mode-title-endless', isEn ? 'Endless Trial' : '無盡試煉');
+            setElText('mode-badge-endless', isEn ? 'Infinite Waves' : '極限生存');
+            setElText('mode-desc-endless', isEn
+                ? 'Enter straight at Wave 1 against endless scaling waves. Test 5★ Scion builds & vein infusions.'
+                : '由第 1 波起直面無止盡升壓攻勢，驗證 5★ 神裔與無限靈脈灌注構築極限。');
+            setElText('mode-title-daily', isEn ? 'Daily Seed' : '每日種子挑戰');
+            setElText('mode-badge-daily', isEn ? 'Daily Sync' : '同題競速');
+            setElText('mode-desc-daily', isEn
+                ? 'Deterministic daily map, weather, stock noise, blind box & blessing seed for fair score runs.'
+                : '以今日日期固定生成地圖、天氣、股市波動、盲盒與枝枒賜福序列，公平一戰。');
+            setElText('mode-enter-daily', isEn ? 'Briefing ▸' : '查看簡報 ▸');
+            setElText('mode-title-puzzle', isEn ? 'World Tree Trials' : '世界樹殘局試煉');
+            setElText('mode-badge-puzzle', isEn ? '5 Tactile Trials' : '單波解謎');
+            setElText('mode-desc-puzzle', isEn
+                ? '5 fixed-gold single-wave tactical puzzles. Solve elemental counters and high-tier merges to clear.'
+                : '5 道固定資金與極端怪潮殘局，唯有算準元素相剋與轉職合成方能一次破局。');
+            setElText('mode-enter-puzzle', isEn ? 'Enter Trials ▸' : '挑戰殘局 ▸');
+            setElText('lobby-setup-back-btn', isEn ? '← Back to Lobby' : '← 返回模式大廳');
+            setElText('daily-brief-date-k', isEn ? 'Challenge Date' : '挑戰日期');
+            setElText('daily-brief-seed-k', isEn ? 'Deterministic Seed' : '確定性種子碼');
+            setElText('daily-brief-map-k', isEn ? 'Fixed Battlefield' : '固定戰場');
+            setElText('daily-brief-weather-k', isEn ? 'Forest Weather' : '今日林相天氣');
+            setElText('daily-brief-status-k', isEn ? 'Daily Record' : '今日戰績');
+            setElText('daily-rule-note', isEn
+                ? 'All daily randomness (Blind Box, Stock noise, Blessings, Thief loot) uses today’s fixed seed. Wins & losses stamp a dated scorecard.'
+                : '今日所有波動（盲盒、股市雜訊、賜福抽卡、靈脈竊賊掉落）均鎖定同一種子序列，通關與敗陣結算皆會產生日期戰績卡。');
+            setElText('lobby-codex-btn', isEn ? 'World Tree Codex' : '世界樹圖譜');
+            setElText('lobby-guide-btn', isEn ? 'Field Guide' : '戰術手冊');
+            setElText('boss-entrance-kicker', isEn ? 'Boss Warning' : '領主警示');
             setElText('meta-tree-title', isEn ? 'World Tree Meta Rings' : '世界樹年輪');
             setElText('meta-tree-subtitle', isEn
                 ? 'Spend Honor ★ earned across runs to permanently expand Guild systems, Fate Blind Box perks & Scion cap (saved offline).'
@@ -871,8 +948,8 @@
             // 圖鑑副標題與祝福副標題
             const codexSub = document.querySelector('#codex-overlay .codex-subtitle');
             if (codexSub) codexSub.innerText = isEn
-                ? 'Grows from Core: 3 Base Buds + 3 Hybrid Species ➔ 6 Trunks ➔ 12 Crown Branches (Press [T] anytime to pause & inspect).'
-                : '由世界樹原核向上生長：3 基礎芽 ＋ 3 轉職物種 ➔ 6 進階主幹 ➔ 12 終極冠枝（按 [T] 隨時開啟並自動暫停）。';
+                ? 'Grows from Core: 3 Base + 3 Hybrid ➔ 6 Trunks ➔ 12 Crowns + 3 Tri Legends ➔ Unique Primal Core 5★ ([T] pauses & inspects).'
+                : '由世界樹原核向上生長：3 基礎 ＋ 3 雙元 ➔ 6 主幹 ➔ 12 冠枝 ＋ 3 三元傳奇 ➔ 唯一 5★ 原初之核（按 [T] 隨時暫停檢視）。';
 
             // 戰術手冊彈窗 (#guide-overlay)
             const guideSub = document.querySelector('#guide-overlay .modal-subtitle');
@@ -911,8 +988,8 @@
             });
             const guideEvoNote = document.getElementById('guide-evo-note');
             if (guideEvoNote) guideEvoNote.innerHTML = isEn
-                ? 'Cross 1★+1★ ▸ Hybrid 1★ (2U) | Same 1★+1★ ▸ Trunk 2★ | Same 2★+2★ ▸ Crown Branch A/B 3★ (4U)<br>Same-Lineage 3★+3★ (or feed 8U) ▸ Mastery / Twin AB 4★ | 4★+4★ (or 16U) ▸ World Tree Scion 5★'
-                : '異系 1★+1★ ▸ 轉職混合 1★ (2U) ｜ 同種 1★+1★ ▸ 靈木主幹 2★ ｜ 同種 2★+2★ ▸ 冠枝 A/B 3★ (4U)<br>同脈 3★+3★（或低星餵養滿 8U）▸ 極意古冠 / 雙生神冠 AB 4★ ｜ 同脈 4★+4★（或滿 16U）▸ 世界樹神裔 5★';
+                ? 'Cross 1★+1★ ▸ Hybrid 1★ (2U) | Same 1★+1★ ▸ Trunk 2★ | Same 2★+2★ ▸ Crown A/B 3★ (4U)<br>Same-Lineage 3★+3★ (or 8U) ▸ Twin 4★ | Hybrid 2★/3★ + Missing Pure 2★/3★ ▸ Tri Legend 3★/4★ | Tri 16U ▸ Unique 5★ Primal Core'
+                : '異系 1★+1★ ▸ 雙元 1★ (2U) ｜ 同種 1★+1★ ▸ 靈木主幹 2★ ｜ 同種 2★+2★ ▸ 冠枝 A/B 3★ (4U)<br>同脈 3★+3★（或 8U）▸ 雙生 4★ ｜ 雙元 2★/3★ ＋ 缺口純系 ▸ 三元傳奇 3★/4★ ｜ 三元 16U ▸ 全圖唯一 5★ 原初之核';
             const guideNote = document.getElementById('guide-hotkey-note') || document.querySelector('#guide-overlay .codex-note');
             if (guideNote) guideNote.innerHTML = isEn
                 ? 'Choose a World Tree Blessing every 3 waves; Bosses arrive on Wave 5 &amp; 10.<br>Hotkeys: <b>[1/2/3]</b> Summon | <b>[Q/W/E]</b> Skills | <b>[B]</b> Guild | <b>[T]</b> World Tree | <b>[Space]</b> Pause | <b>[Tab/S]</b> Speed | <b>[Esc]</b> Cancel'

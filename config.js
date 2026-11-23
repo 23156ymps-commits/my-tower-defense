@@ -40,6 +40,103 @@
         STORAGE_LOCAL_BALANCE_KEY: 'merge_defense_local_balance_override',
         STORAGE_MUTE_KEY: 'merge_defense_muted',
         STORAGE_CODEX_KEY: 'merge_defense_codex_unlocked',
+        STORAGE_DAILY_RECORDS_KEY: 'merge_defense_daily_records',
+        STORAGE_PUZZLE_RECORDS_KEY: 'merge_defense_puzzle_records',
+        FIRST_CLEAR_HONOR_BONUS: 200,
+        WEATHER_TYPES: ['sun', 'snow', 'storm'],
+        PUZZLE_TRIALS: [
+            {
+                id: 'puzzle_armor_breach',
+                order: 1,
+                mapId: 'lava',
+                wave: 5,
+                startGold: 185,
+                startLives: 1,
+                titleZh: '殘局 I：黑曜破甲陣',
+                titleEn: 'Trial I: Obsidian Breach',
+                descZh: '高護甲重裝魔像沿火山狹道逼近，運用火系破甲或蒸氣穿甲擊潰防線。',
+                descEn: 'Heavy armored golems march down the caldera lane. Use Fire shatter or Steam pierce.',
+                hintZh: '建議優先構築 🔥火 / ♨️蒸氣 穿透高護甲目標',
+                hintEn: 'Tip: Prioritize 🔥 Fire or ♨️ Steam to melt heavy armor',
+                queueSpecs: [
+                    { type: 'wood', count: 4, intervalMs: 750, waveLevel: 4 },
+                    { type: 'golem', count: 4, intervalMs: 1100, waveLevel: 5 }
+                ]
+            },
+            {
+                id: 'puzzle_frost_halt',
+                order: 2,
+                mapId: 'frost',
+                wave: 6,
+                startGold: 195,
+                startLives: 1,
+                titleZh: '殘局 II：極速截擊線',
+                titleEn: 'Trial II: Velocity Snare',
+                descZh: '疾風獵犬與虛空影豹高速突襲，只有單點生命容錯，務必靠緩速與凍結截停。',
+                descEn: 'Swift hounds and stealth panthers sprint toward the tree with 1 ❤️. Lock them down.',
+                hintZh: '建議配置 ❄️冰塔與 🧲磁環 觸發減速＋定身控制',
+                hintEn: 'Tip: Combine ❄️ Ice slow and 🧲 Magnet snare to break stealth & speed',
+                queueSpecs: [
+                    { type: 'hound', count: 7, intervalMs: 620, waveLevel: 5 },
+                    { type: 'panther', count: 3, intervalMs: 1050, waveLevel: 6 }
+                ]
+            },
+            {
+                id: 'puzzle_shield_breaker',
+                order: 3,
+                mapId: 'forest',
+                wave: 7,
+                startGold: 215,
+                startLives: 1,
+                titleZh: '殘局 III：蒼穹破盾試煉',
+                titleEn: 'Trial III: Aegis Shatter',
+                descZh: '機械飛艇護航符文護衛強攻林徑，藍色護盾吸收大量非雷傷，迅速瓦解盾層！',
+                descEn: 'Airships escort shielded Guardians down the forest path. Strip blue shields swiftly!',
+                hintZh: '建議召喚 ⚡雷 / ⚛️電漿 / 🧲磁環 觸發高效破盾',
+                hintEn: 'Tip: Deploy ⚡ Thunder, ⚛️ Plasma, or 🧲 Magnet for shield-break bonus',
+                queueSpecs: [
+                    { type: 'air', count: 5, intervalMs: 700, waveLevel: 6 },
+                    { type: 'guardian', count: 4, intervalMs: 1050, waveLevel: 7 }
+                ]
+            },
+            {
+                id: 'puzzle_split_purge',
+                order: 4,
+                mapId: 'lava',
+                wave: 8,
+                startGold: 235,
+                startLives: 1,
+                titleZh: '殘局 IV：裂殖疫潮',
+                titleEn: 'Trial IV: Fission Tide',
+                descZh: '癒合花妖為分裂史萊姆持續回血，若不及時掛上灼燒重傷與範圍清場將瞬間爆線。',
+                descEn: 'Healer dryads sustain Splitting Slimes. Inflict burn grievous wounds and AoE clear!',
+                hintZh: '建議以 🔥灼燒重傷 抑制治療並搭配 ♨️範圍潑灑',
+                hintEn: 'Tip: Inflict 🔥 Burn grievous wounds to halve healing and splash splits',
+                queueSpecs: [
+                    { type: 'slime', count: 5, intervalMs: 850, waveLevel: 7 },
+                    { type: 'healer', count: 3, intervalMs: 1150, waveLevel: 8 }
+                ]
+            },
+            {
+                id: 'puzzle_boss_trial',
+                order: 5,
+                mapId: 'frost',
+                wave: 9,
+                startGold: 280,
+                startLives: 1,
+                titleZh: '殘局 V：古樹終末斬首',
+                titleEn: 'Trial V: Execution Matrix',
+                descZh: '自爆蟲掩護硬化巨獸強襲終點！善用高星合成與屬性相剋完成極限單波斬殺。',
+                descEn: 'Molten bombers escort a hardened Behemoth! Merge high-tier towers for the final kill.',
+                hintZh: '建議在緩速凍結狀態擊殺自爆蟲並集中火力破核',
+                hintEn: 'Tip: Freeze bombers before killing to prevent EMP, then focus the Behemoth',
+                queueSpecs: [
+                    { type: 'bomber', count: 3, intervalMs: 900, waveLevel: 8 },
+                    { type: 'golem', count: 2, intervalMs: 1100, waveLevel: 8 },
+                    { type: 'lava', count: 1, intervalMs: 1200, waveLevel: 6, isBoss: true }
+                ]
+            }
+        ],
         CONTRACT_SCORE_BONUS_PER_ITEM: 0.15,
         DIFFICULTY_CONTRACTS: [
             { id: 'fast_tide', code: '契約 I', name: '疾行魔潮', desc: '全體敵軍移動速度 +15%' },
@@ -97,13 +194,83 @@
         return target;
     }
 
+    function hashSeedString(seedStr) {
+        const str = String(seedStr || 'default-seed');
+        let h = 2166136261 >>> 0;
+        for (let i = 0; i < str.length; i++) {
+            h ^= str.charCodeAt(i);
+            h = Math.imul(h, 16777619);
+        }
+        return h >>> 0;
+    }
+
+    function createSeededRng(seedInput) {
+        let a = typeof seedInput === 'number' ? (seedInput >>> 0) : hashSeedString(seedInput);
+        if (a === 0) a = 0x9e3779b9;
+        return function mulberry32() {
+            a = (a + 0x6d2b79f5) >>> 0;
+            let t = Math.imul(a ^ (a >>> 15), 1 | a);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    function getTodayDateKey(dateObj) {
+        const d = dateObj instanceof Date ? dateObj : new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function getDailyChallengeSpec(dateKey) {
+        const key = String(dateKey || getTodayDateKey());
+        const rng = createSeededRng(`daily:${key}`);
+        const maps = ['forest', 'lava', 'frost'];
+        const weathers = Array.isArray(GLOBAL_CONFIG.WEATHER_TYPES) && GLOBAL_CONFIG.WEATHER_TYPES.length
+            ? GLOBAL_CONFIG.WEATHER_TYPES
+            : ['sun', 'snow', 'storm'];
+        const mapId = maps[Math.floor(rng() * maps.length)];
+        const weather = weathers[Math.floor(rng() * weathers.length)];
+        const seedCode = hashSeedString(`daily:${key}`);
+        return {
+            dateKey: key,
+            seedString: `daily:${key}`,
+            seedCode,
+            mapId,
+            weather,
+            contracts: []
+        };
+    }
+
+    let activeRunRng = null;
+
+    function setActiveRunRng(seedInput) {
+        if (seedInput === null || seedInput === undefined || seedInput === '') {
+            activeRunRng = null;
+            return null;
+        }
+        activeRunRng = typeof seedInput === 'function' ? seedInput : createSeededRng(seedInput);
+        return activeRunRng;
+    }
+
+    function nextRunRandom() {
+        return typeof activeRunRng === 'function' ? activeRunRng() : Math.random();
+    }
+
     GameApp.config = GLOBAL_CONFIG;
     GameApp.helpers = {
         clampNumber,
         coordsToIndex,
         indexToCoords,
         isPlainObject,
-        deepMerge
+        deepMerge,
+        hashSeedString,
+        createSeededRng,
+        getTodayDateKey,
+        getDailyChallengeSpec,
+        setActiveRunRng,
+        nextRunRandom
     };
 
     // 保留舊版相容橋接物件，各模組載入時會自動將資料同步掛載至此

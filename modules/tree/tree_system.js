@@ -211,7 +211,8 @@
     function shouldTriggerDewOvercharge() {
         if (!G || !G.state || G.state.dewOverchargeMs <= 0 || !hasBlessing('dew_overcharge')) return false;
         const tc = getTreeConfig();
-        return Math.random() < (tc.BLESSING_DEW_OVERCHARGE_CHANCE || 0.40);
+        const nextRand = (GameApp.helpers && typeof GameApp.helpers.nextRunRandom === 'function') ? GameApp.helpers.nextRunRandom : Math.random;
+        return nextRand() < (tc.BLESSING_DEW_OVERCHARGE_CHANCE || 0.40);
     }
 
     function L(zh, en) {
@@ -650,7 +651,8 @@
                 && (!b.requiresMetaNode || isMetaNodeUnlocked(b.requiresMetaNode))
                 && (!excludeIdsSet || !excludeIdsSet.has(b.id)));
         for (let i = pool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+            const nextRand = (GameApp.helpers && typeof GameApp.helpers.nextRunRandom === 'function') ? GameApp.helpers.nextRunRandom : Math.random;
+            const j = Math.floor(nextRand() * (i + 1));
             [pool[i], pool[j]] = [pool[j], pool[i]];
         }
         return pool;

@@ -378,6 +378,20 @@
         } else if (style === 'fire_B_ember') {
             aoeDps = Math.round(singleDps * 2.1);
             aoeLabel = isEn ? 'Burn AoE' : '灼燒';
+        } else if (style === 'tri_storm_cloud') {
+            aoeDps = Math.round(singleDps + (fxParams.cloudDps || 60.3) * 3);
+            aoeLabel = isEn ? 'Cloud AoE' : '雷雲群傷';
+        } else if (style === 'tri_starforge_nova') {
+            aoeDps = Math.round((unitDmg * (1 + 2 * (fxParams.splashRatio || 0.80))) / intervalSec);
+            aoeLabel = isEn ? 'Nova AoE' : '超新星';
+        } else if (style === 'tri_prism_zero') {
+            const refCount = fxParams.refractTargets ?? 2;
+            const refRatio = fxParams.refractRatio ?? 0.547;
+            aoeDps = Math.round((unitDmg * (1 + refCount * refRatio)) / intervalSec);
+            aoeLabel = isEn ? '3-Beam' : '三束折射';
+        } else if (style === 'primal_genesis') {
+            aoeDps = Math.round((unitDmg * (1 + 2.5 * (fxParams.splashRatio || 0.72))) / intervalSec);
+            aoeLabel = isEn ? 'Genesis' : '創世群傷';
         }
 
         return {
@@ -420,11 +434,16 @@
         const growthTag = (towerObj.tier === 3 || towerObj.tier === 4) && nextU
             ? ` (${curU}/${nextU} U)`
             : '';
-        const tierLabel = towerObj.tier >= 5
-            ? (isEn ? `5★ Scion` : `5★ 神裔`)
-            : (cfg.isTwinCrown ? (isEn ? `4★ Twin AB` : `4★ 雙生AB`) : `${stars}${growthTag}`);
+        const tierLabel = cfg.isPrimalCore
+            ? (isEn ? '5★ Primal Core' : '5★ 原初之核')
+            : (towerObj.tier >= 5
+                ? (isEn ? '5★ Scion' : '5★ 神裔')
+                : (cfg.isTwinCrown ? (isEn ? '4★ Twin AB' : '4★ 雙生AB') : `${stars}${growthTag}`));
         const scionAura = (index !== null && index !== undefined) ? getScionAuraAtCell(index) : null;
         const extraTags = [];
+        if (cfg.isTriElement) {
+            extraTags.push(isEn ? 'Tri 1.26x' : '三元 1.26x');
+        }
         if ((towerObj.infusionCount || 0) > 0) {
             extraTags.push(isEn ? `Infuse +${towerObj.infusionCount}` : `灌注 +${towerObj.infusionCount}`);
         }
@@ -473,7 +492,8 @@
             }
         }
         if (bestPool.length === 0) return null;
-        return { index: bestPool[Math.floor(Math.random() * bestPool.length)], mode: bestCoverage > 0 ? 'near-path' : 'fallback' };
+        const randIdx = Math.floor(((GameApp.helpers && typeof GameApp.helpers.nextRunRandom === 'function') ? GameApp.helpers.nextRunRandom() : Math.random()) * bestPool.length);
+        return { index: bestPool[randIdx], mode: bestCoverage > 0 ? 'near-path' : 'fallback' };
     }
 
     // ==================== 索敵優先級與標籤驅動傷害結算 ====================
@@ -523,15 +543,17 @@
 
         const towerElementTag = cfg.elementTag || (towerObj && towerObj.type);
         const lineageTags = Array.isArray(cfg.lineageTags) ? cfg.lineageTags : [];
-        const isWeakness = Boolean((!cfg.isHybrid) && monster && monster.weakness && towerElementTag === monster.weakness);
-        const isAffinity = Boolean(cfg.isHybrid && monster && monster.weakness && lineageTags.includes(monster.weakness));
+        const isTriElement = Boolean(cfg.isTriElement || cfg.isPrimalCore);
+        const isWeakness = Boolean((!cfg.isHybrid && !isTriElement) && monster && monster.weakness && towerElementTag === monster.weakness);
+        const isAffinity = Boolean((isTriElement && monster) || (cfg.isHybrid && monster && monster.weakness && lineageTags.includes(monster.weakness)));
 
         const constants = towersData.COMBAT_CONSTANTS || {};
         const weaknessMult = Number.isFinite(constants.WEAKNESS_MULTIPLIER) ? constants.WEAKNESS_MULTIPLIER : 1.75;
         const affinityMult = Number.isFinite(constants.HYBRID_AFFINITY_MULTIPLIER) ? constants.HYBRID_AFFINITY_MULTIPLIER : 1.35;
+        const triAffinityMult = Number.isFinite(constants.TRIELEMENT_AFFINITY_MULTIPLIER) ? constants.TRIELEMENT_AFFINITY_MULTIPLIER : 1.26;
         const M_elem = Number.isFinite(options.M_elem)
             ? options.M_elem
-            : (isWeakness ? weaknessMult : (isAffinity ? affinityMult : 1.0));
+            : (isTriElement ? (monster ? triAffinityMult : 1.0) : (isWeakness ? weaknessMult : (isAffinity ? affinityMult : 1.0)));
 
         const family = cfg.family || (towerObj && towerObj.type);
         let P_pierce = Math.max(0, Math.min(1, Number(options.P_pierce ?? options.armorPierce) || 0));
@@ -612,7 +634,8 @@
         let finalDamage = result.damage;
         let isTeamCrit = false;
         const teamCritRate = (G && G.state && Number(G.state.teamCritBonusRate)) || 0;
-        if (!result.isWeakness && teamCritRate > 0 && !options.disableRandomCrit && Math.random() < teamCritRate) {
+        const critRoll = (GameApp.helpers && typeof GameApp.helpers.nextRunRandom === 'function') ? GameApp.helpers.nextRunRandom() : Math.random();
+        if (!result.isWeakness && teamCritRate > 0 && !options.disableRandomCrit && critRoll < teamCritRate) {
             finalDamage = Math.max(1, Math.round(finalDamage * 1.5));
             isTeamCrit = true;
         }
@@ -958,6 +981,75 @@
         if (hitAny) {
             Renderer.emitRingFX(towerPos.left, towerPos.top, G.boardMetrics.step * 6.5, '#D97724', 0.28, 420);
             Renderer.emitParticleBurst(towerPos.left, towerPos.top, '#E0B43C', 10, 95);
+        }
+        return hitAny;
+    }
+
+    function getPrimalCoreLinkedNeighbors(coreIndex) {
+        if (!G || !G.state || !Array.isArray(G.state.board) || coreIndex === null || coreIndex === undefined) {
+            return [];
+        }
+        const cols = CONFIG.GRID_COLS || 15;
+        const rows = CONFIG.GRID_ROWS || 10;
+        const c = indexToCoords(coreIndex);
+        const { coordsToIndex } = GameApp.helpers || {};
+        if (!c || typeof coordsToIndex !== 'function') return [];
+        const neighbors = [];
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                const nx = c.x + dx;
+                const ny = c.y + dy;
+                if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
+                const nIdx = coordsToIndex(nx, ny);
+                if (G.state.board[nIdx]) neighbors.push(nIdx);
+            }
+        }
+        return neighbors;
+    }
+
+    function triggerPrimalGenesisPulse(towerIndex, towerObj) {
+        if (!G || !G.state || !Array.isArray(G.state.monsters) || G.state.monsters.length === 0) return false;
+        const Renderer = GameApp.renderer;
+        const coords = indexToCoords(towerIndex);
+        if (!coords || !Renderer) return false;
+        const towerPos = Renderer.getCellCenter(coords.x, coords.y);
+        const cfg = getTowerCfg(towerObj.type, towerObj.tier) || {};
+        const fxParams = cfg.effectParams || {};
+        const baseRatio = Number.isFinite(fxParams.genesisPulseRatio) ? fxParams.genesisPulseRatio : 0.45;
+        const linkStep = Number.isFinite(fxParams.genesisLinkBonusPerAlly) ? fxParams.genesisLinkBonusPerAlly : 0.03;
+        const linked = getPrimalCoreLinkedNeighbors(towerIndex);
+        const ratio = baseRatio * (1 + Math.min(8, linked.length) * linkStep);
+        const armorPierce = Number.isFinite(fxParams.armorPierce) ? fxParams.armorPierce : 0.30;
+        const MonsterSys = GameApp.systems && GameApp.systems.monster;
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+
+        let hitAny = false;
+        const pulseMonsters = G.state.monsters.slice();
+        for (let i = 0; i < pulseMonsters.length; i++) {
+            const m = pulseMonsters[i];
+            if (!m || m.hp <= 0 || m.isTargetable === false) continue;
+            hitAny = true;
+            if (MonsterSys) {
+                MonsterSys.applyBurnToMonster(m, { burnDps: 10, burnDurationMs: 2500 }, towerObj);
+                MonsterSys.applySlowToMonster(m, 0.35, 2200, 'primal_pulse');
+                MonsterSys.applyShockToMonster(m, { shockDurationMs: 2500, shockBonusBase: 10, shockBonusPerWave: 2.5 }, towerObj);
+            }
+            applyHitToMonster(towerIndex, towerObj, m, {
+                damageScale: ratio,
+                armorPierce,
+                damageCategory: 'aoe',
+                dmgTag: isEn ? '🌳Genesis ' : '🌳創世 '
+            });
+        }
+        if (hitAny) {
+            Renderer.emitRingFX(towerPos.left, towerPos.top, G.boardMetrics.step * 7.2, '#E0B43C', 0.32, 460);
+            Renderer.emitParticleBurst(towerPos.left, towerPos.top, '#F4F1EA', 14, 115);
+            linked.forEach((nIdx) => {
+                const nc = indexToCoords(nIdx);
+                const np = nc ? Renderer.getCellCenter(nc.x, nc.y) : null;
+                if (np) Renderer.emitHitFlash(np.left, np.top, '#E0B43C');
+            });
         }
         return hitAny;
     }
@@ -1576,6 +1668,174 @@
             GameApp.renderer.emitCanvasAttackFX('plasma', towerPos, targetPos, { stacks: towerObj.focusStacks });
             executePlasmaRefract(towerIndex, towerObj, target, targetPos, fxParams);
             if (G.state.selectedIndex === towerIndex) G.callbacks.updateTowerInspector();
+        },
+
+        // Stage 2 三元傳奇：⛈️ 天災風暴樹（2.2 格漂移熾凍雷雲 ＋ 45% 穿甲 ＋ 減速 ＋ 雲內死亡 15% 殉爆）
+        tri_storm_cloud(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
+            const fxParams = cfg.effectParams || {};
+            const MonsterSys = GameApp.systems && GameApp.systems.monster;
+            const armorPierce = fxParams.armorPierce ?? 0.45;
+            applyHitToMonster(towerIndex, towerObj, target, {
+                armorPierce,
+                forceSlow: true,
+                slowRate: fxParams.slowRate ?? 0.35,
+                slowDurationMs: fxParams.slowDurationMs ?? 2000,
+                slowSourceId: 'storm_cloud'
+            });
+            if (MonsterSys && typeof MonsterSys.spawnGroundHazard === 'function') {
+                MonsterSys.spawnGroundHazard({
+                    type: 'storm_cloud',
+                    x: targetPos.left,
+                    y: targetPos.top,
+                    radiusPx: (fxParams.cloudRadiusCells ?? 2.2) * G.boardMetrics.step,
+                    dps: fxParams.cloudDps ?? 60.3,
+                    durationMs: fxParams.cloudDurationMs ?? 3600,
+                    armorPierce,
+                    slowRate: fxParams.slowRate ?? 0.35,
+                    slowDurationMs: fxParams.slowDurationMs ?? 2000,
+                    martyrPct: fxParams.martyrPct ?? 0.15,
+                    martyrRadiusPx: (fxParams.martyrRadiusCells ?? 1.5) * G.boardMetrics.step,
+                    martyrCapNormal: fxParams.martyrCapNormal ?? 420,
+                    martyrCapBoss: fxParams.martyrCapBoss ?? 650,
+                    sourceTower: towerObj
+                });
+            }
+            GameApp.renderer.emitCanvasAttackFX('storm_tri', towerPos, targetPos, {
+                frostRadiusPx: (fxParams.cloudRadiusCells ?? 2.2) * G.boardMetrics.step
+            });
+        },
+
+        // Stage 2 三元傳奇：🌋 星界熔爐樹（1.8 格聚怪 ＋ 0.5s 凍結 ＋ 40% 群體破甲超新星 ＋ 50% 重傷）
+        tri_starforge_nova(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
+            const fxParams = cfg.effectParams || {};
+            const MonsterSys = GameApp.systems && GameApp.systems.monster;
+            const radiusPx = (fxParams.aoeRadiusCells ?? 1.8) * G.boardMetrics.step;
+            const splashRatio = fxParams.splashRatio ?? 0.80;
+            const shredRate = fxParams.shredRate ?? 0.40;
+            const shredDurationMs = fxParams.shredDurationMs ?? 4000;
+            const pullCells = fxParams.pullDistanceCells ?? 0.45;
+            const freezeMs = fxParams.freezeDurationMs ?? 500;
+
+            const victims = G.state.monsters.filter(m =>
+                m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= radiusPx
+            );
+            if (!victims.some(m => m.id === target.id)) victims.unshift(target);
+            for (let i = 0; i < victims.length; i++) {
+                const m = victims[i];
+                maybeRevealByAoE(m);
+                if (MonsterSys) {
+                    MonsterSys.applyGrievousWound(m, fxParams.grievousRate ?? 0.50, fxParams.grievousDurationMs ?? 5000);
+                }
+                applyHitToMonster(towerIndex, towerObj, m, {
+                    damageScale: m.id === target.id ? 1.0 : splashRatio,
+                    damageCategory: m.id === target.id ? 'single' : 'aoe',
+                    forceShred: true,
+                    shredRate,
+                    shredDurationMs,
+                    allowStealthed: true
+                });
+                if (m.hp > 0 && MonsterSys) {
+                    if (!m.isBoss) MonsterSys.pullMonsterAlongPath(m, pullCells);
+                    if (typeof MonsterSys.tryApplyDirectFreeze === 'function') {
+                        MonsterSys.tryApplyDirectFreeze(m, freezeMs, {
+                            bossFreezeMult: fxParams.bossFreezeMult ?? 0.50,
+                            freezeImmuneMs: fxParams.freezeImmuneMs ?? 6000
+                        });
+                    }
+                }
+            }
+            GameApp.renderer.emitCanvasAttackFX('starforge_tri', towerPos, targetPos, { splashRadiusPx: radiusPx });
+        },
+
+        // Stage 2 三元傳奇：❄️ 絕對零度稜鏡（1 主＋2 副折射光束 ＋ 5 層熱脹冷縮脆化 ＋ 滿層碎晶爆發與 0.8s 冰封）
+        tri_prism_zero(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
+            const fxParams = cfg.effectParams || {};
+            const MonsterSys = GameApp.systems && GameApp.systems.monster;
+            const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+            const shatterMult = fxParams.shatterMult ?? 2.0;
+            const freezeMs = fxParams.freezeDurationMs ?? 800;
+
+            const strikeBeam = (victim, beamScale, category) => {
+                if (!victim || victim.hp <= 0) return;
+                applyHitToMonster(towerIndex, towerObj, victim, {
+                    damageScale: beamScale,
+                    damageCategory: category,
+                    forceSlow: true,
+                    slowRate: 0.35,
+                    slowDurationMs: 2200,
+                    slowSourceId: 'prism_zero'
+                });
+                if (victim.hp > 0 && MonsterSys && typeof MonsterSys.registerPrismThermalHit === 'function') {
+                    const th = MonsterSys.registerPrismThermalHit(victim, fxParams);
+                    if (th && th.shattered) {
+                        applyHitToMonster(towerIndex, towerObj, victim, {
+                            damageScale: beamScale * shatterMult,
+                            damageCategory: 'aoe',
+                            applySlow: false,
+                            applyShred: false,
+                            dmgTag: isEn ? '❄️Shatter ' : '❄️碎晶 '
+                        });
+                        if (victim.hp > 0 && typeof MonsterSys.tryApplyDirectFreeze === 'function') {
+                            MonsterSys.tryApplyDirectFreeze(victim, freezeMs, {
+                                bossFreezeMult: fxParams.bossFreezeMult ?? 0.50,
+                                freezeImmuneMs: fxParams.freezeImmuneMs ?? 6000
+                            });
+                        }
+                        if (GameApp.renderer) {
+                            GameApp.renderer.emitParticleBurst(victim.pixelX, victim.pixelY, '#D6EEF7', 10, 95);
+                        }
+                    }
+                }
+            };
+
+            strikeBeam(target, 1.0, 'single');
+            GameApp.renderer.emitCanvasAttackFX('prism_tri', towerPos, targetPos, { stacks: 2 });
+
+            const refractRadiusPx = (fxParams.refractRadiusCells ?? 2.6) * G.boardMetrics.step;
+            const refractRatio = fxParams.refractRatio ?? 0.547;
+            const refractMax = fxParams.refractTargets ?? 2;
+            const candidates = [];
+            for (let i = 0; i < G.state.monsters.length; i++) {
+                const cand = G.state.monsters[i];
+                if (cand.id === target.id || cand.hp <= 0 || cand.isTargetable === false) continue;
+                const d = Math.hypot(cand.pixelX - targetPos.left, cand.pixelY - targetPos.top);
+                if (d <= refractRadiusPx) candidates.push({ monster: cand, dist: d });
+            }
+            candidates.sort((a, b) => a.dist - b.dist);
+            const hitCount = Math.min(refractMax, candidates.length);
+            for (let k = 0; k < hitCount; k++) {
+                const sub = candidates[k].monster;
+                const subPos = { left: sub.pixelX, top: sub.pixelY };
+                strikeBeam(sub, refractRatio, 'aoe');
+                GameApp.renderer.emitCanvasAttackFX('prism_tri', targetPos, subPos, { stacks: 1 });
+            }
+        },
+
+        // 唯一 5★ 創世世界樹·原初之核：三元融合高穿透爆裂主炮（並由 5s 計時器驅動創世脈動）
+        primal_genesis(towerIndex, towerObj, cfg, target, towerPos, targetPos) {
+            const fxParams = cfg.effectParams || {};
+            const MonsterSys = GameApp.systems && GameApp.systems.monster;
+            const splashRadiusPx = (fxParams.splashRadiusCells ?? 1.6) * G.boardMetrics.step;
+            const splashRatio = fxParams.splashRatio ?? 0.72;
+            const armorPierce = fxParams.armorPierce ?? 0.30;
+
+            if (MonsterSys) {
+                MonsterSys.applyBurnToMonster(target, { burnDps: 12, burnDurationMs: 3000 }, towerObj);
+                MonsterSys.applySlowToMonster(target, 0.45, 2400, 'primal_core');
+                MonsterSys.applyShockToMonster(target, { shockDurationMs: 3000, shockBonusBase: 10, shockBonusPerWave: 2.5 }, towerObj);
+            }
+            applyHitToMonster(towerIndex, towerObj, target, {
+                armorPierce,
+                forceShred: true,
+                shredRate: 0.35,
+                shredDurationMs: 3500
+            });
+            applySplashDamage(towerIndex, towerObj, targetPos, splashRadiusPx, target.id, {
+                damageScale: splashRatio,
+                armorPierce,
+                allowStealthed: true
+            });
+            GameApp.renderer.emitCanvasAttackFX('primal_core', towerPos, targetPos, { splashRadiusPx });
         }
     };
 
@@ -1687,12 +1947,15 @@
 
             if ((Number(towerObj.tier) || 1) >= 5 && st.monsters.length > 0) {
                 const econData = (GameApp.data && GameApp.data.economy) || {};
-                const pulseIntervalMs = Number.isFinite(econData.SCION_PULSE_INTERVAL_MS) ? econData.SCION_PULSE_INTERVAL_MS : 6000;
+                const cfg5 = getTowerCfg(towerObj.type, towerObj.tier) || {};
+                const isPrimal = Boolean(towerObj.type === 'primal_core' || cfg5.isPrimalCore);
+                const pulseIntervalMs = isPrimal
+                    ? ((cfg5.effectParams && cfg5.effectParams.genesisPulseIntervalMs) || 5000)
+                    : (Number.isFinite(econData.SCION_PULSE_INTERVAL_MS) ? econData.SCION_PULSE_INTERVAL_MS : 6000);
                 towerObj.scionPulseAccMs = (towerObj.scionPulseAccMs || 0) + dtMs;
                 if (towerObj.scionPulseAccMs >= pulseIntervalMs) {
-                    if (triggerScionMapPulse(idx, towerObj)) {
-                        didCombatAct = true;
-                    }
+                    const fired = isPrimal ? triggerPrimalGenesisPulse(idx, towerObj) : triggerScionMapPulse(idx, towerObj);
+                    if (fired) didCombatAct = true;
                     towerObj.scionPulseAccMs %= pulseIntervalMs;
                 }
             }
@@ -1768,6 +2031,8 @@
         applyHitToMonster,
         fireThunderBolt: fireLightningBolt,
         triggerScionMapPulse,
+        getPrimalCoreLinkedNeighbors,
+        triggerPrimalGenesisPulse,
         performTowerAttack,
         updateTowersCombat,
         refreshAllTowerAttackReadiness

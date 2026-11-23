@@ -93,7 +93,29 @@
         const cfg = getTowersDict()[nodeId];
         if (cfg && cfg.family) return cfg.family;
         if (cfg && cfg.elementTag) return cfg.elementTag;
-        return String(nodeId || '').replace(/_(bud|trunk|A|B|crown_A|crown_B|twin_AB|scion)$/, '');
+        return String(nodeId || '').replace(/_(bud|trunk|A|B|crown_A|crown_B|twin_AB|scion|4)$/, '');
+    }
+
+    function hasPrimalCoreOnBoard() {
+        const board = G && G.state && G.state.board;
+        if (!Array.isArray(board)) return false;
+        const dict = getTowersDict();
+        for (let i = 0; i < board.length; i++) {
+            const t = board[i];
+            if (!t) continue;
+            const cfg = dict[normalizeNodeId(t)] || dict[t.type] || {};
+            if (t.type === 'primal_core' || cfg.isPrimalCore) return true;
+        }
+        return false;
+    }
+
+    function isTriElementTower(towerOrType) {
+        if (!towerOrType) return false;
+        const nodeId = typeof towerOrType === 'string' ? towerOrType : normalizeNodeId(towerOrType);
+        const cfg = getTowersDict()[nodeId] || {};
+        if (cfg.isTriElement || cfg.isPrimalCore) return true;
+        const fam = resolveTowerFamily(nodeId);
+        return ['storm_tri', 'starforge_tri', 'prism_tri', 'primal_core'].includes(fam);
     }
 
     function getDefaultNutritionU(towerObj) {
@@ -166,6 +188,10 @@
         const toFam = resolveTowerFamily(toTower);
         if (!fromFam || !toFam) return false;
         if (fromFam === toFam) return true;
+        if (isTriElementTower(toTower)) {
+            const allowedTriFeeders = ['fire', 'ice', 'thunder', 'steam', 'magnet', 'plasma', 'storm_tri', 'starforge_tri', 'prism_tri'];
+            return (Number(fromTower.tier) || 1) < (Number(toTower.tier) || 1) && allowedTriFeeders.includes(fromFam);
+        }
         const evo = getEvoData();
         const parentMap = evo.PARENT_LINEAGE_MAP || {
             steam: ['fire', 'ice'],
@@ -186,12 +212,18 @@
         if (toTier >= maxTier || fromTier >= toTier) return false;
         const curU = getTowerNutritionU(toTower);
         if (curU >= 16) return false;
-        if (toTier === 4 && curU >= 15 && isScionCrownCapReached()) return false;
+        if (toTier === 4 && curU >= 15) {
+            if (isTriElementTower(toTower) && hasPrimalCoreOnBoard()) return false;
+            if (isScionCrownCapReached()) return false;
+        }
         return isSameBloodlineForFeeding(fromTower, toTower);
     }
 
     function resolveEvolved3To4Type(toTower, addedBranch = null) {
         const fam = resolveTowerFamily(toTower);
+        if (isTriElementTower(toTower)) {
+            return `${fam}_4`;
+        }
         const cfg = getTowersDict()[normalizeNodeId(toTower)] || {};
         const curBranch = cfg.branchCode || (toTower.type.endsWith('_B') ? 'B' : 'A');
         const hasA = curBranch === 'A' || addedBranch === 'A' || Boolean(toTower.hasFedBranchA);
@@ -213,8 +245,18 @@
         if (fromTower.tier >= maxTier) {
             return L('5★ 世界樹神裔無法作為素材被吞噬', '5★ Scion cannot be sacrificed as material');
         }
+        const pairKeyCheck = getRecipeKey(normalizeNodeId(fromTower), normalizeNodeId(toTower));
+        const primalRules = evo.PRIMAL_RECIPES_T4_TO_T5 || {};
+        const wantsPrimalCore = (fromTower.tier === 4 && toTower.tier === 4 && Boolean(primalRules[pairKeyCheck]))
+            || (toTower.tier === 4 && fromTower.tier < toTower.tier && isTriElementTower(toTower) && isSameBloodlineForFeeding(fromTower, toTower) && getTowerNutritionU(toTower) >= 15);
+        if (wantsPrimalCore && hasPrimalCoreOnBoard()) {
+            return L(
+                '場上已存在唯一 5★「創世世界樹·原初之核」（全圖限 1 座），無法再合出第 2 座',
+                'Only 1 Genesis Primal Core (5★) can exist on the board at a time'
+            );
+        }
         const isScionCapBlocked = (
-            (fromTower.tier === 4 && toTower.tier === 4 && resolveTowerFamily(fromTower) === resolveTowerFamily(toTower))
+            (fromTower.tier === 4 && toTower.tier === 4 && (resolveTowerFamily(fromTower) === resolveTowerFamily(toTower) || Boolean(primalRules[pairKeyCheck])))
             || (toTower.tier === 4 && fromTower.tier < toTower.tier && isSameBloodlineForFeeding(fromTower, toTower) && getTowerNutritionU(toTower) >= 15)
         ) && isScionCrownCapReached();
         if (isScionCapBlocked) {
@@ -235,9 +277,9 @@
             return L('僅同物種 1★、異系基礎芽轉職，或同血脈基礎芽灌注轉職 1★ 可融合', 'Requires matching 1★ pair, distinct base buds, or matching lineage infusion');
         }
         if (fromTower.tier === 2 && toTower.tier === 2) {
-            return L('須兩座同物種 2★ 塔才能觸發冠枝分岔進化', 'Requires two matching 2★ trunks for Crown evolution');
+            return L('須兩座同物種 2★ 塔，或二元 2★＋缺失第 3 元素純系 2★ 方可三元融合', 'Requires matching 2★ trunks or Binary 2★ + missing 3rd Pure 2★ for Tri-Elemental fusion');
         }
-        return L('須同血脈防禦塔方可進階或餵養充能', 'Requires matching bloodline towers to evolve or feed');
+        return L('須同血脈或合法三元融合配方方可進階或餵養充能', 'Requires matching bloodline or valid Tri-Elemental recipe');
     }
 
     /**
@@ -290,11 +332,32 @@
             return null;
         }
 
-        // ==================== 2★ + 2★ -> 3★ 冠枝 (4U) ====================
+        // ==================== 2★ + 2★ -> 3★ 冠枝 (4U) 或 三元素創世融合 (4U) ====================
         if (fromTower.tier === 2 && toTower.tier === 2) {
             const trunkA = normalizeNodeId(fromTower);
             const trunkB = normalizeNodeId(toTower);
             const pairKey = getRecipeKey(trunkA, trunkB);
+            const triT2Rules = evo.TRI_RECIPES_T2_TO_T3 || {};
+            const triRule = triT2Rules[pairKey];
+            if (triRule && triRule.resultType && towersDict[triRule.resultType]) {
+                const triCfg = towersDict[triRule.resultType];
+                return {
+                    type: triRule.resultType,
+                    options: [triRule.resultType],
+                    tier: 3,
+                    nextNutritionU: 4,
+                    isCrossElement: true,
+                    isTriElement: true,
+                    mode: triRule.mode || 'tri_genesis_t3',
+                    family: triRule.family || triCfg.family || '',
+                    requiresConfirmation: false,
+                    title: `${triCfg.icon || '✨'} ${triCfg.name}`,
+                    previewLabel: L(
+                        `三元創世融合 ▸ ${triCfg.name} ★★★ (4U · 全場 1.26x)`,
+                        `Tri-Genesis Fusion ▸ ${triCfg.name} ★★★ (4U · 1.26x Affinity)`
+                    )
+                };
+            }
             const t2Rules = evo.T2_TO_T3_RULES || {};
             const rule = t2Rules[pairKey];
             if (!rule || !Array.isArray(rule.options) || rule.options.length === 0) {
@@ -316,11 +379,33 @@
             };
         }
 
-        // ==================== 3★ + 3★ -> 4★ 極意古冠 / 雙生神冠 AB (8U) ====================
+        // ==================== 3★ + 3★ -> 4★ 極意古冠 / 雙生神冠 AB / 三元古冠 (8U) ====================
         if (fromTower.tier === 3 && toTower.tier === 3) {
             const idA = normalizeNodeId(fromTower);
             const idB = normalizeNodeId(toTower);
             const pairKey = getRecipeKey(idA, idB);
+            const triT3Rules = evo.TRI_RECIPES_T3_TO_T4 || {};
+            const triRule34 = triT3Rules[pairKey];
+            if (triRule34 && triRule34.resultType && towersDict[triRule34.resultType]) {
+                const resTriCfg = towersDict[triRule34.resultType];
+                const nextU = Math.min(16, Math.max(8, getTowerNutritionU(toTower) + getFeedNutritionValue(fromTower)));
+                return {
+                    type: triRule34.resultType,
+                    options: [triRule34.resultType],
+                    tier: 4,
+                    nextNutritionU: nextU,
+                    isCrossElement: true,
+                    isTriElement: true,
+                    mode: triRule34.mode || 'tri_genesis_t4',
+                    family: triRule34.family || resTriCfg.family || '',
+                    requiresConfirmation: false,
+                    title: `${resTriCfg.icon || '✨'} ${resTriCfg.name}`,
+                    previewLabel: L(
+                        `三元創世古冠 ▸ ${resTriCfg.name} ★★★★ (8U · 全場 1.26x)`,
+                        `Tri-Genesis Crown ▸ ${resTriCfg.name} ★★★★ (8U · 1.26x Affinity)`
+                    )
+                };
+            }
             const t3Rules = evo.T3_TO_T4_RULES || {};
             const rule = t3Rules[pairKey];
             if (!rule || !rule.resultType || !towersDict[rule.resultType]) {
@@ -345,14 +430,40 @@
             };
         }
 
-        // ==================== 4★ + 4★ -> 5★ 世界樹神裔 (16U) ====================
+        // ==================== 4★ + 4★ -> 5★ 世界樹神裔 / 唯一原初之核 (16U) ====================
         if (fromTower.tier === 4 && toTower.tier === 4) {
-            if (isScionCrownCapReached()) {
-                return null;
-            }
             const idA = normalizeNodeId(fromTower);
             const idB = normalizeNodeId(toTower);
             const pairKey = getRecipeKey(idA, idB);
+            const primalRules = evo.PRIMAL_RECIPES_T4_TO_T5 || {};
+            const primalRule = primalRules[pairKey];
+            if (primalRule && primalRule.resultType && towersDict[primalRule.resultType]) {
+                if (hasPrimalCoreOnBoard() || isScionCrownCapReached()) {
+                    return null;
+                }
+                const pCfg = towersDict[primalRule.resultType];
+                return {
+                    type: primalRule.resultType,
+                    options: [primalRule.resultType],
+                    tier: 5,
+                    nextNutritionU: 16,
+                    isScion: true,
+                    isPrimalCore: true,
+                    isTriElement: true,
+                    isCrossElement: true,
+                    mode: 'primal_core_t5',
+                    family: 'primal_core',
+                    requiresConfirmation: false,
+                    title: `${pCfg.icon || '🌳'} ${pCfg.name}`,
+                    previewLabel: L(
+                        `🌳 創世覺醒 ▸ ${pCfg.name} ★★★★★（全圖唯一限 1 座）`,
+                        `🌳 Genesis Awakening ▸ ${pCfg.name} ★★★★★ (Unique Limit 1)`
+                    )
+                };
+            }
+            if (isScionCrownCapReached()) {
+                return null;
+            }
             const t4Rules = evo.T4_TO_T5_RULES || {};
             const rule = t4Rules[pairKey];
             if (!rule || !rule.resultType || !towersDict[rule.resultType]) {
@@ -379,7 +490,8 @@
             const feedU = getFeedNutritionValue(fromTower);
             const curU = getTowerNutritionU(toTower);
             let nextU = Math.min(16, curU + feedU);
-            if (toTower.tier === 4 && nextU >= 16 && isScionCrownCapReached()) {
+            const isTriDest = isTriElementTower(toTower);
+            if (toTower.tier === 4 && nextU >= 16 && ((isTriDest && hasPrimalCoreOnBoard()) || isScionCrownCapReached())) {
                 if (curU >= 15) return null;
                 nextU = 15;
             }
@@ -400,8 +512,9 @@
                     feedU,
                     nextNutritionU: nextU,
                     isTwinCrown: isTwin,
+                    isTriElement: isTriDest,
                     isCrossElement: Boolean(resCfg.isHybrid),
-                    mode: isTwin ? 'feed_twin_t4' : 'feed_evolve_t4',
+                    mode: isTriDest ? 'feed_evolve_tri_t4' : (isTwin ? 'feed_twin_t4' : 'feed_evolve_t4'),
                     family: resolveTowerFamily(toTower),
                     requiresConfirmation: false,
                     title: `${resCfg.icon || ''} ${resCfg.name || targetType}`,
@@ -413,7 +526,7 @@
 
             if (toTower.tier === 4 && nextU >= 16) {
                 const fam = resolveTowerFamily(toTower);
-                const targetType = `${fam}_scion`;
+                const targetType = isTriDest ? 'primal_core' : `${fam}_scion`;
                 const resCfg = towersDict[targetType] || {};
                 return {
                     type: targetType,
@@ -424,12 +537,16 @@
                     feedU,
                     nextNutritionU: 16,
                     isScion: true,
+                    isPrimalCore: isTriDest,
+                    isTriElement: isTriDest,
                     isCrossElement: Boolean(resCfg.isHybrid),
-                    mode: 'feed_evolve_t5',
-                    family: fam,
+                    mode: isTriDest ? 'feed_evolve_primal_core' : 'feed_evolve_t5',
+                    family: isTriDest ? 'primal_core' : fam,
                     requiresConfirmation: false,
                     title: `${resCfg.icon || ''} ${resCfg.name || targetType}`,
-                    previewLabel: L(`🌳 神裔充能覺醒 +${feedU}U ▸ ${resCfg.name} ★★★★★ (16U)`, `🌳 Scion Charge +${feedU}U ▸ ${resCfg.name} ★★★★★ (16U)`)
+                    previewLabel: isTriDest
+                        ? L(`🌳 創世充能覺醒 +${feedU}U ▸ ${resCfg.name} ★★★★★ (唯一 16U)`, `🌳 Primal Charge +${feedU}U ▸ ${resCfg.name} ★★★★★ (Unique 16U)`)
+                        : L(`🌳 神裔充能覺醒 +${feedU}U ▸ ${resCfg.name} ★★★★★ (16U)`, `🌳 Scion Charge +${feedU}U ▸ ${resCfg.name} ★★★★★ (16U)`)
                 };
             }
 
@@ -753,8 +870,10 @@
 
         if (towerObj.tier === 4) {
             const fam = resolveTowerFamily(towerObj);
+            const isTriTarget = isTriElementTower(towerObj);
             if (nextU >= 16) {
-                if (isScionCrownCapReached()) {
+                const blockedByPrimal = isTriTarget && hasPrimalCoreOnBoard();
+                if (blockedByPrimal || isScionCrownCapReached()) {
                     if (curU >= 15) return null;
                     const cappedU = 15;
                     const curCfg = towersDict[nodeId] || {};
@@ -766,18 +885,24 @@
                         tier: 4,
                         feedU: Math.max(1, cappedU - curU),
                         nextNutritionU: cappedU,
+                        isTriElement: isTriTarget,
                         isCrossElement: Boolean(curCfg.isHybrid),
                         mode: 'fruit_feed_charge_t4',
                         family: fam,
                         requiresConfirmation: false,
                         title: `${curCfg.icon || ''} ${curCfg.name || nodeId}`,
-                        previewLabel: L(
-                            `神裔上限已滿 · 充能鎖定 ${cappedU} / 16 U`,
-                            `Scion Cap Reached · Locked at ${cappedU} / 16 U`
-                        )
+                        previewLabel: blockedByPrimal
+                            ? L(
+                                `場上已存在唯一原初之核 · 充能鎖定 ${cappedU} / 16 U`,
+                                `Unique Primal Core exists · Locked at ${cappedU} / 16 U`
+                            )
+                            : L(
+                                `神裔上限已滿 · 充能鎖定 ${cappedU} / 16 U`,
+                                `Scion Cap Reached · Locked at ${cappedU} / 16 U`
+                            )
                     };
                 }
-                const scionType = `${fam}_scion`;
+                const scionType = isTriTarget ? 'primal_core' : `${fam}_scion`;
                 const resCfg = towersDict[scionType] || {};
                 return {
                     isFruitUpgrade: true,
@@ -787,9 +912,11 @@
                     feedU: fruitFeedU,
                     nextNutritionU: 16,
                     isScion: true,
+                    isPrimalCore: isTriTarget,
+                    isTriElement: isTriTarget,
                     isCrossElement: Boolean(resCfg.isHybrid),
-                    mode: 'fruit_feed_evolve_t5',
-                    family: fam,
+                    mode: isTriTarget ? 'fruit_feed_evolve_primal_core' : 'fruit_feed_evolve_t5',
+                    family: isTriTarget ? 'primal_core' : fam,
                     requiresConfirmation: false,
                     title: `${resCfg.icon || ''} ${resCfg.name || scionType}`,
                     previewLabel: L(
@@ -921,6 +1048,8 @@
         getShortNodeLabel,
         getTowerLineagePathText,
         getIncompatibilityReason,
+        hasPrimalCoreOnBoard,
+        isTriElementTower,
         getFusionResult,
         canCombineTowers,
         getAscensionHint,

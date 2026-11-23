@@ -241,6 +241,15 @@
                         <div id="boss-banner-hp-fill" class="boss-banner-hp-fill"></div>
                     </div>
                 </div>
+                <!-- Boss 降臨高情緒橫幅（W5 / W10 / W15 / W20 約 0.8s 劃過，不阻斷操作） -->
+                <div id="boss-entrance-banner" class="boss-entrance-banner hidden" aria-hidden="true">
+                    <div class="boss-entrance-crest" aria-hidden="true"></div>
+                    <div class="boss-entrance-text-wrap">
+                        <span id="boss-entrance-kicker" class="boss-entrance-kicker">領主警示</span>
+                        <strong id="boss-entrance-title" class="boss-entrance-title">魔王降臨</strong>
+                        <span id="boss-entrance-sub" class="boss-entrance-sub num">弱點 · 護甲</span>
+                    </div>
+                </div>
                 <!-- 0.15x 子彈時間 T2 -> T3 進化分岔選擇與確認輪盤 -->
                 <div id="evo-confirm-overlay" class="evo-confirm-overlay hidden" role="dialog" aria-modal="true"
                     aria-labelledby="evo-confirm-title">
@@ -565,8 +574,8 @@
             <div class="guide-section">
                 <h2 id="guide-evo-title" class="guide-section-title">轉職與升星金字塔（1★ → 5★ 16U）</h2>
                 <div id="guide-evo-note" class="codex-note guide-evo-note num">
-                    異系 1★+1★ ▸ 轉職混合 1★ (2U) ｜ 同種 1★+1★ ▸ 靈木主幹 2★ ｜ 同種 2★+2★ ▸ 冠枝 A/B 3★ (4U)<br>
-                    同脈 3★+3★（或低星餵養滿 8U）▸ 極意古冠 / 雙生神冠 AB 4★ ｜ 同脈 4★+4★（或滿 16U）▸ 世界樹神裔 5★
+                    異系 1★+1★ ▸ 雙元 1★ (2U) ｜ 同種 1★+1★ ▸ 靈木主幹 2★ ｜ 同種 2★+2★ ▸ 冠枝 A/B 3★ (4U)<br>
+                    同脈 3★+3★（或 8U）▸ 雙生 4★ ｜ 雙元 2★/3★ ＋ 缺口純系 ▸ 三元傳奇 3★/4★ ｜ 三元 16U ▸ 全圖唯一 5★ 原初之核
                 </div>
             </div>
 
@@ -605,8 +614,7 @@
             <div class="codex-header-bar">
                 <div>
                     <h1 id="codex-title" class="codex-title">元素世界樹演化圖譜</h1>
-                    <p class="modal-subtitle codex-subtitle">由世界樹原核向上生長：3 基礎芽 ＋ 3 轉職物種 ➔ 6 進階主幹 ➔ 12 終極冠枝（按 [T]
-                        隨時開啟並自動暫停）。</p>
+                    <p class="modal-subtitle codex-subtitle">由世界樹原核向上生長：3 基礎 ＋ 3 雙元 ➔ 6 主幹 ➔ 12 冠枝 ＋ 3 三元傳奇 ➔ 唯一 5★ 原初之核（按 [T] 隨時暫停檢視）。</p>
                 </div>
                 <button id="codex-close-btn" class="codex-close-top-btn" type="button" aria-label="關閉圖鑑">關閉
                     [Esc]</button>
@@ -617,85 +625,230 @@
         </div>
     </div>
 
-    <!-- 開局封面與三地圖選擇 -->
-    <div id="start-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
-        <div class="modal-card start-card">
-            <div class="start-top-bar">
-                <div class="lang-dropdown start-lang-dropdown" id="start-lang-dropdown">
-                    <button id="start-lang-btn" class="hud-ctrl-btn hud-lang-btn" type="button" aria-haspopup="true"
-                        aria-expanded="false" aria-label="切換語言" title="切換語言 / Switch Language">
-                        <svg class="lang-globe-icon" viewBox="0 0 16 16" aria-hidden="true">
-                            <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.3" />
-                            <ellipse cx="8" cy="8" rx="2.8" ry="6.2" fill="none" stroke="currentColor"
-                                stroke-width="1.2" />
-                            <line x1="2.2" y1="8" x2="13.8" y2="8" stroke="currentColor" stroke-width="1.2" />
-                        </svg>
-                        <span id="start-lang-btn-label">語言 ▾</span>
-                    </button>
-                    <div id="start-lang-menu" class="lang-menu hidden" role="menu" aria-labelledby="start-lang-btn">
-                        <button type="button" class="lang-option is-active" data-lang="zh-TW" role="menuitemradio"
-                            aria-checked="true">
-                            <span>繁體中文</span>
-                            <span class="lang-check" aria-hidden="true">✓</span>
+    <!-- 全屏深林主大廳（兩步式進入：Step 1 模式選擇 -> Step 2 關卡／試煉配置 -> 單屏戰場） -->
+    <div id="start-overlay" class="modal-overlay lobby-fullscreen" role="dialog" aria-modal="true"
+        aria-labelledby="start-title">
+        <canvas id="lobby-bg-canvas" class="lobby-bg-canvas" aria-hidden="true"></canvas>
+        <div class="lobby-vignette" aria-hidden="true"></div>
+
+        <div class="lobby-shell">
+            <header class="lobby-top-bar">
+                <div id="start-career-banner" class="start-career-banner num">全圖最高第 1 波 · 累計通關 0 次</div>
+                <div class="lobby-top-controls">
+                    <button id="lobby-honor-badge" class="lobby-top-pill num" type="button">榮譽 0 ★</button>
+                    <button id="lobby-sound-btn" class="hud-ctrl-btn" type="button">音效：開</button>
+                    <div class="lang-dropdown start-lang-dropdown" id="start-lang-dropdown">
+                        <button id="start-lang-btn" class="hud-ctrl-btn hud-lang-btn" type="button"
+                            aria-haspopup="true" aria-expanded="false" aria-label="切換語言"
+                            title="切換語言 / Switch Language">
+                            <svg class="lang-globe-icon" viewBox="0 0 16 16" aria-hidden="true">
+                                <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.3" />
+                                <ellipse cx="8" cy="8" rx="2.8" ry="6.2" fill="none" stroke="currentColor"
+                                    stroke-width="1.2" />
+                                <line x1="2.2" y1="8" x2="13.8" y2="8" stroke="currentColor" stroke-width="1.2" />
+                            </svg>
+                            <span id="start-lang-btn-label">語言 ▾</span>
                         </button>
-                        <button type="button" class="lang-option" data-lang="en" role="menuitemradio"
-                            aria-checked="false">
-                            <span>English</span>
-                            <span class="lang-check" aria-hidden="true">✓</span>
-                        </button>
+                        <div id="start-lang-menu" class="lang-menu hidden" role="menu" aria-labelledby="start-lang-btn">
+                            <button type="button" class="lang-option is-active" data-lang="zh-TW" role="menuitemradio"
+                                aria-checked="true">
+                                <span>繁體中文</span>
+                                <span class="lang-check" aria-hidden="true">✓</span>
+                            </button>
+                            <button type="button" class="lang-option" data-lang="en" role="menuitemradio"
+                                aria-checked="false">
+                                <span>English</span>
+                                <span class="lang-check" aria-hidden="true">✓</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <h1 id="start-title" class="start-title">元素陣線：合成塔防</h1>
-            <p class="modal-subtitle">15×10 古林戰線 · 守護世界樹抵禦 10 波攻勢</p>
-            <div id="start-career-banner" class="start-career-banner num">全圖最高第 1 波 · 累計通關 0 次</div>
+            </header>
 
-            <!-- 三地圖關卡選擇 -->
-            <div class="map-selector-section">
-                <h2 class="map-selector-header">選擇戰場地圖</h2>
-                <div id="map-selector-grid" class="map-selector-grid">
-                    <button type="button" class="map-card selected" data-map-id="forest">
-                        <div class="map-card-top">
-                            <span class="map-card-name">晨光森林</span>
-                            <span class="map-diff-badge diff-std">標準難度</span>
-                        </div>
-                        <div class="map-card-desc">41 格蜿蜒長徑 · 經典穩定防線</div>
-                        <div id="map-record-forest" class="map-card-record num">最高第 1 波 · 尚未通關</div>
-                    </button>
-                    <button type="button" class="map-card" data-map-id="lava">
-                        <div class="map-card-top">
-                            <span class="map-card-name">熔岩峽谷</span>
-                            <span class="map-diff-badge diff-hard">進階挑戰</span>
-                        </div>
-                        <div class="map-card-desc">31 格雙折短徑 · 初始 +10 💰</div>
-                        <div id="map-record-lava" class="map-card-record num">最高第 1 波 · 尚未通關</div>
-                    </button>
-                    <button type="button" class="map-card" data-map-id="frost">
-                        <div class="map-card-top">
-                            <span class="map-card-name">永凍裂谷</span>
-                            <span class="map-diff-badge diff-ice">雙路分線</span>
-                        </div>
-                        <div class="map-card-desc">36 格雙線匯流 · 初始 +15 💰 · 冰脈傷害 +20%</div>
-                        <div id="map-record-frost" class="map-card-record num">最高第 1 波 · 尚未通關</div>
-                    </button>
+            <main class="lobby-main">
+                <div class="lobby-hero-head">
+                    <h1 id="start-title" class="start-title lobby-hero-title">元素陣線：合成塔防</h1>
+                    <p class="modal-subtitle lobby-hero-sub">15×10 古林戰線 · 守護世界樹抵禦 10 波攻勢</p>
                 </div>
-            </div>
 
-            <!-- 8 項世界樹難度契約詞條（預設全部不勾選，可自由展開挑戰） -->
-            <details id="contracts-drawer" class="contracts-drawer">
-                <summary class="contracts-summary">
-                    <span>難度契約（選填挑戰）</span>
-                    <span id="contracts-summary-badge" class="contracts-summary-badge num">未啟用契約 · 榮譽 +0%</span>
-                </summary>
-                <div id="contracts-grid" class="contracts-grid"></div>
-            </details>
+                <!-- Step 1：主大廳 4 大模式入口 -->
+                <section id="lobby-step-hub" class="lobby-step-hub" aria-label="遊戲模式選擇">
+                    <div id="lobby-mode-grid" class="lobby-mode-grid">
+                        <button type="button" id="mode-card-campaign" class="lobby-mode-card ornate-card selected"
+                            data-mode="campaign">
+                            <span class="ornate-corner tl" aria-hidden="true"></span>
+                            <span class="ornate-corner tr" aria-hidden="true"></span>
+                            <span class="ornate-corner bl" aria-hidden="true"></span>
+                            <span class="ornate-corner br" aria-hidden="true"></span>
+                            <div class="mode-card-head">
+                                <span id="mode-title-campaign" class="mode-card-title">戰役關卡</span>
+                                <span id="mode-badge-campaign" class="mode-card-badge">主線推進</span>
+                            </div>
+                            <p id="mode-desc-campaign" class="mode-card-desc">推進晨光、熔岩與永凍三線戰場，挑戰 10 波魔王並贏取星級與首通 +200 ★ 榮譽。</p>
+                            <div class="mode-card-foot">
+                                <span id="mode-meta-campaign" class="mode-card-meta num">通關進度 0 / 3 圖</span>
+                                <span id="mode-enter-campaign" class="mode-card-cta">選擇戰場 ▸</span>
+                            </div>
+                        </button>
 
-            <p id="start-quick-tip" class="start-quick-tip">拖曳元素卡建塔 · 異系轉職／同系升星 · [Q/W] 世界樹技能</p>
+                        <button type="button" id="mode-card-endless" class="lobby-mode-card ornate-card"
+                            data-mode="endless">
+                            <span class="ornate-corner tl" aria-hidden="true"></span>
+                            <span class="ornate-corner tr" aria-hidden="true"></span>
+                            <span class="ornate-corner bl" aria-hidden="true"></span>
+                            <span class="ornate-corner br" aria-hidden="true"></span>
+                            <div class="mode-card-head">
+                                <span id="mode-title-endless" class="mode-card-title">無盡試煉</span>
+                                <span id="mode-badge-endless" class="mode-card-badge">極限生存</span>
+                            </div>
+                            <p id="mode-desc-endless" class="mode-card-desc">由第 1 波起直面無止盡升壓攻勢，驗證 5★ 神裔與無限靈脈灌注構築極限。</p>
+                            <div class="mode-card-foot">
+                                <span id="mode-meta-endless" class="mode-card-meta num">任意戰役通關 1 次解鎖</span>
+                                <span id="mode-enter-endless" class="mode-card-cta">進入無盡 ▸</span>
+                            </div>
+                        </button>
 
-            <div class="start-actions-row">
-                <button id="meta-tree-btn" class="secondary-cta-btn num" type="button">世界樹年輪 · 榮譽 0 ★</button>
-                <button id="start-game-btn" class="primary-cta-btn" type="button">開始防守</button>
-            </div>
+                        <button type="button" id="mode-card-daily" class="lobby-mode-card ornate-card"
+                            data-mode="daily">
+                            <span class="ornate-corner tl" aria-hidden="true"></span>
+                            <span class="ornate-corner tr" aria-hidden="true"></span>
+                            <span class="ornate-corner bl" aria-hidden="true"></span>
+                            <span class="ornate-corner br" aria-hidden="true"></span>
+                            <div class="mode-card-head">
+                                <span id="mode-title-daily" class="mode-card-title">每日種子挑戰</span>
+                                <span id="mode-badge-daily" class="mode-card-badge num">同題競速</span>
+                            </div>
+                            <p id="mode-desc-daily" class="mode-card-desc">以今日日期固定生成地圖、天氣、股市波動、盲盒與枝枒賜福序列，公平一戰。</p>
+                            <div class="mode-card-foot">
+                                <span id="mode-meta-daily" class="mode-card-meta num">今日種子載入中</span>
+                                <span id="mode-enter-daily" class="mode-card-cta">查看簡報 ▸</span>
+                            </div>
+                        </button>
+
+                        <button type="button" id="mode-card-puzzle" class="lobby-mode-card ornate-card"
+                            data-mode="puzzle">
+                            <span class="ornate-corner tl" aria-hidden="true"></span>
+                            <span class="ornate-corner tr" aria-hidden="true"></span>
+                            <span class="ornate-corner bl" aria-hidden="true"></span>
+                            <span class="ornate-corner br" aria-hidden="true"></span>
+                            <div class="mode-card-head">
+                                <span id="mode-title-puzzle" class="mode-card-title">世界樹殘局試煉</span>
+                                <span id="mode-badge-puzzle" class="mode-card-badge">單波解謎</span>
+                            </div>
+                            <p id="mode-desc-puzzle" class="mode-card-desc">5 道固定資金與極端怪潮殘局，唯有算準元素相剋與轉職合成方能一次破局。</p>
+                            <div class="mode-card-foot">
+                                <span id="mode-meta-puzzle" class="mode-card-meta num">已完成 0 / 5 關</span>
+                                <span id="mode-enter-puzzle" class="mode-card-cta">挑戰殘局 ▸</span>
+                            </div>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Step 2：關卡／難度契約／每日簡報／殘局配置 -->
+                <section id="lobby-step-setup" class="modal-card start-card ornate-card lobby-setup-card hidden"
+                    aria-label="出戰配置">
+                    <div class="setup-step-bar">
+                        <button id="lobby-setup-back-btn" class="lobby-back-btn" type="button">← 返回模式大廳</button>
+                        <div class="setup-mode-pill">
+                            <span id="lobby-setup-mode-title" class="setup-mode-title">戰役關卡</span>
+                            <span id="lobby-setup-mode-badge" class="setup-mode-badge num">標準 10 波</span>
+                        </div>
+                    </div>
+
+                    <!-- 戰役與無盡共通：地圖與難度契約面板 -->
+                    <div id="setup-campaign-pane" class="setup-pane">
+                        <div class="map-selector-section">
+                            <h2 class="map-selector-header">選擇戰場地圖</h2>
+                            <div id="map-selector-grid" class="map-selector-grid">
+                                <button type="button" class="map-card selected" data-map-id="forest">
+                                    <div class="map-card-top">
+                                        <span class="map-card-name">晨光森林</span>
+                                        <span class="map-diff-badge diff-std">標準難度</span>
+                                    </div>
+                                    <div class="map-card-desc">41 格蜿蜒長徑 · 經典穩定防線</div>
+                                    <div id="map-record-forest" class="map-card-record num">最高第 1 波 · 尚未通關</div>
+                                </button>
+                                <button type="button" class="map-card" data-map-id="lava">
+                                    <div class="map-card-top">
+                                        <span class="map-card-name">熔岩峽谷</span>
+                                        <span class="map-diff-badge diff-hard">進階挑戰</span>
+                                    </div>
+                                    <div class="map-card-desc">31 格雙折短徑 · 初始 +10 💰</div>
+                                    <div id="map-record-lava" class="map-card-record num">最高第 1 波 · 尚未通關</div>
+                                </button>
+                                <button type="button" class="map-card" data-map-id="frost">
+                                    <div class="map-card-top">
+                                        <span class="map-card-name">永凍裂谷</span>
+                                        <span class="map-diff-badge diff-ice">雙路分線</span>
+                                    </div>
+                                    <div class="map-card-desc">36 格雙線匯流 · 初始 +15 💰 · 冰脈傷害 +20%</div>
+                                    <div id="map-record-frost" class="map-card-record num">最高第 1 波 · 尚未通關</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <details id="contracts-drawer" class="contracts-drawer">
+                            <summary class="contracts-summary">
+                                <span>難度契約（選填挑戰）</span>
+                                <span id="contracts-summary-badge" class="contracts-summary-badge num">未啟用契約 · 榮譽 +0%</span>
+                            </summary>
+                            <div id="contracts-grid" class="contracts-grid"></div>
+                        </details>
+                    </div>
+
+                    <!-- 每日種子簡報面板 -->
+                    <div id="setup-daily-pane" class="setup-pane hidden">
+                        <div class="daily-briefing-card ornate-card">
+                            <div class="daily-brief-row">
+                                <span id="daily-brief-date-k">挑戰日期</span>
+                                <strong id="daily-date-label" class="num">2026-01-01</strong>
+                            </div>
+                            <div class="daily-brief-row">
+                                <span id="daily-brief-seed-k">確定性種子碼</span>
+                                <strong id="daily-seed-label" class="num">#00000000</strong>
+                            </div>
+                            <div class="daily-brief-row">
+                                <span id="daily-brief-map-k">固定戰場</span>
+                                <strong id="daily-map-label">晨光森林</strong>
+                            </div>
+                            <div class="daily-brief-row">
+                                <span id="daily-brief-weather-k">今日林相天氣</span>
+                                <strong id="daily-weather-label">熾陽暖森</strong>
+                            </div>
+                            <div class="daily-brief-row">
+                                <span id="daily-brief-status-k">今日戰績</span>
+                                <strong id="daily-status-label" class="num">尚未挑戰</strong>
+                            </div>
+                        </div>
+                        <p id="daily-rule-note" class="daily-rule-note">今日所有波動（盲盒、股市雜訊、賜福抽卡、靈脈竊賊掉落）均鎖定同一種子序列，通關與敗陣結算皆會產生日期戰績卡。</p>
+                    </div>
+
+                    <!-- 世界樹殘局選關面板 -->
+                    <div id="setup-puzzle-pane" class="setup-pane hidden">
+                        <div id="puzzle-selector-grid" class="puzzle-selector-grid"></div>
+                        <div id="puzzle-detail-box" class="puzzle-detail-box">
+                            <div class="puzzle-detail-head">
+                                <strong id="puzzle-detail-title">殘局試煉</strong>
+                                <span id="puzzle-detail-meta" class="num">185 💰 · 1 ❤️</span>
+                            </div>
+                            <p id="puzzle-detail-desc" class="puzzle-detail-desc"></p>
+                            <div id="puzzle-detail-hint" class="puzzle-detail-hint"></div>
+                        </div>
+                    </div>
+
+                    <p id="start-quick-tip" class="start-quick-tip">拖曳元素卡建塔 · 異系轉職／同系升星 · [Q/W/E] 世界樹技能 · [B] 商會</p>
+
+                    <div class="start-actions-row">
+                        <button id="start-game-btn" class="primary-cta-btn" type="button">開始防守</button>
+                    </div>
+                </section>
+            </main>
+
+            <footer class="lobby-bottom-bar" aria-label="大廳常駐功能列">
+                <button id="meta-tree-btn" class="lobby-dock-btn num" type="button">世界樹年輪 · 榮譽 0 ★</button>
+                <button id="lobby-codex-btn" class="lobby-dock-btn" type="button">世界樹圖譜</button>
+                <button id="lobby-guide-btn" class="lobby-dock-btn" type="button">戰術手冊</button>
+            </footer>
         </div>
     </div>
 
@@ -710,6 +863,7 @@
             <h1 id="victory-title" class="victory-title">防守成功 · 世界樹安然無恙</h1>
             <div id="victory-stars" class="victory-stars" aria-label="通關星級">★★★</div>
             <p id="victory-rank-text" class="modal-subtitle">成功守護世界樹，擊退第 10 波腐朽古樹王。</p>
+            <div id="victory-mode-banner" class="outcome-mode-banner num hidden"></div>
 
             <div class="modal-stats">
                 <div class="stat-row">
@@ -774,6 +928,7 @@
             </div>
             <h1 id="game-over-title" class="gameover-title">防線失守</h1>
             <p class="modal-subtitle">世界樹生命枯竭，本局戰役結束。</p>
+            <div id="gameover-mode-banner" class="outcome-mode-banner num hidden"></div>
             <div class="modal-stats">
                 <div class="stat-row">
                     <span>戰場地圖</span>

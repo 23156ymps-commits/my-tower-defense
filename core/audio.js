@@ -161,6 +161,34 @@
             }
         },
 
+        playBossHorn() {
+            if (!this.ensureContext()) return;
+            if (!this.canPlayGroup('bossHorn', 0.4)) return;
+            // 低沉戰鼓衝擊 + 古林銅角低鳴
+            this.tone({ freq: 110, freqEnd: 52, type: 'triangle', duration: 0.28, gain: 0.17, delay: 0 });
+            this.tone({ freq: 82, freqEnd: 46, type: 'sine', duration: 0.34, gain: 0.18, delay: 0.12 });
+            this.tone({ freq: 146.83, freqEnd: 130.81, type: 'sawtooth', duration: 0.42, gain: 0.10, delay: 0.16 });
+        },
+
+        playAscendChord(tier = 4) {
+            if (!this.ensureContext()) return;
+            if (!this.canPlayGroup('ascendChord', 0.12)) return;
+            const isTier5 = Number(tier) >= 5;
+            const notes = isTier5
+                ? [392.00, 493.88, 587.33, 783.99, 987.77]
+                : [329.63, 440.00, 523.25, 659.25];
+            notes.forEach((f, idx) => {
+                this.tone({
+                    freq: f,
+                    freqEnd: f * 1.01,
+                    type: idx === notes.length - 1 ? 'triangle' : 'sine',
+                    duration: idx === notes.length - 1 ? 0.30 : 0.18,
+                    gain: isTier5 ? 0.12 : 0.10,
+                    delay: idx * 0.055
+                });
+            });
+        },
+
         toggleMute() {
             this.isMuted = !this.isMuted;
             saveMutedPref(this.isMuted);

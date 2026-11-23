@@ -128,7 +128,7 @@
             return { ok: false, reason: 'insufficient_gold', cost };
         }
         G.state.currentGold -= cost;
-        const roll = Math.random();
+        const roll = (GameApp.helpers && typeof GameApp.helpers.nextRunRandom === 'function') ? GameApp.helpers.nextRunRandom() : Math.random();
         let revealedTerrain = null;
         if (roll < 0.45) {
             revealedTerrain = 'mana_vein';

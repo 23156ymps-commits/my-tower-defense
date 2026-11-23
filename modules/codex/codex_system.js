@@ -36,7 +36,11 @@
         ice_crown_A: '4★ A', ice_crown_B: '4★ B', ice_twin_AB: '4★ Twin', ice_scion: 'Frostking 5★',
         magnet_crown_A: '4★ A', magnet_crown_B: '4★ B', magnet_twin_AB: '4★ Twin', magnet_scion: 'Starmagnet 5★',
         thunder_crown_A: '4★ A', thunder_crown_B: '4★ B', thunder_twin_AB: '4★ Twin', thunder_scion: 'Apexbolt 5★',
-        plasma_crown_A: '4★ A', plasma_crown_B: '4★ B', plasma_twin_AB: '4★ Twin', plasma_scion: 'Radiant 5★'
+        plasma_crown_A: '4★ A', plasma_crown_B: '4★ B', plasma_twin_AB: '4★ Twin', plasma_scion: 'Radiant 5★',
+        storm_tri: 'Storm 3★', storm_tri_4: 'Storm 4★',
+        starforge_tri: 'Starforge 3★', starforge_tri_4: 'Forge 4★',
+        prism_tri: 'ZeroPrism 3★', prism_tri_4: 'Prism 4★',
+        primal_core: 'Primal Core 5★'
     };
 
     function L(zh, en) {
@@ -50,9 +54,9 @@
         return (meta && meta.label) || nodeId;
     }
 
-    // SVG 世界樹演化圖譜畫布與扇形樹冠座標拓撲（1760 × 960，自底向上：原核 → 1★ → 2★ → 3★ → 4★ 極意/雙生 → 5★ 世界樹神裔）
+    // SVG 世界樹演化圖譜畫布與扇形樹冠座標拓撲（1760 × 1300，自底向上：原核 → 1★ → 2★ → 3★ → 4★ 極意/雙生 → 5★ 神裔 → 三元傳奇 → 唯一 5★ 原初之核）
     const TREE_VIEW_W = 1760;
-    const TREE_VIEW_H = 960;
+    const TREE_VIEW_H = 1300;
 
     const FAMILY_TREE_COLUMNS = [
         { family: 'fire', x: 165, branchA: '熔核', branchB: '焚世', twinLabel: '雙生4★', scionLabel: '炎燼神裔' },
@@ -64,22 +68,32 @@
     ];
 
     const WORLD_TREE_LAYOUT = {
-        world_core: { x: 880, y: 880, tier: 0, family: 'core', label: '世界樹原核' },
+        world_core: { x: 880, y: 1220, tier: 0, family: 'core', label: '世界樹原核' },
 
-        fire_bud: { x: 290, y: 760, tier: 1, family: 'fire', label: '火芽 1★' },
-        ice_bud: { x: 880, y: 760, tier: 1, family: 'ice', label: '冰芽 1★' },
-        thunder_bud: { x: 1470, y: 760, tier: 1, family: 'thunder', label: '雷芽 1★' },
+        fire_bud: { x: 290, y: 1100, tier: 1, family: 'fire', label: '火芽 1★' },
+        ice_bud: { x: 880, y: 1100, tier: 1, family: 'ice', label: '冰芽 1★' },
+        thunder_bud: { x: 1470, y: 1100, tier: 1, family: 'thunder', label: '雷芽 1★' },
 
-        steam_bud: { x: 455, y: 638, tier: 1, family: 'steam', isTransfer: true, label: '蒸氣 1★' },
-        magnet_bud: { x: 1035, y: 638, tier: 1, family: 'magnet', isTransfer: true, label: '磁環 1★' },
-        plasma_bud: { x: 1605, y: 638, tier: 1, family: 'plasma', isTransfer: true, label: '電漿 1★' },
+        steam_bud: { x: 455, y: 978, tier: 1, family: 'steam', isTransfer: true, label: '蒸氣 1★' },
+        magnet_bud: { x: 1035, y: 978, tier: 1, family: 'magnet', isTransfer: true, label: '磁環 1★' },
+        plasma_bud: { x: 1605, y: 978, tier: 1, family: 'plasma', isTransfer: true, label: '電漿 1★' },
 
-        fire_trunk: { x: 165, y: 515, tier: 2, family: 'fire', label: '炎核 2★' },
-        steam_trunk: { x: 455, y: 515, tier: 2, family: 'steam', label: '高階蒸氣' },
-        ice_trunk: { x: 745, y: 515, tier: 2, family: 'ice', label: '霜晶 2★' },
-        magnet_trunk: { x: 1035, y: 515, tier: 2, family: 'magnet', label: '高階磁環' },
-        thunder_trunk: { x: 1325, y: 515, tier: 2, family: 'thunder', label: '雷紋 2★' },
-        plasma_trunk: { x: 1605, y: 515, tier: 2, family: 'plasma', label: '高階電漿' }
+        fire_trunk: { x: 165, y: 855, tier: 2, family: 'fire', label: '炎核 2★' },
+        steam_trunk: { x: 455, y: 855, tier: 2, family: 'steam', label: '高階蒸氣' },
+        ice_trunk: { x: 745, y: 855, tier: 2, family: 'ice', label: '霜晶 2★' },
+        magnet_trunk: { x: 1035, y: 855, tier: 2, family: 'magnet', label: '高階磁環' },
+        thunder_trunk: { x: 1325, y: 855, tier: 2, family: 'thunder', label: '雷紋 2★' },
+        plasma_trunk: { x: 1605, y: 855, tier: 2, family: 'plasma', label: '高階電漿' },
+
+        storm_tri: { x: 455, y: 295, tier: 3, family: 'storm_tri', branch: '三', label: '天災風暴 3★' },
+        starforge_tri: { x: 880, y: 295, tier: 3, family: 'starforge_tri', branch: '三', label: '星界熔爐 3★' },
+        prism_tri: { x: 1325, y: 295, tier: 3, family: 'prism_tri', branch: '三', label: '絕對零度 3★' },
+
+        storm_tri_4: { x: 455, y: 185, tier: 4, family: 'storm_tri', branch: '4★', label: '天災風暴 4★' },
+        starforge_tri_4: { x: 880, y: 185, tier: 4, family: 'starforge_tri', branch: '4★', label: '星界熔爐 4★' },
+        prism_tri_4: { x: 1325, y: 185, tier: 4, family: 'prism_tri', branch: '4★', label: '絕對零度 4★' },
+
+        primal_core: { x: 880, y: 72, tier: 5, family: 'primal_core', branch: '核', label: '原初之核 5★' }
     };
 
     const WORLD_TREE_EDGES = [
@@ -106,17 +120,32 @@
         { from: 'ice_bud', to: 'magnet_trunk', family: 'ice', kind: 'directed' },
         { from: 'thunder_bud', to: 'magnet_trunk', family: 'thunder', kind: 'directed' },
         { from: 'fire_bud', to: 'plasma_trunk', family: 'fire', kind: 'directed', arcOffsetY: -45 },
-        { from: 'thunder_bud', to: 'plasma_trunk', family: 'thunder', kind: 'directed' }
+        { from: 'thunder_bud', to: 'plasma_trunk', family: 'thunder', kind: 'directed' },
+
+        { from: 'steam_trunk', to: 'storm_tri', family: 'storm_tri', kind: 'sym' },
+        { from: 'thunder_trunk', to: 'storm_tri', family: 'thunder', kind: 'sym', arcOffsetY: -65 },
+        { from: 'magnet_trunk', to: 'starforge_tri', family: 'starforge_tri', kind: 'sym' },
+        { from: 'fire_trunk', to: 'starforge_tri', family: 'fire', kind: 'sym', arcOffsetY: -80 },
+        { from: 'plasma_trunk', to: 'prism_tri', family: 'prism_tri', kind: 'sym' },
+        { from: 'ice_trunk', to: 'prism_tri', family: 'ice', kind: 'sym', arcOffsetY: -65 },
+
+        { from: 'storm_tri', to: 'storm_tri_4', family: 'storm_tri', kind: 'primary' },
+        { from: 'starforge_tri', to: 'starforge_tri_4', family: 'starforge_tri', kind: 'primary' },
+        { from: 'prism_tri', to: 'prism_tri_4', family: 'prism_tri', kind: 'primary' },
+
+        { from: 'storm_tri_4', to: 'primal_core', family: 'primal_core', kind: 'sym' },
+        { from: 'starforge_tri_4', to: 'primal_core', family: 'primal_core', kind: 'primary' },
+        { from: 'prism_tri_4', to: 'primal_core', family: 'primal_core', kind: 'sym' }
     ];
 
     FAMILY_TREE_COLUMNS.forEach((col) => {
         const fam = col.family;
-        WORLD_TREE_LAYOUT[`${fam}_A`] = { x: col.x - 62, y: 378, tier: 3, family: fam, branch: 'A', label: `A ${col.branchA}` };
-        WORLD_TREE_LAYOUT[`${fam}_B`] = { x: col.x + 62, y: 378, tier: 3, family: fam, branch: 'B', label: `B ${col.branchB}` };
-        WORLD_TREE_LAYOUT[`${fam}_crown_A`] = { x: col.x - 88, y: 230, tier: 4, family: fam, branch: 'A', label: `4★A` };
-        WORLD_TREE_LAYOUT[`${fam}_twin_AB`] = { x: col.x, y: 230, tier: 4, family: fam, branch: 'AB', label: col.twinLabel };
-        WORLD_TREE_LAYOUT[`${fam}_crown_B`] = { x: col.x + 88, y: 230, tier: 4, family: fam, branch: 'B', label: `4★B` };
-        WORLD_TREE_LAYOUT[`${fam}_scion`] = { x: col.x, y: 88, tier: 5, family: fam, branch: '神', label: col.scionLabel };
+        WORLD_TREE_LAYOUT[`${fam}_A`] = { x: col.x - 62, y: 718, tier: 3, family: fam, branch: 'A', label: `A ${col.branchA}` };
+        WORLD_TREE_LAYOUT[`${fam}_B`] = { x: col.x + 62, y: 718, tier: 3, family: fam, branch: 'B', label: `B ${col.branchB}` };
+        WORLD_TREE_LAYOUT[`${fam}_crown_A`] = { x: col.x - 88, y: 570, tier: 4, family: fam, branch: 'A', label: `4★A` };
+        WORLD_TREE_LAYOUT[`${fam}_twin_AB`] = { x: col.x, y: 570, tier: 4, family: fam, branch: 'AB', label: col.twinLabel };
+        WORLD_TREE_LAYOUT[`${fam}_crown_B`] = { x: col.x + 88, y: 570, tier: 4, family: fam, branch: 'B', label: `4★B` };
+        WORLD_TREE_LAYOUT[`${fam}_scion`] = { x: col.x, y: 428, tier: 5, family: fam, branch: '神', label: col.scionLabel };
 
         WORLD_TREE_EDGES.push(
             { from: `${fam}_trunk`, to: `${fam}_A`, family: fam, kind: 'primary' },
@@ -138,7 +167,11 @@
         thunder: '#E0B43C',
         steam: '#D97724',
         magnet: '#4A9EBF',
-        plasma: '#D97724'
+        plasma: '#D97724',
+        storm_tri: '#4A9EBF',
+        starforge_tri: '#D97724',
+        prism_tri: '#E0B43C',
+        primal_core: '#E0B43C'
     };
 
     function bind(ctx) {
@@ -216,6 +249,9 @@
         const t2Rules = evoData.T2_TO_T3_RULES || {};
         const t3Rules = evoData.T3_TO_T4_RULES || {};
         const t4Rules = evoData.T4_TO_T5_RULES || {};
+        const tri2Rules = evoData.TRI_RECIPES_T2_TO_T3 || {};
+        const tri3Rules = evoData.TRI_RECIPES_T3_TO_T4 || {};
+        const primalRules = evoData.PRIMAL_RECIPES_T4_TO_T5 || {};
 
         if (st && Array.isArray(st.board) && !st.isGameOver && st.waveState !== 'WAITING_START') {
             for (let i = 0; i < st.board.length; i++) {
@@ -252,6 +288,11 @@
         scanPairRules(t2Rules, true);
         scanPairRules(t3Rules, false);
         scanPairRules(t4Rules, false);
+        scanPairRules(tri2Rules, false);
+        scanPairRules(tri3Rules, false);
+        if (!(EvoSys && typeof EvoSys.hasPrimalCoreOnBoard === 'function' && EvoSys.hasPrimalCoreOnBoard())) {
+            scanPairRules(primalRules, false);
+        }
 
         return {
             boardNodeCounts,
@@ -319,7 +360,7 @@
                         <span class="wt-detail-tag num">${L(`聚寶根鬚 Lv.${rootLv} / Lv.3`, `Treasure Roots Lv.${rootLv} / Lv.3`)}</span>
                         <span class="wt-detail-tag num">${L(`出售退費 ${refundPct}%`, `Sell Refund ${refundPct}%`)}</span>
                         <span class="wt-detail-tag num">${L(`本波預估 +${estIncome.totalGain} 💰（軟上限 ${estIncome.waveCap} 💰）`, `Est. +${estIncome.totalGain} 💰 (Cap ${estIncome.waveCap} 💰)`)}</span>
-                        <span class="wt-detail-tag num">${L(`已喚醒枝脈：${totalUnlocked} / 48`, `Awakened Nodes: ${totalUnlocked} / 48`)}</span>
+                        <span class="wt-detail-tag num">${L(`已喚醒枝脈：${totalUnlocked} / 55`, `Awakened Nodes: ${totalUnlocked} / 55`)}</span>
                     </div>
                     <div class="wt-detail-row">${L(
                         '<strong>聚寶根鬚（Lv.0 → Lv.3）：</strong>Lv.1 汲取根鬚（45 💰 ➔ 每波 +15 💰）｜Lv.2 黃金根脈（75 💰 ➔ 每波 +32 💰 · 退費 80%）｜Lv.3 複利樹心（110 💰 ➔ 每波 +42 💰 ＋ 8% 利息，上限 +35 💰，單波軟上限 22 + 8w）',
@@ -472,7 +513,7 @@
                 `<span class="wt-banner-dot"></span><span class="num">Craftable paths detected: <strong>${craftableNames.join(', ')}</strong> (highlighted in amber)</span>`
             );
         } else {
-            bannerEl.innerText = L('拖曳平移、滾輪縮放視角；點擊或懸停節點高亮完整進化血脈與詳細數值。', 'Drag to pan, scroll to zoom; click or hover a node to inspect its full lineage.');
+            bannerEl.innerText = L('點擊或懸停節點，高亮完整進化血脈與詳細數值。', 'Tap or hover a node to inspect its full lineage and stats.');
         }
         treeShellEl.appendChild(bannerEl);
 
@@ -710,15 +751,26 @@
         viewportEl.appendChild(worldCanvasEl);
         treeShellEl.appendChild(viewportEl);
 
-        // 平移與縮放視窗狀態（支援滑鼠拖曳、觸控拖曳與滾輪 0.50x ~ 1.45x）
-        const viewState = { scale: 0.55, panX: 0, panY: 0, dragging: false, startX: 0, startY: 0, origPanX: 0, origPanY: 0 };
+        const gestureHintEl = document.createElement('div');
+        gestureHintEl.className = 'wt-gesture-hint';
+        gestureHintEl.innerText = L('支援拖曳平移、雙指縮放查看完整樹狀圖', 'Drag to pan · Pinch or zoom to view full tree');
+        treeShellEl.appendChild(gestureHintEl);
+
+        // 平移與縮放視窗狀態（支援滑鼠拖曳、觸控平移／雙指縮放與滾輪縮放）
+        const viewState = {
+            scale: 0.55, panX: 0, panY: 0,
+            dragging: false, startX: 0, startY: 0, origPanX: 0, origPanY: 0,
+            pinching: false, pinchDist: 0, pinchScale: 0.55, pinchMidX: 0, pinchMidY: 0
+        };
+
+        const getMinScale = (vpW) => (vpW < 640 ? Math.max(0.20, Math.min(0.45, vpW / TREE_VIEW_W)) : 0.50);
 
         const clampView = () => {
             const vpW = viewportEl.clientWidth || 860;
             const vpH = viewportEl.clientHeight || 420;
             const contentW = TREE_VIEW_W * viewState.scale;
             const contentH = TREE_VIEW_H * viewState.scale;
-            const pad = 48;
+            const pad = vpW < 640 ? 28 : 48;
 
             if (contentW <= vpW) {
                 viewState.panX = (vpW - contentW) * 0.5;
@@ -742,7 +794,13 @@
             const vpW = viewportEl.clientWidth || 860;
             const vpH = viewportEl.clientHeight || 420;
             const fitScale = Math.min(vpW / TREE_VIEW_W, vpH / TREE_VIEW_H);
-            viewState.scale = Math.max(0.50, Math.min(1.45, fitScale));
+            if (vpW < 640) {
+                // 窄螢幕初始以縱向樹幹完整入鏡且水平置中（原核～5★神裔一覽無遺）
+                const heightFit = (vpH / TREE_VIEW_H) * 0.96;
+                viewState.scale = Math.max(getMinScale(vpW), Math.min(0.40, heightFit));
+            } else {
+                viewState.scale = Math.max(0.50, Math.min(1.45, fitScale));
+            }
             viewState.panX = (vpW - TREE_VIEW_W * viewState.scale) * 0.5;
             viewState.panY = (vpH - TREE_VIEW_H * viewState.scale) * 0.5;
             applyViewTransform();
@@ -765,8 +823,9 @@
 
         const onWindowMouseMove = (e) => handlePanMove(e.clientX, e.clientY);
         const endPan = () => {
-            if (!viewState.dragging) return;
+            if (!viewState.dragging && !viewState.pinching) return;
             viewState.dragging = false;
+            viewState.pinching = false;
             viewportEl.classList.remove('is-panning');
             window.removeEventListener('mousemove', onWindowMouseMove);
             window.removeEventListener('mouseup', endPan);
@@ -787,8 +846,22 @@
         });
 
         viewportEl.addEventListener('touchstart', (e) => {
-            if (e.touches.length !== 1 || e.target === resetViewBtn) return;
+            if (e.target === resetViewBtn) return;
+            if (e.touches.length === 2) {
+                const t0 = e.touches[0], t1 = e.touches[1];
+                const rect = viewportEl.getBoundingClientRect();
+                viewState.dragging = false;
+                viewState.pinching = true;
+                viewState.pinchDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY) || 1;
+                viewState.pinchScale = viewState.scale;
+                viewState.pinchMidX = ((t0.clientX + t1.clientX) * 0.5) - rect.left;
+                viewState.pinchMidY = ((t0.clientY + t1.clientY) * 0.5) - rect.top;
+                suppressNodeClick = true;
+                return;
+            }
+            if (e.touches.length !== 1) return;
             const t = e.touches[0];
+            viewState.pinching = false;
             viewState.dragging = true;
             viewState.startX = t.clientX;
             viewState.startY = t.clientY;
@@ -798,10 +871,30 @@
         }, { passive: true });
 
         viewportEl.addEventListener('touchmove', (e) => {
+            if (viewState.pinching && e.touches.length === 2) {
+                e.preventDefault();
+                const t0 = e.touches[0], t1 = e.touches[1];
+                const rect = viewportEl.getBoundingClientRect();
+                const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY) || 1;
+                const prevScale = viewState.scale;
+                const minScale = getMinScale(viewportEl.clientWidth || 860);
+                const nextScale = Math.max(minScale, Math.min(1.45, viewState.pinchScale * (dist / viewState.pinchDist)));
+                const midX = ((t0.clientX + t1.clientX) * 0.5) - rect.left;
+                const midY = ((t0.clientY + t1.clientY) * 0.5) - rect.top;
+                const worldX = (viewState.pinchMidX - viewState.panX) / prevScale;
+                const worldY = (viewState.pinchMidY - viewState.panY) / prevScale;
+                viewState.scale = nextScale;
+                viewState.panX = midX - worldX * nextScale;
+                viewState.panY = midY - worldY * nextScale;
+                viewState.pinchMidX = midX;
+                viewState.pinchMidY = midY;
+                applyViewTransform();
+                return;
+            }
             if (!viewState.dragging || e.touches.length !== 1) return;
             const t = e.touches[0];
             handlePanMove(t.clientX, t.clientY);
-        }, { passive: true });
+        }, { passive: false });
 
         viewportEl.addEventListener('touchend', endPan);
 
@@ -811,8 +904,9 @@
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
             const prevScale = viewState.scale;
+            const minScale = getMinScale(viewportEl.clientWidth || 860);
             const factor = e.deltaY < 0 ? 1.1 : 0.9;
-            const nextScale = Math.max(0.50, Math.min(1.45, prevScale * factor));
+            const nextScale = Math.max(minScale, Math.min(1.45, prevScale * factor));
             if (Math.abs(nextScale - prevScale) < 1e-4) return;
             const worldX = (mouseX - viewState.panX) / prevScale;
             const worldY = (mouseY - viewState.panY) / prevScale;

@@ -26,19 +26,29 @@
         }
     };
 
+    const memoryStorageFallback = {};
+
     function safeCloudStorageGet(key) {
         try {
-            return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+            if (typeof localStorage !== 'undefined') {
+                const raw = localStorage.getItem(key);
+                if (raw !== null) return raw;
+            }
         } catch (_) {
-            return null;
+            // 受限或隱私環境改用記憶體快取降級
         }
+        return Object.prototype.hasOwnProperty.call(memoryStorageFallback, key)
+            ? memoryStorageFallback[key]
+            : null;
     }
 
     function safeCloudStorageSet(key, val) {
+        const strVal = String(val);
+        memoryStorageFallback[key] = strVal;
         try {
-            if (typeof localStorage !== 'undefined') localStorage.setItem(key, val);
+            if (typeof localStorage !== 'undefined') localStorage.setItem(key, strVal);
         } catch (_) {
-            // 受限或隱私環境無聲降級
+            // 受限或隱私環境無聲降級並保留於記憶體快取
         }
     }
 
@@ -699,13 +709,18 @@
                     : (st.currentMapId === 'frost' ? (isEn ? 'Permafrost Rift' : '永凍裂谷') : (isEn ? 'Sunlit Woods' : '晨光森林'))
             };
             const victoryWave = CONFIG.VICTORY_WAVE || 10;
+            const modeTag = st.gameMode === 'daily'
+                ? (isEn ? `[Daily Seed ${st.dailyDateKey || ''}${st.weatherType ? ` · ${st.weatherType}` : ''}] ` : `【每日種子 ${st.dailyDateKey || ''}${st.weatherType ? ` · ${st.weatherType}` : ''}】`)
+                : (st.gameMode === 'puzzle'
+                    ? (isEn ? `[Endgame Trial: ${st.puzzleId || ''}] ` : `【殘局試煉：${st.puzzleId || ''}】`)
+                    : (st.isEndlessMode ? (isEn ? '[Endless] ' : '【無盡試煉】') : ''));
             const waveStr = isEn
                 ? (outcomeMode === 'victory'
-                    ? `Victory (Wave ${st.currentWave || victoryWave}/${victoryWave} · Remaining ❤️ ${st.baseHp || 0})`
-                    : `Defeat (Fallen at Wave ${st.currentWave || 1}${st.isEndlessMode ? ' Endless' : `/${victoryWave}`})`)
+                    ? `${modeTag}Victory (Wave ${st.currentWave || victoryWave}/${st.gameMode === 'puzzle' ? (st.currentWave || 1) : victoryWave} · Remaining ❤️ ${st.baseHp || 0})`
+                    : `${modeTag}Defeat (Fallen at Wave ${st.currentWave || 1}${st.isEndlessMode ? ' Endless' : `/${st.gameMode === 'puzzle' ? (st.currentWave || 1) : victoryWave}`})`)
                 : (outcomeMode === 'victory'
-                    ? `通關成功 (第 ${st.currentWave || victoryWave}/${victoryWave} 波 · 剩餘 ❤️ ${st.baseHp || 0})`
-                    : `防線失守 (陣亡於第 ${st.currentWave || 1} 波${st.isEndlessMode ? ' 無盡模式' : ` / ${victoryWave} 波`})`);
+                    ? `${modeTag}通關成功 (第 ${st.currentWave || victoryWave}/${st.gameMode === 'puzzle' ? (st.currentWave || 1) : victoryWave} 波 · 剩餘 ❤️ ${st.baseHp || 0})`
+                    : `${modeTag}防線失守 (陣亡於第 ${st.currentWave || 1} 波${st.isEndlessMode ? ' 無盡模式' : ` / ${st.gameMode === 'puzzle' ? (st.currentWave || 1) : victoryWave} 波`})`);
 
             // 漏怪明細
             const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
@@ -875,6 +890,82 @@
         }
     }
 
+    function wasMapCleared(mapId) {
+        if (!mapId) return false;
+        const records = loadMapRecords();
+        return Boolean(records[mapId] && (Number(records[mapId].bestStars) || 0) > 0);
+    }
+
+    function isEndlessUnlocked() {
+        const career = loadCareerStats();
+        if ((Number(career.totalClears) || 0) >= 1) return true;
+        const records = loadMapRecords();
+        return Object.keys(records).some(id => records[id] && (Number(records[id].bestStars) || 0) > 0);
+    }
+
+    function loadDailyRecords() {
+        try {
+            const raw = safeCloudStorageGet(CONFIG.STORAGE_DAILY_RECORDS_KEY || 'merge_defense_daily_records');
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function saveDailyRecord(dateKey, payload = {}) {
+        if (!dateKey) return loadDailyRecords();
+        const records = loadDailyRecords();
+        const prev = records[dateKey] || {
+            bestWave: 0,
+            bestStars: 0,
+            cleared: false,
+            honorScore: 0,
+            mapId: payload.mapId || 'forest',
+            weather: payload.weather || 'sun'
+        };
+        const wave = Math.max(0, Math.floor(Number(payload.wave) || 0));
+        const stars = Math.max(0, Math.min(3, Math.floor(Number(payload.stars) || 0)));
+        const honor = Math.max(0, Math.round(Number(payload.honorScore) || 0));
+        records[dateKey] = {
+            bestWave: Math.max(prev.bestWave || 0, wave),
+            bestStars: Math.max(prev.bestStars || 0, stars),
+            cleared: Boolean(prev.cleared || payload.cleared),
+            honorScore: Math.max(prev.honorScore || 0, honor),
+            mapId: payload.mapId || prev.mapId || 'forest',
+            weather: payload.weather || prev.weather || 'sun',
+            updatedAt: Date.now()
+        };
+        safeCloudStorageSet(CONFIG.STORAGE_DAILY_RECORDS_KEY || 'merge_defense_daily_records', JSON.stringify(records));
+        return records;
+    }
+
+    function loadPuzzleRecords() {
+        try {
+            const raw = safeCloudStorageGet(CONFIG.STORAGE_PUZZLE_RECORDS_KEY || 'merge_defense_puzzle_records');
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function savePuzzleClear(puzzleId, remainingGold = 0) {
+        if (!puzzleId) return loadPuzzleRecords();
+        const records = loadPuzzleRecords();
+        const prev = records[puzzleId] || { cleared: false, clearCount: 0, bestRemainingGold: 0 };
+        records[puzzleId] = {
+            cleared: true,
+            clearCount: (Number(prev.clearCount) || 0) + 1,
+            bestRemainingGold: Math.max(Number(prev.bestRemainingGold) || 0, Math.max(0, Math.floor(Number(remainingGold) || 0))),
+            updatedAt: Date.now()
+        };
+        safeCloudStorageSet(CONFIG.STORAGE_PUZZLE_RECORDS_KEY || 'merge_defense_puzzle_records', JSON.stringify(records));
+        return records;
+    }
+
     function loadCareerStats() {
         const records = loadMapRecords();
         const maxFromMaps = Math.max(
@@ -888,6 +979,7 @@
             bestHonorScore: 0,
             totalHonorEarned: 0,
             bestContractCount: 0,
+            endlessBestWave: 0,
             mapRecords: records
         };
         try {
@@ -911,6 +1003,9 @@
                     }
                     if (Number.isFinite(Number(parsed.bestContractCount))) {
                         career.bestContractCount = Math.max(0, Math.floor(Number(parsed.bestContractCount)));
+                    }
+                    if (Number.isFinite(Number(parsed.endlessBestWave))) {
+                        career.endlessBestWave = Math.max(0, Math.floor(Number(parsed.endlessBestWave)));
                     }
                 }
             }
@@ -1022,6 +1117,7 @@
     function saveMapRecord(mapId, wave, stars = null, options = {}) {
         const records = loadMapRecords();
         const target = records[mapId] || { bestWave: 1, bestStars: 0 };
+        const wasClearedBefore = (Number(target.bestStars) || 0) > 0;
         if (Number.isFinite(wave) && wave > target.bestWave) target.bestWave = wave;
         if (Number.isFinite(stars) && stars > target.bestStars) target.bestStars = Math.min(3, Math.max(0, stars));
         records[mapId] = target;
@@ -1036,12 +1132,18 @@
 
         const career = loadCareerStats();
         career.bestWaveOverall = Math.max(career.bestWaveOverall || 1, maxOverall);
+        if (options && (options.isEndless || options.gameMode === 'endless') && Number.isFinite(wave)) {
+            career.endlessBestWave = Math.max(career.endlessBestWave || 0, Math.floor(wave));
+        }
         if (options && options.isClear) {
             career.totalClears = (career.totalClears || 0) + 1;
         }
-        const earnedRunHonor = (options && options.awardHonor && Number.isFinite(options.honorScore))
-            ? Math.max(0, Math.round(options.honorScore))
+        const firstClearBonus = (options && options.isClear && options.awardHonor && !wasClearedBefore && options.awardFirstClearBonus !== false)
+            ? (CONFIG.FIRST_CLEAR_HONOR_BONUS || 200)
             : 0;
+        const earnedRunHonor = ((options && options.awardHonor && Number.isFinite(options.honorScore))
+            ? Math.max(0, Math.round(options.honorScore))
+            : 0) + firstClearBonus;
         if (earnedRunHonor > 0) {
             career.totalHonorEarned = (career.totalHonorEarned || 0) + earnedRunHonor;
             grantMetaHonorPoints(earnedRunHonor);
@@ -1057,7 +1159,8 @@
             totalClears: career.totalClears,
             bestHonorScore: career.bestHonorScore,
             totalHonorEarned: career.totalHonorEarned,
-            bestContractCount: career.bestContractCount
+            bestContractCount: career.bestContractCount,
+            endlessBestWave: career.endlessBestWave || 0
         }));
         return records;
     }
@@ -1090,6 +1193,12 @@
         generateBattleReportText,
         copyBattleReportToClipboard,
         loadMapRecords,
+        wasMapCleared,
+        isEndlessUnlocked,
+        loadDailyRecords,
+        saveDailyRecord,
+        loadPuzzleRecords,
+        savePuzzleClear,
         loadCareerStats,
         loadMetaTreeState,
         saveMetaTreeState,

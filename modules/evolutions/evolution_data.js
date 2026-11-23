@@ -38,6 +38,7 @@
 
     const LINEAGE_FAMILIES = ['fire', 'steam', 'ice', 'magnet', 'thunder', 'plasma'];
     const HYBRID_FAMILIES = ['steam', 'magnet', 'plasma'];
+    const TRI_ELEMENT_FAMILIES = ['storm_tri', 'starforge_tri', 'prism_tri'];
     const PARENT_LINEAGE_MAP = {
         steam: ['fire', 'ice'],
         magnet: ['ice', 'thunder'],
@@ -227,6 +228,102 @@
         LV5_ASCENSION_HINTS[scionId] = '【5★ 世界樹神裔 16U · 雙核心完全體＋2.2 格友軍光環＋6s 全圖脈動】';
     });
 
+    // ==================== Stage 2：三元素創世融合配方 (4U / 8U) 與唯一 5★ 原初之核 (16U) ====================
+    const TRI_RECIPES_T2_TO_T3 = {
+        'steam_trunk+thunder_trunk': {
+            resultType: 'storm_tri',
+            family: 'storm_tri',
+            tier: 3,
+            mode: 'tri_genesis_t3',
+            title: '三元創世 · 天災風暴樹',
+            previewLabel: '⛈️ 三元融合 ▸ 天災風暴樹 ★★★ (4U · 全場 1.26x)'
+        },
+        'fire_trunk+magnet_trunk': {
+            resultType: 'starforge_tri',
+            family: 'starforge_tri',
+            tier: 3,
+            mode: 'tri_genesis_t3',
+            title: '三元創世 · 星界熔爐樹',
+            previewLabel: '🌋 三元融合 ▸ 星界熔爐樹 ★★★ (4U · 全場 1.26x)'
+        },
+        'ice_trunk+plasma_trunk': {
+            resultType: 'prism_tri',
+            family: 'prism_tri',
+            tier: 3,
+            mode: 'tri_genesis_t3',
+            title: '三元創世 · 絕對零度稜鏡',
+            previewLabel: '❄️ 三元融合 ▸ 絕對零度稜鏡 ★★★ (4U · 全場 1.26x)'
+        }
+    };
+
+    const TRI_RECIPES_T3_TO_T4 = {
+        'storm_tri+storm_tri': { resultType: 'storm_tri_4', family: 'storm_tri', tier: 4, mode: 'tri_ascend_t4' },
+        'starforge_tri+starforge_tri': { resultType: 'starforge_tri_4', family: 'starforge_tri', tier: 4, mode: 'tri_ascend_t4' },
+        'prism_tri+prism_tri': { resultType: 'prism_tri_4', family: 'prism_tri', tier: 4, mode: 'tri_ascend_t4' }
+    };
+    ['steam_A', 'steam_B'].forEach((sId) => {
+        ['thunder_A', 'thunder_B'].forEach((tId) => {
+            const k = [sId, tId].sort().join('+');
+            TRI_RECIPES_T3_TO_T4[k] = {
+                resultType: 'storm_tri_4',
+                family: 'storm_tri',
+                tier: 4,
+                mode: 'tri_genesis_t4'
+            };
+        });
+    });
+    ['magnet_A', 'magnet_B'].forEach((mId) => {
+        ['fire_A', 'fire_B'].forEach((fId) => {
+            const k = [mId, fId].sort().join('+');
+            TRI_RECIPES_T3_TO_T4[k] = {
+                resultType: 'starforge_tri_4',
+                family: 'starforge_tri',
+                tier: 4,
+                mode: 'tri_genesis_t4'
+            };
+        });
+    });
+    ['plasma_A', 'plasma_B'].forEach((pId) => {
+        ['ice_A', 'ice_B'].forEach((iId) => {
+            const k = [pId, iId].sort().join('+');
+            TRI_RECIPES_T3_TO_T4[k] = {
+                resultType: 'prism_tri_4',
+                family: 'prism_tri',
+                tier: 4,
+                mode: 'tri_genesis_t4'
+            };
+        });
+    });
+
+    const PRIMAL_RECIPES_T4_TO_T5 = {};
+    const TRI_T4_FORMS = ['storm_tri_4', 'starforge_tri_4', 'prism_tri_4'];
+    for (let i = 0; i < TRI_T4_FORMS.length; i++) {
+        for (let j = i; j < TRI_T4_FORMS.length; j++) {
+            const pair = [TRI_T4_FORMS[i], TRI_T4_FORMS[j]].sort().join('+');
+            PRIMAL_RECIPES_T4_TO_T5[pair] = {
+                mode: 'primal_core_t5',
+                family: 'primal_core',
+                resultType: 'primal_core',
+                options: ['primal_core'],
+                tier: 5,
+                isPrimalCore: true,
+                previewLabel: '🌳 創世唯一覺醒 ▸ 原初之核 ★★★★★ (全圖限 1 座)'
+            };
+        }
+    }
+
+    Object.assign(LV3_ASCENSION_HINTS, {
+        storm_tri: '【三元融合 3★ · 1.26x 全親和 · 2.2 格熾凍雷雲 (45% 穿甲) ＋ 雲內死亡 15% 殉爆】',
+        starforge_tri: '【三元融合 3★ · 1.26x 全親和 · 1.8 格聚怪凍結 0.5s ＋ 40% 破甲超新星】',
+        prism_tri: '【三元融合 3★ · 1.26x 全親和 · 3 光束折射 ＋ 5 層脆化 2.0x 碎晶冰封】'
+    });
+    Object.assign(LV4_ASCENSION_HINTS, {
+        storm_tri_4: '【4★ 三元古冠 · 強化熾凍雷雲＋全場 1.26x 親和】',
+        starforge_tri_4: '【4★ 三元古冠 · 強化超新星聚怪凍結＋全場 1.26x 親和】',
+        prism_tri_4: '【4★ 三元古冠 · 強化三束零度折射＋全場 1.26x 親和】'
+    });
+    LV5_ASCENSION_HINTS.primal_core = '【5★ 創世世界樹·原初之核（全圖限 1 座）· 周圍 8 格靈脈連線＋5s 創世脈動】';
+
     CONFIG.MAX_TIER = MAX_TIER;
 
     GameApp.data = GameApp.data || {};
@@ -236,12 +333,16 @@
         STAR_CONCENTRATION_EFFICIENCY,
         LINEAGE_FAMILIES,
         HYBRID_FAMILIES,
+        TRI_ELEMENT_FAMILIES,
         PARENT_LINEAGE_MAP,
         T1_RECIPES,
         T1_TO_T2_RECIPES,
         T2_TO_T3_RULES,
         T3_TO_T4_RULES,
         T4_TO_T5_RULES,
+        TRI_RECIPES_T2_TO_T3,
+        TRI_RECIPES_T3_TO_T4,
+        PRIMAL_RECIPES_T4_TO_T5,
         FUSION_RECIPES,
         FUSION_RECIPE_LIST,
         LV3_ASCENSION_HINTS,
@@ -254,5 +355,8 @@
         global.GameConfig.T2_TO_T3_RULES = T2_TO_T3_RULES;
         global.GameConfig.T3_TO_T4_RULES = T3_TO_T4_RULES;
         global.GameConfig.T4_TO_T5_RULES = T4_TO_T5_RULES;
+        global.GameConfig.TRI_RECIPES_T2_TO_T3 = TRI_RECIPES_T2_TO_T3;
+        global.GameConfig.TRI_RECIPES_T3_TO_T4 = TRI_RECIPES_T3_TO_T4;
+        global.GameConfig.PRIMAL_RECIPES_T4_TO_T5 = PRIMAL_RECIPES_T4_TO_T5;
     }
 })(window);

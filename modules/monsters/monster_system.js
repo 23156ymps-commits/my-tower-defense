@@ -77,6 +77,11 @@
                 durationMs: 0,
                 tickAccMs: 0,
                 sourceTower: null
+            },
+            thermalBrittle: {
+                stacks: 0,
+                maxStacks: 5,
+                durationMs: 0
             }
         };
     }
@@ -85,6 +90,9 @@
         if (!monster) return null;
         if (!monster.status) {
             monster.status = createInitialStatusState();
+        }
+        if (!monster.status.thermalBrittle) {
+            monster.status.thermalBrittle = { stacks: 0, maxStacks: 5, durationMs: 0 };
         }
         return monster.status;
     }
@@ -481,6 +489,61 @@
         return true;
     }
 
+    /**
+     * 直接施加凍結（受既有的解凍 6s 免疫與 Boss 控場減半約束，供星界熔爐樹／絕對零度稜鏡使用）
+     */
+    function tryApplyDirectFreeze(monster, durationMs = 500, options = {}) {
+        if (!monster || monster.hp <= 0 || monster.isTargetable === false) return false;
+        const st = ensureMonsterStatus(monster);
+        const fz = st.freeze;
+        if (fz.immuneMs > 0 || fz.durationMs > 0) return false;
+
+        const baseDur = Math.max(100, Number(durationMs) || 500);
+        const bossMult = Number.isFinite(options.bossFreezeMult) ? options.bossFreezeMult : 0.50;
+        const dur = monster.isBoss ? Math.max(100, Math.round(baseDur * bossMult)) : baseDur;
+        fz.durationMs = dur;
+        fz.pendingImmuneMs = Number(options.freezeImmuneMs) || 6000;
+        const isEnSt = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+        if (monster.isStealthed) {
+            revealStealthMonster(monster, isEnSt ? '❄️ Freeze Reveal' : '❄️ 凍結現形');
+        }
+        if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
+            GameApp.renderer.spawnFloatingNotice(isEnSt ? '❄️ Frozen' : '❄️ 冰封', monster.pixelX, monster.pixelY, 'pity-seed');
+        }
+        return true;
+    }
+
+    /**
+     * 絕對零度稜鏡專用：疊加熱脹冷縮脆化易傷（最多 5 層，計入 60% 易傷上限桶），滿 5 層觸發碎晶並重置層數
+     */
+    function registerPrismThermalHit(monster, fxParams = {}) {
+        if (!monster || monster.hp <= 0 || monster.isTargetable === false) {
+            return { shattered: false, stacks: 0 };
+        }
+        const st = ensureMonsterStatus(monster);
+        const tb = st.thermalBrittle;
+        const maxStacks = Math.max(1, Number(fxParams.brittleMaxStacks) || tb.maxStacks || 5);
+        const perStack = Number.isFinite(fxParams.brittleVulnPerStack) ? fxParams.brittleVulnPerStack : 0.05;
+        const dur = Math.max(500, Number(fxParams.brittleDurationMs) || 3500);
+
+        tb.maxStacks = maxStacks;
+        tb.stacks = tb.durationMs > 0 ? Math.min(maxStacks, tb.stacks + 1) : 1;
+        tb.durationMs = dur;
+
+        if (tb.stacks >= maxStacks) {
+            tb.stacks = 0;
+            tb.durationMs = 0;
+            if (st.vuln && st.vuln.prism_brittle) {
+                delete st.vuln.prism_brittle;
+            }
+            return { shattered: true, stacks: maxStacks };
+        }
+
+        const totalBonus = tb.stacks * perStack;
+        applyVulnerabilityToMonster(monster, totalBonus, dur, 'prism_brittle');
+        return { shattered: false, stacks: tb.stacks };
+    }
+
     function revealStealthMonster(monster, label) {
         if (!monster || !monster.isStealthed) return false;
         const isEnSt = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
@@ -773,9 +836,40 @@
                 G.state.groundHazards.splice(oldIdx, 1);
                 steamCount--;
             }
+        } else if (hazardType === 'storm_cloud') {
+            if (spec.sourceTower && spec.sourceTower.uid) {
+                const existing = G.state.groundHazards.find(h => h && h.type === 'storm_cloud' && h.ownerUid === spec.sourceTower.uid);
+                if (existing) {
+                    existing.x = Number(spec.x) || existing.x;
+                    existing.y = Number(spec.y) || existing.y;
+                    existing.radiusPx = Number(spec.radiusPx) || existing.radiusPx;
+                    existing.dps = Number(spec.dps) || existing.dps;
+                    existing.remainingMs = Number(spec.durationMs) || 3600;
+                    existing.maxDurationMs = Number(spec.durationMs) || 3600;
+                    existing.armorPierce = Number(spec.armorPierce) || 0.45;
+                    existing.slowRate = Number(spec.slowRate) || 0.35;
+                    existing.slowDurationMs = Number(spec.slowDurationMs) || 2000;
+                    existing.martyrPct = Number(spec.martyrPct) || 0.15;
+                    existing.martyrRadiusPx = Number(spec.martyrRadiusPx) || (1.5 * G.boardMetrics.step);
+                    existing.martyrCapNormal = Number(spec.martyrCapNormal) || 420;
+                    existing.martyrCapBoss = Number(spec.martyrCapBoss) || 650;
+                    return existing;
+                }
+            }
+            let cloudCount = 0;
+            for (let i = 0; i < G.state.groundHazards.length; i++) {
+                if (G.state.groundHazards[i] && G.state.groundHazards[i].type === 'storm_cloud') cloudCount++;
+            }
+            while (cloudCount >= 6) {
+                const oldCloudIdx = G.state.groundHazards.findIndex(h => h && h.type === 'storm_cloud');
+                if (oldCloudIdx === -1) break;
+                G.state.groundHazards.splice(oldCloudIdx, 1);
+                cloudCount--;
+            }
         }
         const hazard = {
             type: hazardType,
+            ownerUid: (spec.sourceTower && spec.sourceTower.uid) || spec.ownerUid || null,
             x: Number(spec.x) || 0,
             y: Number(spec.y) || 0,
             radiusPx: Number(spec.radiusPx) || (1.3 * G.boardMetrics.step),
@@ -784,6 +878,14 @@
             maxDurationMs: Number(spec.durationMs) || 3000,
             tickAccMs: 0,
             dmgCarry: 0,
+            armorPierce: Number(spec.armorPierce) || 0,
+            slowRate: Number(spec.slowRate) || 0,
+            slowDurationMs: Number(spec.slowDurationMs) || 2000,
+            martyrPct: Number(spec.martyrPct) || 0,
+            martyrRadiusPx: Number(spec.martyrRadiusPx) || (1.5 * G.boardMetrics.step),
+            martyrCapNormal: Number(spec.martyrCapNormal) || 420,
+            martyrCapBoss: Number(spec.martyrCapBoss) || 650,
+            driftSpeedPx: Number(spec.driftSpeedPx) || 28,
             sourceTower: spec.sourceTower || null
         };
         G.state.groundHazards.push(hazard);
@@ -849,7 +951,7 @@
                 st.totalGoldEarned += thiefGoldGranted;
             }
             const stocksAvailable = EconSys && typeof EconSys.canTradeStocks === 'function' ? EconSys.canTradeStocks() : true;
-            const preferStock = stocksAvailable && Math.random() < 0.5;
+            const preferStock = stocksAvailable && ((GameApp.helpers && typeof GameApp.helpers.nextRunRandom === 'function') ? GameApp.helpers.nextRunRandom() : Math.random()) < 0.5;
             let gotStock = null;
             if (preferStock && EconSys && typeof EconSys.grantRandomStockShare === 'function') {
                 gotStock = EconSys.grantRandomStockShare();
@@ -918,6 +1020,44 @@
                 : `擊殺【${monster.name}】，獲得 +${totalShowGold} 💰${mistSuffixZh}${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
         }
 
+        if (!options.isMartyrBlast && Array.isArray(st.groundHazards) && st.groundHazards.length > 0) {
+            for (let h = 0; h < st.groundHazards.length; h++) {
+                const hz = st.groundHazards[h];
+                if (!hz || hz.type !== 'storm_cloud' || hz.remainingMs <= 0 || (hz.martyrPct || 0) <= 0) continue;
+                if (Math.hypot((monster.pixelX || 0) - hz.x, (monster.pixelY || 0) - hz.y) <= hz.radiusPx) {
+                    const martyrRad = hz.martyrRadiusPx || (1.5 * G.boardMetrics.step);
+                    const capVal = monster.isBoss ? (hz.martyrCapBoss || 650) : (hz.martyrCapNormal || 420);
+                    const rawMartyr = Math.min(capVal, Math.round((monster.maxHp || 60) * (hz.martyrPct || 0.15)));
+                    if (rawMartyr > 0) {
+                        const victims = st.monsters.filter(v =>
+                            v && v.id !== monster.id && v.hp > 0 && !v._killHandled && (v.isTargetable !== false || v.isStealthed)
+                            && Math.hypot(v.pixelX - monster.pixelX, v.pixelY - monster.pixelY) <= martyrRad
+                        );
+                        victims.forEach((vic) => {
+                            const armMult = getMonsterArmorMultiplier(vic, hz.armorPierce ?? 0.45);
+                            const mDmg = Math.max(1, Math.round(rawMartyr * armMult));
+                            const hpBefore = vic.hp;
+                            vic.hp = Math.max(0, hpBefore - mDmg);
+                            if (GameApp.systems && GameApp.systems.towerAttack && hz.sourceTower) {
+                                GameApp.systems.towerAttack.recordTowerDamage(hz.sourceTower, Math.min(hpBefore, mDmg), 'aoe');
+                            }
+                            if (GameApp.renderer) {
+                                GameApp.renderer.spawnDamageNumber(mDmg, false, vic.pixelX, vic.pixelY, isEnKill ? '⛈️Blast ' : '⛈️殉爆 ');
+                            }
+                            if (vic.hp <= 0) {
+                                handleMonsterKilled(vic, hz.sourceTower || killerTowerObj, mDmg, { isMartyrBlast: true, isDotKill: true });
+                            }
+                        });
+                        if (GameApp.renderer) {
+                            GameApp.renderer.emitRingFX(monster.pixelX, monster.pixelY, martyrRad, '#4A9EBF', 0.28, 300);
+                            GameApp.renderer.emitParticleBurst(monster.pixelX, monster.pixelY, '#E0B43C', 8, 85);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
         // 🔥 熔核自爆蟲：非減速且非凍結狀態死亡時癱瘓 1.4 格內防禦塔 1.5s
         if (monster.bomberSpec) {
             const suppressed = isMonsterSlowed(monster) || isMonsterFrozen(monster);
@@ -957,12 +1097,32 @@
             hz.remainingMs -= dtMs;
             hz.tickAccMs += dtMs;
 
+            if (hz.type === 'storm_cloud' && st.monsters.length > 0 && (hz.driftSpeedPx || 0) > 0) {
+                const searchMax = 2.8 * (G.boardMetrics ? G.boardMetrics.step : 36);
+                let nearest = null;
+                let bestDist = searchMax;
+                for (let mi = 0; mi < st.monsters.length; mi++) {
+                    const m = st.monsters[mi];
+                    if (!m || m.hp <= 0 || m.isTargetable === false) continue;
+                    const d = Math.hypot(m.pixelX - hz.x, m.pixelY - hz.y);
+                    if (d < bestDist) { bestDist = d; nearest = m; }
+                }
+                if (nearest && bestDist > 6) {
+                    const stepPx = Math.min(bestDist - 4, (hz.driftSpeedPx || 28) * (dtMs / 1000));
+                    if (stepPx > 0) {
+                        hz.x += ((nearest.pixelX - hz.x) / bestDist) * stepPx;
+                        hz.y += ((nearest.pixelY - hz.y) / bestDist) * stepPx;
+                    }
+                }
+            }
+
             while (hz.tickAccMs >= 250) {
                 hz.tickAccMs -= 250;
+                const isCloud = hz.type === 'storm_cloud';
                 const rawTick = (hz.dps || 28) * 0.25 + (hz.dmgCarry || 0);
                 const tickDmg = Math.max(1, Math.floor(rawTick));
                 hz.dmgCarry = Math.max(0, rawTick - tickDmg);
-                const dmgIcon = hz.type === 'scorch_trail' ? '🔥' : '💨';
+                const dmgIcon = isCloud ? '⛈️' : (hz.type === 'scorch_trail' ? '🔥' : '💨');
                 const victims = st.monsters.filter(m =>
                     m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - hz.x, m.pixelY - hz.y) <= hz.radiusPx
                 );
@@ -970,16 +1130,24 @@
                     const m = victims[v];
                     if (m.hp <= 0) continue;
                     if (m.isStealthed) revealStealthMonster(m, (GameApp.i18n && GameApp.i18n.isEnglish()) ? 'AoE Reveal' : 'AoE 現形');
+                    let dealtDmg = tickDmg;
+                    if (isCloud) {
+                        const armMult = getMonsterArmorMultiplier(m, hz.armorPierce ?? 0.45);
+                        dealtDmg = Math.max(1, Math.round(tickDmg * 1.26 * armMult));
+                        if ((hz.slowRate || 0) > 0) {
+                            applySlowToMonster(m, hz.slowRate, hz.slowDurationMs || 2000, 'storm_cloud');
+                        }
+                    }
                     const before = m.hp;
-                    m.hp = Math.max(0, before - tickDmg);
+                    m.hp = Math.max(0, before - dealtDmg);
                     if (AttackSys && hz.sourceTower) {
-                        AttackSys.recordTowerDamage(hz.sourceTower, Math.min(before, tickDmg), 'dot');
+                        AttackSys.recordTowerDamage(hz.sourceTower, Math.min(before, dealtDmg), 'dot');
                     }
                     if (GameApp.renderer) {
-                        GameApp.renderer.spawnDamageNumber(tickDmg, false, m.pixelX, m.pixelY, dmgIcon);
+                        GameApp.renderer.spawnDamageNumber(dealtDmg, false, m.pixelX, m.pixelY, dmgIcon, isCloud);
                     }
                     if (m.hp <= 0) {
-                        handleMonsterKilled(m, hz.sourceTower, tickDmg, { isDotKill: true });
+                        handleMonsterKilled(m, hz.sourceTower, dealtDmg, { isDotKill: true });
                     }
                 }
             }
@@ -1060,6 +1228,10 @@
         }
         if (st.shock.durationMs > 0) {
             st.shock.durationMs = Math.max(0, st.shock.durationMs - dtMs);
+        }
+        if (st.thermalBrittle && st.thermalBrittle.durationMs > 0) {
+            st.thermalBrittle.durationMs = Math.max(0, st.thermalBrittle.durationMs - dtMs);
+            if (st.thermalBrittle.durationMs === 0) st.thermalBrittle.stacks = 0;
         }
 
         // 7. 灼燒持續傷害與每 2s 鄰近傳染
@@ -1394,6 +1566,8 @@
         isMonsterFrozen,
         isMonsterControlled,
         registerPermafrostHitAndTryFreeze,
+        tryApplyDirectFreeze,
+        registerPrismThermalHit,
         revealStealthMonster,
         tryTriggerPantherStealth,
         applyCrownTrueBurn,
