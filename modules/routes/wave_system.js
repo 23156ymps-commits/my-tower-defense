@@ -31,6 +31,11 @@
         return maps[curId] || maps.forest;
     }
 
+    function getMapVictoryWave(mapSpec = null) {
+        const spec = mapSpec || (G && G.map && G.map.spec) || getCurrentMapSpec();
+        return Math.max(1, Math.floor(Number((spec && spec.victoryWave) || CONFIG.VICTORY_WAVE) || 10));
+    }
+
     /**
      * 根據指定地圖的 waypoints 即時重算 PATH_CELL_INDICES、方向箭頭與地形分佈
      * 實現「地面石磚外觀」、「怪物行軍路線」與「拖拉禁止建塔區域」三合一自動連動
@@ -44,8 +49,22 @@
         const boardSize = CONFIG.BOARD_SIZE || 150;
         G.state.currentMapId = spec.id;
         map.spec = spec;
-        map.waypoints = spec.waypoints.map(pt => ({ x: pt.x, y: pt.y }));
-        map.altWaypoints = Array.isArray(spec.altWaypoints) ? spec.altWaypoints.map(pt => ({ x: pt.x, y: pt.y })) : null;
+        map.waypoints = spec.waypoints.map(pt => ({
+            x: pt.x,
+            y: pt.y,
+            teleportToNext: Boolean(pt.teleportToNext)
+        }));
+        map.altWaypoints = Array.isArray(spec.altWaypoints)
+            ? spec.altWaypoints.map(pt => ({ x: pt.x, y: pt.y, teleportToNext: Boolean(pt.teleportToNext) }))
+            : null;
+        map.teleportRift = (spec.teleportRift && spec.teleportRift.from && spec.teleportRift.to)
+            ? {
+                from: { x: spec.teleportRift.from.x, y: spec.teleportRift.from.y },
+                to: { x: spec.teleportRift.to.x, y: spec.teleportRift.to.y },
+                fromIndex: coordsToIndex(spec.teleportRift.from.x, spec.teleportRift.from.y),
+                toIndex: coordsToIndex(spec.teleportRift.to.x, spec.teleportRift.to.y)
+            }
+            : null;
         map.startCellIndex = coordsToIndex(map.waypoints[0].x, map.waypoints[0].y);
         map.altStartCellIndex = map.altWaypoints ? coordsToIndex(map.altWaypoints[0].x, map.altWaypoints[0].y) : null;
         map.startCellIndices = new Set([map.startCellIndex]);
@@ -59,10 +78,16 @@
             if (!Array.isArray(wps) || wps.length === 0) return;
             for (let i = 0; i < wps.length - 1; i++) {
                 const p1 = wps[i], p2 = wps[i + 1];
-                let cx = p1.x, cy = p1.y;
-                const startIdx = coordsToIndex(cx, cy);
+                const startIdx = coordsToIndex(p1.x, p1.y);
                 map.pathCellIndices.add(startIdx);
                 PATH_CELL_INDICES.add(startIdx);
+                if (p1.teleportToNext) {
+                    const destIdx = coordsToIndex(p2.x, p2.y);
+                    map.pathCellIndices.add(destIdx);
+                    PATH_CELL_INDICES.add(destIdx);
+                    continue;
+                }
+                let cx = p1.x, cy = p1.y;
                 while (cx !== p2.x || cy !== p2.y) {
                     if (cx < p2.x) cx++; else if (cx > p2.x) cx--; else if (cy < p2.y) cy++; else cy--;
                     const stepIdx = coordsToIndex(cx, cy);
@@ -87,12 +112,18 @@
         }
 
         map.terrainMap.clear();
+        map.chargedStoneIndices = [];
         if (spec.terrainLayout && typeof spec.terrainLayout === 'object') {
             Object.entries(spec.terrainLayout).forEach(([terrainType, coordsList]) => {
                 if (!Array.isArray(coordsList)) return;
                 for (let i = 0; i < coordsList.length; i++) {
                     const idx = coordsToIndex(coordsList[i][0], coordsList[i][1]);
-                    if (!map.pathCellIndices.has(idx)) map.terrainMap.set(idx, terrainType);
+                    if (!map.pathCellIndices.has(idx)) {
+                        map.terrainMap.set(idx, terrainType);
+                        if (terrainType === 'charged_stone') {
+                            map.chargedStoneIndices.push(idx);
+                        }
+                    }
                 }
             });
         }
@@ -100,7 +131,11 @@
         const buildCumDist = (wps) => {
             const arr = [0];
             for (let i = 0; i < wps.length - 1; i++) {
-                arr.push(arr[i] + Math.hypot(wps[i + 1].x - wps[i].x, wps[i + 1].y - wps[i].y));
+                if (wps[i].teleportToNext) {
+                    arr.push(arr[i]);
+                } else {
+                    arr.push(arr[i] + Math.hypot(wps[i + 1].x - wps[i].x, wps[i + 1].y - wps[i].y));
+                }
             }
             return arr;
         };
@@ -112,12 +147,14 @@
             let step = 0;
             for (let i = 0; i < wps.length - 1; i++) {
                 const p1 = wps[i], p2 = wps[i + 1];
+                if (p1.teleportToNext) continue;
                 const sdx = Math.sign(p2.x - p1.x), sdy = Math.sign(p2.y - p1.y);
                 const deg = sdx === 1 ? 0 : (sdy === 1 ? 90 : (sdx === -1 ? 180 : -90));
                 let cx = p1.x, cy = p1.y;
                 while (cx !== p2.x || cy !== p2.y) {
                     const idx = coordsToIndex(cx, cy);
                     if (!map.startCellIndices.has(idx) && idx !== map.endCellIndex && !map.pathFlowArrows.has(idx)
+                        && (!map.teleportRift || (idx !== map.teleportRift.fromIndex && idx !== map.teleportRift.toIndex))
                         && ((cx === p1.x && cy === p1.y && i > 0) || step % 2 === 1)) {
                         map.pathFlowArrows.set(idx, deg);
                     }
@@ -131,6 +168,8 @@
         if (typeof document !== 'undefined' && document.body) {
             document.body.classList.toggle('map-lava', G.state.currentMapId === 'lava');
             document.body.classList.toggle('map-frost', G.state.currentMapId === 'frost');
+            document.body.classList.toggle('map-thunder', G.state.currentMapId === 'thunder_isles');
+            document.body.classList.toggle('map-blackmarket', G.state.currentMapId === 'blackmarket');
         }
 
         // 若開啟 syncRender，立即刷新地面石磚與棋盤狀態
@@ -147,11 +186,12 @@
     }
 
     function isBossWaveNumber(waveNum) {
-        const victoryWave = CONFIG.VICTORY_WAVE || 10;
-        if (waveNum === 5) return true;
-        const isEndless = G && G.state && G.state.isEndlessMode;
-        if (!isEndless && waveNum === victoryWave) return true;
-        return Boolean(isEndless && waveNum >= victoryWave && waveNum % 5 === 0);
+        const w = Math.max(1, Math.floor(Number(waveNum) || 1));
+        const victoryWave = getMapVictoryWave();
+        const isEndless = Boolean(G && G.state && G.state.isEndlessMode);
+        if (!isEndless && w > victoryWave) return false;
+        if (!isEndless && w === victoryWave) return true;
+        return w >= 5 && w % 5 === 0;
     }
 
     /**
@@ -204,9 +244,11 @@
         const bossRoster = monstersData.BOSS_ROSTER || [];
         const monsterDb = monstersData.MONSTER_DATABASE || {};
         const wb = getRoutesData().WAVE_BALANCE || {};
-        const victoryWave = CONFIG.VICTORY_WAVE || 10;
+        const victoryWave = getMapVictoryWave();
 
-        const milestoneIdx = Math.max(0, Math.floor(waveNum / 5) - 1);
+        const milestoneIdx = (waveNum === victoryWave && victoryWave === 12 && bossRoster.length >= 3)
+            ? 2
+            : Math.max(0, Math.floor(waveNum / 5) - 1);
         const template = bossRoster[milestoneIdx % Math.max(1, bossRoster.length)] || {
             typeKey: 'wood', name: '腐朽古樹王', icon: '👹', weakness: 'fire', armorBase: 19, hpBase: 8487
         };
@@ -285,7 +327,7 @@
         const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
         const monsterRules = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.GLOBAL_MONSTER_RULES) || {};
         const TreeSys = GameApp.systems && GameApp.systems.tree;
-        const victoryWave = CONFIG.VICTORY_WAVE || 10;
+        const victoryWave = getMapVictoryWave();
         const isEndless = G && G.state && G.state.isEndlessMode;
 
         const pool = getWaveNormalPool(waveNum);
@@ -319,6 +361,10 @@
 
         const mapSpec = getCurrentMapSpec();
         const hasAltRoute = Boolean(mapSpec && Array.isArray(mapSpec.altWaypoints) && mapSpec.altWaypoints.length >= 2);
+        const createRng = GameApp.helpers && GameApp.helpers.createSeededRng;
+        const affixSeedKey = (G && G.state && (G.state.dailySeedCode || G.state.runSeedCode || G.state.sessionId)) || 1;
+        const affixIds = ['bounty', 'frenzied', 'shield_regen'];
+        const eliteAffixCounts = {};
         const queue = [];
         let crisisSeq = 0;
         for (let i = 0; i < totalCount; i++) {
@@ -333,7 +379,14 @@
             } else if (isElite) {
                 armor = Math.max(armor, eliteArmor);
             }
-            queue.push({ typeKey, hpScale, rewardBonus, isElite, isBoss: false, armor, useAltRoute: hasAltRoute && (i % 2 === 1) });
+            let eliteAffix = null;
+            if (waveNum >= 6 && isElite) {
+                const affixRng = typeof createRng === 'function' ? createRng(`${affixSeedKey}:eliteAffix:${waveNum}:${i}`) : null;
+                const roll = affixRng ? affixRng() : (((waveNum * 7 + i * 13) % 97) / 97);
+                eliteAffix = affixIds[Math.floor(roll * affixIds.length) % affixIds.length];
+                eliteAffixCounts[eliteAffix] = (eliteAffixCounts[eliteAffix] || 0) + 1;
+            }
+            queue.push({ typeKey, hpScale, rewardBonus, isElite, eliteAffix, isBoss: false, armor, useAltRoute: hasAltRoute && (i % 2 === 1) });
         }
 
         let hasThief = false;
@@ -368,6 +421,7 @@
             queue,
             eliteCount,
             eliteArmor,
+            eliteAffixCounts,
             bossMeta,
             crisisSpec,
             hasThief,
@@ -379,6 +433,7 @@
         bind,
         PATH_CELL_INDICES,
         getCurrentMapSpec,
+        getMapVictoryWave,
         applyMapConfig,
         rebuildRouteFromWaypoints,
         isBossWaveNumber,

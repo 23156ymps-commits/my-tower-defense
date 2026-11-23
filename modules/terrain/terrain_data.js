@@ -96,6 +96,39 @@
             rangeMult: 1.0,
             attackSpeedMult: 1.0,
             maxDamageBonus: 0.20
+        },
+        charged_stone: {
+            id: 'charged_stone',
+            name: '充能浮石',
+            icon: '⚡',
+            image: '',
+            buildable: true,
+            isSpecial: true,
+            isDynamic: true,
+            shortTag: '每 2 波輪流充能 · 傷害 +40%',
+            tooltip: '⚡ 充能浮石：每 2 波輪流點亮 1 座浮石，進駐發光浮石的防禦塔獲得 +40% 傷害加成（併入 B_power）',
+            swatchClass: 'swatch-charged-stone',
+            rangeMult: 1.0,
+            attackSpeedMult: 1.0,
+            maxDamageBonus: 0.40,
+            damageMult: 1.40
+        },
+        treasure_rock: {
+            id: 'treasure_rock',
+            name: '藏寶巨石',
+            icon: '🪨',
+            image: '',
+            buildable: false,
+            clearable: true,
+            clearCost: 45,
+            isSpecial: false,
+            isTreasureRock: true,
+            shortTag: '點擊 45 💰 開採隨機寶藏',
+            tooltip: '🪨 藏寶巨石：花費 45 💰 開採，可隨機挖掘金幣（受軟上限約束）、萬能融合果實或隨機 2★ 砲塔',
+            swatchClass: 'swatch-treasure-rock',
+            rangeMult: 1.0,
+            attackSpeedMult: 1.0,
+            maxDamageBonus: 0
         }
     };
 
@@ -104,7 +137,9 @@
         highground: TERRAIN_TYPES.highground,
         mana_vein: TERRAIN_TYPES.mana_vein,
         world_tree: TERRAIN_TYPES.world_tree,
-        obstacle: TERRAIN_TYPES.obstacle
+        obstacle: TERRAIN_TYPES.obstacle,
+        charged_stone: TERRAIN_TYPES.charged_stone,
+        treasure_rock: TERRAIN_TYPES.treasure_rock
     };
 
     GameApp.data = GameApp.data || {};

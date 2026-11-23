@@ -526,6 +526,30 @@
                 subtitle: 'W10 / W15 / W20 降臨 · 高壓高賞金',
                 desc: '敵軍獲得 15% 減傷護盾，但擊殺賞金 +30%（受 22+8w 軟上限約束）、靈露 +30%、盲盒 3★ 機率翻倍。',
                 defaultUnlocked: true
+            },
+            charged_stone: {
+                title: '⚡ 充能浮石（雷鳴浮島）',
+                subtitle: '每 2 波輪流點亮 1 座 · 傷害 +40%（B_power）',
+                desc: '雷鳴浮島共有 3 座浮石，每 2 波僅 1 座發光充能，進駐發光浮石的防禦塔獲得 +40% 傷害加成。',
+                defaultUnlocked: true
+            },
+            treasure_rock: {
+                title: '🪨 藏寶巨石（荒蕪黑市）',
+                subtitle: '花費 45 💰 開採隨機寶藏',
+                desc: '荒蕪黑市共分佈 8 顆藏寶巨石，開採後有機會挖出金幣（併入 22+8w 軟上限）、萬能融合果實或隨機 2★ 砲塔。',
+                defaultUnlocked: true
+            },
+            teleport_rift: {
+                title: '🌀 單向傳送裂隙（A → B）',
+                subtitle: '雷鳴浮島地形機制',
+                desc: '敵軍踏入裂隙起點 A 將直接躍遷至後半島嶼入口 B，防線需分別於兩段島嶼設防攔截。',
+                defaultUnlocked: true
+            },
+            elite_affixes: {
+                title: '🔱 W6+ 菁英隨機詞條',
+                subtitle: '賞金首 / 狂躁 / 護盾再生',
+                desc: '第 6 波（含無盡）起每隻菁英必帶 1 個詞條：賞金首額外掉金（受軟上限約束）、狂躁加速衝鋒、護盾再生週期回盾（重傷減半）。',
+                defaultUnlocked: true
             }
         }
     };

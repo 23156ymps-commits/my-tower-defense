@@ -55,7 +55,9 @@
         ['goldDisplay', 'gold-display'], ['baseHpDisplay', 'base-hp-display'], ['dewDisplay', 'dew-display'], ['dewBarFillEl', 'dew-bar-fill'],
         ['waveDisplay', 'wave-display'], ['wavePhaseTagEl', 'wave-phase-tag'], ['bestWaveDisplay', 'best-wave-display'], ['msgText', 'msg-text'],
         ['startOverlayEl', 'start-overlay'], ['mapSelectorGridEl', 'map-selector-grid'], ['mapRecordForestEl', 'map-record-forest'],
-        ['mapRecordLavaEl', 'map-record-lava'], ['mapRecordFrostEl', 'map-record-frost'], ['startGameBtn', 'start-game-btn'],
+        ['mapRecordLavaEl', 'map-record-lava'], ['mapRecordFrostEl', 'map-record-frost'],
+        ['mapRecordThunderIslesEl', 'map-record-thunder_isles'], ['mapRecordBlackmarketEl', 'map-record-blackmarket'],
+        ['startGameBtn', 'start-game-btn'],
         ['bossEntranceBannerEl', 'boss-entrance-banner'], ['bossEntranceKickerEl', 'boss-entrance-kicker'],
         ['bossEntranceTitleEl', 'boss-entrance-title'], ['bossEntranceSubEl', 'boss-entrance-sub'],
         ['lobbyHonorBadgeEl', 'lobby-honor-badge'], ['lobbySoundBtn', 'lobby-sound-btn'],
@@ -75,6 +77,8 @@
         ['puzzleDetailDescEl', 'puzzle-detail-desc'], ['puzzleDetailHintEl', 'puzzle-detail-hint'],
         ['lobbyCodexBtn', 'lobby-codex-btn'], ['lobbyGuideBtn', 'lobby-guide-btn'],
         ['victoryModeBannerEl', 'victory-mode-banner'], ['gameoverModeBannerEl', 'gameover-mode-banner'],
+        ['victoryDailyShareBoxEl', 'victory-daily-share-box'], ['victoryDailyShareTextEl', 'victory-daily-share-text'], ['victoryDailyCopyBtn', 'victory-daily-copy-btn'],
+        ['gameoverDailyShareBoxEl', 'gameover-daily-share-box'], ['gameoverDailyShareTextEl', 'gameover-daily-share-text'], ['gameoverDailyCopyBtn', 'gameover-daily-copy-btn'],
         ['victoryOverlayEl', 'victory-overlay'], ['victoryStarsEl', 'victory-stars'], ['victoryRankTextEl', 'victory-rank-text'],
         ['victoryMapTextEl', 'victory-map-text'], ['victoryKillsTextEl', 'victory-kills-text'], ['victoryHpTextEl', 'victory-hp-text'],
         ['victoryGoldTextEl', 'victory-gold-text'], ['victoryMvpTextEl', 'victory-mvp-text'], ['victoryGoldEarnedTextEl', 'victory-gold-earned-text'],
@@ -183,7 +187,7 @@
 
     function resolveDefaultWeatherForMap(mapId) {
         if (mapId === 'frost') return 'snow';
-        if (mapId === 'lava') return 'storm';
+        if (mapId === 'lava' || mapId === 'thunder_isles') return 'storm';
         return 'sun';
     }
 
@@ -241,13 +245,37 @@
             const refBoss = (refPlan && Array.isArray(refPlan.queue)) ? refPlan.queue.find(q => q.isBoss) : null;
             const mCfg = monsterDb[sp.type] || {};
             const cnt = Math.max(1, Math.floor(Number(sp.count) || 1));
-            if (sp.isBoss && refBoss) {
-                queue.push(Object.assign({}, refBoss, { useAltRoute: false }));
-                bossMeta = refPlan.bossMeta || {
-                    name: refBoss.bossName || mCfg.name || 'Boss',
-                    weakness: (refBoss.bossSpec && refBoss.bossSpec.weakness) || mCfg.weakness || 'ice',
-                    armor: refBoss.armor || 16,
-                    hp: refBoss.bossHp || 2978
+            if (sp.isBoss) {
+                const refBossWave = Math.max(5, Number(sp.bossWaveRef) || refWave || 5);
+                const bossFromSys = (WaveSys && typeof WaveSys.getBossSpecForWave === 'function')
+                    ? WaveSys.getBossSpecForWave(refBossWave)
+                    : null;
+                const bSpec = bossFromSys || (refBoss && refBoss.bossSpec) || null;
+                const rawHp = bSpec ? bSpec.hp : ((refBoss && refBoss.bossHp) || 2978);
+                const scaledHp = Math.max(120, Math.round(rawHp * (Number.isFinite(sp.bossHpScale) ? sp.bossHpScale : 1.0)));
+                const scaledSpec = bSpec ? Object.assign({}, bSpec, { hp: scaledHp }) : { typeKey: sp.type, weakness: mCfg.weakness || 'ice', hp: scaledHp };
+                for (let bi = 0; bi < cnt; bi++) {
+                    queue.push({
+                        typeKey: (bSpec && bSpec.typeKey) || sp.type,
+                        bossName: (bSpec && bSpec.name) || mCfg.name || 'Boss',
+                        bossIcon: (bSpec && bSpec.icon) || mCfg.icon || '👹',
+                        hpScale: 1,
+                        rewardBonus: refNormal ? refNormal.rewardBonus : 0,
+                        isElite: true,
+                        isBoss: true,
+                        armor: (bSpec && bSpec.armor) || 16,
+                        bossHp: scaledHp,
+                        bossBaseDamage: (bSpec && bSpec.baseDamage) || 20,
+                        bossReward: (bSpec && bSpec.reward) || 120,
+                        bossSpec: scaledSpec,
+                        useAltRoute: false
+                    });
+                }
+                bossMeta = {
+                    name: (bSpec && bSpec.name) || mCfg.name || 'Boss',
+                    weakness: scaledSpec.weakness || mCfg.weakness || 'ice',
+                    armor: (bSpec && bSpec.armor) || 16,
+                    hp: scaledHp
                 };
                 return;
             }
@@ -327,6 +355,9 @@
             guildAutoHoldTimer: false,
             guildTimerHold: false,
             blindBoxTokens: 0,
+            blackmarketFreeBoxAvailable: Boolean(spec && spec.freeBlindBoxPerWave),
+            blackmarketFreeBoxWaveGranted: (spec && spec.freeBlindBoxPerWave) ? 1 : 0,
+            runSeedCode: Math.floor(Math.random() * 0xffffffff) >>> 0,
             blessingRerollsLeft: (TreeSys && typeof TreeSys.isMetaNodeUnlocked === 'function' && TreeSys.isMetaNodeUnlocked('fate_4')) ? 1 : 0,
             entangleCdMs: 0, frenzyCdMs: 0, frenzyActiveMs: 0, harvestCdMs: 0, dewOverchargeMs: 0,
             activeBlessings: new Set(), blessingGrantedWaves: new Set(), blessingChoices: [],
@@ -373,7 +404,8 @@
         map: {
             waypoints: [], startCellIndex: 0, endCellIndex: (CONFIG.BOARD_SIZE || 150) - 1,
             pathCellIndices: new Set(), cellPathDist: new Float32Array(CONFIG.BOARD_SIZE || 150),
-            terrainMap: new Map(), waypointCumDist: [0], pathFlowArrows: new Map()
+            terrainMap: new Map(), waypointCumDist: [0], pathFlowArrows: new Map(),
+            teleportRift: null, chargedStoneIndices: []
         },
         boardMetrics: { originX: 8, originY: 8, cellW: 34, cellH: 34, stepX: 37, stepY: 37, step: 37, stageW: 560, stageH: 380 },
         cellElements: [],
@@ -514,6 +546,8 @@
         if (G.dom.mapRecordForestEl) G.dom.mapRecordForestEl.innerText = fmt(records.forest);
         if (G.dom.mapRecordLavaEl) G.dom.mapRecordLavaEl.innerText = fmt(records.lava);
         if (G.dom.mapRecordFrostEl) G.dom.mapRecordFrostEl.innerText = fmt(records.frost);
+        if (G.dom.mapRecordThunderIslesEl) G.dom.mapRecordThunderIslesEl.innerText = fmt(records.thunder_isles);
+        if (G.dom.mapRecordBlackmarketEl) G.dom.mapRecordBlackmarketEl.innerText = fmt(records.blackmarket);
         updateMetaTreeEntryUI();
     }
 
@@ -566,9 +600,12 @@
                     `Cleared ${'★'.repeat(Math.max(1, rec.bestStars || 1))} · Honor ${rec.honorScore || 0}`
                 );
             } else {
+                const mapVWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+                    ? WaveSys.getMapVictoryWave(maps[spec.mapId])
+                    : (CONFIG.VICTORY_WAVE || 10);
                 G.dom.dailyStatusLabelEl.innerText = L(
-                    `最佳第 ${rec.bestWave || 1} / ${CONFIG.VICTORY_WAVE || 10} 波`,
-                    `Best W${rec.bestWave || 1}/${CONFIG.VICTORY_WAVE || 10}`
+                    `最佳第 ${rec.bestWave || 1} / ${mapVWave} 波`,
+                    `Best W${rec.bestWave || 1}/${mapVWave}`
                 );
             }
         }
@@ -622,8 +659,11 @@
             if (modeBadgeEl) modeBadgeEl.innerText = cur ? `${cur.order || 1} / 5` : '1 / 5';
             if (startBtn) startBtn.innerText = L('進入殘局', 'Start Trial');
         } else {
+            const curMapVWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+                ? WaveSys.getMapVictoryWave()
+                : (CONFIG.VICTORY_WAVE || 10);
             if (modeTitleEl) modeTitleEl.innerText = L('戰役關卡', 'Campaign');
-            if (modeBadgeEl) modeBadgeEl.innerText = L('標準 10 波', '10 Waves');
+            if (modeBadgeEl) modeBadgeEl.innerText = L(`標準 ${curMapVWave} 波`, `${curMapVWave} Waves`);
             if (startBtn) startBtn.innerText = L('開始防守', 'Start Defense');
         }
         if (tipEl && selectedGameMode === 'puzzle') {
@@ -635,7 +675,8 @@
 
     function renderLobbyHubUI() {
         const records = Backend.loadMapRecords();
-        const clearedMaps = ['forest', 'lava', 'frost'].filter(id => records[id] && (records[id].bestStars || 0) > 0).length;
+        const campaignIds = ['forest', 'lava', 'frost', 'thunder_isles', 'blackmarket'];
+        const clearedMaps = campaignIds.filter(id => records[id] && (records[id].bestStars || 0) > 0).length;
         const endlessUnlocked = Backend && typeof Backend.isEndlessUnlocked === 'function' ? Backend.isEndlessUnlocked() : clearedMaps > 0;
         const career = Backend.loadCareerStats ? Backend.loadCareerStats() : { endlessBestWave: 0 };
         const dailySpec = getDailySpecSafe();
@@ -644,7 +685,7 @@
         const puzzleRecs = (Backend && typeof Backend.loadPuzzleRecords === 'function') ? Backend.loadPuzzleRecords() : {};
         const puzzleClearedCnt = (Array.isArray(CONFIG.PUZZLE_TRIALS) ? CONFIG.PUZZLE_TRIALS : []).filter(t => puzzleRecs[t.id] && puzzleRecs[t.id].cleared).length;
 
-        if (G.dom.modeMetaCampaignEl) G.dom.modeMetaCampaignEl.innerText = L(`已通關 ${clearedMaps} / 3 戰場`, `Cleared ${clearedMaps} / 3 Maps`);
+        if (G.dom.modeMetaCampaignEl) G.dom.modeMetaCampaignEl.innerText = L(`已通關 ${clearedMaps} / 5 戰場`, `Cleared ${clearedMaps} / 5 Maps`);
         if (G.dom.modeCardEndlessEl) {
             G.dom.modeCardEndlessEl.classList.toggle('is-locked', !endlessUnlocked);
             G.dom.modeCardEndlessEl.disabled = !endlessUnlocked;
@@ -801,11 +842,14 @@
         st.bestWave = Backend.getMapBestWave(st.currentMapId);
         st.activeContracts = new Set(selectedContracts);
         st.currentGold = EconSys.getInitialGold(mapSpec, st.activeContracts);
+        st.blackmarketFreeBoxAvailable = Boolean(mapSpec && mapSpec.freeBlindBoxPerWave);
+        st.blackmarketFreeBoxWaveGranted = st.blackmarketFreeBoxAvailable ? 1 : 0;
         st.selectedIndex = null; st.buildTargetIndex = null; st.hoveredIndex = null;
         st.weatherType = resolveDefaultWeatherForMap(mapId);
         Renderer.initBoard();
         Renderer.renderBoard();
         renderMapSelectorUI();
+        updateLobbySetupHeader();
         updateHUD();
         const bonusNote = mapSpec.startGoldBonus > 0 ? L(`（起始 💰 +${mapSpec.startGoldBonus}，擊殺 💰 +${Math.round((mapSpec.killGoldMult - 1) * 100)}%）`, ` (Start 💰 +${mapSpec.startGoldBonus}, Kill 💰 +${Math.round((mapSpec.killGoldMult - 1) * 100)}%)`) : '';
         setStatusMsg(
@@ -886,6 +930,8 @@
         });
         if (G.dom.victoryCopyReportBtn) G.dom.victoryCopyReportBtn.innerText = L('複製本局數據戰報', 'Copy Battle Report');
         if (G.dom.gameoverCopyReportBtn) G.dom.gameoverCopyReportBtn.innerText = L('複製本局數據戰報', 'Copy Battle Report');
+        if (G.dom.victoryDailyCopyBtn) G.dom.victoryDailyCopyBtn.innerText = L('複製日期戰績卡', 'Copy Scorecard');
+        if (G.dom.gameoverDailyCopyBtn) G.dom.gameoverDailyCopyBtn.innerText = L('複製日期戰績卡', 'Copy Scorecard');
     }
 
     function computeRunHonorSummary(st) {
@@ -927,8 +973,15 @@
             }
             return;
         }
+        const vWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+            ? WaveSys.getMapVictoryWave(mapSpec)
+            : (CONFIG.VICTORY_WAVE || 10);
         setDomText(dom.gameoverMapTextEl, mapSpec.name);
-        setDomText(dom.finalWaveTextEl, st.isEndlessMode ? L(`第 ${st.currentWave} 波 (無盡)`, `Wave ${st.currentWave} (Endless)`) : L(`第 ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10} 波`, `Wave ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10}`));
+        setDomText(dom.finalWaveTextEl, st.isEndlessMode
+            ? L(`第 ${st.currentWave} 波 (無盡)`, `Wave ${st.currentWave} (Endless)`)
+            : (st.gameMode === 'puzzle'
+                ? L(`殘局第 ${st.currentWave} 波`, `Trial Wave ${st.currentWave}`)
+                : L(`第 ${st.currentWave} / ${vWave} 波`, `Wave ${st.currentWave} / ${vWave}`)));
         setDomText(dom.finalBestTextEl, L(`第 ${st.bestWave} 波`, `Wave ${st.bestWave}`));
         setDomText(dom.finalKillsTextEl, L(`${st.killsCount} 隻`, `${st.killsCount}`));
         setDomText(dom.gameoverMvpTextEl, mvpText);
@@ -966,7 +1019,10 @@
         if (m.slowTimer > 0) status.push(`${L('緩速', 'Slow')} ${Math.round((m.slowRate || 0) * 100)}%`);
         if (m.armorShredTimer > 0) status.push(`${L('破甲', 'Shred')} ${Math.round((m.armorShredRate || 0.3) * 100)}%`);
         const sep = L('｜', ' | ');
-        return `${m.icon || '👾'} ${m.name}${sep}HP ${m.hp}/${m.maxHp}${sep}${L('護甲', 'ARM')} ${armorStr}${sep}${L('弱點', 'Weak')} ${weakStr}${status.length ? `${sep}${status.join(' · ')}` : ''}`;
+        const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
+        const af = (!m.isBoss && m.eliteAffix) ? affixMap[m.eliteAffix] : null;
+        const afTag = af ? `[${L(af.shortBadge || af.name, af.shortBadgeEn || af.nameEn)}] ` : '';
+        return `${m.icon || '👾'} ${afTag}${m.name}${sep}HP ${m.hp}/${m.maxHp}${sep}${L('護甲', 'ARM')} ${armorStr}${sep}${L('弱點', 'Weak')} ${weakStr}${status.length ? `${sep}${status.join(' · ')}` : ''}`;
     }
 
     function findMonsterNearCell(index) {
@@ -1112,6 +1168,8 @@
             const effSpeed = (MonsterSys && (MonsterSys.isMonsterFrozen(liveM) || (liveM.rootTimer || 0) > 0))
                 ? 0
                 : Math.round((liveM.speed || 40) * (liveM.isStealthed ? 1.65 : 1.0) * slowFactor);
+            const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
+            const af = (!liveM.isBoss && liveM.eliteAffix) ? affixMap[liveM.eliteAffix] : null;
             st.hoverLockMonster = {
                 id: liveM.id,
                 typeKey: liveM.typeKey,
@@ -1127,6 +1185,11 @@
                 effSpeed,
                 isBoss: Boolean(liveM.isBoss),
                 isElite: Boolean(liveM.isElite),
+                eliteAffix: liveM.eliteAffix || null,
+                affixBadge: af ? (af.shortBadge || af.name) : '',
+                affixBadgeEn: af ? (af.shortBadgeEn || af.nameEn) : '',
+                affixDesc: af ? (af.desc || '') : '',
+                affixDescEn: af ? (af.descEn || '') : '',
                 bossMechanic: liveM.bossMechanic || '',
                 traitDesc: liveM.traitDesc || '',
                 debuffs: buildMonsterActiveDebuffList(liveM)
@@ -1188,7 +1251,10 @@
         const weakStr = weakCfg ? `${weakCfg.icon}${getWeaknessShortName(m.weakness)}` : getWeaknessShortName(m.weakness);
         const armorStr = m.armorShredTimer > 0 ? `${m.effArmor}/${m.armor}` : `${m.effArmor}`;
         const tierBadge = m.isBoss ? 'Boss' : (m.isElite ? L('菁英', 'Elite') : L('敵軍', 'Foe'));
-        const traitText = m.traitDesc || mCfg.traitDesc || (m.isBoss ? L('階段首領 · 留意頭像旁弱點屬性', 'Stage Boss · Check weakness icon') : L('沿路徑前進攻擊世界樹', 'Marches toward the World Tree'));
+        const affixBadgeText = m.eliteAffix ? L(m.affixBadge, m.affixBadgeEn || m.affixBadge) : '';
+        const affixLine = m.eliteAffix ? L(m.affixDesc, m.affixDescEn || m.affixDesc) : '';
+        const baseTraitText = m.traitDesc || mCfg.traitDesc || (m.isBoss ? L('階段首領 · 留意頭像旁弱點屬性', 'Stage Boss · Check weakness icon') : L('沿路徑前進攻擊世界樹', 'Marches toward the World Tree'));
+        const traitText = affixLine ? `${affixLine} | ${baseTraitText}` : baseTraitText;
 
         if (dom.sideMonsterCardEl) {
             dom.sideMonsterCardEl.classList.remove('hidden');
@@ -1209,7 +1275,7 @@
                 dom.sideMonsterLockFillEl.style.width = `${Math.max(0, Math.min(100, lockRatio * 100)).toFixed(1)}%`;
                 dom.sideMonsterLockFillEl.classList.toggle('is-killed', isKilledDisplay);
             }
-            setDomText(dom.sideMonsterNameEl, `${m.name} (${tierBadge})`);
+            setDomText(dom.sideMonsterNameEl, `${m.name} (${tierBadge}${affixBadgeText ? ` · ${affixBadgeText}` : ''})`);
             setDomText(dom.sideMonsterHpEl, isKilledDisplay ? `HP 0 / ${m.maxHp} · ${L('已擊殺', 'Slain')}` : `HP ${m.hp} / ${m.maxHp}`);
             if (dom.sideMonsterShieldEl) {
                 const hasShield = (m.shield || 0) > 0;
@@ -1245,6 +1311,14 @@
                 : (TerrainSys && index !== null && index !== undefined ? TerrainSys.getTerrainBonusesAt(index).damageMult : 1.0);
             const bonusPct = Math.max(0, Math.round((mult - 1) * 100));
             return L(`🌿 庇護傷 +${bonusPct}%`, `🌿 Sanctuary +${bonusPct}%`);
+        }
+        if (tInfo.id === 'charged_stone') {
+            const isActive = (TerrainSys && index !== null && index !== undefined && typeof TerrainSys.isChargedStoneActiveAt === 'function')
+                ? TerrainSys.isChargedStoneActiveAt(index)
+                : (Number(damageMultOverride) > 1.05);
+            return isActive
+                ? L('⚡ 浮石充能 +40% 傷', '⚡ Active Floatstone +40% DMG')
+                : L('⚡ 浮石待機中', '⚡ Floatstone Dormant');
         }
         const rawTag = String(tInfo.shortTag || '');
         if (tInfo.icon && !rawTag.startsWith(tInfo.icon)) {
@@ -1597,12 +1671,16 @@
 
     function renderForecastListInto(headerEl, listEl, waveNum, prefixLabel, isFinalClear = false) {
         if (!headerEl || !listEl) return;
+        const mapVWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+            ? WaveSys.getMapVictoryWave()
+            : (CONFIG.VICTORY_WAVE || 10);
         if (isFinalClear) {
             headerEl.innerText = `${prefixLabel} · ${L('已達最終波', 'Final Wave')}`;
-            listEl.innerHTML = `<li class="forecast-item forecast-boss">${L('守住第 10 波即可通關', 'Hold Wave 10 to win')}</li>`;
+            listEl.innerHTML = `<li class="forecast-item forecast-boss">${L(`守住第 ${mapVWave} 波即可通關`, `Hold Wave ${mapVWave} to win`)}</li>`;
             return;
         }
         const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
+        const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
         const towersDict = getTowersDict();
         const plan = resolveWaveForecastPlan(waveNum);
         const crisisSuffix = plan.crisisSpec ? ` · ⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)}` : '';
@@ -1627,7 +1705,15 @@
             items.push(`<li class="forecast-item"><span>${mCfg.name} <span class="num">×${cnt}</span></span><span class="forecast-weak weak-${mCfg.weakness}">${weakTag}</span></li>`);
         });
         if (plan.eliteCount > 0) {
-            items.push(`<li class="forecast-meta num">${L(`含 ${plan.eliteCount} 隻護甲菁英（甲 ${plan.eliteArmor}）`, `Includes ${plan.eliteCount} ${plan.eliteCount === 1 ? 'Armored Elite' : 'Armored Elites'} (ARM ${plan.eliteArmor})`)}</li>`);
+            const afEntries = plan.eliteAffixCounts ? Object.entries(plan.eliteAffixCounts).filter(([, c]) => c > 0) : [];
+            const afSummary = afEntries.length > 0
+                ? ' · ' + afEntries.map(([k, c]) => {
+                    const af = affixMap[k];
+                    const lbl = af ? L(af.shortBadge || af.name, af.shortBadgeEn || af.nameEn) : k;
+                    return `${lbl}×${c}`;
+                }).join(' ')
+                : '';
+            items.push(`<li class="forecast-meta num">${L(`含 ${plan.eliteCount} 隻護甲菁英（甲 ${plan.eliteArmor}）`, `Includes ${plan.eliteCount} ${plan.eliteCount === 1 ? 'Armored Elite' : 'Armored Elites'} (ARM ${plan.eliteArmor})`)}${afSummary}</li>`);
         }
         if (plan.bossMeta) {
             const bWeak = towersDict[plan.bossMeta.weakness];
@@ -1654,7 +1740,10 @@
         const isPrepPhase = st.waveState === 'PREP' || st.waveState === 'INTERMISSION' || st.waveState === 'WAITING_START';
         const targetWave = isPuzzleMode ? 1 : (st.waveState === 'INTERMISSION' ? curWave + 1 : curWave);
         const nextWave = curWave + 1;
-        const isFinalClear = isPuzzleMode ? true : (!st.isEndlessMode && curWave >= (CONFIG.VICTORY_WAVE || 10));
+        const mapVWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+            ? WaveSys.getMapVictoryWave()
+            : (CONFIG.VICTORY_WAVE || 10);
+        const isFinalClear = isPuzzleMode ? true : (!st.isEndlessMode && curWave >= mapVWave);
 
         const curLabel = L('本波情報', 'Current');
         const nextLabel = L('下波預告', 'Next');
@@ -1914,13 +2003,14 @@
         const stocksUnlocked = Boolean(EconSys && typeof EconSys.canTradeStocks === 'function' && EconSys.canTradeStocks());
         const boxUnlocked = Boolean(EconSys && typeof EconSys.canOpenBlindBox === 'function' && EconSys.canOpenBlindBox());
         const freeTokens = Math.max(0, Number(st && st.blindBoxTokens) || 0);
+        const hasMarketFreeBox = Boolean(st && st.blackmarketFreeBoxAvailable);
         const hasFruit = Boolean(st && (st.fusionFruitCount || 0) > 0);
-        const boxVisible = boxUnlocked || freeTokens > 0 || hasFruit;
+        const boxVisible = boxUnlocked || freeTokens > 0 || hasMarketFreeBox || hasFruit;
         const wagerUnlocked = Boolean(EconSys && typeof EconSys.canUseWager === 'function' && EconSys.canUseWager());
         const fateTabVisible = boxVisible || wagerUnlocked;
         const netBadgeVisible = rootsUnlocked || stocksUnlocked;
-        const critBadgeVisible = boxUnlocked || (Number(st && st.teamCritBonusRate) || 0) > 0 || hasFruit;
-        const hasAnyGuildFeature = (hasAnyMetaRing && (rootsUnlocked || stocksUnlocked || fateTabVisible)) || freeTokens > 0 || hasFruit;
+        const critBadgeVisible = boxUnlocked || hasMarketFreeBox || (Number(st && st.teamCritBonusRate) || 0) > 0 || hasFruit;
+        const hasAnyGuildFeature = (hasAnyMetaRing && (rootsUnlocked || stocksUnlocked || fateTabVisible)) || freeTokens > 0 || hasMarketFreeBox || hasFruit;
         return {
             hasAnyMetaRing,
             rootsUnlocked,
@@ -2349,6 +2439,7 @@
         // B. 命運種子盲盒 & 萬能融合果實 UI
         const boxUnlocked = !EconSys || typeof EconSys.canOpenBlindBox !== 'function' || EconSys.canOpenBlindBox();
         const freeTokens = Math.max(0, Number(st.blindBoxTokens) || 0);
+        const hasMarketFree = Boolean(st.blackmarketFreeBoxAvailable);
         const boxCost = EconSys && typeof EconSys.getBlindBoxCost === 'function' ? EconSys.getBlindBoxCost() : 35;
         const streak = Math.max(0, Number(st.blindBox1StarStreak) || 0);
         const pityNeed = (EconSys && typeof EconSys.getBlindBoxPityThreshold === 'function') ? EconSys.getBlindBoxPityThreshold() : 3;
@@ -2356,7 +2447,7 @@
         const missCritLabel = hasLeaf ? '2.0%' : '1.5%';
         if (dom.guildBlindBoxCardEl) {
             dom.guildBlindBoxCardEl.classList.toggle('hidden', !vis.boxVisible);
-            dom.guildBlindBoxCardEl.classList.toggle('is-meta-locked', !boxUnlocked && freeTokens <= 0);
+            dom.guildBlindBoxCardEl.classList.toggle('is-meta-locked', !boxUnlocked && freeTokens <= 0 && !hasMarketFree);
         }
         if (dom.guildBoxTitleEl) dom.guildBoxTitleEl.innerText = L('命運種子盲盒', 'Fate Seed Blind Box');
         if (dom.guildBoxPityEl) {
@@ -2368,15 +2459,21 @@
             const eclipseBoxTag = st.weatherType === 'eclipse'
                 ? L(' · 🌑蝕月 3★翻倍(16%/保底50%)', ' · 🌑Eclipse 3★ ×2 (16%/50% Pity)')
                 : '';
-            dom.guildBoxDescEl.innerText = (!boxUnlocked && freeTokens <= 0)
+            const marketTag = hasMarketFree
+                ? L('【荒蕪黑市】本波可享 1 次免費開啟（實付鎖定 0 💰） · ', '[Black Market] 1 Free Pull This Wave (0 💰 Lock) · ')
+                : '';
+            dom.guildBoxDescEl.innerText = (!boxUnlocked && freeTokens <= 0 && !hasMarketFree)
                 ? L('尚未解鎖 · 請於「世界樹年輪 · 命運枝 ①」解鎖（擊殺竊賊可獲免費代幣）', 'Locked · Unlock Meta Fate #1 (or Thief Free Token)')
-                : L(
+                : `${marketTag}${L(
                     `1★ 48% · 2★ 32% · 萬能果實 12% · 3★ 8%${eclipseBoxTag}（未出 2★+ 全隊暴擊 +${missCritLabel}，退費依實付計）`,
                     `1★ 48% · 2★ 32% · Fruit 12% · 3★ 8%${eclipseBoxTag} (Non-2★+ adds +${missCritLabel} crit; refund by cost)`
-                );
+                )}`;
         }
         if (dom.blindBoxBuyBtn) {
-            if (freeTokens > 0) {
+            if (hasMarketFree) {
+                dom.blindBoxBuyBtn.innerText = L('黑市免費盲盒 (1/1)', 'Market Free Box (1/1)');
+                dom.blindBoxBuyBtn.disabled = !isGameplayActive();
+            } else if (freeTokens > 0) {
                 dom.blindBoxBuyBtn.innerText = L(`免費開啟盲盒（代幣 ${freeTokens}）`, `Open Free Box (Token ${freeTokens})`);
                 dom.blindBoxBuyBtn.disabled = !isGameplayActive();
             } else if (!boxUnlocked) {
@@ -2480,13 +2577,16 @@
         setDomText(dom.goldDisplay, formatCompactGold(st.currentGold));
         if (dom.goldDisplay) dom.goldDisplay.title = String(st.currentGold);
         setDomText(dom.baseHpDisplay, `${st.baseHp}/${maxHp}`);
+        const mapVWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+            ? WaveSys.getMapVictoryWave()
+            : (CONFIG.VICTORY_WAVE || 10);
         setDomText(dom.waveDisplay, st.gameMode === 'puzzle'
             ? L(`殘局 ${st.puzzleSpec ? st.puzzleSpec.order : 1}/5`, `Trial ${st.puzzleSpec ? st.puzzleSpec.order : 1}/5`)
             : (st.isEndlessMode
                 ? L(`第 ${st.currentWave} 波 (無盡)`, `W${st.currentWave} (Endless)`)
                 : (st.gameMode === 'daily'
-                    ? L(`每日 W${st.currentWave}/${CONFIG.VICTORY_WAVE || 10}`, `Daily W${st.currentWave}/${CONFIG.VICTORY_WAVE || 10}`)
-                    : L(`第 ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10} 波`, `Wave ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10}`))));
+                    ? L(`每日 W${st.currentWave}/${mapVWave}`, `Daily W${st.currentWave}/${mapVWave}`)
+                    : L(`第 ${st.currentWave} / ${mapVWave} 波`, `Wave ${st.currentWave} / ${mapVWave}`))));
         setDomText(dom.bestWaveDisplay, L(`第 ${st.bestWave} 波`, `W${st.bestWave}`));
         updateWavePhaseUI(); Renderer.updateWorldTreeVisualState(); updateSkillButtonsUI();
         updateSeedPityUI(); updateTreasureRootUI(); updateGuildDrawerUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
@@ -2760,7 +2860,8 @@
     function tryClearObstacleCell(index) {
         const st = G.state;
         const terrainsDict = (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
-        if (TerrainSys.getTerrainAt(index) !== 'obstacle' || typeof TerrainSys.clearObstacleAt !== 'function') return false;
+        const terrainKey = TerrainSys.getTerrainAt(index);
+        if ((terrainKey !== 'obstacle' && terrainKey !== 'treasure_rock') || typeof TerrainSys.clearObstacleAt !== 'function') return false;
         if (st.isTouchMode) clearMonsterHoverLock();
         st.pendingSpawnType = null;
         st.selectedIndex = null;
@@ -2770,8 +2871,12 @@
         if (!clearRes.ok) {
             if (clearRes.reason === 'insufficient_gold') {
                 setStatusMsg(
-                    `爆破古代巨岩需花費 ${clearRes.cost} 💰，當前金幣不足。`,
-                    `Clearing Ancient Boulder requires ${clearRes.cost} 💰 (insufficient Gold).`
+                    clearRes.isTreasureRock
+                        ? `開採藏寶巨石需花費 ${clearRes.cost} 💰，當前金幣不足。`
+                        : `爆破古代巨岩需花費 ${clearRes.cost} 💰，當前金幣不足。`,
+                    clearRes.isTreasureRock
+                        ? `Mining Treasure Boulder requires ${clearRes.cost} 💰 (insufficient Gold).`
+                        : `Clearing Ancient Boulder requires ${clearRes.cost} 💰 (insufficient Gold).`
                 );
             }
             Renderer.renderBoard([]);
@@ -2780,8 +2885,35 @@
         if (typeof Renderer.refreshCellTerrain === 'function') Renderer.refreshCellTerrain(index);
         const c = indexToCoords(index);
         const center = Renderer.getCellCenter(c.x, c.y);
-        Renderer.emitParticleBurst(center.left, center.top, '#D97724', 12, 95);
+        Renderer.emitParticleBurst(center.left, center.top, clearRes.isTreasureRock ? '#E0B43C' : '#D97724', 12, 95);
         SoundEngine.playMerge(2, true);
+        if (clearRes.isTreasureRock) {
+            if (clearRes.treasureType === 'fruit') {
+                Renderer.spawnFloatingNotice(L('🍎 發掘萬能融合果實！', '🍎 Unearthed Universal Fruit!'), center.left, center.top, 'pity-seed');
+                setStatusMsg(
+                    `開採藏寶巨石（-${clearRes.cost} 💰）：掘出【萬能融合果實 ★】並存入槽位！`,
+                    `Treasure Boulder (-${clearRes.cost} 💰): Unearthed [Universal Fusion Fruit ★]!`
+                );
+            } else if (clearRes.treasureType === 'tower' && clearRes.spawnedTowerType) {
+                const tCfg = getTowersDict()[clearRes.spawnedTowerType] || { icon: '✨', name: clearRes.spawnedTowerType };
+                Renderer.spawnFloatingNotice(L(`🪨 掘出 ${tCfg.name} ★★`, `🪨 Found ${tCfg.name} ★★`), center.left, center.top, 'pity-seed');
+                setStatusMsg(
+                    `開採藏寶巨石（-${clearRes.cost} 💰）：發掘出【${tCfg.icon || ''} ${tCfg.name} ★★】（實付鎖定 ${clearRes.cost} 💰）！`,
+                    `Treasure Boulder (-${clearRes.cost} 💰): Unearthed ${tCfg.icon || ''} ${tCfg.name} ★★ (locked at ${clearRes.cost} 💰)!`
+                );
+            } else {
+                const capNoteZh = clearRes.isSoftCapped ? '（淨利受軟上限約束）' : '';
+                const capNoteEn = clearRes.isSoftCapped ? ' (soft-capped)' : '';
+                Renderer.spawnFloatingNotice(L(`💰 +${clearRes.totalPayout || clearRes.cost} 金幣`, `💰 +${clearRes.totalPayout || clearRes.cost} Gold`), center.left, center.top, 'pity-seed');
+                setStatusMsg(
+                    `開採藏寶巨石（-${clearRes.cost} 💰）：掘出古代金庫！實獲 +${clearRes.totalPayout || clearRes.cost} 💰（淨賺 +${clearRes.netGain || 0}${capNoteZh}）。`,
+                    `Treasure Boulder (-${clearRes.cost} 💰): Returned +${clearRes.totalPayout || clearRes.cost} 💰 (net +${clearRes.netGain || 0}${capNoteEn}).`
+                );
+            }
+            Renderer.renderBoard([index]);
+            updateHUD();
+            return true;
+        }
         const revInfo = clearRes.revealedTerrain ? terrainsDict[clearRes.revealedTerrain] : null;
         if (revInfo) {
             const revTag = getTerrainShortTagForCell(index, revInfo);
@@ -3235,8 +3367,9 @@
         const towersDict = getTowersDict();
         if (!isGameplayActive() || !EconSys) return { ok: false, reason: 'inactive' };
         const canBox = !EconSys.canOpenBlindBox || EconSys.canOpenBlindBox();
-        const useFreeToken = (st.blindBoxTokens || 0) > 0 && !Number.isFinite(options.costOverride);
-        if (!canBox && !useFreeToken) {
+        const useMarketFree = Boolean(st.blackmarketFreeBoxAvailable) && !Number.isFinite(options.costOverride);
+        const useFreeToken = !useMarketFree && (st.blindBoxTokens || 0) > 0 && !Number.isFinite(options.costOverride);
+        if (!canBox && !useMarketFree && !useFreeToken) {
             setStatusMsg(
                 '【命運種子盲盒】需於主選單「世界樹年輪・命運枝 ①」解鎖（或擊殺靈脈竊賊取得免費代幣）。',
                 'Fate Seed Blind Box requires Fate Branch #1 (or a free token from Vein Thief).'
@@ -3246,7 +3379,8 @@
         Backend.recordPlayerAction();
         holdIntermissionTimerIfPrep();
 
-        const boxCost = useFreeToken ? 0 : (Number.isFinite(options.costOverride) ? options.costOverride : EconSys.getBlindBoxCost());
+        const isFreePull = useMarketFree || useFreeToken;
+        const boxCost = isFreePull ? 0 : (Number.isFinite(options.costOverride) ? options.costOverride : EconSys.getBlindBoxCost());
         if (st.currentGold < boxCost) {
             setStatusMsg(
                 `金幣不足，開啟【命運種子盲盒】需要 ${boxCost} 💰。`,
@@ -3264,7 +3398,9 @@
             return { ok: false, reason: 'board_full', boxCost };
         }
 
-        if (useFreeToken) {
+        if (useMarketFree) {
+            st.blackmarketFreeBoxAvailable = false;
+        } else if (useFreeToken) {
             st.blindBoxTokens = Math.max(0, (st.blindBoxTokens || 0) - 1);
         } else {
             st.currentGold -= boxCost;
@@ -3275,7 +3411,9 @@
         if (roll.kind === 'fruit') {
             st.fusionFruitCount = 1;
             SoundEngine.playMerge(2, true);
-            const costLabel = useFreeToken ? L('盲盒代幣', 'Box Token') : `-${boxCost} 💰`;
+            const costLabel = useMarketFree
+                ? L('黑市免費盒', 'Market Free Box')
+                : (useFreeToken ? L('盲盒代幣', 'Box Token') : `-${boxCost} 💰`);
             setStatusMsg(
                 `命運盲盒（${costLabel}）開出【萬能融合果實 ★】！已存入槽位 (1/1)，全隊暴擊加成 +${critPct}%。`,
                 `Blind Box (${costLabel}) yielded [Universal Fusion Fruit ★]! Stored (1/1), Team Crit +${critPct}%.`
@@ -3318,8 +3456,8 @@
         const pityPullCount = (EconSys.getBlindBoxPityThreshold ? EconSys.getBlindBoxPityThreshold() : 3) + 1;
         const pityNoteZh = roll.isPityTriggered ? `（觸發第 ${pityPullCount} 抽 2★+ 保底）` : '';
         const pityNoteEn = roll.isPityTriggered ? ` (${pityPullCount}th-pull 2★+ Pity!)` : '';
-        const costTagZh = boxCost > 0 ? `-${boxCost} 💰` : '免費代幣';
-        const costTagEn = boxCost > 0 ? `-${boxCost} 💰` : 'Free Token';
+        const costTagZh = boxCost > 0 ? `-${boxCost} 💰` : (useMarketFree ? '黑市免費' : '免費代幣');
+        const costTagEn = boxCost > 0 ? `-${boxCost} 💰` : (useMarketFree ? 'Market Free' : 'Free Token');
         const refundPreview = EconSys.getTowerSellRefund(spawnedTower);
         setStatusMsg(
             `命運盲盒（${costTagZh}）${pityNoteZh}於 (${coords.x + 1},${coords.y + 1}) 開出【${cfg.icon} ${cfg.name} ${Renderer.getTierStars(roll.tier)}】（實付鎖定 ${boxCost} 💰，出售退還 ${refundPreview} 💰｜全隊暴擊 +${critPct}%）。`,
@@ -3698,7 +3836,10 @@
     function startWave(waveNum, earlyBonus = 0) {
         if (!isGameplayActive()) return;
         const st = G.state;
-        const victoryWave = CONFIG.VICTORY_WAVE || 10;
+        const curMapSpec = WaveSys && typeof WaveSys.getCurrentMapSpec === 'function' ? WaveSys.getCurrentMapSpec() : null;
+        const victoryWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+            ? WaveSys.getMapVictoryWave(curMapSpec)
+            : (CONFIG.VICTORY_WAVE || 10);
         const towersDict = getTowersDict();
         st.currentWave = waveNum;
         st.waveNonCombatGold = 0;
@@ -3706,6 +3847,13 @@
         st.waveLeakedCount = 0;
         st.waveTriLeyDewCount = 0;
         st.weatherBoltAccMs = 0;
+        if (st.gameMode !== 'puzzle' && curMapSpec && curMapSpec.freeBlindBoxPerWave && st.blackmarketFreeBoxWaveGranted !== waveNum) {
+            st.blackmarketFreeBoxWaveGranted = waveNum;
+            st.blackmarketFreeBoxAvailable = true;
+        }
+        if (Renderer && typeof Renderer.syncChargedStoneVisuals === 'function') {
+            Renderer.syncChargedStoneVisuals(waveNum);
+        }
         const prevWeather = st.weatherType;
         st.weatherType = st.gameMode === 'puzzle' ? resolveDefaultWeatherForMap(st.currentMapId) : resolveCurrentRunWeather(waveNum);
         const weatherShifted = Boolean(prevWeather && st.weatherType !== prevWeather);
@@ -3819,7 +3967,10 @@
         if (st.isGameOver || st.waveState === 'VICTORY') return;
         const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
         const maxHp = st.maxBaseHp || treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
-        let starsNum = 1, stars = '★', rankText = L('驚險死守，於危急時刻擊退腐朽古樹王。', 'Close victory—repelled the Blighted Treant King.');
+        const victoryWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+            ? WaveSys.getMapVictoryWave()
+            : (CONFIG.VICTORY_WAVE || 10);
+        let starsNum = 1, stars = '★', rankText = L('驚險死守，於危急時刻擊退終極領主。', 'Close victory—repelled the final Wave Boss.');
         if (st.gameMode === 'puzzle') {
             starsNum = 3;
             stars = '★★★';
@@ -3831,11 +3982,17 @@
         } else if (st.baseHp >= maxHp) {
             starsNum = 3;
             stars = '★★★';
-            rankText = L('完美防守，世界樹滿血守護通關第 10 波。', 'Flawless defense—cleared Wave 10 with full World Tree HP.');
+            rankText = L(
+                `完美防守，世界樹滿血守護通關第 ${victoryWave} 波。`,
+                `Flawless defense—cleared Wave ${victoryWave} with full World Tree HP.`
+            );
         } else if (st.baseHp >= Math.ceil(maxHp * 0.5)) {
             starsNum = 2;
             stars = '★★';
-            rankText = L('穩固防線，成功守護世界樹擊敗腐朽古樹王。', 'Solid defense—World Tree protected and Treant King defeated.');
+            rankText = L(
+                `穩固防線，成功守護世界樹擊敗第 ${victoryWave} 波魔王。`,
+                `Solid defense—World Tree protected and Wave ${victoryWave} Boss defeated.`
+            );
         }
 
         const honor = computeRunHonorSummary(st);
@@ -3907,6 +4064,13 @@
         }
         setDomText(G.dom.victoryStarsEl, stars); setDomText(G.dom.victoryRankTextEl, rankText);
         populateBattleRecap('victory');
+        if (G.dom.victoryDailyShareBoxEl) {
+            const showDailyShare = st.gameMode === 'daily';
+            G.dom.victoryDailyShareBoxEl.classList.toggle('hidden', !showDailyShare);
+            if (showDailyShare && G.dom.victoryDailyShareTextEl && Backend && typeof Backend.generateDailyShareCardText === 'function') {
+                G.dom.victoryDailyShareTextEl.innerText = Backend.generateDailyShareCardText(G, 'victory');
+            }
+        }
         if (G.dom.victoryOverlayEl) G.dom.victoryOverlayEl.classList.remove('hidden');
     }
 
@@ -3915,6 +4079,9 @@
         if (st.isGameOver && st.waveState === 'GAMEOVER') return;
         st.isGameOver = true;
         const honor = computeRunHonorSummary(st);
+        const victoryWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+            ? WaveSys.getMapVictoryWave()
+            : (CONFIG.VICTORY_WAVE || 10);
         Backend.finalizeWaveFeel(st.currentWave);
         let bannerText = '';
         if (st.gameMode === 'puzzle') {
@@ -3941,8 +4108,8 @@
                 }
                 const seedHex = Number(st.dailySeedCode || 0).toString(16).toUpperCase().padStart(8, '0');
                 bannerText = L(
-                    `每日戰績卡 · ${st.dailyDateKey} · 種子 #${seedHex} · 抵達第 ${st.currentWave} / ${CONFIG.VICTORY_WAVE || 10} 波`,
-                    `Daily Scorecard · ${st.dailyDateKey} · #${seedHex} · Wave ${st.currentWave}/${CONFIG.VICTORY_WAVE || 10}`
+                    `每日戰績卡 · ${st.dailyDateKey} · 種子 #${seedHex} · 抵達第 ${st.currentWave} / ${victoryWave} 波`,
+                    `Daily Scorecard · ${st.dailyDateKey} · #${seedHex} · Wave ${st.currentWave}/${victoryWave}`
                 );
             } else if (st.isEndlessMode) {
                 bannerText = L(
@@ -3971,6 +4138,13 @@
             Backend.finalizeRunFeel('gameover', { wave: st.currentWave, mapId: st.currentMapId, contracts: honor.count });
         }
         populateBattleRecap('gameover');
+        if (G.dom.gameoverDailyShareBoxEl) {
+            const showDailyShare = st.gameMode === 'daily';
+            G.dom.gameoverDailyShareBoxEl.classList.toggle('hidden', !showDailyShare);
+            if (showDailyShare && G.dom.gameoverDailyShareTextEl && Backend && typeof Backend.generateDailyShareCardText === 'function') {
+                G.dom.gameoverDailyShareTextEl.innerText = Backend.generateDailyShareCardText(G, 'gameover');
+            }
+        }
         if (G.dom.newRecordBadgeEl) G.dom.newRecordBadgeEl.classList.toggle('hidden', st.gameMode === 'puzzle' || !st.isNewRecordThisRun);
         if (G.dom.gameOverOverlayEl) G.dom.gameOverOverlayEl.classList.remove('hidden');
     }
@@ -4044,6 +4218,8 @@
             st.activeContracts = new Set();
             setRng(spec.seedString);
             const mapSpec = WaveSys.getCurrentMapSpec();
+            st.blackmarketFreeBoxAvailable = Boolean(mapSpec && mapSpec.freeBlindBoxPerWave);
+            st.blackmarketFreeBoxWaveGranted = st.blackmarketFreeBoxAvailable ? 1 : 0;
             st.maxBaseHp = treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
             st.baseHp = st.maxBaseHp;
             st.dewEnergy = treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20;
@@ -4064,6 +4240,8 @@
                 st.weatherType = resolveDefaultWeatherForMap(trial.mapId);
                 st.activeContracts = new Set();
                 setRng(`puzzle:${trial.id}`);
+                st.blackmarketFreeBoxAvailable = false;
+                st.blackmarketFreeBoxWaveGranted = 0;
                 st.maxBaseHp = Math.max(1, Number(trial.startLives) || 1);
                 st.baseHp = st.maxBaseHp;
                 st.dewEnergy = 0;
@@ -4077,6 +4255,8 @@
         WaveSys.applyMapConfig(st.currentMapId);
         const mapSpec = WaveSys.getCurrentMapSpec();
         st.activeContracts = new Set(selectedContracts);
+        st.blackmarketFreeBoxAvailable = Boolean(mapSpec && mapSpec.freeBlindBoxPerWave);
+        st.blackmarketFreeBoxWaveGranted = st.blackmarketFreeBoxAvailable ? 1 : 0;
         st.weatherSeedOffset = 0;
         st.weatherType = resolveCurrentRunWeather(1);
         st.maxBaseHp = st.activeContracts.has('fragile_heart') ? 12 : (treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20);
@@ -4229,7 +4409,9 @@
         }
         if (st.entangleCdMs > 0 || st.frenzyCdMs > 0 || (st.harvestCdMs || 0) > 0 || wasFrenzy) updateSkillButtonsUI();
 
-        const victoryWave = CONFIG.VICTORY_WAVE || 10;
+        const victoryWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+            ? WaveSys.getMapVictoryWave()
+            : (CONFIG.VICTORY_WAVE || 10);
         const blessingInterval = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.BLESSING_INTERVAL_WAVES) || 3;
         const baseInterMs = CONFIG.WAVE_INTERMISSION_MS || 4000;
         const intermissionMs = (st.activeContracts && st.activeContracts.has('rapid_waves')) ? Math.round(baseInterMs * 0.5) : baseInterMs;
@@ -4562,6 +4744,19 @@
                 return res;
             });
         }
+
+        [
+            [G.dom.victoryDailyCopyBtn, 'victory'],
+            [G.dom.gameoverDailyCopyBtn, 'gameover']
+        ].forEach(([btn, outcomeMode]) => {
+            if (!btn) return;
+            btn.addEventListener('click', async () => {
+                if (Backend && typeof Backend.copyDailyShareCardToClipboard === 'function') {
+                    await Backend.copyDailyShareCardToClipboard(G, outcomeMode);
+                }
+                btn.innerText = L('已複製戰績卡 ✓', 'Copied ✓');
+            });
+        });
     }
 
     function setLangMenuOpen(open, targetWhich = 'all') {
@@ -5051,8 +5246,18 @@
             if (isOverlayVisible(G.dom.metaTreeOverlayEl)) {
                 renderMetaTreeModal();
             }
-            if (st.waveState === 'VICTORY') populateBattleRecap('victory');
-            if (st.isGameOver || st.waveState === 'GAMEOVER') populateBattleRecap('gameover');
+            if (st.waveState === 'VICTORY') {
+                populateBattleRecap('victory');
+                if (st.gameMode === 'daily' && G.dom.victoryDailyShareTextEl && Backend && typeof Backend.generateDailyShareCardText === 'function') {
+                    G.dom.victoryDailyShareTextEl.innerText = Backend.generateDailyShareCardText(G, 'victory');
+                }
+            }
+            if (st.isGameOver || st.waveState === 'GAMEOVER') {
+                populateBattleRecap('gameover');
+                if (st.gameMode === 'daily' && G.dom.gameoverDailyShareTextEl && Backend && typeof Backend.generateDailyShareCardText === 'function') {
+                    G.dom.gameoverDailyShareTextEl.innerText = Backend.generateDailyShareCardText(G, 'gameover');
+                }
+            }
             if (Array.isArray(st.monsters) && st.monsters.length > 0) {
                 const isEnNow = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
                 const mDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};

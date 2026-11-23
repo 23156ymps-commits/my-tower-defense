@@ -1091,6 +1091,27 @@
         }
 
         // 鄰格靈脈陣法（上下左右相鄰不同血脈防禦塔連線 ＋ 拖曳預覽連線）
+        if (G.callbacks.isGameplayActive() && G && G.map && G.map.teleportRift && G.map.teleportRift.from && G.map.teleportRift.to) {
+            const rFrom = getCellCenter(G.map.teleportRift.from.x, G.map.teleportRift.from.y);
+            const rTo = getCellCenter(G.map.teleportRift.to.x, G.map.teleportRift.to.y);
+            const cx = (rFrom.left + rTo.left) * 0.5;
+            const cy = Math.min(rFrom.top, rTo.top) - Math.max(18, (m.cellH || 34) * 0.75);
+            fxCtx.save();
+            fxCtx.strokeStyle = tk.elIce;
+            fxCtx.lineWidth = 1.6;
+            fxCtx.globalAlpha = 0.54;
+            fxCtx.setLineDash([5, 4]);
+            fxCtx.beginPath();
+            fxCtx.moveTo(rFrom.left, rFrom.top);
+            fxCtx.quadraticCurveTo(cx, cy, rTo.left, rTo.top);
+            fxCtx.stroke();
+            const tRift = ((st.elapsedPlayMs || 0) % 1800) / 1800;
+            const omt = 1 - tRift;
+            const rx = omt * omt * rFrom.left + 2 * omt * tRift * cx + tRift * tRift * rTo.left;
+            const ry = omt * omt * rFrom.top + 2 * omt * tRift * cy + tRift * tRift * rTo.top;
+            fillCircle2D(fxCtx, rx, ry, 2.6, '#E0B43C', 0.88);
+            fxCtx.restore();
+        }
         const AttackSysLey = GameApp.systems && GameApp.systems.towerAttack;
         if (G.callbacks.isGameplayActive() && Array.isArray(st.board) && AttackSysLey && typeof AttackSysLey.getLeylineNetwork === 'function') {
             const net = AttackSysLey.getLeylineNetwork();
@@ -1324,13 +1345,17 @@
         const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         const armorPrefix = isEn ? 'ARM ' : '甲 ';
         const armorHtml = monster.armor > 0 ? `<span class="m-armor-badge num">${armorPrefix}${monster.armor}</span>` : '';
+        const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
+        const affixSpec = (!monster.isBoss && monster.eliteAffix) ? affixMap[monster.eliteAffix] : null;
+        const affixText = affixSpec ? (isEn ? (affixSpec.shortBadgeEn || affixSpec.nameEn) : (affixSpec.shortBadge || affixSpec.name)) : '';
+        const affixHtml = affixSpec ? `<span class="m-affix-badge affix-${affixSpec.id}">${affixText}</span>` : '';
         const weakCfg = getTowersDict()[monster.weakness];
         const weakText = (GameApp.i18n && typeof GameApp.i18n.getWeaknessLabel === 'function')
             ? GameApp.i18n.getWeaknessLabel(monster.weakness)
             : (weakCfg ? weakCfg.name.charAt(0) : (monster.weakness || ''));
         const weakShort = weakCfg ? `${weakCfg.icon}${weakText}` : weakText;
         const bossHtml = monster.isBoss ? `<span class="m-boss-badge weak-${monster.weakness}">${isEn ? 'B·' : '王·弱'}${weakShort}</span>` : '';
-        el.innerHTML = `<div class="m-hud-stack" aria-hidden="true"><div class="m-debuff-strip"></div><div class="m-shield-bar hidden"><div class="m-shield-fill"></div></div><div class="m-hp-bar"><div class="m-hp-fill"></div></div></div>${armorHtml}<span class="m-icon">${createMonsterSvgHtml(monster)}</span>${bossHtml}`;
+        el.innerHTML = `<div class="m-hud-stack" aria-hidden="true"><div class="m-debuff-strip"></div><div class="m-shield-bar hidden"><div class="m-shield-fill"></div></div><div class="m-hp-bar"><div class="m-hp-fill"></div></div></div>${affixHtml}${armorHtml}<span class="m-icon">${createMonsterSvgHtml(monster)}</span>${bossHtml}`;
         G.dom.monsterLayerEl.appendChild(el);
         const rec = {
             el,
@@ -1338,6 +1363,7 @@
             shieldBarEl: el.querySelector('.m-shield-bar'),
             shieldFillEl: el.querySelector('.m-shield-fill'),
             armorBadgeEl: el.querySelector('.m-armor-badge'),
+            affixBadgeEl: el.querySelector('.m-affix-badge'),
             bossBadgeEl: el.querySelector('.m-boss-badge'),
             debuffStripEl: el.querySelector('.m-debuff-strip'),
             lastDebuffHtml: '',
@@ -1415,7 +1441,6 @@
             rec.el.classList.toggle('stealthed', Boolean(m.isStealthed));
             if (m.isBoss && rec.bossBadgeEl && (rec.lastWeakness !== m.weakness || rec.lastLang !== curLang)) {
                 rec.lastWeakness = m.weakness;
-                rec.lastLang = curLang;
                 const weakCfg = getTowersDict()[m.weakness];
                 const weakText = (GameApp.i18n && typeof GameApp.i18n.getWeaknessLabel === 'function')
                     ? GameApp.i18n.getWeaknessLabel(m.weakness)
@@ -1424,6 +1449,12 @@
                 rec.bossBadgeEl.className = `m-boss-badge weak-${m.weakness}`;
                 rec.bossBadgeEl.innerText = `${isEnNow ? 'B·' : '王·弱'}${weakShort}`;
             }
+            if (rec.affixBadgeEl && rec.lastLang !== curLang && m.eliteAffix) {
+                const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
+                const af = affixMap[m.eliteAffix];
+                if (af) rec.affixBadgeEl.innerText = isEnNow ? (af.shortBadgeEn || af.nameEn) : (af.shortBadge || af.name);
+            }
+            rec.lastLang = curLang;
             if (rec.debuffStripEl) {
                 const debuffHtml = buildMonsterDebuffMicroHtml(m, MonsterSys);
                 if (rec.lastDebuffHtml !== debuffHtml) {
@@ -1619,12 +1650,35 @@
         highground: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><defs><pattern id="hgHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(224,180,60,0.28)" stroke-width="1.6"/></pattern></defs><rect x="2" y="2" width="60" height="60" rx="4" fill="url(#hgHatch)"/><polygon points="12,50 25,20 35,34 45,16 52,50" fill="rgba(224,180,60,0.24)" stroke="rgba(242,208,96,0.78)" stroke-width="1.8" stroke-linejoin="round"/><polyline points="18,44 27,28 35,38 43,25 48,44" fill="none" stroke="rgba(244,241,234,0.48)" stroke-width="1.8" stroke-linejoin="round"/></svg>',
         mana_vein: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="rgba(74,158,191,0.18)" stroke="rgba(118,200,232,0.76)" stroke-width="1.8" stroke-dasharray="5 3"/><circle cx="32" cy="32" r="14" fill="none" stroke="rgba(118,200,232,0.72)" stroke-width="1.6"/><polygon points="32,14 46,32 32,50 18,32" fill="rgba(74,158,191,0.26)" stroke="rgba(214,238,247,0.72)" stroke-width="1.6"/><circle cx="32" cy="32" r="4.5" fill="rgba(155,211,232,0.88)"/></svg>',
         world_tree: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="rgba(78,154,104,0.18)" stroke="rgba(116,196,144,0.78)" stroke-width="1.8"/><path d="M32 12 C43 20 47 32 32 52 C17 32 21 20 32 12 Z" fill="rgba(78,154,104,0.28)" stroke="rgba(184,224,196,0.74)" stroke-width="1.6"/><line x1="32" y1="16" x2="32" y2="50" stroke="rgba(220,242,226,0.68)" stroke-width="1.6"/><path d="M32 25 L40 20 M32 33 L41 28 M32 25 L24 20 M32 33 L23 28" stroke="rgba(220,242,226,0.62)" stroke-width="1.6" stroke-linecap="round"/></svg>',
-        obstacle: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><polygon points="10,48 18,22 33,16 48,24 54,48 40,54 20,54" fill="rgba(82,98,90,0.70)" stroke="rgba(200,211,204,0.68)" stroke-width="1.8"/><polyline points="18,22 31,34 48,24" fill="none" stroke="rgba(244,241,234,0.40)" stroke-width="1.6"/></svg>'
+        obstacle: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><polygon points="10,48 18,22 33,16 48,24 54,48 40,54 20,54" fill="rgba(82,98,90,0.70)" stroke="rgba(200,211,204,0.68)" stroke-width="1.8"/><polyline points="18,22 31,34 48,24" fill="none" stroke="rgba(244,241,234,0.40)" stroke-width="1.6"/></svg>',
+        charged_stone: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><polygon points="20,6 44,6 58,20 58,44 44,58 20,58 6,44 6,20" fill="rgba(74,158,191,0.16)" stroke="rgba(118,200,232,0.72)" stroke-width="1.8"/><polygon points="35,14 23,34 32,34 29,50 41,30 32,30" fill="rgba(224,180,60,0.88)" stroke="#1B211E" stroke-width="1.2"/></svg>',
+        treasure_rock: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><polygon points="10,48 18,20 34,14 50,23 54,48 39,55 19,54" fill="rgba(78,72,56,0.84)" stroke="rgba(224,180,60,0.82)" stroke-width="1.8"/><polygon points="28,25 38,24 41,35 31,42 24,35" fill="rgba(224,180,60,0.78)" stroke="#1B211E" stroke-width="1.3"/><polyline points="18,20 28,25 34,14" fill="none" stroke="rgba(244,241,234,0.42)" stroke-width="1.4"/></svg>'
     };
 
     const PATH_ARROW_SVG = '<svg class="path-arrow-svg" viewBox="0 0 16 16" aria-hidden="true"><polyline points="5.5,3 11,8 5.5,13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const START_CELL_SVG = '<svg class="cell-marker-svg" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 26 V12 A8 8 0 0 1 24 12 V26" fill="rgba(244,241,234,0.12)" stroke="#B8C2BC" stroke-width="1.8"/><line x1="6" y1="26" x2="26" y2="26" stroke="#B8C2BC" stroke-width="1.8" stroke-linecap="round"/><polyline points="13,13 18,17 13,21" fill="none" stroke="#F4F1EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const TREE_CELL_SVG = '<svg class="cell-marker-svg" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5 C23 11 25 18 16 24 C7 18 9 11 16 5 Z" fill="rgba(78,154,104,0.42)" stroke="#B8C2BC" stroke-width="1.6"/><rect x="14" y="22" width="4" height="6" rx="1" fill="#8C6A4A"/></svg>';
+
+    function syncChargedStoneVisuals(waveNum = null) {
+        if (!G || !G.map || !Array.isArray(G.cellElements)) return;
+        const list = Array.isArray(G.map.chargedStoneIndices) ? G.map.chargedStoneIndices : [];
+        if (list.length === 0) return;
+        const TerrainSys = GameApp.systems && GameApp.systems.terrain;
+        const activeIdx = TerrainSys && typeof TerrainSys.getActiveChargedStoneIndex === 'function'
+            ? TerrainSys.getActiveChargedStoneIndex(waveNum)
+            : -1;
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+        for (let i = 0; i < list.length; i++) {
+            const idx = list[i];
+            const cell = G.cellElements[idx];
+            if (!cell) continue;
+            const isActive = idx === activeIdx;
+            cell.classList.toggle('is-charged-active', isActive);
+            cell.title = isActive
+                ? (isEn ? '⚡ Active Floatstone: Tower DMG +40% (rotates every 2 waves)' : '⚡ 充能浮石（發光中）：防禦塔傷害 +40%（每 2 波輪換）')
+                : (isEn ? '⚡ Dormant Floatstone: Rotates active +40% DMG every 2 waves' : '⚡ 充能浮石（待機中）：目前未充能，每 2 波輪換發光');
+        }
+    }
 
     function initBoard() {
         const boardEl = G.dom.boardElement, st = G.state, map = G.map;
@@ -1636,6 +1690,7 @@
         const startSet = (map.startCellIndices instanceof Set && map.startCellIndices.size > 0)
             ? map.startCellIndices
             : new Set([map.startCellIndex]);
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
 
         for (let index = 0; index < boardSize; index++) {
             const cell = document.createElement('div');
@@ -1655,6 +1710,20 @@
                     marker.classList.add('cell-marker');
                     marker.innerHTML = TREE_CELL_SVG;
                     cell.appendChild(marker);
+                } else if (map.teleportRift && index === map.teleportRift.fromIndex) {
+                    cell.classList.add('path-rift-a');
+                    cell.title = isEn ? 'One-Way Rift Entry A ▸ Warps monsters directly to B' : '單向傳送裂隙起點 A ▸ 敵軍踏入直接傳送至 B';
+                    const riftTag = document.createElement('span');
+                    riftTag.className = 'cell-rift-tag num';
+                    riftTag.innerText = 'A▸';
+                    cell.appendChild(riftTag);
+                } else if (map.teleportRift && index === map.teleportRift.toIndex) {
+                    cell.classList.add('path-rift-b');
+                    cell.title = isEn ? 'One-Way Rift Exit ▸ B' : '單向傳送裂隙出口 ▸ B';
+                    const riftTag = document.createElement('span');
+                    riftTag.className = 'cell-rift-tag num';
+                    riftTag.innerText = '▸B';
+                    cell.appendChild(riftTag);
                 } else if (map.pathFlowArrows.has(index)) {
                     const arrow = document.createElement('span');
                     arrow.classList.add('path-arrow');
@@ -1704,6 +1773,7 @@
             G.cellElements.push(cell);
             boardEl.appendChild(cell);
         }
+        syncChargedStoneVisuals();
         measureBoardMetrics();
     }
 
@@ -1711,7 +1781,7 @@
         const cell = G && G.cellElements ? G.cellElements[index] : null;
         if (!cell) return;
         const terrainsDict = getTerrainsDict();
-        cell.classList.remove('terrain-highground', 'terrain-mana_vein', 'terrain-world_tree', 'terrain-obstacle', 'obstacle-cell');
+        cell.classList.remove('terrain-highground', 'terrain-mana_vein', 'terrain-world_tree', 'terrain-obstacle', 'terrain-charged_stone', 'terrain-treasure_rock', 'is-charged-active', 'obstacle-cell');
         cell.removeAttribute('title');
         const oldArt = cell.querySelector('.terrain-art');
         if (oldArt) oldArt.remove();
@@ -1911,6 +1981,13 @@
             tipEl.innerText = isEn
                 ? `${tCfg.name} · DMG +${bonusPct}%`
                 : `${tCfg.name} · 當前傷 +${bonusPct}%`;
+        } else if (terrainKey === 'charged_stone') {
+            const TerrainSys = GameApp.systems && GameApp.systems.terrain;
+            const isActive = TerrainSys && typeof TerrainSys.isChargedStoneActiveAt === 'function' ? TerrainSys.isChargedStoneActiveAt(idx) : false;
+            const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+            tipEl.innerText = isActive
+                ? (isEn ? `${tCfg.name} · Active DMG +40%` : `${tCfg.name} · 發光充能 DMG +40%`)
+                : (isEn ? `${tCfg.name} · Dormant (2-Wave Cycle)` : `${tCfg.name} · 待機（每 2 波輪換）`);
         } else {
             tipEl.innerText = `${tCfg.name} · ${tCfg.shortTag}`;
         }
@@ -2253,6 +2330,7 @@
     setTowerStunnedVisual,
     renderCellTower,
     initBoard,
+    syncChargedStoneVisuals,
     refreshCellTerrain,
     renderBoard,
     showDragRangePreview,

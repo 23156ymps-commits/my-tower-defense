@@ -28,6 +28,27 @@
         return G.map.terrainMap.get(index) || null;
     }
 
+    function getChargedStoneIndices() {
+        return (G && G.map && Array.isArray(G.map.chargedStoneIndices)) ? G.map.chargedStoneIndices : [];
+    }
+
+    function getActiveChargedStoneIndex(waveNum = null) {
+        const list = getChargedStoneIndices();
+        if (list.length === 0) return -1;
+        const rawWave = waveNum !== null && waveNum !== undefined
+            ? waveNum
+            : (G && G.state ? G.state.currentWave : 1);
+        const w = Math.max(1, Math.floor(Number(rawWave) || 1));
+        const slot = Math.floor((w - 1) / 2) % list.length;
+        return list[slot];
+    }
+
+    function isChargedStoneActiveAt(index, waveNum = null) {
+        if (!Number.isFinite(index) || index < 0) return false;
+        if (getTerrainAt(index) !== 'charged_stone') return false;
+        return index === getActiveChargedStoneIndex(waveNum);
+    }
+
     function getEffectiveTerrainKey(index) {
         if (!G || !G.map) return 'grass';
         if (G.map.pathCellIndices && G.map.pathCellIndices.has(index)) return 'path';
@@ -63,6 +84,7 @@
                 rangeMult: 1.0,
                 attackSpeedMult: 1.0,
                 damageMult: 1.0,
+                isActiveChargedStone: false,
                 shortTag: '',
                 tooltip: ''
             };
@@ -71,7 +93,12 @@
         const rangeMult = Number.isFinite(tCfg.rangeMult) ? tCfg.rangeMult : 1.0;
         const attackSpeedMult = Number.isFinite(tCfg.attackSpeedMult) ? tCfg.attackSpeedMult : 1.0;
         let damageMult = 1.0;
-        if (Number.isFinite(tCfg.maxDamageBonus) && tCfg.maxDamageBonus > 0) {
+        let isActiveChargedStone = false;
+
+        if (terrainKey === 'charged_stone') {
+            isActiveChargedStone = isChargedStoneActiveAt(index);
+            damageMult = isActiveChargedStone ? (Number.isFinite(tCfg.damageMult) ? tCfg.damageMult : 1.40) : 1.0;
+        } else if (Number.isFinite(tCfg.maxDamageBonus) && tCfg.maxDamageBonus > 0) {
             const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
             const maxHp = (G && G.state && G.state.maxBaseHp) || treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
             const curHp = (G && G.state && Number.isFinite(G.state.baseHp)) ? G.state.baseHp : maxHp;
@@ -84,6 +111,7 @@
             rangeMult,
             attackSpeedMult,
             damageMult,
+            isActiveChargedStone,
             shortTag: tCfg.shortTag || '',
             tooltip: tCfg.tooltip || ''
         };
@@ -116,19 +144,91 @@
     }
 
     /**
-     * 地脈拓荒：花費 45 金幣爆破岩石障礙，高機率露出隱藏的元素靈脈或制高點
+     * 地脈拓荒與黑市開採：花費 45 金幣清除障礙巨岩，或開採「藏寶巨石」獲得金幣（軟上限）／果實／2★ 塔
      */
     function clearObstacleAt(index) {
-        if (!G || !G.state || !G.map || getTerrainAt(index) !== 'obstacle') {
+        const terrainKey = getTerrainAt(index);
+        if (!G || !G.state || !G.map || (terrainKey !== 'obstacle' && terrainKey !== 'treasure_rock')) {
             return { ok: false, reason: 'invalid_obstacle' };
         }
+        const tCfg = getTerrainsDict()[terrainKey] || {};
         const EconSys = GameApp.systems && GameApp.systems.economy;
-        const cost = EconSys && typeof EconSys.getObstacleClearCost === 'function' ? EconSys.getObstacleClearCost() : 45;
+        const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
+        const CodexSys = GameApp.systems && GameApp.systems.codex;
+        const nextRand = (GameApp.helpers && typeof GameApp.helpers.nextRunRandom === 'function')
+            ? GameApp.helpers.nextRunRandom
+            : Math.random;
+        const cost = Number.isFinite(tCfg.clearCost)
+            ? tCfg.clearCost
+            : (EconSys && typeof EconSys.getObstacleClearCost === 'function' ? EconSys.getObstacleClearCost() : 45);
         if (G.state.currentGold < cost) {
-            return { ok: false, reason: 'insufficient_gold', cost };
+            return { ok: false, reason: 'insufficient_gold', cost, isTreasureRock: terrainKey === 'treasure_rock' };
         }
         G.state.currentGold -= cost;
-        const roll = (GameApp.helpers && typeof GameApp.helpers.nextRunRandom === 'function') ? GameApp.helpers.nextRunRandom() : Math.random();
+        G.map.terrainMap.delete(index);
+
+        if (terrainKey === 'treasure_rock') {
+            const roll = nextRand();
+            const canFruit = (G.state.fusionFruitCount || 0) <= 0;
+            if (roll < 0.40) {
+                const rawNetBonus = 30;
+                let grantedNet = rawNetBonus;
+                let isSoftCapped = false;
+                if (EconSys && typeof EconSys.recordNonCombatNetGain === 'function') {
+                    const capRes = EconSys.recordNonCombatNetGain(rawNetBonus, G.state.currentWave);
+                    grantedNet = capRes.granted || 0;
+                    isSoftCapped = Boolean(capRes.isSoftCapped);
+                }
+                const totalPayout = cost + grantedNet;
+                G.state.currentGold += totalPayout;
+                G.state.totalGoldEarned = (G.state.totalGoldEarned || 0) + grantedNet;
+                return {
+                    ok: true,
+                    cost,
+                    isTreasureRock: true,
+                    treasureType: 'gold',
+                    totalPayout,
+                    netGain: grantedNet,
+                    isSoftCapped,
+                    revealedTerrain: null
+                };
+            }
+            if (roll < 0.70 && canFruit) {
+                G.state.fusionFruitCount = 1;
+                return {
+                    ok: true,
+                    cost,
+                    isTreasureRock: true,
+                    treasureType: 'fruit',
+                    revealedTerrain: null
+                };
+            }
+            const pool = ['fire_trunk', 'ice_trunk', 'thunder_trunk'];
+            const pickedType = pool[Math.floor(nextRand() * pool.length)] || 'fire_trunk';
+            if (AttackSys && typeof AttackSys.createTowerObj === 'function' && (!G.state.board[index])) {
+                const towerObj = AttackSys.createTowerObj(pickedType, 2, cost, null, { keepRawType: true });
+                towerObj.investedGold = cost;
+                G.state.board[index] = towerObj;
+                if (CodexSys && typeof CodexSys.unlockEntry === 'function') {
+                    CodexSys.unlockEntry(`tower:${towerObj.type}`);
+                }
+                if (typeof AttackSys.recalculateLeylines === 'function') {
+                    AttackSys.recalculateLeylines();
+                }
+                return {
+                    ok: true,
+                    cost,
+                    isTreasureRock: true,
+                    treasureType: 'tower',
+                    spawnedTowerType: towerObj.type,
+                    tower: towerObj,
+                    revealedTerrain: null
+                };
+            }
+            return { ok: true, cost, isTreasureRock: true, treasureType: 'gold', totalPayout: cost, netGain: 0, isSoftCapped: false, revealedTerrain: null };
+        }
+
+        const roll = nextRand();
         let revealedTerrain = null;
         if (roll < 0.45) {
             revealedTerrain = 'mana_vein';
@@ -137,15 +237,16 @@
         }
         if (revealedTerrain) {
             G.map.terrainMap.set(index, revealedTerrain);
-        } else {
-            G.map.terrainMap.delete(index);
         }
-        return { ok: true, cost, revealedTerrain };
+        return { ok: true, cost, isTreasureRock: false, revealedTerrain };
     }
 
     const TerrainSystem = {
         bind,
         getTerrainAt,
+        getChargedStoneIndices,
+        getActiveChargedStoneIndex,
+        isChargedStoneActiveAt,
         getEffectiveTerrainKey,
         canBuildAt,
         getTerrainBonusesAt,

@@ -531,7 +531,13 @@
         const rawTerrain = Number.isFinite(options.b_terrain)
             ? options.b_terrain
             : Math.max(0, ((options.terrainMult ?? 1.0) - 1) + mapIceBonus);
-        const b_terrain = Math.min(terrainCap, Math.max(0, rawTerrain));
+        const TerrainSys = GameApp.systems && GameApp.systems.terrain;
+        const isActiveChargedStone = Boolean(
+            options.isActiveChargedStone
+            || (Number.isFinite(options.cellIndex) && TerrainSys && typeof TerrainSys.isChargedStoneActiveAt === 'function' && TerrainSys.isChargedStoneActiveAt(options.cellIndex))
+        );
+        const effectiveTerrainCap = isActiveChargedStone ? Math.max(terrainCap, 0.40) : terrainCap;
+        const b_terrain = Math.min(effectiveTerrainCap, Math.max(0, rawTerrain));
 
         const TreeSys = GameApp.systems && GameApp.systems.tree;
         const resonanceBonus = (TreeSys && monster && typeof TreeSys.getElementalResonanceMult === 'function')

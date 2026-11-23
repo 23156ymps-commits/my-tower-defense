@@ -591,6 +591,24 @@
                 </ul>
             </div>
 
+            <div id="guide-stage4-section" class="guide-section">
+                <h2 id="guide-stage4-title" class="guide-section-title">浮島裂隙 · 黑市開採 · W6+ 菁英詞條</h2>
+                <ul id="guide-stage4-list" class="panel-list">
+                    <li class="panel-row">
+                        <span id="guide-s4-k0" class="panel-key">⚡ 充能浮石 / 🌀 裂隙 A→B（雷鳴浮島）</span>
+                        <span id="guide-s4-v0" class="panel-val num">2 波輪充 +40% 傷 · 單向躍遷</span>
+                    </li>
+                    <li class="panel-row">
+                        <span id="guide-s4-k1" class="panel-key">🪨 藏寶巨石 / 🎁 免費盲盒（荒蕪黑市）</span>
+                        <span id="guide-s4-v1" class="panel-val num">45 💰 開採寶藏 · 每波 1 免費盒</span>
+                    </li>
+                    <li class="panel-row">
+                        <span id="guide-s4-k2" class="panel-key">🔱 W6+ 菁英詞條（賞金首 / 狂躁 / 再生）</span>
+                        <span id="guide-s4-v2" class="panel-val num">掉金受軟上限 · 重傷減半回盾</span>
+                    </li>
+                </ul>
+            </div>
+
             <div class="guide-section">
                 <h2 id="guide-evo-title" class="guide-section-title">轉職與升星金字塔（1★ → 5★ 16U）</h2>
                 <div id="guide-evo-note" class="codex-note guide-evo-note num">
@@ -704,9 +722,9 @@
                                 <span id="mode-title-campaign" class="mode-card-title">戰役關卡</span>
                                 <span id="mode-badge-campaign" class="mode-card-badge">主線推進</span>
                             </div>
-                            <p id="mode-desc-campaign" class="mode-card-desc">推進晨光、熔岩與永凍三線戰場，挑戰 10 波魔王並贏取星級與首通 +200 ★ 榮譽。</p>
+                            <p id="mode-desc-campaign" class="mode-card-desc">推進五大元素戰場，挑戰 10～15 波魔王並贏取星級與首通 +200 ★ 榮譽。</p>
                             <div class="mode-card-foot">
-                                <span id="mode-meta-campaign" class="mode-card-meta num">通關進度 0 / 3 圖</span>
+                                <span id="mode-meta-campaign" class="mode-card-meta num">通關進度 0 / 5 圖</span>
                                 <span id="mode-enter-campaign" class="mode-card-cta">選擇戰場 ▸</span>
                             </div>
                         </button>
@@ -803,6 +821,22 @@
                                     </div>
                                     <div class="map-card-desc">36 格雙線匯流 · 初始 +15 💰 · 冰脈傷害 +20%</div>
                                     <div id="map-record-frost" class="map-card-record num">最高第 1 波 · 尚未通關</div>
+                                </button>
+                                <button type="button" class="map-card" data-map-id="thunder_isles">
+                                    <div class="map-card-top">
+                                        <span class="map-card-name">雷鳴浮島</span>
+                                        <span class="map-diff-badge diff-thunder">浮島裂隙</span>
+                                    </div>
+                                    <div class="map-card-desc">單向裂隙 A→B · 3 浮石輪充 +40% 傷 · 12 波</div>
+                                    <div id="map-record-thunder_isles" class="map-card-record num">最高第 1 波 · 尚未通關</div>
+                                </button>
+                                <button type="button" class="map-card" data-map-id="blackmarket">
+                                    <div class="map-card-top">
+                                        <span class="map-card-name">荒蕪黑市</span>
+                                        <span class="map-diff-badge diff-market">極限 15 波</span>
+                                    </div>
+                                    <div class="map-card-desc">每波 1 免費盲盒 · 8 藏寶巨石 · 15 波</div>
+                                    <div id="map-record-blackmarket" class="map-card-record num">最高第 1 波 · 尚未通關</div>
                                 </button>
                             </div>
                         </div>
@@ -917,6 +951,14 @@
                 <div id="victory-contracts-row" class="recap-contracts num hidden"></div>
             </div>
 
+            <div id="victory-daily-share-box" class="daily-share-box hidden">
+                <div class="daily-share-head">
+                    <span id="victory-daily-share-title" class="daily-share-title">每日種子戰績卡</span>
+                    <button id="victory-daily-copy-btn" class="daily-copy-btn" type="button">複製日期戰績卡</button>
+                </div>
+                <pre id="victory-daily-share-text" class="daily-share-preview num"></pre>
+            </div>
+
             <!-- 試玩 5 秒主觀體感快評列 ＋ 單局黑盒子戰報複製（預設收納於右上角切換鈕） -->
             <div id="victory-feedback-box" class="feel-feedback-box hidden">
                 <div class="feel-rating-header">5 秒試玩體感快評</div>
@@ -983,6 +1025,14 @@
                     <strong id="gameover-breaker-text">—</strong>
                 </div>
                 <div id="gameover-contracts-row" class="recap-contracts num hidden"></div>
+            </div>
+
+            <div id="gameover-daily-share-box" class="daily-share-box hidden">
+                <div class="daily-share-head">
+                    <span id="gameover-daily-share-title" class="daily-share-title">每日種子戰績卡</span>
+                    <button id="gameover-daily-copy-btn" class="daily-copy-btn" type="button">複製日期戰績卡</button>
+                </div>
+                <pre id="gameover-daily-share-text" class="daily-share-preview num"></pre>
             </div>
 
             <div id="new-record-badge" class="new-record-badge hidden">刷新歷史最高波數紀錄</div>

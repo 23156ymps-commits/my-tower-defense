@@ -67,6 +67,7 @@
             diffLabel: '標準難度',
             diffClass: 'diff-std',
             desc: '41 格蜿蜒長徑 · 經典穩定防線',
+            victoryWave: 10,
             startGoldBonus: 0,
             killGoldMult: 1.0,
             waypoints: [
@@ -98,6 +99,7 @@
             diffLabel: '進階挑戰',
             diffClass: 'diff-hard',
             desc: '31 格雙折短徑 · 初始 +10 💰',
+            victoryWave: 10,
             startGoldBonus: 10,
             killGoldMult: 1.15,
             waypoints: [
@@ -130,6 +132,7 @@
             diffLabel: '雙路分線',
             diffClass: 'diff-hard',
             desc: '36 格雙岔匯流 · 初始 +15 💰 · 寒霜靈脈冰傷 +20%',
+            victoryWave: 10,
             startGoldBonus: 15,
             killGoldMult: 1.20,
             iceDamageBonus: 0.20,
@@ -165,6 +168,84 @@
                 ],
                 obstacle: [
                     [3, 4], [4, 6], [7, 2], [11, 7]
+                ]
+            }
+        },
+        thunder_isles: {
+            id: 'thunder_isles',
+            name: '雷鳴浮島',
+            diffLabel: '浮島裂隙',
+            diffClass: 'diff-thunder',
+            desc: '單向裂隙 A → B 跳躍 · 3 座充能浮石每 2 波輪換 +40% 傷害 · 12 波',
+            victoryWave: 12,
+            startGoldBonus: 15,
+            killGoldMult: 1.0,
+            teleportRift: { from: { x: 3, y: 8 }, to: { x: 9, y: 1 } },
+            waypoints: [
+                { x: 0, y: 2 },
+                { x: 5, y: 2 },
+                { x: 5, y: 5 },
+                { x: 3, y: 5 },
+                { x: 3, y: 8, teleportToNext: true },
+                { x: 9, y: 1 },
+                { x: 13, y: 1 },
+                { x: 13, y: 4 },
+                { x: 9, y: 4 },
+                { x: 9, y: 7 },
+                { x: 14, y: 7 }
+            ],
+            terrainLayout: {
+                charged_stone: [
+                    [4, 3], [8, 3], [11, 6]
+                ],
+                highground: [
+                    [7, 6]
+                ],
+                mana_vein: [
+                    [2, 4]
+                ],
+                world_tree: [
+                    [12, 8]
+                ],
+                obstacle: [
+                    [6, 2], [10, 2]
+                ]
+            }
+        },
+        blackmarket: {
+            id: 'blackmarket',
+            name: '荒蕪黑市',
+            diffLabel: '極限 15 波',
+            diffClass: 'diff-market',
+            desc: '每波 1 次免費盲盒 · 8 顆藏寶巨石可開採 · 15 波持久戰',
+            victoryWave: 15,
+            startGoldBonus: 20,
+            killGoldMult: 1.0,
+            freeBlindBoxPerWave: true,
+            waypoints: [
+                { x: 0, y: 1 },
+                { x: 4, y: 1 },
+                { x: 4, y: 4 },
+                { x: 1, y: 4 },
+                { x: 1, y: 8 },
+                { x: 7, y: 8 },
+                { x: 7, y: 2 },
+                { x: 11, y: 2 },
+                { x: 11, y: 7 },
+                { x: 14, y: 7 }
+            ],
+            terrainLayout: {
+                treasure_rock: [
+                    [2, 2], [5, 2], [3, 6], [5, 6], [8, 4], [9, 5], [12, 4], [13, 5]
+                ],
+                highground: [
+                    [6, 4], [10, 6]
+                ],
+                mana_vein: [
+                    [2, 6], [9, 3]
+                ],
+                world_tree: [
+                    [13, 8]
                 ]
             }
         }

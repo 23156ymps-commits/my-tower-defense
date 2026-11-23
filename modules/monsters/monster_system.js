@@ -205,10 +205,17 @@
             return;
         }
 
+        const affixDb = getMonstersData().ELITE_AFFIXES || {};
+        const affixSpec = (entry.isElite && !entry.isBoss && entry.eliteAffix) ? (affixDb[entry.eliteAffix] || null) : null;
         const hpMult = entry.isElite ? (wb.ELITE_HP_MULT || 2.1) : 1.0;
-        const speedMult = (cfg.speedMult || 1.0) * (entry.isElite ? (wb.ELITE_SPEED_MULT || 0.85) : 1.0);
+        const affixSpeedMult = (affixSpec && affixSpec.id === 'frenzied') ? (affixSpec.speedMult || 1.22) : 1.0;
+        const speedMult = (cfg.speedMult || 1.0) * (entry.isElite ? (wb.ELITE_SPEED_MULT || 0.85) : 1.0) * affixSpeedMult;
         const maxHp = Math.max(10, Math.round((cfg.baseHp || 68) * (entry.hpScale || 1) * hpMult * hpGlobal));
-        const maxShield = cfg.shieldRatio > 0 ? Math.round(maxHp * cfg.shieldRatio) : 0;
+        let maxShield = cfg.shieldRatio > 0 ? Math.round(maxHp * cfg.shieldRatio) : 0;
+        if (affixSpec && affixSpec.id === 'shield_regen') {
+            const shieldAddRatio = maxShield > 0 ? (affixSpec.extraShieldRatio || 0.20) : (affixSpec.shieldRatio || 0.30);
+            maxShield += Math.max(1, Math.round(maxHp * shieldAddRatio));
+        }
         const reward = Math.max(1, Math.round(((cfg.baseReward || 10) + (entry.rewardBonus || 0)) * (entry.isElite ? (wb.ELITE_REWARD_MULT || 2.2) : 1.0)));
 
         const isEnSpawn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
@@ -225,6 +232,9 @@
             maxShield,
             armor: Math.max(0, Math.round((entry.armor || 0) * armorScale) + armorBonus),
             isElite: Boolean(entry.isElite),
+            eliteAffix: affixSpec ? affixSpec.id : null,
+            eliteAffixSpec: affixSpec,
+            shieldRegenTimerMs: affixSpec && affixSpec.regenIntervalMs ? affixSpec.regenIntervalMs : 0,
             isBoss: false,
             isSplitChild: false,
             splitsOnDeath: Boolean(cfg.splitsOnDeath),
@@ -341,6 +351,7 @@
 
         let segIdx = 0;
         for (let i = 0; i < cum.length - 1; i++) {
+            if (wps[i] && wps[i].teleportToNext) continue;
             if (targetDist >= cum[i] && targetDist <= cum[i + 1]) {
                 segIdx = i;
                 break;
@@ -959,6 +970,28 @@
             }
         }
 
+        // 💰 W6+ 菁英「賞金首」詞條：額外掉落賞金（併入單波非戰鬥淨收益軟上限約束）
+        let bountyAffixGold = 0;
+        if (monster.eliteAffix === 'bounty' && !monster.isBoss && EconSys && typeof EconSys.recordNonCombatNetGain === 'function') {
+            const affixSpec = monster.eliteAffixSpec || ((getMonstersData().ELITE_AFFIXES || {}).bounty) || {};
+            const rawBounty = Math.max(1, Math.round((killGold || 10) * (affixSpec.goldRate ?? 0.85)) + (affixSpec.goldFlat ?? 12));
+            const bRes = EconSys.recordNonCombatNetGain(rawBounty, st.currentWave);
+            bountyAffixGold = bRes.granted || 0;
+            if (bountyAffixGold > 0) {
+                st.currentGold += bountyAffixGold;
+                st.totalGoldEarned += bountyAffixGold;
+                if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
+                    const isEnBounty = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                    GameApp.renderer.spawnFloatingNotice(
+                        isEnBounty ? `💰 Bounty +${bountyAffixGold}` : `💰 賞金首 +${bountyAffixGold}`,
+                        monster.pixelX,
+                        monster.pixelY,
+                        'pity-seed'
+                    );
+                }
+            }
+        }
+
         // 🦊 靈脈竊賊擊殺驚喜掉落：+60 金幣（受單波軟上限約束）＋ 1 股隨機股票或 1 枚盲盒代幣
         let thiefGoldGranted = 0;
         let thiefBonusLabelZh = '';
@@ -1061,14 +1094,16 @@
                 ? `Caught ${monster.name}! +${thiefGoldGranted} 💰${thiefBonusLabelEn}`
                 : `捕獲【${monster.name}】！獲得 +${thiefGoldGranted} 💰${thiefBonusLabelZh}。`;
         } else if (killGold > 0 && !options.isEmberSplash && !options.isDotKill) {
-            const totalShowGold = killGold + mistExtraGold + eclipseExtraGold;
+            const totalShowGold = killGold + mistExtraGold + eclipseExtraGold + bountyAffixGold;
             const mistSuffixZh = mistExtraGold > 0 ? `（含霜霧 +${mistExtraGold}）` : '';
             const mistSuffixEn = mistExtraGold > 0 ? ` (Mist +${mistExtraGold})` : '';
             const ecSuffixZh = eclipseExtraGold > 0 ? `（含蝕月 +${eclipseExtraGold}）` : '';
             const ecSuffixEn = eclipseExtraGold > 0 ? ` (Eclipse +${eclipseExtraGold})` : '';
+            const bSuffixZh = bountyAffixGold > 0 ? `（含賞金首 +${bountyAffixGold}）` : '';
+            const bSuffixEn = bountyAffixGold > 0 ? ` (Bounty +${bountyAffixGold})` : '';
             G.dom.msgText.innerText = isEnKill
-                ? `Slain ${monster.name}: +${totalShowGold} 💰${mistSuffixEn}${ecSuffixEn}${dewGain > 0 ? `, +${dewGain} 💧` : ''}`
-                : `擊殺【${monster.name}】，獲得 +${totalShowGold} 💰${mistSuffixZh}${ecSuffixZh}${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
+                ? `Slain ${monster.name}: +${totalShowGold} 💰${mistSuffixEn}${ecSuffixEn}${bSuffixEn}${dewGain > 0 ? `, +${dewGain} 💧` : ''}`
+                : `擊殺【${monster.name}】，獲得 +${totalShowGold} 💰${mistSuffixZh}${ecSuffixZh}${bSuffixZh}${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
         }
 
         if (!options.isMartyrBlast && Array.isArray(st.groundHazards) && st.groundHazards.length > 0) {
@@ -1404,6 +1439,25 @@
             }
         }
 
+        // 10.5 W6+ 菁英「護盾再生」詞條（每 2.5s 回復 4% 最大護盾；受灼燒重傷減半）
+        if (m.eliteAffix === 'shield_regen' && m.hp > 0 && (m.maxShield || 0) > 0) {
+            const afSpec = m.eliteAffixSpec || ((getMonstersData().ELITE_AFFIXES || {}).shield_regen) || {};
+            m.shieldRegenTimerMs = Math.max(0, (m.shieldRegenTimerMs || 0) - dtMs);
+            if (m.shieldRegenTimerMs <= 0) {
+                m.shieldRegenTimerMs = afSpec.regenIntervalMs || 2500;
+                const rawRegen = Math.max(1, Math.round(m.maxShield * (afSpec.regenRatio || 0.04)));
+                const gw = st.grievousWound;
+                const mult = (gw && gw.durationMs > 0) ? (1 - (gw.rate || 0.50)) : 1.0;
+                const gain = Math.max(0, Math.round(rawRegen * mult));
+                if (gain > 0 && (m.shield || 0) < m.maxShield) {
+                    m.shield = Math.min(m.maxShield, (m.shield || 0) + gain);
+                    if (GameApp.renderer && typeof GameApp.renderer.emitRingFX === 'function' && G && G.boardMetrics) {
+                        GameApp.renderer.emitRingFX(m.pixelX, m.pixelY, Math.max(12, G.boardMetrics.cellW * 0.44), '#4A9EBF', 0.22, 260);
+                    }
+                }
+            }
+        }
+
         // 11. 4 階段機制 Boss 週期技能 (W10 召喚+回血 / W15 EMP癱瘓)
         if (m.isBoss && m.bossMechanic && m.hp > 0) {
             const bSpec = m.bossMechanicSpec || {};
@@ -1508,21 +1562,60 @@
             const isRootedOrFrozen = (m.rootTimer || 0) > 0 || (m.stunTimer || 0) > 0 || isMonsterFrozen(m);
             const effSlowRate = getMonsterEffectiveSlowRate(m);
             const stealthSpeedMult = m.isStealthed ? (1 + ((m.pantherSpec && m.pantherSpec.stealthSpeedBonus) || 0.65)) : 1.0;
+            const frenziedSpec = (m.eliteAffix === 'frenzied')
+                ? (m.eliteAffixSpec || ((getMonstersData().ELITE_AFFIXES || {}).frenzied) || {})
+                : null;
+            const frenziedLowHpMult = (frenziedSpec && (m.hp / Math.max(1, m.maxHp)) < 0.50)
+                ? (1 + (frenziedSpec.lowHpBonus || 0.15))
+                : 1.0;
             const snowSpdMult = st.weatherType === 'snow'
                 ? (((GameApp.data && GameApp.data.weather && GameApp.data.weather.snow && GameApp.data.weather.snow.monsterSpeedMult)) || 0.90)
                 : 1.0;
             const slowMult = isRootedOrFrozen
                 ? 0
-                : Math.max(minSpeedRatio, (1 - effSlowRate) * snowSpdMult) * stealthSpeedMult;
+                : Math.max(minSpeedRatio, (1 - effSlowRate) * snowSpdMult) * stealthSpeedMult * frenziedLowHpMult;
             const safeSpeed = clampNumber(m.baseSpeed, 0.2, baseSpd * 10, baseSpd);
             let step = safeSpeed * slowMult * dtSec, reachedEnd = false;
 
+            const emitRiftWarpFX = (fromWp, toWp) => {
+                if (!Renderer || !fromWp || !toWp) return;
+                const fromPos = Renderer.getCellCenter(fromWp.x, fromWp.y);
+                const toPos = Renderer.getCellCenter(toWp.x, toWp.y);
+                const ringRad = Math.max(14, ((G && G.boardMetrics && G.boardMetrics.cellW) || 34) * 0.62);
+                if (typeof Renderer.emitRingFX === 'function') {
+                    Renderer.emitRingFX(fromPos.left, fromPos.top, ringRad, '#4A9EBF', 0.30, 320);
+                    Renderer.emitRingFX(toPos.left, toPos.top, ringRad * 1.08, '#E0B43C', 0.34, 340);
+                }
+                if (typeof Renderer.emitParticleBurst === 'function') {
+                    Renderer.emitParticleBurst(fromPos.left, fromPos.top, '#4A9EBF', 7, 70);
+                    Renderer.emitParticleBurst(toPos.left, toPos.top, '#E0B43C', 7, 75);
+                }
+            };
+
             while (step > 0) {
+                const curWpNode = routeWps[m.wpIndex];
+                if (curWpNode && curWpNode.teleportToNext && routeWps[m.wpIndex + 1]) {
+                    const destWp = routeWps[m.wpIndex + 1];
+                    emitRiftWarpFX(curWpNode, destWp);
+                    m.gridX = destWp.x;
+                    m.gridY = destWp.y;
+                    m.wpIndex++;
+                    if (m.wpIndex >= routeWps.length - 1) { reachedEnd = true; break; }
+                    continue;
+                }
                 const targetWp = routeWps[m.wpIndex + 1];
                 if (!targetWp) { reachedEnd = true; break; }
                 const dx = targetWp.x - m.gridX, dy = targetWp.y - m.gridY, dist = Math.hypot(dx, dy);
                 if (dist <= step) {
                     m.gridX = targetWp.x; m.gridY = targetWp.y; m.wpIndex++; step -= dist;
+                    const arrivedWp = routeWps[m.wpIndex];
+                    if (arrivedWp && arrivedWp.teleportToNext && routeWps[m.wpIndex + 1]) {
+                        const destWp = routeWps[m.wpIndex + 1];
+                        emitRiftWarpFX(arrivedWp, destWp);
+                        m.gridX = destWp.x;
+                        m.gridY = destWp.y;
+                        m.wpIndex++;
+                    }
                     if (m.wpIndex >= routeWps.length - 1) { reachedEnd = true; break; }
                 } else {
                     m.gridX += (dx / dist) * step; m.gridY += (dy / dist) * step; step = 0;

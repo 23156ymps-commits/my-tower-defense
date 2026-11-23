@@ -127,30 +127,30 @@
                 wave: 6,
                 startGold: 195,
                 startLives: 1,
-                titleZh: '殘局 II：極速截擊線',
-                titleEn: 'Trial II: Velocity Snare',
-                descZh: '疾風獵犬與虛空影豹高速突襲，只有單點生命容錯，務必靠緩速與凍結截停。',
-                descEn: 'Swift hounds and stealth panthers sprint toward the tree with 1 ❤️. Lock them down.',
+                titleZh: '殘局 II：極速獵犬衝線',
+                titleEn: 'Trial II: Gale Hound Rush',
+                descZh: '雙路線同時湧出極速疾風獵犬與虛空影豹，只有 1 點生命容錯，務必以緩速與凍結截停！',
+                descEn: 'Gale Hounds & Shadow Panthers sprint down twin lanes with 1 ❤️. Lock them down with Chill & Slow!',
                 hintZh: '建議配置 ❄️冰塔與 🧲磁環 觸發減速＋定身控制',
                 hintEn: 'Tip: Combine ❄️ Ice slow and 🧲 Magnet snare to break stealth & speed',
                 queueSpecs: [
-                    { type: 'hound', count: 7, intervalMs: 620, waveLevel: 5 },
+                    { type: 'hound', count: 10, intervalMs: 560, waveLevel: 5 },
                     { type: 'panther', count: 3, intervalMs: 1050, waveLevel: 6 }
                 ]
             },
             {
                 id: 'puzzle_shield_breaker',
                 order: 3,
-                mapId: 'forest',
+                mapId: 'thunder_isles',
                 wave: 7,
-                startGold: 215,
+                startGold: 220,
                 startLives: 1,
-                titleZh: '殘局 III：蒼穹破盾試煉',
-                titleEn: 'Trial III: Aegis Shatter',
-                descZh: '機械飛艇護航符文護衛強攻林徑，藍色護盾吸收大量非雷傷，迅速瓦解盾層！',
-                descEn: 'Airships escort shielded Guardians down the forest path. Strip blue shields swiftly!',
-                hintZh: '建議召喚 ⚡雷 / ⚛️電漿 / 🧲磁環 觸發高效破盾',
-                hintEn: 'Tip: Deploy ⚡ Thunder, ⚛️ Plasma, or 🧲 Magnet for shield-break bonus',
+                titleZh: '殘局 III：浮島裂隙破盾',
+                titleEn: 'Trial III: Skyrift Shatter',
+                descZh: '機械飛艇護航符文護衛經單向裂隙突襲！善用發光充能浮石 (+40% 傷) 與雷／磁環瓦解藍盾！',
+                descEn: 'Airships & Shielded Guardians warp via A → B rift! Use active Floatstone (+40% DMG) & ⚡/🧲!',
+                hintZh: '建議將 ⚡雷 / 🧲磁環 部署於發光 ⚡ 充能浮石觸發高效破盾',
+                hintEn: 'Tip: Place ⚡ Thunder or 🧲 Magnet on glowing Floatstones for fast shield break',
                 queueSpecs: [
                     { type: 'air', count: 5, intervalMs: 700, waveLevel: 6 },
                     { type: 'guardian', count: 4, intervalMs: 1050, waveLevel: 7 }
@@ -159,15 +159,15 @@
             {
                 id: 'puzzle_split_purge',
                 order: 4,
-                mapId: 'lava',
+                mapId: 'blackmarket',
                 wave: 8,
-                startGold: 235,
+                startGold: 240,
                 startLives: 1,
-                titleZh: '殘局 IV：裂殖疫潮',
-                titleEn: 'Trial IV: Fission Tide',
-                descZh: '癒合花妖為分裂史萊姆持續回血，若不及時掛上灼燒重傷與範圍清場將瞬間爆線。',
-                descEn: 'Healer dryads sustain Splitting Slimes. Inflict burn grievous wounds and AoE clear!',
-                hintZh: '建議以 🔥灼燒重傷 抑制治療並搭配 ♨️範圍潑灑',
+                titleZh: '殘局 IV：黑市裂殖疫潮',
+                titleEn: 'Trial IV: Market Fission Tide',
+                descZh: '癒合花妖為分裂史萊姆持續回血！靈活開採場上藏寶巨石或直接構築 🔥灼燒重傷與 ♨️濺射防線。',
+                descEn: 'Healer dryads sustain Splitting Slimes! Mine Treasure Rocks or build 🔥 Wound + ♨️ AoE.',
+                hintZh: '建議以 🔥灼燒重傷 抑制治療並搭配 ♨️蒸氣範圍清場',
                 hintEn: 'Tip: Inflict 🔥 Burn grievous wounds to halve healing and splash splits',
                 queueSpecs: [
                     { type: 'slime', count: 5, intervalMs: 850, waveLevel: 7 },
@@ -179,18 +179,19 @@
                 order: 5,
                 mapId: 'frost',
                 wave: 9,
-                startGold: 280,
+                startGold: 360,
                 startLives: 1,
-                titleZh: '殘局 V：古樹終末斬首',
-                titleEn: 'Trial V: Execution Matrix',
-                descZh: '自爆蟲掩護硬化巨獸強襲終點！善用高星合成與屬性相剋完成極限單波斬殺。',
-                descEn: 'Molten bombers escort a hardened Behemoth! Merge high-tier towers for the final kill.',
-                hintZh: '建議在緩速凍結狀態擊殺自爆蟲並集中火力破核',
-                hintEn: 'Tip: Freeze bombers before killing to prevent EMP, then focus the Behemoth',
+                titleZh: '殘局 V：高甲三王極限斬首',
+                titleEn: 'Trial V: Triple Boss Execution',
+                descZh: '熔岩巨獸王、腐朽古樹王與天穹堡壘艦接踵壓境！精算高階雙元／三元融合一舉擊破三巨頭。',
+                descEn: 'Three armored Stage Bosses march in sequence! Forge 3★/4★ merged towers to execute all three.',
+                hintZh: '建議運用火系破甲 ＋ 冰雷破盾高階融合壓制三王弱點',
+                hintEn: 'Tip: Combine Fire shred + Ice/Thunder burst to counter all 3 Boss weaknesses',
                 queueSpecs: [
-                    { type: 'bomber', count: 3, intervalMs: 900, waveLevel: 8 },
-                    { type: 'golem', count: 2, intervalMs: 1100, waveLevel: 8 },
-                    { type: 'lava', count: 1, intervalMs: 1200, waveLevel: 6, isBoss: true }
+                    { type: 'golem', count: 2, intervalMs: 950, waveLevel: 8 },
+                    { type: 'lava', count: 1, intervalMs: 1400, waveLevel: 5, bossWaveRef: 5, bossHpScale: 0.45, isBoss: true },
+                    { type: 'wood', count: 1, intervalMs: 1500, waveLevel: 10, bossWaveRef: 10, bossHpScale: 0.30, isBoss: true },
+                    { type: 'air', count: 1, intervalMs: 1600, waveLevel: 15, bossWaveRef: 15, bossHpScale: 0.22, isBoss: true }
                 ]
             }
         ],
@@ -284,7 +285,7 @@
         const w = Math.max(1, Math.floor(Number(waveNum) || 1));
         if (w >= 10 && w % 5 === 0) return 'eclipse';
         const cycle = ['sun', 'snow', 'storm'];
-        const baseIdx = mapId === 'frost' ? 1 : (mapId === 'lava' ? 2 : 0);
+        const baseIdx = mapId === 'frost' ? 1 : ((mapId === 'lava' || mapId === 'thunder_isles') ? 2 : 0);
         const offset = ((Math.floor(Number(seedOffset) || 0) % 3) + 3) % 3;
         const block = Math.floor((w - 1) / 3);
         return cycle[(baseIdx + offset + block) % 3];
@@ -293,12 +294,12 @@
     function getDailyChallengeSpec(dateKey) {
         const key = String(dateKey || getTodayDateKey());
         const rng = createSeededRng(`daily:${key}`);
-        const maps = ['forest', 'lava', 'frost'];
+        const maps = ['forest', 'lava', 'frost', 'thunder_isles', 'blackmarket'];
         const weathers = ['sun', 'snow', 'storm'];
         const mapId = maps[Math.floor(rng() * maps.length)];
         const weatherIdx = Math.floor(rng() * weathers.length);
         const weather = weathers[weatherIdx];
-        const baseIdx = mapId === 'frost' ? 1 : (mapId === 'lava' ? 2 : 0);
+        const baseIdx = mapId === 'frost' ? 1 : ((mapId === 'lava' || mapId === 'thunder_isles') ? 2 : 0);
         const weatherSeedOffset = (weatherIdx - baseIdx + 3) % 3;
         const seedCode = hashSeedString(`daily:${key}`);
         return {

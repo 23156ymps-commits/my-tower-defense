@@ -917,6 +917,44 @@ body.map-frost .cell:nth-child(even) { background-color: #233138; }
     background-color: #2C302D;
 }
 
+.cell.terrain-charged_stone {
+    background-color: #20313A;
+    border: 1px solid rgba(74, 158, 191, 0.55);
+}
+.cell.terrain-charged_stone.is-charged-active {
+    background-color: #3D3219;
+    border: 2px solid var(--el-lightning);
+}
+.cell.terrain-treasure_rock {
+    background-color: #2A261E;
+    border: 1px solid #8A6B2F;
+    cursor: pointer;
+}
+.cell.terrain-treasure_rock:hover {
+    border-color: var(--el-lightning);
+    background-color: #373124;
+}
+.cell.path-cell.path-rift-a {
+    background-color: #1F343D;
+    border: 1.5px solid var(--el-ice);
+}
+.cell.path-cell.path-rift-b {
+    background-color: #352B19;
+    border: 1.5px solid var(--el-lightning);
+}
+.cell-rift-tag {
+    position: relative;
+    z-index: 2;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-primary);
+    background-color: rgba(27, 33, 30, 0.85);
+    padding: 1px 3px;
+    border-radius: 3px;
+    pointer-events: none;
+}
+
 .terrain-art {
     position: absolute;
     inset: 0;
@@ -1270,6 +1308,28 @@ body.map-frost .cell.path-cell {
 .m-boss-badge.weak-fire { border-color: var(--el-fire); }
 .m-boss-badge.weak-ice { border-color: var(--el-ice); }
 .m-boss-badge.weak-thunder { border-color: var(--el-lightning); }
+
+.m-affix-badge {
+    position: absolute;
+    bottom: -4px;
+    left: -5px;
+    max-width: calc(var(--cell-size) * 1.35);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.1;
+    padding: 0 3px;
+    border-radius: 4px;
+    background-color: #1B211E;
+    border: 1px solid #8A6B2F;
+    color: var(--el-lightning);
+    z-index: 14;
+}
+.m-affix-badge.affix-frenzied { border-color: var(--accent-cta); color: #F4C37A; }
+.m-affix-badge.affix-shield_regen { border-color: var(--el-ice); color: #A6D7E8; }
+.m-affix-badge.affix-bounty { border-color: var(--el-lightning); color: #E0B43C; }
 
 .boss-status-bar {
     position: absolute;
@@ -3298,6 +3358,50 @@ body.map-frost .cell.path-cell {
 }
 .outcome-mode-banner.hidden { display: none; }
 
+.daily-share-box {
+    margin: 8px 0 10px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: #1B211E;
+    border: 1px solid var(--border-subtle);
+    text-align: left;
+}
+.daily-share-box.hidden { display: none; }
+.daily-share-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.daily-share-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--el-lightning);
+}
+.daily-copy-btn {
+    padding: 4px 10px;
+    min-height: 28px;
+    border-radius: 5px;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    background-color: var(--accent-cta);
+    border: 1px solid var(--accent-cta);
+    color: #1B211E;
+}
+.daily-copy-btn:hover { background-color: #E28533; }
+.daily-share-preview {
+    margin: 0;
+    font-family: inherit;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+
 @media (max-width: 760px) {
     #start-overlay.lobby-fullscreen { padding: 10px 12px; }
     .lobby-mode-grid { grid-template-columns: 1fr; gap: 10px; }
@@ -3371,9 +3475,9 @@ body.map-frost .cell.path-cell {
 .map-selector-header { font-size: 18px; font-weight: 600; line-height: 1.35; color: var(--text-primary); margin: 0 0 8px 0; }
 .map-selector-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(156px, 1fr));
     align-items: stretch;
-    gap: 12px;
+    gap: 10px;
 }
 
 .map-card {
@@ -3426,6 +3530,8 @@ body.map-frost .cell.path-cell {
 .map-diff-badge.diff-std { color: #A8D5B5; }
 .map-diff-badge.diff-hard { color: #EE9B8F; }
 .map-diff-badge.diff-ice { color: #A6D7E8; }
+.map-diff-badge.diff-thunder { color: #E0B43C; }
+.map-diff-badge.diff-market { color: #F4C37A; }
 .map-card-desc {
     font-size: 12px;
     line-height: 1.5;

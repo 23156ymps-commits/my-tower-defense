@@ -424,7 +424,27 @@
     const EN_MAPS = {
         forest: { name: 'Sunlit Woods', desc: '41-cell winding path · Balanced classic defense' },
         lava: { name: 'Magma Canyon', desc: '31-cell short canyon · Start +10 💰 · Kill Gold +15%' },
-        frost: { name: 'Permafrost Rift', desc: '36-cell dual-lane · Start +15 💰 · Ice DMG +20%' }
+        frost: { name: 'Permafrost Rift', desc: '36-cell dual-lane · Start +15 💰 · Ice DMG +20%' },
+        thunder_isles: { name: 'Thunder Float Isles', desc: 'One-way Rift A → B · 3 Floatstones (+40% DMG cycle) · 12 Waves' },
+        blackmarket: { name: 'Barren Black Market', desc: '1 Free Blind Box/wave · 8 Treasure Rocks · 15 Waves' }
+    };
+
+    const EN_ELITE_AFFIXES = {
+        bounty: {
+            name: 'Bounty',
+            shortBadge: '💰Bounty',
+            desc: 'Grants extra bounty gold on kill (governed by wave soft cap).'
+        },
+        frenzied: {
+            name: 'Frenzied',
+            shortBadge: '⚡Frenzied',
+            desc: '+22% base speed, plus +15% extra speed below 50% HP.'
+        },
+        shield_regen: {
+            name: 'Shield Regen',
+            shortBadge: '🛡️Regen',
+            desc: 'Spawns with energy shield; restores 4% max shield every 2.5s (halved by Wound).'
+        }
     };
 
     const EN_TERRAINS = {
@@ -434,6 +454,10 @@
         mana_vein: { name: '✨ Mana Vein', shortTag: 'Spd +25%', tooltip: 'Mana Vein: Tower Attack Speed +25%' },
         world_tree: { name: '🌿 Tree Sanctuary', shortTag: 'DMG +20% max', tooltip: 'Sanctuary: Up to +20% DMG based on Tree HP' },
         obstacle: { name: '🪨 Ancient Boulder', shortTag: '45 💰 Clear', tooltip: 'Ancient Boulder: Click to clear for 45 💰 and unearth terrain' },
+        charged_stone: { name: '⚡ Charging Floatstone', shortTag: '+40% DMG Cycle', tooltip: 'Rotates 1 glowing stone every 2 waves: tower on glowing stone gains +40% DMG (B_power).' },
+        treasure_rock: { name: '🪨 Treasure Boulder', shortTag: '45 💰 Mine', tooltip: 'Click to mine for 45 💰: yields Gold (soft-capped), Universal Fruit, or a random 2★ tower.' },
+        teleport_rift: { name: '🌀 One-Way Teleport Rift (A → B)', shortTag: 'Thunder Isles Rift', tooltip: 'Enemies stepping onto Entry A warp straight to Exit B along the second island.' },
+        elite_affixes: { name: '🔱 W6+ Elite Affixes', shortTag: 'Bounty / Frenzied / Regen', tooltip: 'From Wave 6+, each Elite rolls 1 affix: Bounty (soft-capped bonus gold), Frenzied (haste burst), or Shield Regen (halved by Grievous Wound).' },
         leyline_links: {
             name: '🔗 Adjacent Leyline Links',
             shortTag: 'Max 2 Links · +18% Cap',
@@ -506,6 +530,11 @@
             snapshots.bosses = {};
             (d.monsters.BOSS_ROSTER || []).forEach((b) => {
                 snapshots.bosses[b.wave] = { name: b.name, traitDesc: b.traitDesc };
+            });
+            snapshots.eliteAffixes = {};
+            Object.keys(d.monsters.ELITE_AFFIXES || {}).forEach((k) => {
+                const af = d.monsters.ELITE_AFFIXES[k];
+                if (af) snapshots.eliteAffixes[k] = { name: af.name, desc: af.desc, shortBadge: af.shortBadge };
             });
         }
         if (!snapshots.blessings && d.tree && d.tree.BLESSINGS_MAP) {
@@ -604,6 +633,15 @@
                 if (src) {
                     b.name = src.name;
                     b.traitDesc = src.traitDesc;
+                }
+            });
+            Object.keys(snapshots.eliteAffixes || {}).forEach((k) => {
+                const af = d.monsters.ELITE_AFFIXES && d.monsters.ELITE_AFFIXES[k];
+                const src = (isEn ? EN_ELITE_AFFIXES[k] : null) || snapshots.eliteAffixes[k];
+                if (af && src) {
+                    af.name = src.name;
+                    af.desc = src.desc;
+                    af.shortBadge = src.shortBadge;
                 }
             });
         }
@@ -876,8 +914,8 @@
             setElText('mode-title-campaign', isEn ? 'Campaign' : '戰役關卡');
             setElText('mode-badge-campaign', isEn ? 'Story Maps' : '主線推進');
             setElText('mode-desc-campaign', isEn
-                ? 'Conquer Sunlit, Magma & Frost lanes across 10 waves for ★ ratings and +200 ★ first-clear bonus.'
-                : '推進晨光、熔岩與永凍三線戰場，挑戰 10 波魔王並贏取星級與首通 +200 ★ 榮譽。');
+                ? 'Conquer 5 elemental battlefields across 10-15 waves for ★ ratings and +200 ★ first-clear bonus.'
+                : '推進五大元素戰場，挑戰 10～15 波魔王並贏取星級與首通 +200 ★ 榮譽。');
             setElText('mode-enter-campaign', isEn ? 'Select Map ▸' : '選擇戰場 ▸');
             setElText('mode-title-endless', isEn ? 'Endless Trial' : '無盡試煉');
             setElText('mode-badge-endless', isEn ? 'Infinite Waves' : '極限生存');
@@ -934,7 +972,7 @@
             if (mapSecHead) mapSecHead.innerText = isEn ? 'Select Battlefield' : '選擇戰場地圖';
 
             const startSub = document.querySelector('#start-overlay .modal-subtitle');
-            if (startSub) startSub.innerText = isEn ? '15×10 Woodland Front · Defend 10 Waves' : '15×10 古林戰線 · 守護世界樹抵禦 10 波攻勢';
+            if (startSub) startSub.innerText = isEn ? '15×10 Woodland Front · Defend 10–15 Waves' : '15×10 古林戰線 · 守護世界樹抵禦 10～15 波攻勢';
 
             const mapCards = document.querySelectorAll('#map-selector-grid .map-card');
             mapCards.forEach((card) => {
@@ -954,6 +992,14 @@
                     if (nameEl) nameEl.innerText = isEn ? 'Permafrost Rift' : '永凍裂谷';
                     if (badgeEl) badgeEl.innerText = isEn ? 'Dual-Lane' : '雙路分線';
                     if (descEl) descEl.innerText = isEn ? '36-cell dual-lane · Start +15 💰 · Ice DMG +20%' : '36 格雙線匯流 · 初始 +15 💰 · 冰脈傷害 +20%';
+                } else if (id === 'thunder_isles') {
+                    if (nameEl) nameEl.innerText = isEn ? 'Thunder Float Isles' : '雷鳴浮島';
+                    if (badgeEl) badgeEl.innerText = isEn ? 'Rift +40%' : '浮島裂隙';
+                    if (descEl) descEl.innerText = isEn ? 'Rift A→B · 3 Floatstones +40% DMG · 12 Waves' : '單向裂隙 A→B · 3 浮石輪充 +40% 傷 · 12 波';
+                } else if (id === 'blackmarket') {
+                    if (nameEl) nameEl.innerText = isEn ? 'Barren Black Market' : '荒蕪黑市';
+                    if (badgeEl) badgeEl.innerText = isEn ? '15 Waves' : '極限 15 波';
+                    if (descEl) descEl.innerText = isEn ? '1 Free Box/wave · 8 Treasure Rocks · 15 Waves' : '每波 1 免費盲盒 · 8 藏寶巨石 · 15 波';
                 }
             });
 
@@ -1070,6 +1116,17 @@
             });
             setElText('victory-copy-report-btn', isEn ? 'Copy Battle Report' : '複製本局數據戰報');
             setElText('gameover-copy-report-btn', isEn ? 'Copy Battle Report' : '複製本局數據戰報');
+            setElText('victory-daily-share-title', isEn ? 'Daily Seed Scorecard' : '每日種子戰績卡');
+            setElText('gameover-daily-share-title', isEn ? 'Daily Seed Scorecard' : '每日種子戰績卡');
+            setElText('victory-daily-copy-btn', isEn ? 'Copy Scorecard' : '複製日期戰績卡');
+            setElText('gameover-daily-copy-btn', isEn ? 'Copy Scorecard' : '複製日期戰績卡');
+            setElText('guide-stage4-title', isEn ? 'Float Isles · Black Market · W6+ Affixes' : '浮島裂隙 · 黑市開採 · W6+ 菁英詞條');
+            setElText('guide-s4-k0', isEn ? '⚡ Floatstones / 🌀 Rift A→B (Thunder Isles)' : '⚡ 充能浮石 / 🌀 裂隙 A→B（雷鳴浮島）');
+            setElText('guide-s4-v0', isEn ? '2-Wave +40% DMG · One-Way Warp' : '2 波輪充 +40% 傷 · 單向躍遷');
+            setElText('guide-s4-k1', isEn ? '🪨 Treasure Boulders / 🎁 Free Box (Black Market)' : '🪨 藏寶巨石 / 🎁 免費盲盒（荒蕪黑市）');
+            setElText('guide-s4-v1', isEn ? '45 💰 Mine · 1 Free Box/Wave' : '45 💰 開採寶藏 · 每波 1 免費盒');
+            setElText('guide-s4-k2', isEn ? '🔱 W6+ Elite Affixes (Bounty / Frenzied / Regen)' : '🔱 W6+ 菁英詞條（賞金首 / 狂躁 / 再生）');
+            setElText('guide-s4-v2', isEn ? 'Soft-Capped Gold · Wound Halves Regen' : '掉金受軟上限 · 重傷減半回盾');
         }
 
         function getWeaknessLabel(weakness) {

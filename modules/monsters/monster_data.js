@@ -335,6 +335,44 @@
         }
     ];
 
+    const ELITE_AFFIXES = {
+        bounty: {
+            id: 'bounty',
+            name: '賞金首',
+            nameEn: 'Bounty',
+            shortBadge: '💰賞金',
+            shortBadgeEn: '💰Bounty',
+            goldRate: 0.85,
+            goldFlat: 12,
+            desc: '擊殺額外掉落豐厚賞金（併入單波非戰鬥淨收益軟上限控管）。',
+            descEn: 'Grants bonus gold on kill (governed by wave non-combat soft cap).'
+        },
+        frenzied: {
+            id: 'frenzied',
+            name: '狂躁',
+            nameEn: 'Frenzied',
+            shortBadge: '⚡狂躁',
+            shortBadgeEn: '⚡Frenzied',
+            speedMult: 1.22,
+            lowHpBonus: 0.15,
+            desc: '基礎移速 +22%，血量低於 50% 時額外狂暴加速 +15%。',
+            descEn: '+22% base speed, plus +15% extra speed below 50% HP.'
+        },
+        shield_regen: {
+            id: 'shield_regen',
+            name: '護盾再生',
+            nameEn: 'Shield Regen',
+            shortBadge: '🛡️再生',
+            shortBadgeEn: '🛡️Regen',
+            shieldRatio: 0.30,
+            extraShieldRatio: 0.20,
+            regenIntervalMs: 2500,
+            regenRatio: 0.04,
+            desc: '進場附帶能量護盾，每 2.5 秒回復 4% 最大護盾（受灼燒重傷減半）。',
+            descEn: 'Spawns with energy shield; regenerates 4% max shield every 2.5s (halved by Grievous Wound).'
+        }
+    };
+
     const SPECIAL_MECHANIC_MONSTERS = new Set(
         Object.keys(MONSTER_DATABASE).filter(k => Boolean(MONSTER_DATABASE[k] && MONSTER_DATABASE[k].isSpecialMechanic))
     );
@@ -352,6 +390,7 @@
         GLOBAL_MONSTER_RULES,
         MONSTER_DATABASE,
         BOSS_ROSTER,
+        ELITE_AFFIXES,
         SPECIAL_MECHANIC_MONSTERS
     };
 
@@ -359,6 +398,7 @@
         Object.assign(global.GameConfig, {
             MONSTER_DATABASE,
             BOSS_ROSTER,
+            ELITE_AFFIXES,
             SPECIAL_MECHANIC_MONSTERS
         });
     }

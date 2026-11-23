@@ -703,12 +703,21 @@
             const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
             const st = (runtime && runtime.state) || {};
             const routesData = (GameApp.data && GameApp.data.routes && GameApp.data.routes.MAPS_CONFIG) || {};
-            const mapSpec = routesData[st.currentMapId] || {
-                name: st.currentMapId === 'lava'
-                    ? (isEn ? 'Magma Canyon' : '熔岩峽谷')
-                    : (st.currentMapId === 'frost' ? (isEn ? 'Permafrost Rift' : '永凍裂谷') : (isEn ? 'Sunlit Woods' : '晨光森林'))
+            const WaveSys = GameApp.systems && GameApp.systems.wave;
+            const fallbackMapNames = {
+                forest: isEn ? 'Sunlit Woods' : '晨光森林',
+                lava: isEn ? 'Magma Canyon' : '熔岩峽谷',
+                frost: isEn ? 'Permafrost Rift' : '永凍裂谷',
+                thunder_isles: isEn ? 'Thunder Float Isles' : '雷鳴浮島',
+                blackmarket: isEn ? 'Barren Black Market' : '荒蕪黑市'
             };
-            const victoryWave = CONFIG.VICTORY_WAVE || 10;
+            const mapSpec = routesData[st.currentMapId] || {
+                name: fallbackMapNames[st.currentMapId] || fallbackMapNames.forest,
+                victoryWave: st.currentMapId === 'thunder_isles' ? 12 : (st.currentMapId === 'blackmarket' ? 15 : 10)
+            };
+            const victoryWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+                ? WaveSys.getMapVictoryWave(mapSpec)
+                : (Number(mapSpec.victoryWave) || CONFIG.VICTORY_WAVE || 10);
             const modeTag = st.gameMode === 'daily'
                 ? (isEn ? `[Daily Seed ${st.dailyDateKey || ''}${st.weatherType ? ` · ${st.weatherType}` : ''}] ` : `【每日種子 ${st.dailyDateKey || ''}${st.weatherType ? ` · ${st.weatherType}` : ''}】`)
                 : (st.gameMode === 'puzzle'
@@ -831,6 +840,92 @@
         }
     }
 
+    function generateDailyShareCardText(runtime, outcomeMode = 'victory') {
+        try {
+            const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+            const st = (runtime && runtime.state) || (GameApp.runtime && GameApp.runtime.state) || {};
+            const routesData = (GameApp.data && GameApp.data.routes && GameApp.data.routes.MAPS_CONFIG) || {};
+            const WaveSys = GameApp.systems && GameApp.systems.wave;
+            const mapSpec = routesData[st.currentMapId] || {};
+            const victoryWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
+                ? WaveSys.getMapVictoryWave(mapSpec)
+                : (Number(mapSpec.victoryWave) || CONFIG.VICTORY_WAVE || 10);
+            const fallbackNames = {
+                forest: isEn ? 'Sunlit Woods' : '晨光森林',
+                lava: isEn ? 'Magma Canyon' : '熔岩峽谷',
+                frost: isEn ? 'Permafrost Rift' : '永凍裂谷',
+                thunder_isles: isEn ? 'Thunder Float Isles' : '雷鳴浮島',
+                blackmarket: isEn ? 'Barren Black Market' : '荒蕪黑市'
+            };
+            const mapName = mapSpec.name || fallbackNames[st.currentMapId] || st.currentMapId || 'forest';
+            const dateKey = st.dailyDateKey || (GameApp.helpers && typeof GameApp.helpers.getTodayDateKey === 'function' ? GameApp.helpers.getTodayDateKey() : '2026-01-01');
+            const seedHex = Number(st.dailySeedCode || 0).toString(16).toUpperCase().padStart(8, '0');
+            const wCat = (GameApp.data && GameApp.data.weather) || (CONFIG && CONFIG.WEATHER_CATALOG) || {};
+            const wSpec = wCat[st.weatherType] || { icon: '☀️', nameZh: '熾陽季', nameEn: 'Sunlit Blaze' };
+            const weatherStr = `${wSpec.icon || '☀️'} ${isEn ? (wSpec.nameEn || st.weatherType) : (wSpec.nameZh || st.weatherType)}`;
+            const maxHp = Math.max(1, Number(st.maxBaseHp) || 20);
+            const curHp = Math.max(0, Number(st.baseHp) || 0);
+            const isWin = outcomeMode === 'victory';
+            let starsNum = 0;
+            if (isWin) {
+                starsNum = curHp >= maxHp ? 3 : (curHp >= Math.ceil(maxHp * 0.5) ? 2 : 1);
+            }
+            const starsBadge = starsNum > 0 ? ' ' + '★'.repeat(starsNum) : '';
+            const count = (st.activeContracts && st.activeContracts.size) || 0;
+            const mult = 1 + count * (CONFIG.CONTRACT_SCORE_BONUS_PER_ITEM || 0.15);
+            const baseScore = Math.max(0, (st.currentWave || 1) * 120 + (st.killsCount || 0) * 8 + curHp * 35);
+            const honorScore = Math.round(baseScore * mult);
+            const mvpText = (GameApp.game && typeof GameApp.game.getMvpSummaryText === 'function')
+                ? GameApp.game.getMvpSummaryText()
+                : (isEn ? 'None' : '無');
+
+            if (isEn) {
+                return [
+                    `[Elemental Frontline · Daily Seed ${dateKey}]`,
+                    `Seed #${seedHex} | ${mapName} | ${weatherStr}`,
+                    `${isWin ? `Victory${starsBadge}` : 'Defeated'} · Wave ${st.currentWave || 1}/${victoryWave} · ❤️ ${curHp}/${maxHp} · Honor ${honorScore.toLocaleString()} ★`,
+                    `Kills ${st.killsCount || 0} | MVP: ${mvpText}`
+                ].join('\n');
+            }
+            return [
+                `【元素陣線 · 每日種子 ${dateKey}】`,
+                `種子 #${seedHex}｜${mapName}｜${weatherStr}`,
+                `${isWin ? `防守成功${starsBadge}` : '防線失守'} · 第 ${st.currentWave || 1}/${victoryWave} 波 · ❤️ ${curHp}/${maxHp} · 榮譽 ${honorScore.toLocaleString()} ★`,
+                `擊殺 ${st.killsCount || 0} 隻｜MVP：${mvpText}`
+            ].join('\n');
+        } catch (_) {
+            return (GameApp.i18n && GameApp.i18n.isEnglish())
+                ? '[Elemental Frontline · Daily Seed Scorecard]'
+                : '【元素陣線 · 每日種子戰績卡】';
+        }
+    }
+
+    async function copyDailyShareCardToClipboard(runtime, outcomeMode = 'victory') {
+        const text = generateDailyShareCardText(runtime, outcomeMode);
+        GameApp.lastCopiedDailyCard = text;
+        try {
+            if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(text);
+                return { ok: true, text };
+            }
+        } catch (_) {}
+        try {
+            if (typeof document !== 'undefined') {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', 'true');
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                return { ok: true, text };
+            }
+        } catch (_) {}
+        return { ok: false, text };
+    }
+
     async function copyBattleReportToClipboard(runtime, outcomeMode = 'victory') {
         const text = generateBattleReportText(runtime, outcomeMode);
         GameApp.lastCopiedReport = text;
@@ -868,7 +963,9 @@
         const defaults = {
             forest: { bestWave: legacyBest, bestStars: 0 },
             lava: { bestWave: 1, bestStars: 0 },
-            frost: { bestWave: 1, bestStars: 0 }
+            frost: { bestWave: 1, bestStars: 0 },
+            thunder_isles: { bestWave: 1, bestStars: 0 },
+            blackmarket: { bestWave: 1, bestStars: 0 }
         };
         try {
             const raw = safeCloudStorageGet(CONFIG.STORAGE_MAP_RECORDS_KEY || 'merge_defense_map_records');
@@ -969,9 +1066,8 @@
     function loadCareerStats() {
         const records = loadMapRecords();
         const maxFromMaps = Math.max(
-            (records.forest && records.forest.bestWave) || 1,
-            (records.lava && records.lava.bestWave) || 1,
-            (records.frost && records.frost.bestWave) || 1
+            1,
+            ...Object.keys(records).map(id => (records[id] && records[id].bestWave) || 1)
         );
         const career = {
             bestWaveOverall: maxFromMaps,
@@ -1124,9 +1220,8 @@
 
         safeCloudStorageSet(CONFIG.STORAGE_MAP_RECORDS_KEY || 'merge_defense_map_records', JSON.stringify(records));
         const maxOverall = Math.max(
-            (records.forest && records.forest.bestWave) || 1,
-            (records.lava && records.lava.bestWave) || 1,
-            (records.frost && records.frost.bestWave) || 1
+            1,
+            ...Object.keys(records).map(id => (records[id] && records[id].bestWave) || 1)
         );
         safeCloudStorageSet(CONFIG.STORAGE_BEST_WAVE_KEY || 'merge_defense_best_wave', String(maxOverall));
 
@@ -1192,6 +1287,8 @@
         getRunTelemetry: () => runTelemetry,
         generateBattleReportText,
         copyBattleReportToClipboard,
+        generateDailyShareCardText,
+        copyDailyShareCardToClipboard,
         loadMapRecords,
         wasMapCleared,
         isEndlessUnlocked,
