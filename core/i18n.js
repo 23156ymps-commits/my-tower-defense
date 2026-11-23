@@ -26,21 +26,21 @@
     const EN_TOWERS = {
         fire_bud: {
             name: 'Fire Bud', shortName: 'Fire 1★',
-            shopRoleTag: 'Shred 25% · 25 DMG',
+            shopRoleTag: '25% Shred · 25',
             roleSummary: 'Single Armor Shred (25%)',
             tooltipSummary: 'Hits shred 25% target armor for 3.0s',
             lineagePath: '🔥 Fire Bud'
         },
         ice_bud: {
             name: 'Ice Bud', shortName: 'Ice 1★',
-            shopRoleTag: 'Slow 40% · 15 DMG',
+            shopRoleTag: '40% Slow · 15',
             roleSummary: 'Slow Control (40%)',
             tooltipSummary: 'Slows target by 40% for 2.0s',
             lineagePath: '❄️ Ice Bud'
         },
         thunder_bud: {
             name: 'Thunder Bud', shortName: 'Thunder 1★',
-            shopRoleTag: 'Chain ×2 · 13 DMG',
+            shopRoleTag: 'Chain ×2 · 13',
             roleSummary: '2-Target Lightning Chain',
             tooltipSummary: 'Arcs to 2 targets; +30% vs Air/Armor',
             lineagePath: '⚡ Thunder Bud'
@@ -173,6 +173,151 @@
             roleSummary: '4-Stack Main + 2 Refract Beams',
             tooltipSummary: 'Focus main target + refracts 50% beam to 2 foes',
             lineagePath: '☄️ Hi-Plasma 2★ ▸ B Prism Refractor'
+        },
+        // ==================== Tier 4（18 座極意古冠／雙生神冠，8U）與 Tier 5（6 座世界樹神裔，16U） ====================
+        fire_crown_A: {
+            name: 'Solar Forge Crown', shortName: '🔥A Mastery',
+            roleSummary: '1.6 Splash + 55% AoE Shred (4★ Mastery)',
+            tooltipSummary: '1.6-cell 72% splash + 55% shred (4.5s) · Faster ATK',
+            lineagePath: '🔥 Ember 2★ ▸ A Core Bombardier ▸ Solar Forge 4★'
+        },
+        fire_crown_B: {
+            name: 'Eternal Cinder Crown', shortName: '🔥B Mastery',
+            roleSummary: '7-Stack Burn + 60% Wound + <16% Exec (4★ Mastery)',
+            tooltipSummary: '7-stack contagious burn + 60% wound + <16% exec · Faster ATK',
+            lineagePath: '🔥 Ember 2★ ▸ B Cinder Sovereign ▸ Eternal Cinder 4★'
+        },
+        fire_twin_AB: {
+            name: 'Twin Cinderforge Crown', shortName: '🔥AB Twin Crown',
+            roleSummary: '1.4 Splash Shred (45%) + 5-Stack Burn (<14% Exec)',
+            tooltipSummary: '1.4-cell 65% splash shred (45%) + 5-stack burn (<14% exec)',
+            lineagePath: '🔥 Bombardier + Cinder ▸ Twin Cinderforge 4★'
+        },
+        fire_scion: {
+            name: 'Blazeking Scion', shortName: '🔥World Scion',
+            roleSummary: 'Full Mortar + Burn Scion · 1.5% True DMG · 2.2 Aura + Pulse',
+            tooltipSummary: 'Full Mortar + Burn Scion · 1.5% True DMG · 2.2 Aura + Pulse',
+            lineagePath: '🔥 Fire 2★ ▸ Twin Cinderforge 4★ ▸ Blazeking Scion 5★'
+        },
+        ice_crown_A: {
+            name: 'Whiteout Prison Crown', shortName: '❄️A Mastery',
+            roleSummary: '1.8 Slow 65% + 3-Hit Freeze (4★ Mastery)',
+            tooltipSummary: '1.8-cell 65% slow · 3rd hit freezes 1.1s · Faster ATK',
+            lineagePath: '❄️ Frost 2★ ▸ A Permafrost Domain ▸ Whiteout 4★'
+        },
+        ice_crown_B: {
+            name: 'Worldpierce Ice Crown', shortName: '❄️B Mastery',
+            roleSummary: '3-Target Pierce +75% Shatter (4★ Mastery)',
+            tooltipSummary: 'Pierces 3 targets · +75% shatter vs slow/freeze · Faster ATK',
+            lineagePath: '❄️ Frost 2★ ▸ B Icicle Piercer ▸ Worldpierce 4★'
+        },
+        ice_twin_AB: {
+            name: 'Twin Frostedge Crown', shortName: '❄️AB Twin Crown',
+            roleSummary: '1.6 Slow 60% Freeze + 2-Pierce (+60% Shatter)',
+            tooltipSummary: '1.6-cell 60% slow (4-hit freeze) + 2-pierce (+60% shatter)',
+            lineagePath: '❄️ Permafrost + Icicle ▸ Twin Frostedge 4★'
+        },
+        ice_scion: {
+            name: 'Absolutefrost Scion', shortName: '❄️World Scion',
+            roleSummary: 'Full Freeze + Pierce Scion · +15% Brittle · 2.2 Aura + Pulse',
+            tooltipSummary: 'Full Freeze + Pierce Scion · +15% Brittle · 2.2 Aura + Pulse',
+            lineagePath: '❄️ Ice 2★ ▸ Twin Frostedge 4★ ▸ Absolutefrost Scion 5★'
+        },
+        thunder_crown_A: {
+            name: 'Skynet Tempest Crown', shortName: '⚡A Mastery',
+            roleSummary: '5-Target Chain Lightning (4★ Mastery)',
+            tooltipSummary: '5-target chain lightning (3.0-cell arc) · Faster ATK',
+            lineagePath: '⚡ Volt 2★ ▸ A Tempest Chain ▸ Skynet 4★'
+        },
+        thunder_crown_B: {
+            name: 'Doomsday Verdict Crown', shortName: '⚡B Mastery',
+            roleSummary: '3rd Hit 2.8x + 55% Armor Pierce (4★ Mastery)',
+            tooltipSummary: 'Every 3rd thunder hit 2.8x DMG + 55% pierce · Faster ATK',
+            lineagePath: '⚡ Volt 2★ ▸ B Sky Judgment ▸ Verdict 4★'
+        },
+        thunder_twin_AB: {
+            name: 'Twin Skybolt Crown', shortName: '⚡AB Twin Crown',
+            roleSummary: '4-Target Chain + Every 3rd Hit 2.4x Pierce',
+            tooltipSummary: '4-target lightning chain + every 3rd hit 2.4x pierce judgment',
+            lineagePath: '⚡ Tempest + Judgment ▸ Twin Skybolt 4★'
+        },
+        thunder_scion: {
+            name: 'Apexbolt Scion', shortName: '⚡World Scion',
+            roleSummary: 'Full Tempest + Verdict Scion · <10% Exec · 2.2 Aura + Pulse',
+            tooltipSummary: 'Full Tempest + Verdict Scion · <10% Exec · 2.2 Aura + Pulse',
+            lineagePath: '⚡ Volt 2★ ▸ Twin Skybolt 4★ ▸ Apexbolt Scion 5★'
+        },
+        steam_crown_A: {
+            name: 'Abyssal Boiler Crown', shortName: '💨A Mastery',
+            roleSummary: '75% Pierce Splash + 3.6s Steam Pool (4★ Mastery)',
+            tooltipSummary: '75% pierce + 1.65 splash + 3.6s steam pool (52/s) · Faster ATK',
+            lineagePath: '💨 Hi-Steam 2★ ▸ A Pressure ▸ Abyssal Boiler 4★'
+        },
+        steam_crown_B: {
+            name: 'Eternal Bonefog Crown', shortName: '💨B Mastery',
+            roleSummary: '1.9 Mist 45% Slow +30% Vuln +15% Gold (4★ Mastery)',
+            tooltipSummary: '1.9-cell fog 45% slow + 30% vuln + 15% kill gold · Faster ATK',
+            lineagePath: '💨 Hi-Steam 2★ ▸ B Frostmist ▸ Eternal Bonefog 4★'
+        },
+        steam_twin_AB: {
+            name: 'Twin Steammist Crown', shortName: '💨AB Twin Crown',
+            roleSummary: '65% Pierce Splash + 36/s Pool + 1.6 Fog (+22% Vuln)',
+            tooltipSummary: '65% pierce splash + 36/s steam pool + 1.6 mist (+22% vuln)',
+            lineagePath: '💨 Pressure + Frostmist ▸ Twin Steammist 4★'
+        },
+        steam_scion: {
+            name: 'Palemist Scion', shortName: '💨World Scion',
+            roleSummary: 'Full Pressure + Fog Scion · +25% Pierce +0.4 Spread · Aura + Pulse',
+            tooltipSummary: 'Full Pressure + Fog Scion · +25% Pierce +0.4 Spread · Aura + Pulse',
+            lineagePath: '💨 Steam 2★ ▸ Twin Steammist 4★ ▸ Palemist Scion 5★'
+        },
+        magnet_crown_A: {
+            name: 'Singularity Crown', shortName: '💠A Mastery',
+            roleSummary: '1.8 Slow 52% + Pull Every 2nd Hit (4★ Mastery)',
+            tooltipSummary: '1.8-cell 52% slow · 2nd pulse pulls 0.55 cells · Faster ATK',
+            lineagePath: '💠 Hi-Magnet 2★ ▸ A Gravity ▸ Singularity 4★'
+        },
+        magnet_crown_B: {
+            name: 'Overclock Grid Crown', shortName: '💠B Mastery',
+            roleSummary: '4-Bounce + 4.2s Heavy Shock (4★ Mastery)',
+            tooltipSummary: '4 bounces (82%) + 4.2s heavy Shock aura · Faster ATK',
+            lineagePath: '💠 Hi-Magnet 2★ ▸ B Overload ▸ Overclock Grid 4★'
+        },
+        magnet_twin_AB: {
+            name: 'Twin Fluxdome Crown', shortName: '💠AB Twin Crown',
+            roleSummary: '1.6 Slow + 0.5 Pull + 3-Target Shock (10+2.5*W)',
+            tooltipSummary: '1.6-cell slow + 0.5-cell pull + 3-target Shock (10+2.5*Wave)',
+            lineagePath: '💠 Gravity + Overload ▸ Twin Fluxdome 4★'
+        },
+        magnet_scion: {
+            name: 'Starmagnet Scion', shortName: '💠World Scion',
+            roleSummary: 'Full Flux + Shock Scion · Periodic Root · 2.2 Aura + Pulse',
+            tooltipSummary: 'Full Flux + Shock Scion · Periodic Root · 2.2 Aura + Pulse',
+            lineagePath: '💠 Magnet 2★ ▸ Twin Fluxdome 4★ ▸ Starmagnet Scion 5★'
+        },
+        plasma_crown_A: {
+            name: 'Starburst Annihilation Crown', shortName: '☄️A Mastery',
+            roleSummary: '10-Stack Focus (+20%/stk) + 55% Pierce (4★ Mastery)',
+            tooltipSummary: '10 focus stacks (+20%/stk) + 55% pierce (≥4 stk) · Faster ATK',
+            lineagePath: '☄️ Hi-Plasma 2★ ▸ A Deathray ▸ Starburst 4★'
+        },
+        plasma_crown_B: {
+            name: 'Prismatic Horizon Crown', shortName: '☄️B Mastery',
+            roleSummary: '5-Stack Focus + 3 Refract Beams (4★ Mastery)',
+            tooltipSummary: '5 focus stacks (+18%/stk) + 3 refract beams (62%) · Faster ATK',
+            lineagePath: '☄️ Hi-Plasma 2★ ▸ B Prism ▸ Prismatic 4★'
+        },
+        plasma_twin_AB: {
+            name: 'Twin Arcprism Crown', shortName: '☄️AB Twin Crown',
+            roleSummary: '8-Stack Focus (≥5 Stk 45% Pierce) + 2 Refract Beams',
+            tooltipSummary: '8-stack focus (45% pierce) + 2 refract beams (55% dmg)',
+            lineagePath: '☄️ Deathray + Prism ▸ Twin Arcprism 4★'
+        },
+        plasma_scion: {
+            name: 'Radiantbeam Scion', shortName: '☄️World Scion',
+            roleSummary: 'Full Beam + Prism Scion (Max 12 Stacks) · 2.2 Aura + Pulse',
+            tooltipSummary: 'Full Beam + Prism Scion (Max 12 Stacks) · 2.2 Aura + Pulse',
+            lineagePath: '☄️ Plasma 2★ ▸ Twin Arcprism 4★ ▸ Radiantbeam Scion 5★'
         }
     };
     // 兼容 fire / ice / thunder / steam / magnet / plasma 舊鍵別名（供怪物弱點標籤與相剋查詢同步顯示英文）
@@ -235,9 +380,9 @@
     };
 
     const EN_MAPS = {
-        forest: { name: '🌲 Sunlit Woods', desc: '41-cell winding path · Balanced classic defense' },
-        lava: { name: '🌋 Magma Canyon', desc: '31-cell short canyon · Start +10 💰 · Kill Gold +15%' },
-        frost: { name: '❄️ Permafrost Rift', desc: '36-cell dual-lane · Start +15 💰 · Ice DMG +20%' }
+        forest: { name: 'Sunlit Woods', desc: '41-cell winding path · Balanced classic defense' },
+        lava: { name: 'Magma Canyon', desc: '31-cell short canyon · Start +10 💰 · Kill Gold +15%' },
+        frost: { name: 'Permafrost Rift', desc: '36-cell dual-lane · Start +15 💰 · Ice DMG +20%' }
     };
 
     const EN_TERRAINS = {
@@ -373,7 +518,7 @@
             if (typeof d.towers.syncLegacyAliases === 'function') d.towers.syncLegacyAliases();
             if (d.towers.TARGET_MODE_LABELS) {
                 Object.assign(d.towers.TARGET_MODE_LABELS, isEn
-                    ? { first: 'First', armor: 'Armor', lowhp: 'Low HP' }
+                    ? { first: 'First', armor: 'Armor', lowhp: 'LowHP' }
                     : snapshots.targetLabels);
             }
         }
@@ -496,10 +641,16 @@
         const langBtn = document.getElementById('lang-btn');
         if (langBtn) {
             langBtn.title = isEn ? 'Switch Language / 切換語言' : '切換語言 / Switch Language';
+            langBtn.setAttribute('aria-label', isEn ? 'Switch Language' : '切換語言');
+            const lbl = document.getElementById('lang-btn-label') || langBtn.querySelector('span');
+            if (lbl) lbl.innerText = isEn ? 'Language ▾' : '語言 ▾';
         }
         const startLangBtn = document.getElementById('start-lang-btn');
         if (startLangBtn) {
             startLangBtn.title = isEn ? 'Switch Language / 切換語言' : '切換語言 / Switch Language';
+            startLangBtn.setAttribute('aria-label', isEn ? 'Switch Language' : '切換語言');
+            const lbl = document.getElementById('start-lang-btn-label') || startLangBtn.querySelector('span');
+            if (lbl) lbl.innerText = isEn ? 'Language ▾' : '語言 ▾';
         }
         document.querySelectorAll('.lang-option').forEach((opt) => {
             const active = opt.dataset.lang === (isEn ? 'en' : 'zh-TW');
@@ -511,12 +662,43 @@
         if (sideLeftEl) sideLeftEl.setAttribute('aria-label', isEn ? 'Elemental Counters & Terrain Quick Reference' : '元素相剋與地形加成速查');
         const sideRightEl = document.getElementById('side-panel-right');
         if (sideRightEl) sideRightEl.setAttribute('aria-label', isEn ? 'Current and Next Wave Details' : '本波與下波出怪詳情');
+        const guildPanelEl = document.getElementById('world-tree-guild-panel');
+        if (guildPanelEl) guildPanelEl.setAttribute('aria-label', isEn ? 'World Tree Guild Drawer' : '世界樹商會波間抽屜');
+        const guildTabsBarEl = document.querySelector('.guild-tabs-bar');
+        if (guildTabsBarEl) guildTabsBarEl.setAttribute('aria-label', isEn ? 'World Tree Guild Tabs' : '世界樹商會分頁');
+        const rootPanelEl = document.getElementById('world-tree-root-panel');
+        if (rootPanelEl) rootPanelEl.setAttribute('aria-label', isEn ? 'Treasure Roots Management System' : '世界樹聚寶根鬚經營系統');
+        const guildCloseBtn = document.getElementById('guild-drawer-close-btn');
+        if (guildCloseBtn) {
+            guildCloseBtn.title = isEn ? 'Collapse Guild Drawer [B / Esc]' : '收合商會抽屜 [B / Esc]';
+            guildCloseBtn.setAttribute('aria-label', isEn ? 'Collapse Guild Drawer' : '收合商會抽屜');
+        }
+        const metaResetBtn = document.getElementById('meta-tree-reset-btn');
+        if (metaResetBtn) metaResetBtn.setAttribute('aria-label', isEn ? 'Reset Meta Rings' : '重置年輪');
+        const metaCloseBtn = document.getElementById('meta-tree-close-btn');
+        if (metaCloseBtn) metaCloseBtn.setAttribute('aria-label', isEn ? 'Close World Tree Meta Rings' : '關閉世界樹年輪');
+        const metaGridEl = document.getElementById('meta-tree-branches-grid');
+        if (metaGridEl) metaGridEl.setAttribute('aria-label', isEn ? 'World Tree Meta Ring Branches' : '世界樹年輪天賦分支');
         const codexCloseBtn = document.getElementById('codex-close-btn');
         if (codexCloseBtn) codexCloseBtn.setAttribute('aria-label', isEn ? 'Close Codex' : '關閉圖鑑');
         const victoryStarsEl = document.getElementById('victory-stars');
         if (victoryStarsEl) victoryStarsEl.setAttribute('aria-label', isEn ? 'Clear Stars' : '通關星級');
         const guideXBtn = document.getElementById('guide-x-btn');
         if (guideXBtn) guideXBtn.setAttribute('aria-label', isEn ? 'Close Tactical Field Guide' : '關閉戰術手冊');
+        setElText('guild-stock-title', isEn ? 'Element Stocks' : '元素股市');
+        document.querySelectorAll('#guild-stock-list .stock-row').forEach((row) => {
+            const elKey = row.dataset ? row.dataset.stockElement : '';
+            const nameEl = row.querySelector('.stock-name');
+            if (nameEl) {
+                if (elKey === 'fire') nameEl.innerText = isEn ? '🔥 Fire Stock' : '🔥 火股';
+                else if (elKey === 'ice') nameEl.innerText = isEn ? '❄️ Ice Stock' : '❄️ 冰股';
+                else if (elKey === 'thunder') nameEl.innerText = isEn ? '⚡ Thunder Stock' : '⚡ 雷股';
+            }
+            const buyBtn = row.querySelector('.stock-buy-btn');
+            if (buyBtn) buyBtn.innerText = isEn ? 'Buy' : '買入';
+            const sellBtn = row.querySelector('.stock-sell-btn');
+            if (sellBtn) sellBtn.innerText = isEn ? 'Sell' : '賣出';
+        });
 
         // 頂部左側 HUD 標籤節點
         const hpItem = document.querySelector('.hud-hp');
@@ -581,8 +763,20 @@
             }
             if (leftList[2]) {
                 const rows = leftList[2].querySelectorAll('.side-panel-row');
-                const zh2 = [['異系 1★ + 1★', '轉職 1★'], ['同種 / 灌注 1★', '升星 2★'], ['同種 2★ + 2★', '冠枝 3★']];
-                const en2 = [['Cross 1★ + 1★', 'Job 1★'], ['Same / Infuse 1★', 'Star 2★'], ['Same 2★ + 2★', 'Crown 3★']];
+                const zh2 = [
+                    ['異系 1★ + 1★', '轉職 1★'],
+                    ['同種 / 灌注 1★', '升星 2★'],
+                    ['同種 2★ + 2★', '冠枝 3★'],
+                    ['同脈 3★ / 餵養', '古冠·雙生 4★'],
+                    ['同脈 4★ / 16U', '神裔 5★']
+                ];
+                const en2 = [
+                    ['Cross 1★ + 1★', 'Job 1★'],
+                    ['Same / Infuse 1★', 'Star 2★'],
+                    ['Same 2★ + 2★', 'Crown 3★'],
+                    ['Same 3★ / Feed', 'Crown·Twin 4★'],
+                    ['Same 4★ / 16U', 'Scion 5★']
+                ];
                 (isEn ? en2 : zh2).forEach((pair, idx) => {
                     if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
                     rows[idx].children[0].innerText = pair[0];
@@ -752,10 +946,10 @@
 
             document.querySelectorAll('.feel-rating-header').forEach(el => { el.innerText = isEn ? '5s Quick Playtest Rating' : '5 秒試玩體感快評'; });
             const ratingMap = [
-                ['🔥 爽快好玩', '🔥 Fun & Crisp'],
-                ['😴 中間有點無聊', '😴 Slow Midgame'],
-                ['🤯 難度太高卡關', '🤯 Too Hard'],
-                ['🖐️ 拖拉操作卡手', '🖐️ Clunky Drag']
+                ['爽快好玩', 'Fun & Crisp'],
+                ['中間有點無聊', 'Slow Midgame'],
+                ['難度太高卡關', 'Too Hard'],
+                ['拖拉操作卡手', 'Clunky Drag']
             ];
             document.querySelectorAll('.feel-rating-bar').forEach(bar => {
                 bar.querySelectorAll('.feel-rating-btn').forEach((btn, idx) => {

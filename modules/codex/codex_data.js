@@ -314,21 +314,21 @@
                 title: '🌿 蔓藤巨魔',
                 subtitle: '弱點：🔥 火屬性（175% 暴擊）',
                 desc: '森林常見的堅韌樹怪，移速均衡，部署火芽或焚世餘燼樹可迅速瓦解其防線。',
-                unlockRule: 'Wave 1 起登場',
+                unlockRule: '第 1 波起登場',
                 defaultUnlocked: true
             },
             lava: {
                 title: '🌋 熔岩傀儡',
                 subtitle: '弱點：❄️ 冰屬性（175% 暴擊）',
                 desc: '由熾熱岩漿凝聚而成的重步兵，血量偏高，懼怕寒霜緩速與永凍凍結。',
-                unlockRule: 'Wave 1 起登場',
+                unlockRule: '第 1 波起登場',
                 defaultUnlocked: true
             },
             air: {
                 title: '🛸 機械飛艇',
                 subtitle: '弱點：⚡ 雷屬性（175% 暴擊）',
                 desc: '高速推進的古代浮空艇，能迅速掠過前線，宜用長射程雷芽／落雷審判樹攔截。',
-                unlockRule: 'Wave 1 起登場',
+                unlockRule: '第 1 波起登場',
                 defaultUnlocked: true
             },
             hound: {
@@ -442,48 +442,102 @@
         plasma_twin: '8 層聚變死光＋雙副束折射雙極'
     };
 
+    const ATTACK_STYLE_LABELS_EN = {
+        burst_armor_break: 'Armor-Shredding Burst',
+        fire_A_mortar: 'AoE Splash + Armor Shred Mortar',
+        fire_B_ember: '5-Stack Contagious Burn & Execute',
+        slow_control: 'Frost Slow Control',
+        ice_A_permafrost: 'AoE Slow & 4-Hit Permafrost Freeze',
+        ice_B_icicle: 'Linear Pierce & Shatter Bonus',
+        chain_lightning: 'Multi-Target Non-Repeating Chain',
+        thunder_B_judgment: 'Long-Range Snipe & Sky Judgment',
+        aoe_mist: 'Armor-Piercing Steam Splash',
+        steam_A_pressure: 'High-Pierce Steam Pool Burn',
+        steam_B_fog: 'Chilling Mist AoE Slow & Vuln',
+        stun_pulse: 'AoE Slow + Shock Bounces',
+        magnet_A_singularity: 'Gravity Well Path Pull-Back',
+        magnet_B_overload: '3-Target Bounce + Heavy Shock',
+        pierce_beam: 'High-Frequency Focus Beam',
+        plasma_A_deathray: '8-Stack Overcharged Deathray',
+        plasma_B_refract: 'Primary Beam + Twin Refract Arcs',
+        fire_twin: 'Dual Mortar Shred + Burn Execute',
+        ice_twin: 'Dual Permafrost Freeze + Icicle Pierce',
+        thunder_twin: 'Dual Chain Grid + 2.4x Verdict',
+        steam_twin: 'Dual Steam Pool + Chilling Fog Vuln',
+        magnet_twin: 'Dual Gravity Pull + Shock Overload',
+        plasma_twin: 'Dual 8-Stack Deathray + Refract Beams'
+    };
+
     /**
      * 為未在 codex_data.js 填寫文案的新增防禦塔（含 4★ 極意／雙生與 5★ 世界樹神裔）自動生成完整圖鑑卡
      */
     function buildFallbackTowerCard(towerKey, towerCfg) {
+        const isEn = Boolean(GameApp.i18n && typeof GameApp.i18n.isEnglish === 'function' && GameApp.i18n.isEnglish());
         const tierNum = Number(towerCfg.nodeTier || towerCfg.tier) || 1;
         const dmgVal = Number.isFinite(towerCfg.damage)
             ? towerCfg.damage
             : (Array.isArray(towerCfg.tierDamage) ? towerCfg.tierDamage[tierNum] || towerCfg.tierDamage[1] : 25);
         const sec = Number(((towerCfg.attackIntervalMs || 1000) / 1000).toFixed(2));
-        const styleText = ATTACK_STYLE_LABELS[towerCfg.attackStyle] || towerCfg.attackStyle || '元素打擊';
-        const badgesText = Array.isArray(towerCfg.badges) && towerCfg.badges.length > 0
-            ? towerCfg.badges.join(' · ')
-            : styleText;
-        const lineage = Array.isArray(towerCfg.defaultLineagePath)
-            ? towerCfg.defaultLineagePath.join(' ▸ ')
-            : (towerCfg.lineagePath || `${towerCfg.icon || '🔥'} ${towerCfg.name || towerKey}`);
+        const styleText = isEn
+            ? (ATTACK_STYLE_LABELS_EN[towerCfg.attackStyle] || towerCfg.attackStyle || 'Elemental Strike')
+            : (ATTACK_STYLE_LABELS[towerCfg.attackStyle] || towerCfg.attackStyle || '元素打擊');
+        const badgesText = isEn
+            ? (towerCfg.tooltipSummary || towerCfg.roleSummary || styleText)
+            : (Array.isArray(towerCfg.badges) && towerCfg.badges.length > 0 ? towerCfg.badges.join(' · ') : styleText);
+        const lineage = isEn
+            ? (towerCfg.lineagePath || `${towerCfg.icon || '🔥'} ${towerCfg.name || towerKey}`)
+            : (Array.isArray(towerCfg.defaultLineagePath)
+                ? towerCfg.defaultLineagePath.join(' ▸ ')
+                : (towerCfg.lineagePath || `${towerCfg.icon || '🔥'} ${towerCfg.name || towerKey}`));
         let formulaText = lineage;
-        let synergyText = towerCfg.roleSummary || '可自由搭配減速或易傷節點放大輸出。';
-        let unlockText = towerCfg.isHybrid ? '於戰場中合成此共生節點後解鎖' : '於戰場中召喚或進化至此節點後解鎖';
+        let synergyText = towerCfg.roleSummary || (isEn
+            ? 'Pairs cleanly with slow or vulnerability nodes to amplify DPS.'
+            : '可自由搭配減速或易傷節點放大輸出。');
+        let unlockText = isEn
+            ? (towerCfg.isHybrid ? 'Synthesize this hybrid node in battle to unlock.' : 'Summon or evolve into this node in battle to unlock.')
+            : (towerCfg.isHybrid ? '於戰場中合成此共生節點後解鎖' : '於戰場中召喚或進化至此節點後解鎖');
         if (tierNum === 4) {
-            formulaText = towerCfg.isTwinCrown
-                ? '同血脈 3★ A + 3★ B 雙生合體（或餵養充滿 8U）'
-                : `同血脈 3★ ${towerCfg.branchCode || ''} × 2 極意進化（或餵養充滿 8U）`;
-            unlockText = towerCfg.isTwinCrown
-                ? '於戰場合成同血脈異分支「3★ A + 3★ B」解鎖雙生神冠'
-                : `於戰場合成同血脈同分支「3★ ${towerCfg.branchCode || ''} × 2」或餵養滿 8U 解鎖`;
+            if (isEn) {
+                const bCode = towerCfg.branchCode || '';
+                formulaText = towerCfg.isTwinCrown
+                    ? 'Same-lineage 3★ A + 3★ B Twin Fusion (or feed to 8U)'
+                    : `Same-lineage 3★ ${bCode} × 2 Mastery Evolution (or feed to 8U)`;
+                unlockText = towerCfg.isTwinCrown
+                    ? 'Merge same-lineage 3★ A + 3★ B in battle to unlock Twin Crown.'
+                    : `Merge same-lineage 3★ ${bCode} × 2 or feed to 8U to unlock.`;
+            } else {
+                formulaText = towerCfg.isTwinCrown
+                    ? '同血脈 3★ A + 3★ B 雙生合體（或餵養充滿 8U）'
+                    : `同血脈 3★ ${towerCfg.branchCode || ''} × 2 極意進化（或餵養充滿 8U）`;
+                unlockText = towerCfg.isTwinCrown
+                    ? '於戰場合成同血脈異分支「3★ A + 3★ B」解鎖雙生神冠'
+                    : `於戰場合成同血脈同分支「3★ ${towerCfg.branchCode || ''} × 2」或餵養滿 8U 解鎖`;
+            }
         } else if (tierNum === 5) {
-            formulaText = '同血脈任意 4★ × 2（或 4★ 餵養充能滿 16U）';
-            synergyText = '整合周圍 2.2 格友軍光環（攻速 +16% · 射程 +0.3 格）與 6.0s 全圖神樹脈動；選取後可進行無盡靈脈灌注。';
-            unlockText = '於戰場晉升同血脈雙 4★ 或漸進吞噬達 16U 解鎖世界樹神裔';
+            if (isEn) {
+                formulaText = 'Any same-lineage 4★ × 2 (or feed 4★ to 16U)';
+                synergyText = 'Projects a 2.2-cell Ally Aura (+16% ATK Spd · +0.3 Rng) and 6.0s World Pulse; supports Endless Vein Infusion when selected.';
+                unlockText = 'Ascend same-lineage dual 4★ or feed a 4★ tower to 16U in battle to unlock World Tree Scion.';
+            } else {
+                formulaText = '同血脈任意 4★ × 2（或 4★ 餵養充能滿 16U）';
+                synergyText = '整合周圍 2.2 格友軍光環（攻速 +16% · 射程 +0.3 格）與 6.0s 全圖神樹脈動；選取後可進行無盡靈脈灌注。';
+                unlockText = '於戰場晉升同血脈雙 4★ 或漸進吞噬達 16U 解鎖世界樹神裔';
+            }
         }
+        const mechText = isEn
+            ? `Rng ${towerCfg.range || 2.5} | CD ${sec}s | DMG ${dmgVal} | ${badgesText}.`
+            : `射程 ${towerCfg.range || 2.5} 格｜攻速 ${sec}s｜單發 ${dmgVal}｜特性：${badgesText}。`;
         return {
             title: `${towerCfg.icon || '🔥'} ${towerCfg.name || towerKey}`,
             nodeTier: tierNum,
             family: towerCfg.family || towerCfg.elementTag || 'steam',
             branchCode: towerCfg.branchCode || null,
             formula: formulaText,
-            mech: `射程 ${towerCfg.range || 2.5} 格｜攻速 ${sec}s｜單發 ${dmgVal}｜特性：${badgesText}。`,
+            mech: mechText,
             synergy: synergyText,
             recipeText: `${towerCfg.icon || '🔥'} <strong>${towerCfg.name || towerKey}</strong> <span class="num" style="font-size:12px;color:#B8C2BC;">｜${formulaText}</span>`,
-            lockedRecipeText: `<strong>？？？ · 未知世界樹節點</strong> <span class="num" style="font-size:12px;color:#B8C2BC;">｜${formulaText}</span>`,
-            desc: `射程 ${towerCfg.range || 2.5} 格｜攻速 ${sec}s｜單發 ${dmgVal}｜特性：${badgesText}。`,
+            lockedRecipeText: `<strong>${isEn ? '??? · Unknown World Tree Node' : '？？？ · 未知世界樹節點'}</strong> <span class="num" style="font-size:12px;color:#B8C2BC;">｜${formulaText}</span>`,
+            desc: mechText,
             unlockRule: unlockText,
             defaultUnlocked: tierNum <= 1 && !towerCfg.isHybrid,
             cardClass: 'codex-steam'
@@ -494,15 +548,25 @@
      * 為未在 codex_data.js 填寫文案的新增怪物自動生成預設圖鑑卡
      */
     function buildFallbackMonsterCard(monsterKey, mCfg) {
+        const isEn = Boolean(GameApp.i18n && typeof GameApp.i18n.isEnglish === 'function' && GameApp.i18n.isEnglish());
         const towersDict = (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
         const wCfg = towersDict[mCfg.weakness];
-        const weakName = wCfg ? `${wCfg.icon} ${wCfg.name}` : (mCfg.weakness || '無');
+        const weakLabel = (GameApp.i18n && typeof GameApp.i18n.getWeaknessLabel === 'function')
+            ? GameApp.i18n.getWeaknessLabel(mCfg.weakness)
+            : (wCfg ? wCfg.name : (mCfg.weakness || (isEn ? 'None' : '無')));
+        const weakName = wCfg ? `${wCfg.icon} ${weakLabel}` : weakLabel;
         const minW = Number(mCfg.minWave) || 1;
         return {
             title: `${mCfg.icon || '👾'} ${mCfg.name || monsterKey}`,
-            subtitle: `弱點：${weakName}｜基礎血量 ${mCfg.baseHp || 70} · 護甲 ${mCfg.baseArmor || 0}`,
-            desc: `移速倍率 ${mCfg.speedMult || 1.0}x，擊殺賞金 +${mCfg.baseReward || 10} 💰${mCfg.splitsOnDeath ? '（具備死亡分裂特性）' : ''}。`,
-            unlockRule: `於戰場遭遇「${mCfg.name || monsterKey}」（Wave ${minW}+）後自動解鎖`,
+            subtitle: isEn
+                ? `Weak: ${weakName} | Base HP ${mCfg.baseHp || 70} · ARM ${mCfg.baseArmor || 0}`
+                : `弱點：${weakName}｜基礎血量 ${mCfg.baseHp || 70} · 護甲 ${mCfg.baseArmor || 0}`,
+            desc: isEn
+                ? `Speed ${mCfg.speedMult || 1.0}x, Kill bounty +${mCfg.baseReward || 10} 💰${mCfg.splitsOnDeath ? ' (Splits on death)' : ''}.`
+                : `移速倍率 ${mCfg.speedMult || 1.0}x，擊殺賞金 +${mCfg.baseReward || 10} 💰${mCfg.splitsOnDeath ? '（具備死亡分裂特性）' : ''}。`,
+            unlockRule: isEn
+                ? `Unlocks upon encountering ${mCfg.name || monsterKey} (Wave ${minW}+).`
+                : `於戰場遭遇「${mCfg.name || monsterKey}」（第 ${minW} 波起）後自動解鎖`,
             defaultUnlocked: minW <= 1
         };
     }

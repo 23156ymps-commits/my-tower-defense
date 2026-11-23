@@ -343,41 +343,41 @@
         if (style === 'chain_lightning' || style === 'thunder_twin') {
             const chainTotalMult = getThunderChainScales(towerObj, cfg).reduce((sum, s) => sum + s, 0);
             aoeDps = Math.round((unitDmg * singleHitFactor * chainTotalMult) / intervalSec);
-            aoeLabel = isEn ? 'Chain DPS' : '連鎖 DPS';
+            aoeLabel = isEn ? 'Chain' : '連鎖';
         } else if (style === 'stun_pulse' || style === 'magnet_B_overload') {
             const extraChain = (fxParams.chainTargets ? fxParams.chainTargets - 1 : (fxParams.chainExtraTargets ?? 2));
             const chainRatio = fxParams.chainDamageRatio ?? 0.70;
             const dynShockDmg = Math.round(10 + 2.5 * Math.max(1, (G && G.state && Number(G.state.currentWave)) || 1));
             const shockExtra = style === 'magnet_B_overload' ? dynShockDmg * 2 : 0;
             aoeDps = Math.round((unitDmg * (1 + extraChain * chainRatio)) / intervalSec + shockExtra);
-            aoeLabel = isEn ? 'Chain DPS' : '連鎖 DPS';
+            aoeLabel = isEn ? 'Chain' : '連鎖';
         } else if (style === 'magnet_twin') {
             const extraChain = (fxParams.chainTargets ? fxParams.chainTargets - 1 : 2);
             const chainRatio = fxParams.chainDamageRatio ?? 0.75;
             const dynShockDmg = Math.round(10 + 2.5 * Math.max(1, (G && G.state && Number(G.state.currentWave)) || 1));
             aoeDps = Math.round((unitDmg * (2.4 + extraChain * chainRatio)) / intervalSec + dynShockDmg * 2);
-            aoeLabel = isEn ? 'Twin AoE' : '雙生群傷';
+            aoeLabel = isEn ? 'Twin AoE' : '雙生';
         } else if (style === 'aoe_mist' || style === 'fire_A_mortar' || style === 'steam_A_pressure' || style === 'fire_twin' || style === 'steam_twin') {
             const splashRatio = fxParams.splashRatio ?? 0.65;
             const poolDps = (style === 'steam_A_pressure' || style === 'steam_twin') ? (fxParams.poolDps || 28) * 2 : 0;
             const burnBonus = style === 'fire_twin' ? (fxParams.burnFlatDps || 8) * 2 : 0;
             aoeDps = Math.round((unitDmg * (1 + 2 * splashRatio)) / intervalSec + poolDps + burnBonus);
-            aoeLabel = isEn ? 'Est. AoE' : '預估群傷';
+            aoeLabel = isEn ? 'AoE' : '群傷';
         } else if (style === 'ice_A_permafrost' || style === 'steam_B_fog' || style === 'magnet_A_singularity' || style === 'ice_twin') {
             aoeDps = Math.round((unitDmg * (style === 'ice_twin' ? 2.75 : 2.4)) / intervalSec);
-            aoeLabel = isEn ? 'Est. AoE' : '預估群傷';
+            aoeLabel = isEn ? 'AoE' : '群傷';
         } else if (style === 'ice_B_icicle') {
             const secondRatio = fxParams.secondTargetRatio ?? 0.60;
             aoeDps = Math.round((unitDmg * (1 + secondRatio)) / intervalSec);
-            aoeLabel = isEn ? 'Pierce DPS' : '穿透 DPS';
+            aoeLabel = isEn ? 'Pierce' : '穿透';
         } else if (style === 'plasma_B_refract' || style === 'plasma_twin') {
             const refCount = fxParams.refractTargets ?? 2;
             const refRatio = fxParams.refractRatio ?? 0.50;
             aoeDps = Math.round((unitDmg * (singleHitFactor + refCount * refRatio)) / intervalSec);
-            aoeLabel = isEn ? 'Refract DPS' : '折射 DPS';
+            aoeLabel = isEn ? 'Refract' : '折射';
         } else if (style === 'fire_B_ember') {
             aoeDps = Math.round(singleDps * 2.1);
-            aoeLabel = isEn ? 'Plague AoE' : '瘟疫群傷';
+            aoeLabel = isEn ? 'Burn AoE' : '灼燒';
         }
 
         return {

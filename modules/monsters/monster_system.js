@@ -138,7 +138,9 @@
         const baseHpScale = clampNumber(rules.MONSTER_HP_SCALE ?? CONFIG.MONSTER_HP_SCALE ?? 1.0, 0.1, 20.0, 1.0);
         const armorScale = clampNumber(rules.MONSTER_ARMOR_SCALE ?? CONFIG.MONSTER_ARMOR_SCALE ?? 1.0, 0.1, 5.0, 1.0);
         const armorBonus = (Number(rules.MONSTER_ARMOR_BONUS) || 0) + (hasContract('iron_armor') ? 4 : 0);
-        const isSurgeWager = Boolean(st.activeWager && st.activeWager.type === 'monster_surge');
+        const econSys = GameApp.systems && GameApp.systems.economy;
+        const wagerAllowed = !econSys || typeof econSys.canUseWager !== 'function' || econSys.canUseWager();
+        const isSurgeWager = Boolean(wagerAllowed && st.activeWager && st.activeWager.type === 'monster_surge' && !st.activeWager.disabled && st.activeWager.active !== false);
         const surgeHpMult = isSurgeWager ? (Number(st.activeWager.hpMult) || 1.25) : 1.0;
         const surgeSpeedMult = isSurgeWager ? (Number(st.activeWager.speedMult) || 1.10) : 1.0;
         const spdGlobal = baseSpdScale * (hasContract('fast_tide') ? 1.15 : 1.0) * surgeSpeedMult;

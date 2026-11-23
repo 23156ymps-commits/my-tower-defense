@@ -143,9 +143,27 @@
 
     // 第 4 階段：局外 12 節點「世界樹年輪（Meta Tree）」（3 條機制枝 × 4 節點，無純數值膨脹）
     const META_TREE_BRANCHES = [
-        { id: 'wealth', name: '財富枝', nameEn: 'Wealth Branch', desc: '聚寶根鬚 · 元素股市 · 經濟底蘊' },
-        { id: 'fate', name: '命運枝', nameEn: 'Fate Branch', desc: '命運盲盒 · 波次對賭 · 賜福重抽' },
-        { id: 'ancient', name: '古樹枝', nameEn: 'Ancient Branch', desc: '靈脈灌注 · 靈脈竊賊 · 高階賜福 · 聖冠上限' }
+        {
+            id: 'wealth',
+            name: '財富枝',
+            nameEn: 'Wealth Branch',
+            desc: '聚寶根鬚 · 元素股市 · 經濟底蘊',
+            descEn: 'Treasure Roots · Element Stocks · Economy Core'
+        },
+        {
+            id: 'fate',
+            name: '命運枝',
+            nameEn: 'Fate Branch',
+            desc: '命運盲盒 · 波次對賭 · 賜福重抽',
+            descEn: 'Blind Box · Wave Wagers · Blessing Reroll'
+        },
+        {
+            id: 'ancient',
+            name: '古樹枝',
+            nameEn: 'Ancient Branch',
+            desc: '靈脈灌注 · 靈脈竊賊 · 高階賜福 · 聖冠上限',
+            descEn: 'Vein Infusion · Vein Thief · Mythic Blessings · Scion Cap'
+        }
     ];
 
     const META_TREE_NODES = {

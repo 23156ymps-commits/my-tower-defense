@@ -81,8 +81,9 @@
         const tCfg = getTowersDict()[raw] || {};
         let branchCode = tCfg.branchCode || null;
         if (!branchCode) {
+            const isEnBranch = Boolean(GameApp.i18n && typeof GameApp.i18n.isEnglish === 'function' && GameApp.i18n.isEnglish());
             if (raw.endsWith('_twin_AB')) branchCode = 'AB';
-            else if (raw.endsWith('_scion')) branchCode = '神';
+            else if (raw.endsWith('_scion')) branchCode = isEnBranch ? 'S' : '神';
             else if (raw.endsWith('_crown_A') || raw.endsWith('_A')) branchCode = 'A';
             else if (raw.endsWith('_crown_B') || raw.endsWith('_B')) branchCode = 'B';
         }
@@ -538,9 +539,12 @@
             circle2D(ctx, 32, 37, 7.5, tk.elFire, tk.elLightning, 1.6);
             circle2D(ctx, 32, 37, 3, tk.elLightning);
         } else if (id === 'thief') {
+            const cx = 32;
+            const cy = 32;
+            const s = 58;
             ctx.fillStyle = '#D97724';
             ctx.strokeStyle = '#1E1710';
-            ctx.lineWidth = s * 0.05;
+            ctx.lineWidth = Math.max(1.5, s * 0.035);
             ctx.beginPath();
             ctx.moveTo(cx - s * 0.28, cy - s * 0.14);
             ctx.lineTo(cx - s * 0.34, cy - s * 0.38);
@@ -572,7 +576,11 @@
             ctx.fillStyle = '#2C3530';
             ctx.strokeStyle = '#E0B43C';
             ctx.beginPath();
-            ctx.roundRect(cx - s * 0.18, cy + s * 0.14, s * 0.36, s * 0.22, s * 0.06);
+            if (typeof ctx.roundRect === 'function') {
+                ctx.roundRect(cx - s * 0.18, cy + s * 0.14, s * 0.36, s * 0.22, s * 0.06);
+            } else {
+                ctx.rect(cx - s * 0.18, cy + s * 0.14, s * 0.36, s * 0.22);
+            }
             ctx.fill();
             ctx.stroke();
             ctx.fillStyle = '#E0B43C';
@@ -1313,8 +1321,9 @@
         elDot.setAttribute('aria-hidden', 'true');
         const name = document.createElement('div'); name.classList.add('tower-name');
         let labelText = '';
+        const isEnBadge = Boolean(GameApp.i18n && typeof GameApp.i18n.isEnglish === 'function' && GameApp.i18n.isEnglish());
         if (towerObj.tier >= 5) {
-            labelText = '5★神';
+            labelText = isEnBadge ? '5★S' : '5★神';
         } else if (towerObj.tier === 4) {
             labelText = `${branchCode || ''}4★`;
         } else {

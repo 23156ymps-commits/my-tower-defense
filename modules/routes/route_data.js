@@ -59,11 +59,11 @@
         SPAWN_INTERVAL_MIN_MS: 750
     };
 
-    // 三地圖關卡與路徑點（WAYPOINTS）設定（🌲 晨光森林 / 🔥 熔岩峽谷 / ❄️ 永凍裂谷）
+    // 三地圖關卡與路徑點（WAYPOINTS）設定（晨光森林 / 熔岩峽谷 / 永凍裂谷）
     const MAPS_CONFIG = {
         forest: {
             id: 'forest',
-            name: '🌲 晨光森林',
+            name: '晨光森林',
             diffLabel: '標準難度',
             diffClass: 'diff-std',
             desc: '41 格蜿蜒長徑 · 經典穩定防線',
@@ -94,7 +94,7 @@
         },
         lava: {
             id: 'lava',
-            name: '🔥 熔岩峽谷',
+            name: '熔岩峽谷',
             diffLabel: '進階挑戰',
             diffClass: 'diff-hard',
             desc: '31 格雙折短徑 · 初始 +10 💰',
@@ -126,8 +126,8 @@
         },
         frost: {
             id: 'frost',
-            name: '❄️ 永凍裂谷',
-            diffLabel: '專家挑戰',
+            name: '永凍裂谷',
+            diffLabel: '雙路分線',
             diffClass: 'diff-hard',
             desc: '36 格雙岔匯流 · 初始 +15 💰 · 寒霜靈脈冰傷 +20%',
             startGoldBonus: 15,

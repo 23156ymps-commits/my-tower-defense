@@ -281,7 +281,8 @@
         if (!Number.isFinite(baseReward) || baseReward <= 0) return 0;
         const d = getData();
         const mult = (mapSpec && Number.isFinite(mapSpec.killGoldMult)) ? mapSpec.killGoldMult : 1.0;
-        const isSurgeActive = Boolean(G && G.state && G.state.activeWager && G.state.activeWager.type === 'monster_surge');
+        const wager = G && G.state ? G.state.activeWager : null;
+        const isSurgeActive = Boolean(wager && wager.type === 'monster_surge' && !wager.disabled && wager.active !== false && canUseWager());
         const surgeMult = isSurgeActive ? (Number.isFinite(d.WAGER_SURGE_KILL_GOLD_MULT) ? d.WAGER_SURGE_KILL_GOLD_MULT : 1.45) : 1.0;
         return Math.max(1, Math.round(baseReward * mult * surgeMult));
     }
@@ -752,10 +753,39 @@
     }
 
     // ==================== C. 波次對賭懸賞（零封懸賞 / 魔潮加碼） ====================
+    function getWagerConfig() {
+        const d = getData();
+        const zeroStake = Number.isFinite(d.WAGER_ZERO_LEAK_STAKE) ? d.WAGER_ZERO_LEAK_STAKE : 40;
+        const zeroNet = Number.isFinite(d.WAGER_ZERO_LEAK_NET_PROFIT) ? d.WAGER_ZERO_LEAK_NET_PROFIT : 30;
+        const surgeMaxUses = Number.isFinite(d.WAGER_SURGE_MAX_PER_RUN) ? d.WAGER_SURGE_MAX_PER_RUN : 2;
+        return { zeroStake, zeroNet, surgeMaxUses };
+    }
+
+    function resetRunEconomyState() {
+        if (!G || !G.state) return;
+        const st = G.state;
+        st.activeWager = null;
+        st.surgeWagerUsedCount = 0;
+        st.waveLeakedCount = 0;
+        st.lastWagerSettlement = null;
+        st.waveNonCombatGold = 0;
+        st.nonCombatLedgerWave = 1;
+        st.blindBox1StarStreak = 0;
+        st.teamCritBonusRate = 0;
+        st.fusionFruitCount = 0;
+        st.isApplyingFusionFruit = false;
+        st.blindBoxTokens = 0;
+        st.stocks = createInitialStockState();
+    }
+
     function canSelectWaveWager() {
         if (!G || !G.state) return false;
         const st = G.state;
-        return !st.isGameOver && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION');
+        if (st.isGameOver) return false;
+        if (G.callbacks && typeof G.callbacks.isMatchPhaseActive === 'function' && !G.callbacks.isMatchPhaseActive()) {
+            return false;
+        }
+        return st.waveState === 'PREP' || st.waveState === 'INTERMISSION';
     }
 
     function cancelWaveWager() {
@@ -765,13 +795,13 @@
             return { ok: false, reason: 'wave_already_started' };
         }
         const prev = st.activeWager;
+        st.activeWager = null;
         if (prev.type === 'zero_leak' && prev.stake > 0) {
             st.currentGold += prev.stake;
-        } else if (prev.type === 'monster_surge' && prev.countedUsage) {
+        } else if (prev.type === 'monster_surge' && prev.countedUsage === true) {
             st.surgeWagerUsedCount = Math.max(0, (st.surgeWagerUsedCount || 0) - 1);
         }
-        st.activeWager = null;
-        return { ok: true, cancelledType: prev.type, refundedStake: prev.stake || 0 };
+        return { ok: true, cancelledType: prev.type, refundedStake: prev.type === 'zero_leak' ? (prev.stake || 0) : 0 };
     }
 
     function selectWaveWager(wagerType) {
@@ -790,14 +820,18 @@
 
         if (wagerType === 'zero_leak') {
             const stake = Number.isFinite(d.WAGER_ZERO_LEAK_STAKE) ? d.WAGER_ZERO_LEAK_STAKE : 40;
-            const potentialGold = st.currentGold + ((st.activeWager && st.activeWager.type === 'zero_leak') ? st.activeWager.stake : 0);
-            if (potentialGold < stake) {
+            if (st.currentGold < stake) {
                 return { ok: false, reason: 'insufficient_gold', stake, currentGold: st.currentGold };
             }
-            if (st.activeWager) cancelWaveWager();
+            if (st.activeWager) {
+                const cancelled = cancelWaveWager();
+                if (!cancelled.ok) return cancelled;
+            }
             st.currentGold -= stake;
             st.activeWager = {
                 type: 'zero_leak',
+                active: true,
+                disabled: false,
                 stake,
                 leakedThisWave: false,
                 startBaseHp: st.baseHp
@@ -807,14 +841,23 @@
 
         if (wagerType === 'monster_surge') {
             const maxUses = Number.isFinite(d.WAGER_SURGE_MAX_PER_RUN) ? d.WAGER_SURGE_MAX_PER_RUN : 2;
-            const used = st.surgeWagerUsedCount || 0;
+            const used = Math.max(0, Number(st.surgeWagerUsedCount) || 0);
             if (used >= maxUses) {
                 return { ok: false, reason: 'max_uses_reached', used, maxUses };
             }
-            if (st.activeWager) cancelWaveWager();
-            st.surgeWagerUsedCount = used + 1;
+            if (st.activeWager) {
+                const cancelled = cancelWaveWager();
+                if (!cancelled.ok) return cancelled;
+            }
+            const usedAfterCancel = Math.max(0, Number(st.surgeWagerUsedCount) || 0);
+            if (usedAfterCancel >= maxUses) {
+                return { ok: false, reason: 'max_uses_reached', used: usedAfterCancel, maxUses };
+            }
+            st.surgeWagerUsedCount = usedAfterCancel + 1;
             st.activeWager = {
                 type: 'monster_surge',
+                active: true,
+                disabled: false,
                 stake: 0,
                 countedUsage: true,
                 hpMult: Number.isFinite(d.WAGER_SURGE_HP_MULT) ? d.WAGER_SURGE_HP_MULT : 1.25,
@@ -832,10 +875,50 @@
         return { ok: false, reason: 'invalid_wager_type' };
     }
 
+    function commitWaveWagerOnStart() {
+        if (!G || !G.state) return null;
+        const st = G.state;
+        const d = getData();
+        st.waveLeakedCount = 0;
+        const wager = st.activeWager;
+        if (!wager) return null;
+        if (!canUseWager() || wager.disabled || wager.active === false) {
+            if (wager.type === 'zero_leak' && wager.stake > 0) {
+                st.currentGold += wager.stake;
+            } else if (wager.type === 'monster_surge' && wager.countedUsage === true) {
+                st.surgeWagerUsedCount = Math.max(0, (st.surgeWagerUsedCount || 0) - 1);
+            }
+            st.activeWager = null;
+            return null;
+        }
+        if (wager.type === 'zero_leak') {
+            wager.leakedThisWave = false;
+            wager.startBaseHp = st.baseHp;
+            wager.committed = true;
+            return wager;
+        }
+        if (wager.type === 'monster_surge') {
+            const maxUses = Number.isFinite(d.WAGER_SURGE_MAX_PER_RUN) ? d.WAGER_SURGE_MAX_PER_RUN : 2;
+            const used = Math.max(0, Number(st.surgeWagerUsedCount) || 0);
+            if (wager.countedUsage !== true) {
+                if (used >= maxUses) {
+                    st.activeWager = null;
+                    return null;
+                }
+                st.surgeWagerUsedCount = used + 1;
+                wager.countedUsage = true;
+            }
+            wager.committed = true;
+            return wager;
+        }
+        st.activeWager = null;
+        return null;
+    }
+
     function onWaveMonsterLeaked() {
         if (!G || !G.state) return;
         G.state.waveLeakedCount = (G.state.waveLeakedCount || 0) + 1;
-        if (G.state.activeWager) {
+        if (G.state.activeWager && G.state.activeWager.type === 'zero_leak') {
             G.state.activeWager.leakedThisWave = true;
         }
     }
@@ -848,12 +931,18 @@
         const wager = st.activeWager;
         st.activeWager = null;
 
+        if (st.isGameOver || st.baseHp <= 0 || !canUseWager() || wager.disabled || wager.active === false) {
+            st.waveLeakedCount = 0;
+            return null;
+        }
+
         if (wager.type === 'zero_leak') {
             const stake = Number(wager.stake) || 40;
             const luckyBonus = hasBlessingActive('gambler_lucky_leaf') ? 10 : 0;
             const rawNetProfit = (Number.isFinite(d.WAGER_ZERO_LEAK_NET_PROFIT) ? d.WAGER_ZERO_LEAK_NET_PROFIT : 30) + luckyBonus;
             const failDew = Number.isFinite(d.WAGER_ZERO_LEAK_FAIL_DEW) ? d.WAGER_ZERO_LEAK_FAIL_DEW : 15;
             const leaked = Boolean(wager.leakedThisWave || (st.waveLeakedCount || 0) > 0 || (Number.isFinite(wager.startBaseHp) && st.baseHp < wager.startBaseHp));
+            st.waveLeakedCount = 0;
 
             if (!leaked) {
                 const capRes = recordNonCombatNetGain(rawNetProfit, w);
@@ -892,6 +981,15 @@
         }
 
         if (wager.type === 'monster_surge') {
+            st.waveLeakedCount = 0;
+            const maxUses = Number.isFinite(d.WAGER_SURGE_MAX_PER_RUN) ? d.WAGER_SURGE_MAX_PER_RUN : 2;
+            const used = Math.max(0, Number(st.surgeWagerUsedCount) || 0);
+            if (wager.countedUsage !== true) {
+                if (used >= maxUses) {
+                    return null;
+                }
+                st.surgeWagerUsedCount = used + 1;
+            }
             const maxSlots = Number.isFinite(d.FUSION_FRUIT_MAX_SLOTS) ? d.FUSION_FRUIT_MAX_SLOTS : 1;
             const prevFruits = st.fusionFruitCount || 0;
             st.fusionFruitCount = Math.min(maxSlots, prevFruits + 1);
@@ -901,11 +999,16 @@
                 success: true,
                 fruitGained,
                 fusionFruitCount: st.fusionFruitCount,
-                summaryZh: `魔潮加碼守住：本波擊殺賞金 ×1.45 結算完成，獲得 +1 顆萬能融合果實`,
-                summaryEn: `Monster Surge Cleared: ×1.45 kill bounty & +1 Universal Fusion Fruit earned`
+                summaryZh: fruitGained > 0
+                    ? `魔潮加碼守住：本波擊殺賞金 ×1.45 結算完成，獲得 +1 顆萬能融合果實`
+                    : `魔潮加碼守住：本波擊殺賞金 ×1.45 結算完成（萬能融合果實槽位已滿 ${st.fusionFruitCount}/${maxSlots}）`,
+                summaryEn: fruitGained > 0
+                    ? `Monster Surge Cleared: ×1.45 kill bounty & +1 Universal Fusion Fruit earned`
+                    : `Monster Surge Cleared: ×1.45 kill bounty (Universal Fruit slot full ${st.fusionFruitCount}/${maxSlots})`
             };
         }
 
+        st.waveLeakedCount = 0;
         return null;
     }
 
@@ -949,9 +1052,12 @@
         getAverageShopCost,
         getBlindBoxCost,
         rollBlindBoxOutcome,
+        getWagerConfig,
+        resetRunEconomyState,
         canSelectWaveWager,
         selectWaveWager,
         cancelWaveWager,
+        commitWaveWagerOnStart,
         onWaveMonsterLeaked,
         settleWaveWager
     };

@@ -693,15 +693,19 @@
             const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
             const st = (runtime && runtime.state) || {};
             const routesData = (GameApp.data && GameApp.data.routes && GameApp.data.routes.MAPS_CONFIG) || {};
-            const mapSpec = routesData[st.currentMapId] || { name: runTelemetry.mapName || (isEn ? '🌲 Sunlit Woods' : '🌲 晨光森林') };
+            const mapSpec = routesData[st.currentMapId] || {
+                name: st.currentMapId === 'lava'
+                    ? (isEn ? 'Magma Canyon' : '熔岩峽谷')
+                    : (st.currentMapId === 'frost' ? (isEn ? 'Permafrost Rift' : '永凍裂谷') : (isEn ? 'Sunlit Woods' : '晨光森林'))
+            };
             const victoryWave = CONFIG.VICTORY_WAVE || 10;
             const waveStr = isEn
                 ? (outcomeMode === 'victory'
                     ? `Victory (Wave ${st.currentWave || victoryWave}/${victoryWave} · Remaining ❤️ ${st.baseHp || 0})`
                     : `Defeat (Fallen at Wave ${st.currentWave || 1}${st.isEndlessMode ? ' Endless' : `/${victoryWave}`})`)
                 : (outcomeMode === 'victory'
-                    ? `通關成功 (Wave ${st.currentWave || victoryWave}/${victoryWave} · 剩餘 ❤️ ${st.baseHp || 0})`
-                    : `防線失守 (陣亡於 Wave ${st.currentWave || 1}${st.isEndlessMode ? ' 無盡模式' : `/${victoryWave}`})`);
+                    ? `通關成功 (第 ${st.currentWave || victoryWave}/${victoryWave} 波 · 剩餘 ❤️ ${st.baseHp || 0})`
+                    : `防線失守 (陣亡於第 ${st.currentWave || 1} 波${st.isEndlessMode ? ' 無盡模式' : ` / ${victoryWave} 波`})`);
 
             // 漏怪明細
             const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};

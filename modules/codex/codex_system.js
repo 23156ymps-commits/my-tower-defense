@@ -31,12 +31,12 @@
         fire_A: 'A Bombard', fire_B: 'B Cinder', steam_A: 'A Pressure', steam_B: 'B Frostmist',
         ice_A: 'A Permafrost', ice_B: 'B Icicle', magnet_A: 'A Gravity', magnet_B: 'B Overload',
         thunder_A: 'A Tempest', thunder_B: 'B Judgment', plasma_A: 'A Deathray', plasma_B: 'B Prism',
-        fire_crown_A: '4★A', fire_crown_B: '4★B', fire_twin_AB: '4★ Twin', fire_scion: '5★ Scion',
-        steam_crown_A: '4★A', steam_crown_B: '4★B', steam_twin_AB: '4★ Twin', steam_scion: '5★ Scion',
-        ice_crown_A: '4★A', ice_crown_B: '4★B', ice_twin_AB: '4★ Twin', ice_scion: '5★ Scion',
-        magnet_crown_A: '4★A', magnet_crown_B: '4★B', magnet_twin_AB: '4★ Twin', magnet_scion: '5★ Scion',
-        thunder_crown_A: '4★A', thunder_crown_B: '4★B', thunder_twin_AB: '4★ Twin', thunder_scion: '5★ Scion',
-        plasma_crown_A: '4★A', plasma_crown_B: '4★B', plasma_twin_AB: '4★ Twin', plasma_scion: '5★ Scion'
+        fire_crown_A: '4★ A', fire_crown_B: '4★ B', fire_twin_AB: '4★ Twin', fire_scion: 'Blazeking 5★',
+        steam_crown_A: '4★ A', steam_crown_B: '4★ B', steam_twin_AB: '4★ Twin', steam_scion: 'Palemist 5★',
+        ice_crown_A: '4★ A', ice_crown_B: '4★ B', ice_twin_AB: '4★ Twin', ice_scion: 'Frostking 5★',
+        magnet_crown_A: '4★ A', magnet_crown_B: '4★ B', magnet_twin_AB: '4★ Twin', magnet_scion: 'Starmagnet 5★',
+        thunder_crown_A: '4★ A', thunder_crown_B: '4★ B', thunder_twin_AB: '4★ Twin', thunder_scion: 'Apexbolt 5★',
+        plasma_crown_A: '4★ A', plasma_crown_B: '4★ B', plasma_twin_AB: '4★ Twin', plasma_scion: 'Radiant 5★'
     };
 
     function L(zh, en) {
@@ -298,7 +298,9 @@
             const TreeSys = GameApp.systems && GameApp.systems.tree;
             const EconSys = GameApp.systems && GameApp.systems.economy;
             const rootLv = TreeSys && typeof TreeSys.getTreasureRootLevel === 'function' ? TreeSys.getTreasureRootLevel() : 0;
-            const curRootSpec = TreeSys && typeof TreeSys.getTreasureRootSpec === 'function' ? TreeSys.getTreasureRootSpec(rootLv) : { level: 0, name: '未啟用', sellRefundRate: 0.70 };
+            const curRootSpec = TreeSys && typeof TreeSys.getTreasureRootSpec === 'function'
+                ? TreeSys.getTreasureRootSpec(rootLv)
+                : { level: 0, name: '未啟用', nameEn: 'Dormant', sellRefundRate: 0.70 };
             const nextRootSpec = TreeSys && typeof TreeSys.getNextTreasureRootSpec === 'function' ? TreeSys.getNextTreasureRootSpec() : null;
             const curWave = (G && G.state && G.state.currentWave) || 1;
             const curGold = (G && G.state && G.state.currentGold) || 0;
@@ -666,7 +668,12 @@
 
                 const cap = document.createElement('span');
                 cap.className = 'wt-node-caption num';
-                cap.innerText = unlocked ? getTreeNodeLabel(nodeId, meta) : (meta.branch ? `${meta.branch} ???` : '???');
+                const branchLabel = meta.branch === '神' ? L('神', '5★ Scion') : meta.branch;
+                const displayNodeLabel = unlocked ? getTreeNodeLabel(nodeId, meta) : (branchLabel ? `${branchLabel} ???` : '???');
+                cap.innerText = displayNodeLabel;
+                btn.setAttribute('aria-label', unlocked
+                    ? `${(codexEntries[nodeId] && codexEntries[nodeId].title) || displayNodeLabel}`
+                    : `${L('未解鎖節點', 'Locked Node')} · ${displayNodeLabel}`);
 
                 btn.appendChild(canvasWrap);
                 btn.appendChild(cap);
@@ -900,12 +907,12 @@
                 const card = (entries.towers && entries.towers[key]) || codexData.buildFallbackTowerCard(key, tCfg);
                 const unlocked = isEntryUnlocked(`tower:${key}`, Boolean(card.defaultUnlocked));
                 const statusBadge = unlocked
-                    ? `<span class="codex-status-badge unlocked">${L('✅ 已解鎖', '✅ Unlocked')}</span>`
-                    : `<span class="codex-status-badge locked">${L('🔒 未解鎖', '🔒 Locked')}</span>`;
+                    ? `<span class="codex-status-badge unlocked">${L('已解鎖', 'Unlocked')}</span>`
+                    : `<span class="codex-status-badge locked">${L('未解鎖', 'Locked')}</span>`;
                 const headerHtml = unlocked
                     ? `<strong>${card.title}</strong> ${statusBadge}`
                     : `<strong>${L('？？？ · 未知節點', '??? · Unknown Node')}</strong> ${statusBadge}`;
-                const descHtml = unlocked ? (card.mech || card.desc) : `${L('🔒 解鎖條件：', '🔒 Unlock: ')}${card.unlockRule || L('於戰場召喚或合成解鎖', 'Summon or merge to unlock')}`;
+                const descHtml = unlocked ? (card.mech || card.desc) : `${L('解鎖條件：', 'Unlock: ')}${card.unlockRule || L('於戰場召喚或合成解鎖', 'Summon or merge to unlock')}`;
 
                 listEl.appendChild(createCodexCardElement({
                     portraitCat: 'tower',
@@ -927,14 +934,14 @@
                 const card = (entries.monsters && entries.monsters[key]) || codexData.buildFallbackMonsterCard(key, mCfg);
                 const unlocked = isEntryUnlocked(`monster:${key}`, Boolean(card.defaultUnlocked));
                 const statusBadge = unlocked
-                    ? `<span class="codex-status-badge unlocked">${L('✅ 已解鎖', '✅ Unlocked')}</span>`
-                    : `<span class="codex-status-badge locked">${L('🔒 未解鎖', '🔒 Locked')}</span>`;
+                    ? `<span class="codex-status-badge unlocked">${L('已解鎖', 'Unlocked')}</span>`
+                    : `<span class="codex-status-badge locked">${L('未解鎖', 'Locked')}</span>`;
                 const headerHtml = unlocked
                     ? `<strong>${card.title}</strong> <span class="num" style="font-size:12px;color:#E0B43C;">｜${card.subtitle || ''}</span> ${statusBadge}`
                     : `<strong>${L('？？？ · 未知魔物', '??? · Unknown Enemy')}</strong> ${statusBadge}`;
                 const descHtml = unlocked
                     ? card.desc
-                    : `${L('🔒 解鎖條件：', '🔒 Unlock: ')}${card.unlockRule || L('於戰場遭遇此魔物後自動解鎖彩圖與弱點情報。', 'Unlocks upon encountering this enemy in battle.')}`;
+                    : `${L('解鎖條件：', 'Unlock: ')}${card.unlockRule || L('於戰場遭遇此魔物後自動解鎖彩圖與弱點情報。', 'Unlocks upon encountering this enemy in battle.')}`;
 
                 listEl.appendChild(createCodexCardElement({
                     portraitCat: 'monster',

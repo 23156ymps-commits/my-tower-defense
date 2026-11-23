@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>元素陣線：合成塔防</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
@@ -30,11 +30,11 @@
                             class="dew-bar-fill"></span></span><span id="dew-display" class="num">20/120</span>
                 </div>
                 <div class="hud-item hud-wave">
-                    <span id="wave-display" class="num">Wave 1 / 10</span>
+                    <span id="wave-display" class="num">第 1 / 10 波</span>
                     <span id="wave-phase-tag" class="wave-phase-tag num">等待開始</span>
                 </div>
                 <div class="hud-item hud-best" title="本圖最高紀錄"><span id="hud-best-label">最高</span> <span
-                        id="best-wave-display" class="num">W1</span>
+                        id="best-wave-display" class="num">第 1 波</span>
                 </div>
             </div>
             <div class="hud-actions">
@@ -52,14 +52,14 @@
                     </svg><span id="help-btn-label">戰術手冊</span></button>
                 <div class="lang-dropdown" id="lang-dropdown">
                     <button id="lang-btn" class="hud-ctrl-btn hud-lang-btn" type="button" aria-haspopup="true"
-                        aria-expanded="false" title="切換語言 / Switch Language">
+                        aria-expanded="false" aria-label="切換語言" title="切換語言 / Switch Language">
                         <svg class="lang-globe-icon" viewBox="0 0 16 16" aria-hidden="true">
                             <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.3" />
                             <ellipse cx="8" cy="8" rx="2.8" ry="6.2" fill="none" stroke="currentColor"
                                 stroke-width="1.2" />
                             <line x1="2.2" y1="8" x2="13.8" y2="8" stroke="currentColor" stroke-width="1.2" />
                         </svg>
-                        <span>Language ▾</span>
+                        <span id="lang-btn-label">語言 ▾</span>
                     </button>
                     <div id="lang-menu" class="lang-menu hidden" role="menu" aria-labelledby="lang-btn">
                         <button type="button" class="lang-option is-active" data-lang="zh-TW" role="menuitemradio"
@@ -82,7 +82,7 @@
             <div id="wave-forecast-bar" class="wave-forecast-bar">
                 <div class="forecast-bar-main">
                     <button id="forecast-toggle-btn" class="forecast-toggle-btn" type="button" aria-expanded="false">
-                        <span id="forecast-bar-title" class="num">下波預告 · Wave 1</span>
+                        <span id="forecast-bar-title" class="num">下波預告 · 第 1 波</span>
                         <span id="forecast-weak-chips" class="forecast-weak-chips num"></span>
                         <span id="forecast-toggle-indicator" class="forecast-chevron">▾</span>
                     </button>
@@ -104,11 +104,11 @@
                 </div>
                 <div id="forecast-detail-drawer" class="forecast-detail-drawer">
                     <div class="forecast-detail-col">
-                        <span id="forecast-current-header" class="forecast-col-title num">本波情報 · Wave 1</span>
+                        <span id="forecast-current-header" class="forecast-col-title num">本波情報 · 第 1 波</span>
                         <ul id="forecast-current-list" class="forecast-list"></ul>
                     </div>
                     <div class="forecast-detail-col">
-                        <span id="forecast-next-header" class="forecast-col-title num">下波預告 · Wave 2</span>
+                        <span id="forecast-next-header" class="forecast-col-title num">下波預告 · 第 2 波</span>
                         <ul id="forecast-next-list" class="forecast-list"></ul>
                     </div>
                 </div>
@@ -197,6 +197,17 @@
                 <!-- 特殊地形與防禦塔原位輕量浮動名牌 -->
                 <div id="terrain-tooltip" class="terrain-tooltip hidden" role="status" aria-live="polite"></div>
                 <div id="tower-tooltip" class="tower-tooltip hidden" role="status" aria-live="polite"></div>
+                <!-- 新手首局不擋路輕量情境提示（pointer-events 穿透棋盤，僅關閉按鈕可點） -->
+                <aside id="onboarding-toast" class="onboarding-toast hidden" role="status" aria-live="polite" aria-label="新手情境提示">
+                    <div class="onboarding-toast-body">
+                        <div class="onboarding-toast-head">
+                            <span id="onboarding-step-tag" class="onboarding-step-tag num">提示 1/3</span>
+                            <span id="onboarding-title" class="onboarding-title"></span>
+                        </div>
+                        <p id="onboarding-desc" class="onboarding-desc"></p>
+                    </div>
+                    <button id="onboarding-close-btn" class="onboarding-close-btn" type="button" aria-label="關閉並略過引導">略過 ×</button>
+                </aside>
                 <!-- 懸停或點選場上怪物時浮現之目標怪物情報卡 -->
                 <div id="side-monster-card" class="side-panel-section side-monster-card floating-monster-card hidden" aria-live="polite">
                     <div class="smc-title-bar">
@@ -248,11 +259,11 @@
 
             <aside id="side-panel-right" class="side-panel side-panel-right hidden" aria-label="本波與下波出怪詳情">
                 <div id="side-wave-current-section" class="side-panel-section">
-                    <h2 id="side-current-header" class="side-panel-title num">本波情報 · Wave 1</h2>
+                    <h2 id="side-current-header" class="side-panel-title num">本波情報 · 第 1 波</h2>
                     <ul id="side-current-list" class="forecast-list"></ul>
                 </div>
                 <div class="side-panel-section">
-                    <h2 id="side-next-header" class="side-panel-title num">下波預告 · Wave 2</h2>
+                    <h2 id="side-next-header" class="side-panel-title num">下波預告 · 第 2 波</h2>
                     <ul id="side-next-list" class="forecast-list"></ul>
                 </div>
             </aside>
@@ -288,25 +299,25 @@
             </div>
         </div>
 
-        <!-- 世界樹商會 · 波間抽屜（預設收合 1 行橫條，點擊或按 [B] 向上展開 3 頁籤浮動抽屜） -->
-        <section id="world-tree-guild-panel" class="guild-drawer-panel" aria-label="世界樹商會波間抽屜">
+        <!-- 世界樹商會 · 波間抽屜（0 元環時收斂隱藏；解鎖對應元環節點後顯示） -->
+        <section id="world-tree-guild-panel" class="guild-drawer-panel hidden" aria-label="世界樹商會波間抽屜">
             <div class="guild-drawer-header">
                 <div class="guild-header-left">
                     <button id="guild-drawer-toggle-btn" class="guild-toggle-btn" type="button" aria-expanded="false">
-                        <span id="guild-drawer-title">世界樹商會 [B] · 點擊展開</span>
+                        <span id="guild-drawer-title">世界樹商會 [B]</span>
                         <span id="guild-drawer-chevron" class="guild-chevron">▴</span>
                     </button>
-                    <span id="guild-root-summary-badge" class="guild-meta-tag num">根鬚 Lv.0 (+0 💰)</span>
-                    <span id="guild-noncombat-cap-badge" class="guild-meta-tag num">非戰鬥淨利 0 / 30 💰</span>
-                    <span id="guild-crit-bonus-badge" class="guild-meta-tag num">盲盒暴擊 +0.0%</span>
+                    <span id="guild-root-summary-badge" class="guild-meta-tag num">根鬚 Lv.0</span>
+                    <span id="guild-noncombat-cap-badge" class="guild-meta-tag num">淨利 0/30</span>
+                    <span id="guild-crit-bonus-badge" class="guild-meta-tag num">暴擊 +0.0%</span>
                 </div>
                 <div class="guild-header-right">
                     <button id="guild-harvest-btn" class="guild-hold-timer-btn guild-harvest-shortcut num" type="button"
                         title="消耗 50 靈露：立即收穫黃金並刷新全場攻擊冷卻（快捷鍵 [E]）">
-                        黃金豐收 (50 靈露) [E]
+                        豐收 50💧 [E]
                     </button>
                     <button id="guild-hold-timer-btn" class="guild-hold-timer-btn num" type="button">
-                        波間暫停倒數
+                        暫停倒數
                     </button>
                 </div>
             </div>
@@ -415,7 +426,7 @@
                                 <span id="guild-box-title" class="guild-module-title">命運種子盲盒</span>
                                 <span id="guild-box-pity" class="guild-module-sub num">1★ 保底進度 0 / 3（第 4 抽必出 2★+）</span>
                             </div>
-                            <div id="guild-box-desc" class="guild-box-desc num">
+                            <div id="guild-box-desc" class="guild-box-desc">
                                 1★ 48% · 2★ 32% · 萬能果實 12% · 3★ 8%（未出 2★+ 全隊暴擊 +1.5%，盲盒塔退費依實付價計）
                             </div>
                             <div class="guild-box-actions">
@@ -470,22 +481,22 @@
                     title="消耗 40 靈露：全場敵人定身 2.5 秒且易傷 +20%（冷卻 8 秒）">
                     <span class="skill-cd-mask"></span>
                     <span class="skill-dew-bar"></span>
-                    <span class="skill-label">根鬚纏繞 (<span class="num">40</span> 靈露)</span>
-                    <span class="skill-sub num">還差 20 靈露</span>
+                    <span class="skill-label">纏繞 <span class="num">40💧 [Q]</span></span>
+                    <span class="skill-sub num">差 20 💧</span>
                 </button>
                 <button id="skill-frenzy-btn" class="skill-btn skill-frenzy" type="button"
                     title="消耗 60 靈露：全場防禦塔攻速 +35% 持續 5 秒（冷卻 12 秒）">
                     <span class="skill-cd-mask"></span>
                     <span class="skill-dew-bar"></span>
-                    <span class="skill-label">自然狂熱 (<span class="num">60</span> 靈露)</span>
-                    <span class="skill-sub num">還差 40 靈露</span>
+                    <span class="skill-label">狂熱 <span class="num">60💧 [W]</span></span>
+                    <span class="skill-sub num">差 40 💧</span>
                 </button>
                 <button id="skill-harvest-btn" class="skill-btn skill-harvest" type="button"
                     title="消耗 50 靈露：依波次收穫金幣（受軟上限約束）並立即重置全場塔攻擊冷卻（冷卻 14 秒）">
                     <span class="skill-cd-mask"></span>
                     <span class="skill-dew-bar"></span>
-                    <span class="skill-label">黃金豐收 (<span class="num">50</span> 靈露)</span>
-                    <span class="skill-sub num">還差 30 靈露</span>
+                    <span class="skill-label">豐收 <span class="num">50💧 [E]</span></span>
+                    <span class="skill-sub num">差 30 💧</span>
                 </button>
                 <button id="codex-btn" class="codex-btn" type="button">世界樹圖譜</button>
                 <button id="next-wave-btn" class="wave-btn" type="button" disabled><span
@@ -612,14 +623,14 @@
             <div class="start-top-bar">
                 <div class="lang-dropdown start-lang-dropdown" id="start-lang-dropdown">
                     <button id="start-lang-btn" class="hud-ctrl-btn hud-lang-btn" type="button" aria-haspopup="true"
-                        aria-expanded="false" title="切換語言 / Switch Language">
+                        aria-expanded="false" aria-label="切換語言" title="切換語言 / Switch Language">
                         <svg class="lang-globe-icon" viewBox="0 0 16 16" aria-hidden="true">
                             <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.3" />
                             <ellipse cx="8" cy="8" rx="2.8" ry="6.2" fill="none" stroke="currentColor"
                                 stroke-width="1.2" />
                             <line x1="2.2" y1="8" x2="13.8" y2="8" stroke="currentColor" stroke-width="1.2" />
                         </svg>
-                        <span>Language ▾</span>
+                        <span id="start-lang-btn-label">語言 ▾</span>
                     </button>
                     <div id="start-lang-menu" class="lang-menu hidden" role="menu" aria-labelledby="start-lang-btn">
                         <button type="button" class="lang-option is-active" data-lang="zh-TW" role="menuitemradio"
@@ -637,7 +648,7 @@
             </div>
             <h1 id="start-title" class="start-title">元素陣線：合成塔防</h1>
             <p class="modal-subtitle">15×10 古林戰線 · 守護世界樹抵禦 10 波攻勢</p>
-            <div id="start-career-banner" class="start-career-banner num">全圖最高 Wave 1 · 累計通關 0 次</div>
+            <div id="start-career-banner" class="start-career-banner num">全圖最高第 1 波 · 累計通關 0 次</div>
 
             <!-- 三地圖關卡選擇 -->
             <div class="map-selector-section">
@@ -649,7 +660,7 @@
                             <span class="map-diff-badge diff-std">標準難度</span>
                         </div>
                         <div class="map-card-desc">41 格蜿蜒長徑 · 經典穩定防線</div>
-                        <div id="map-record-forest" class="map-card-record num">最高 Wave 1 · 尚未通關</div>
+                        <div id="map-record-forest" class="map-card-record num">最高第 1 波 · 尚未通關</div>
                     </button>
                     <button type="button" class="map-card" data-map-id="lava">
                         <div class="map-card-top">
@@ -657,7 +668,7 @@
                             <span class="map-diff-badge diff-hard">進階挑戰</span>
                         </div>
                         <div class="map-card-desc">31 格雙折短徑 · 初始 +10 💰</div>
-                        <div id="map-record-lava" class="map-card-record num">最高 Wave 1 · 尚未通關</div>
+                        <div id="map-record-lava" class="map-card-record num">最高第 1 波 · 尚未通關</div>
                     </button>
                     <button type="button" class="map-card" data-map-id="frost">
                         <div class="map-card-top">
@@ -665,7 +676,7 @@
                             <span class="map-diff-badge diff-ice">雙路分線</span>
                         </div>
                         <div class="map-card-desc">36 格雙線匯流 · 初始 +15 💰 · 冰脈傷害 +20%</div>
-                        <div id="map-record-frost" class="map-card-record num">最高 Wave 1 · 尚未通關</div>
+                        <div id="map-record-frost" class="map-card-record num">最高第 1 波 · 尚未通關</div>
                     </button>
                 </div>
             </div>
@@ -736,10 +747,10 @@
             <div id="victory-feedback-box" class="feel-feedback-box hidden">
                 <div class="feel-rating-header">5 秒試玩體感快評</div>
                 <div class="feel-rating-bar">
-                    <button type="button" class="feel-rating-btn" data-rating-tag="🔥 爽快好玩">🔥 爽快好玩</button>
-                    <button type="button" class="feel-rating-btn" data-rating-tag="😴 中間有點無聊">😴 中間有點無聊</button>
-                    <button type="button" class="feel-rating-btn" data-rating-tag="🤯 難度太高卡關">🤯 難度太高卡關</button>
-                    <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">🖐️ 拖拉操作卡手</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🔥 爽快好玩">爽快好玩</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="😴 中間有點無聊">中間有點無聊</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🤯 難度太高卡關">難度太高卡關</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">拖拉操作卡手</button>
                 </div>
                 <div id="victory-rating-status" class="feel-rating-status">點擊上方標籤一鍵回饋本局體感</div>
                 <button id="victory-copy-report-btn" class="copy-report-btn" type="button">複製本局數據戰報</button>
@@ -770,11 +781,11 @@
                 </div>
                 <div class="stat-row">
                     <span>抵達波數</span>
-                    <strong id="final-wave-text" class="num">Wave 1 / 10</strong>
+                    <strong id="final-wave-text" class="num">第 1 / 10 波</strong>
                 </div>
                 <div class="stat-row">
                     <span>歷史最高紀錄</span>
-                    <strong id="final-best-text" class="num">Wave 1</strong>
+                    <strong id="final-best-text" class="num">第 1 波</strong>
                 </div>
             </div>
 
@@ -805,11 +816,10 @@
             <div id="gameover-feedback-box" class="feel-feedback-box hidden">
                 <div class="feel-rating-header">5 秒試玩體感快評</div>
                 <div class="feel-rating-bar">
-                    <button type="button" class="feel-rating-btn" data-rating-tag="🔥 爽快好玩">🔥 爽快好玩</button>
-                    <button type="button" class="feel-rating-btn" data-rating-tag="😴 中間有點無聊">😴 中間有點無聊</button>
-                    <button type="button" class="feel-rating-btn" data-rating-tag="🤯 難度太高卡關">🤯 難度太高卡關</button>
-                    <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">🖐️
-                        拖拉操作卡手</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🔥 爽快好玩">爽快好玩</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="😴 中間有點無聊">中間有點無聊</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🤯 難度太高卡關">難度太高卡關</button>
+                    <button type="button" class="feel-rating-btn" data-rating-tag="🖐️ 拖拉操作卡手">拖拉操作卡手</button>
                 </div>
                 <div id="gameover-rating-status" class="feel-rating-status">點擊上方標籤一鍵回饋本局體感</div>
                 <button id="gameover-copy-report-btn" class="copy-report-btn" type="button">複製本局數據戰報</button>
