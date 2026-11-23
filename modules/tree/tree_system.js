@@ -97,8 +97,13 @@
         const rawGain = monster.isBoss
             ? (tc.DEW_GAIN_BOSS || 30)
             : (isSpec ? (tc.DEW_GAIN_SPECIAL || 8) : (tc.DEW_GAIN_NORMAL || 4));
+        const wCatalog = (GameApp.data && GameApp.data.weather) || {};
+        const eclipseMult = (G && G.state && G.state.weatherType === 'eclipse')
+            ? ((wCatalog.eclipse && Number.isFinite(wCatalog.eclipse.killDewMult)) ? wCatalog.eclipse.killDewMult : 1.30)
+            : 1.0;
+        const weatheredGain = Math.round(rawGain * eclipseMult);
         const hasDrought = Boolean(G && G.state && G.state.activeContracts && G.state.activeContracts.has('dew_drought'));
-        return hasDrought ? Math.max(1, Math.round(rawGain * 0.80)) : rawGain;
+        return hasDrought ? Math.max(1, Math.round(weatheredGain * 0.80)) : weatheredGain;
     }
 
     /**

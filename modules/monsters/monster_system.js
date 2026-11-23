@@ -425,7 +425,15 @@
         const st = ensureMonsterStatus(monster);
         const cc = getCombatConstants();
         const slowCap = Number.isFinite(cc.SLOW_TOTAL_CAP) ? cc.SLOW_TOTAL_CAP : 0.70;
-        const clampedRate = Math.min(slowCap, Math.max(0, Number(slowRate) || 0));
+        let weatherSlowMult = 1.0;
+        const weather = G && G.state ? G.state.weatherType : null;
+        const sid = String(sourceId || '');
+        const isIceSlowSource = sid.includes('ice') || sid.includes('frost') || sid.includes('prism') || sid.includes('steam_B') || sid.includes('leyline_convection');
+        if (weather === 'sun' && isIceSlowSource) {
+            const wCatalog = (GameApp.data && GameApp.data.weather) || {};
+            weatherSlowMult = (wCatalog.sun && Number.isFinite(wCatalog.sun.iceSlowMult)) ? wCatalog.sun.iceSlowMult : 0.85;
+        }
+        const clampedRate = Math.min(slowCap, Math.max(0, (Number(slowRate) || 0) * weatherSlowMult));
         const dur = Math.max(0, Number(durationMs) || 0);
         if (clampedRate <= 0 || dur <= 0) return;
 
@@ -669,7 +677,12 @@
         if (monster.isBoss) {
             perStack = Math.min(b.bossCapPerStack || 35, perStack);
         }
-        return b.stacks * perStack;
+        const weather = G && G.state ? G.state.weatherType : null;
+        const wCatalog = (GameApp.data && GameApp.data.weather) || {};
+        const sunBurnMult = weather === 'sun'
+            ? ((wCatalog.sun && Number.isFinite(wCatalog.sun.burnMult)) ? wCatalog.sun.burnMult : 1.25)
+            : 1.0;
+        return b.stacks * perStack * sunBurnMult;
     }
 
     function applyGrievousWound(monster, rate = 0.50, durationMs = 5000) {
@@ -932,6 +945,20 @@
             }
         }
 
+        // 🌑 蝕月黑潮天象：擊殺額外 +30% 金幣（併入單波非戰鬥淨收益軟上限約束）
+        let eclipseExtraGold = 0;
+        if (st.weatherType === 'eclipse' && killGold > 0 && EconSys && typeof EconSys.recordNonCombatNetGain === 'function') {
+            const wCat = (GameApp.data && GameApp.data.weather) || {};
+            const ecRate = (wCat.eclipse && Number.isFinite(wCat.eclipse.killGoldBonusRate)) ? wCat.eclipse.killGoldBonusRate : 0.30;
+            const rawEcExtra = Math.max(1, Math.round(killGold * ecRate));
+            const ecRes = EconSys.recordNonCombatNetGain(rawEcExtra, st.currentWave);
+            eclipseExtraGold = ecRes.granted || 0;
+            if (eclipseExtraGold > 0) {
+                st.currentGold += eclipseExtraGold;
+                st.totalGoldEarned += eclipseExtraGold;
+            }
+        }
+
         // 🦊 靈脈竊賊擊殺驚喜掉落：+60 金幣（受單波軟上限約束）＋ 1 股隨機股票或 1 枚盲盒代幣
         let thiefGoldGranted = 0;
         let thiefBonusLabelZh = '';
@@ -979,7 +1006,29 @@
             }
         }
 
-        const dewGain = TreeSys ? TreeSys.computeKillDewGain(monster) : 0;
+        let dewGain = TreeSys ? TreeSys.computeKillDewGain(monster) : 0;
+        // 🔺 鄰格靈脈三元陣法：擊殺額外 +1 靈露（受冷卻 1.5s 與每波上限 12 靈露防刷鎖約束）
+        let killerIdx = Number.isFinite(options.killerCellIndex) ? options.killerCellIndex : -1;
+        if (killerIdx < 0 && killerTowerObj && Array.isArray(st.board)) {
+            killerIdx = st.board.indexOf(killerTowerObj);
+        }
+        const AttackSysDew = GameApp.systems && GameApp.systems.towerAttack;
+        const killerLey = (killerIdx >= 0 && AttackSysDew && typeof AttackSysDew.getTowerLeylineSummary === 'function')
+            ? AttackSysDew.getTowerLeylineSummary(killerIdx)
+            : null;
+        if (killerLey && killerLey.hasTriFormation && !monster.isSplitChild) {
+            const cc = getCombatConstants();
+            const triCdMs = Number.isFinite(cc.LEYLINE_TRI_DEW_COOLDOWN_MS) ? cc.LEYLINE_TRI_DEW_COOLDOWN_MS : 1500;
+            const triWaveCap = Number.isFinite(cc.LEYLINE_TRI_DEW_WAVE_CAP) ? cc.LEYLINE_TRI_DEW_WAVE_CAP : 12;
+            const nowPlayMs = Number(st.elapsedPlayMs) || 0;
+            const prevTriDewMs = Number.isFinite(st.lastTriLeyDewMs) ? st.lastTriLeyDewMs : -9999;
+            const usedTriDew = Number(st.waveTriLeyDewCount) || 0;
+            if ((nowPlayMs - prevTriDewMs) >= triCdMs && usedTriDew < triWaveCap) {
+                st.lastTriLeyDewMs = nowPlayMs;
+                st.waveTriLeyDewCount = usedTriDew + 1;
+                dewGain += 1;
+            }
+        }
         const dewMax = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.DEW_MAX) || 100;
         if (dewGain > 0) st.dewEnergy = Math.min(dewMax, st.dewEnergy + dewGain);
 
@@ -1012,12 +1061,14 @@
                 ? `Caught ${monster.name}! +${thiefGoldGranted} 💰${thiefBonusLabelEn}`
                 : `捕獲【${monster.name}】！獲得 +${thiefGoldGranted} 💰${thiefBonusLabelZh}。`;
         } else if (killGold > 0 && !options.isEmberSplash && !options.isDotKill) {
-            const totalShowGold = killGold + mistExtraGold;
+            const totalShowGold = killGold + mistExtraGold + eclipseExtraGold;
             const mistSuffixZh = mistExtraGold > 0 ? `（含霜霧 +${mistExtraGold}）` : '';
             const mistSuffixEn = mistExtraGold > 0 ? ` (Mist +${mistExtraGold})` : '';
+            const ecSuffixZh = eclipseExtraGold > 0 ? `（含蝕月 +${eclipseExtraGold}）` : '';
+            const ecSuffixEn = eclipseExtraGold > 0 ? ` (Eclipse +${eclipseExtraGold})` : '';
             G.dom.msgText.innerText = isEnKill
-                ? `Slain ${monster.name}: +${totalShowGold} 💰${mistSuffixEn}${dewGain > 0 ? `, +${dewGain} 💧` : ''}`
-                : `擊殺【${monster.name}】，獲得 +${totalShowGold} 💰${mistSuffixZh}${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
+                ? `Slain ${monster.name}: +${totalShowGold} 💰${mistSuffixEn}${ecSuffixEn}${dewGain > 0 ? `, +${dewGain} 💧` : ''}`
+                : `擊殺【${monster.name}】，獲得 +${totalShowGold} 💰${mistSuffixZh}${ecSuffixZh}${dewGain > 0 ? `、+${dewGain} 💧` : ''}。`;
         }
 
         if (!options.isMartyrBlast && Array.isArray(st.groundHazards) && st.groundHazards.length > 0) {
@@ -1457,9 +1508,12 @@
             const isRootedOrFrozen = (m.rootTimer || 0) > 0 || (m.stunTimer || 0) > 0 || isMonsterFrozen(m);
             const effSlowRate = getMonsterEffectiveSlowRate(m);
             const stealthSpeedMult = m.isStealthed ? (1 + ((m.pantherSpec && m.pantherSpec.stealthSpeedBonus) || 0.65)) : 1.0;
+            const snowSpdMult = st.weatherType === 'snow'
+                ? (((GameApp.data && GameApp.data.weather && GameApp.data.weather.snow && GameApp.data.weather.snow.monsterSpeedMult)) || 0.90)
+                : 1.0;
             const slowMult = isRootedOrFrozen
                 ? 0
-                : Math.max(minSpeedRatio, 1 - effSlowRate) * stealthSpeedMult;
+                : Math.max(minSpeedRatio, (1 - effSlowRate) * snowSpdMult) * stealthSpeedMult;
             const safeSpeed = clampNumber(m.baseSpeed, 0.2, baseSpd * 10, baseSpd);
             let step = safeSpeed * slowMult * dtSec, reachedEnd = false;
 

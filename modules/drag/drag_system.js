@@ -108,7 +108,12 @@
         if (cellIndex === null || cellIndex === undefined || !G || !G.state) return false;
         const TerrainSys = GameApp.systems && GameApp.systems.terrain;
         const canBuild = TerrainSys ? TerrainSys.canBuildAt(cellIndex) : !G.map.pathCellIndices.has(cellIndex);
-        return Boolean(canBuild && G.state.board[cellIndex] === null);
+        if (!canBuild || G.state.board[cellIndex] !== null) return false;
+        const EconSys = GameApp.systems && GameApp.systems.economy;
+        if (EconSys && activeDrag && activeDrag.dragSource === 'shop' && activeDrag.towerType) {
+            return EconSys.canAffordSummon(activeDrag.towerType, null, null, cellIndex);
+        }
+        return true;
     }
 
     /**
@@ -184,6 +189,9 @@
                 const cellEl = G.cellElements[cellIndex];
                 cellEl.classList.add(valid ? 'drag-valid-build' : 'drag-invalid');
                 if (valid) cellEl.classList.add('drag-over');
+                G.state.leylinePreviewEdges = (valid && AttackSys && typeof AttackSys.previewLeylinesForPlacement === 'function')
+                    ? AttackSys.previewLeylinesForPlacement(towerProbe, cellIndex, null).edges
+                    : null;
 
                 const coords = indexToCoords(cellIndex);
                 const center = Renderer.getCellCenter(coords.x, coords.y);
@@ -192,6 +200,7 @@
                     : (2.0 * G.boardMetrics.step);
                 Renderer.showDragRangePreview(center.left, center.top, radiusPx, activeDrag.towerType);
             } else {
+                G.state.leylinePreviewEdges = null;
                 const stageEl = G.dom.boardStageEl;
                 const rect = stageEl && typeof stageEl.getBoundingClientRect === 'function' ? stageEl.getBoundingClientRect() : null;
                 if (rect && clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
@@ -212,6 +221,7 @@
                 cellEl.classList.add(valid ? 'drag-valid-build' : 'drag-invalid');
                 if (valid) cellEl.classList.add('drag-over');
                 const dstTower = G.state.board[cellIndex];
+                G.state.leylinePreviewEdges = null;
                 if (dstTower && typeof Renderer.showDragEvolutionPreview === 'function') {
                     const preview = EvoSys && typeof EvoSys.getFruitUpgradePreview === 'function'
                         ? EvoSys.getFruitUpgradePreview(dstTower)
@@ -240,6 +250,7 @@
                 if (valid) cellEl.classList.add('drag-over');
 
                 const dstTower = G.state.board[cellIndex];
+                G.state.leylinePreviewEdges = null;
                 if (dstTower && typeof Renderer.showDragEvolutionPreview === 'function') {
                     const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
                     const fusion = EvoSys && typeof EvoSys.getFusionResult === 'function' ? EvoSys.getFusionResult(srcTower, dstTower) : null;
@@ -260,6 +271,7 @@
                 const radiusPx = AttackSys ? AttackSys.getTowerRangePx(srcTower, valid ? cellIndex : activeDrag.sourceIndex) : (2.0 * G.boardMetrics.step);
                 Renderer.showDragRangePreview(center.left, center.top, radiusPx, srcTower.type);
             } else {
+                G.state.leylinePreviewEdges = null;
                 if (typeof Renderer.clearDragEvolutionPreview === 'function') {
                     Renderer.clearDragEvolutionPreview();
                 }
@@ -509,11 +521,21 @@
                     if (targetIndex !== null) {
                         const isPath = G.map.pathCellIndices.has(targetIndex);
                         const hasTower = G.state.board[targetIndex] !== null;
-                        G.dom.msgText.innerText = isPath
-                            ? (isEn ? 'Cannot build on enemy path. Summon cancelled (no Gold spent).' : '怪物路徑不可建塔，已取消召喚（未扣金幣）。')
-                            : (hasTower
-                                ? (isEn ? 'Drop on an open green tile to summon (no Gold spent).' : '商店召喚不可直接覆蓋場上防禦塔，請放置於空白地塊（未扣金幣）。')
-                                : (isEn ? 'Cannot build on this terrain. Summon cancelled (no Gold spent).' : '該地形不可建塔，已取消召喚（未扣金幣）。'));
+                        const TerrainSys = GameApp.systems && GameApp.systems.terrain;
+                        const canBuildCell = TerrainSys ? TerrainSys.canBuildAt(targetIndex) : !isPath;
+                        const EconSysDrop = GameApp.systems && GameApp.systems.economy;
+                        const exactCost = EconSysDrop ? EconSysDrop.getSummonCost(towerType, null, targetIndex) : 10;
+                        if (canBuildCell && !hasTower && G.state.currentGold < exactCost) {
+                            G.dom.msgText.innerText = isEn
+                                ? `Need ${exactCost} 💰 at this tile (❄️ Snow +5 💰 on plain grass). Summon cancelled.`
+                                : `此格召喚需 ${exactCost} 💰（❄️ 霜雪草地 +5 💰），金幣不足已取消。`;
+                        } else {
+                            G.dom.msgText.innerText = isPath
+                                ? (isEn ? 'Cannot build on enemy path. Summon cancelled (no Gold spent).' : '怪物路徑不可建塔，已取消召喚（未扣金幣）。')
+                                : (hasTower
+                                    ? (isEn ? 'Drop on an open green tile to summon (no Gold spent).' : '商店召喚不可直接覆蓋場上防禦塔，請放置於空白地塊（未扣金幣）。')
+                                    : (isEn ? 'Cannot build on this terrain. Summon cancelled (no Gold spent).' : '該地形不可建塔，已取消召喚（未扣金幣）。'));
+                        }
                     } else {
                         G.dom.msgText.innerText = isEn ? 'Drag summon cancelled (no Gold spent).' : '已取消拖曳召喚（未扣金幣）。';
                     }
@@ -559,7 +581,10 @@
         if (drag.ghostEl) drag.ghostEl.remove();
         if (drag.btnEl) drag.btnEl.classList.remove('dragging-card');
         if (drag.towerEl) drag.towerEl.classList.remove('dragging');
-        if (G && G.state) G.state.draggedIndex = null;
+        if (G && G.state) {
+            G.state.draggedIndex = null;
+            G.state.leylinePreviewEdges = null;
+        }
 
         if (GameApp.renderer) {
             if (typeof GameApp.renderer.clearDragEvolutionPreview === 'function') {

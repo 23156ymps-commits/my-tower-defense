@@ -76,15 +76,275 @@
         return baseRange;
     }
 
+    function getTowerLeylineElements(towerObj) {
+        if (!towerObj) return [];
+        const cfg = getTowerCfg(towerObj.type, towerObj.tier) || {};
+        const fam = cfg.family || towerObj.type || '';
+        if (fam === 'fire' || String(towerObj.type).startsWith('fire')) return ['fire'];
+        if (fam === 'ice' || String(towerObj.type).startsWith('ice')) return ['ice'];
+        if (fam === 'thunder' || String(towerObj.type).startsWith('thunder')) return ['thunder'];
+        if (fam === 'steam' || String(towerObj.type).startsWith('steam')) return ['fire', 'ice'];
+        if (fam === 'magnet' || String(towerObj.type).startsWith('magnet')) return ['ice', 'thunder'];
+        if (fam === 'plasma' || String(towerObj.type).startsWith('plasma')) return ['fire', 'thunder'];
+        if (cfg.isTriElement || cfg.isPrimalCore || fam === 'storm_tri' || fam === 'starforge_tri' || fam === 'prism_tri' || fam === 'primal_core') {
+            return ['fire', 'ice', 'thunder'];
+        }
+        return Array.isArray(cfg.lineageTags)
+            ? cfg.lineageTags.filter(e => e === 'fire' || e === 'ice' || e === 'thunder')
+            : [];
+    }
+
+    function getTowerLeylineFamily(towerObj) {
+        if (!towerObj) return '';
+        const cfg = getTowerCfg(towerObj.type, towerObj.tier) || {};
+        return cfg.family || cfg.elementTag || towerObj.type || '';
+    }
+
+    function resolvePairLeylineKind(towerA, towerB) {
+        if (!towerA || !towerB) return null;
+        const famA = getTowerLeylineFamily(towerA);
+        const famB = getTowerLeylineFamily(towerB);
+        if (!famA || !famB || famA === famB) return null;
+
+        const elemsA = getTowerLeylineElements(towerA);
+        const elemsB = getTowerLeylineElements(towerB);
+        if (elemsA.length === 0 || elemsB.length === 0) return null;
+
+        const union = new Set(elemsA.concat(elemsB));
+        if (union.size < 2) return null;
+
+        if (elemsA.length === 1 && elemsB.length === 1) {
+            if (union.has('fire') && union.has('ice')) return 'thermal_convection';
+            if (union.has('ice') && union.has('thunder')) return 'superconduct_chill';
+            if (union.has('fire') && union.has('thunder')) return 'high_volt_overload';
+        }
+
+        const missingFromA = elemsB.filter(e => !elemsA.includes(e));
+        const missingFromB = elemsA.filter(e => !elemsB.includes(e));
+        const diffSet = new Set(missingFromA.concat(missingFromB));
+        if (diffSet.has('thunder') && (elemsA.includes('ice') || elemsB.includes('ice')) && !(elemsA.includes('fire') && elemsB.includes('fire'))) {
+            return 'superconduct_chill';
+        }
+        if ((diffSet.has('fire') || diffSet.has('ice')) && (elemsA.includes('ice') || elemsB.includes('ice')) && (elemsA.includes('fire') || elemsB.includes('fire'))) {
+            return 'thermal_convection';
+        }
+        if ((diffSet.has('fire') || diffSet.has('thunder')) && (elemsA.includes('fire') || elemsB.includes('fire')) && (elemsA.includes('thunder') || elemsB.includes('thunder'))) {
+            return 'high_volt_overload';
+        }
+        if ((diffSet.has('ice') || diffSet.has('thunder')) && (elemsA.includes('ice') || elemsB.includes('ice')) && (elemsA.includes('thunder') || elemsB.includes('thunder'))) {
+            return 'superconduct_chill';
+        }
+        if (union.has('fire') && union.has('ice') && !union.has('thunder')) return 'thermal_convection';
+        if (union.has('ice') && union.has('thunder') && !union.has('fire')) return 'superconduct_chill';
+        if (union.has('fire') && union.has('thunder') && !union.has('ice')) return 'high_volt_overload';
+        return 'superconduct_chill';
+    }
+
+    function computeBoardSignature(board) {
+        if (!Array.isArray(board)) return '';
+        const parts = [];
+        for (let i = 0; i < board.length; i++) {
+            const t = board[i];
+            if (t) parts.push(`${i}:${t.type}`);
+        }
+        return parts.join('|');
+    }
+
+    function isTriTriple(board, idxA, idxB, idxC) {
+        if (idxA === idxB || idxB === idxC || idxA === idxC) return false;
+        const tA = board[idxA], tB = board[idxB], tC = board[idxC];
+        if (!tA || !tB || !tC) return false;
+        const fA = getTowerLeylineFamily(tA), fB = getTowerLeylineFamily(tB), fC = getTowerLeylineFamily(tC);
+        if (fA === fB || fB === fC || fA === fC) return false;
+        const set = new Set([
+            ...getTowerLeylineElements(tA),
+            ...getTowerLeylineElements(tB),
+            ...getTowerLeylineElements(tC)
+        ]);
+        return set.has('fire') && set.has('ice') && set.has('thunder');
+    }
+
+    function computeLeylineNetworkForBoard(board) {
+        const cc = getTowersData().COMBAT_CONSTANTS || {};
+        const maxLinks = Number.isFinite(cc.LEYLINE_MAX_LINKS_PER_TOWER) ? cc.LEYLINE_MAX_LINKS_PER_TOWER : 2;
+        const powerCap = Number.isFinite(cc.LEYLINE_POWER_BONUS_CAP) ? cc.LEYLINE_POWER_BONUS_CAP : 0.18;
+        const triDmgBonus = Number.isFinite(cc.LEYLINE_TRI_DAMAGE_BONUS) ? cc.LEYLINE_TRI_DAMAGE_BONUS : 0.15;
+        const superSpeedBonus = Number.isFinite(cc.LEYLINE_SUPERCONDUCT_SPEED) ? cc.LEYLINE_SUPERCONDUCT_SPEED : 0.10;
+        const overloadCritBonus = Number.isFinite(cc.LEYLINE_OVERLOAD_CRIT) ? cc.LEYLINE_OVERLOAD_CRIT : 0.10;
+
+        const cols = (G && G.BOARD_COLS) || CONFIG.BOARD_COLS || 15;
+        const rows = (G && G.BOARD_ROWS) || CONFIG.BOARD_ROWS || 10;
+        const candidates = [];
+        const adjCand = new Map();
+
+        if (Array.isArray(board)) {
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const a = y * cols + x;
+                    const tA = board[a];
+                    if (!tA) continue;
+                    const neighbors = [];
+                    if (x + 1 < cols) neighbors.push(y * cols + (x + 1));
+                    if (y + 1 < rows) neighbors.push((y + 1) * cols + x);
+                    for (let k = 0; k < neighbors.length; k++) {
+                        const b = neighbors[k];
+                        const tB = board[b];
+                        if (!tB) continue;
+                        const kind = resolvePairLeylineKind(tA, tB);
+                        if (!kind) continue;
+                        const edge = { a, b, kind, triPriority: false };
+                        candidates.push(edge);
+                        if (!adjCand.has(a)) adjCand.set(a, []);
+                        if (!adjCand.has(b)) adjCand.set(b, []);
+                        adjCand.get(a).push({ neighbor: b, edge });
+                        adjCand.get(b).push({ neighbor: a, edge });
+                    }
+                }
+            }
+        }
+
+        // Prioritize candidate edges that participate in a 3-tower Tri-Elemental Formation
+        adjCand.forEach((list, centerIdx) => {
+            if (!Array.isArray(list) || list.length < 2) return;
+            for (let i = 0; i < list.length; i++) {
+                for (let j = i + 1; j < list.length; j++) {
+                    if (isTriTriple(board, centerIdx, list[i].neighbor, list[j].neighbor)) {
+                        list[i].edge.triPriority = true;
+                        list[j].edge.triPriority = true;
+                    }
+                }
+            }
+        });
+
+        candidates.sort((e1, e2) => {
+            if (e1.triPriority !== e2.triPriority) return e1.triPriority ? -1 : 1;
+            if (e1.a !== e2.a) return e1.a - e2.a;
+            return e1.b - e2.b;
+        });
+
+        const deg = new Map();
+        const acceptedEdges = [];
+        const adjActive = new Map();
+
+        for (let i = 0; i < candidates.length; i++) {
+            const e = candidates[i];
+            const dA = deg.get(e.a) || 0;
+            const dB = deg.get(e.b) || 0;
+            if (dA >= maxLinks || dB >= maxLinks) continue;
+            deg.set(e.a, dA + 1);
+            deg.set(e.b, dB + 1);
+            acceptedEdges.push({ a: e.a, b: e.b, kind: e.kind, isTriEdge: false });
+            if (!adjActive.has(e.a)) adjActive.set(e.a, []);
+            if (!adjActive.has(e.b)) adjActive.set(e.b, []);
+            adjActive.get(e.a).push({ neighbor: e.b, kind: e.kind, edgeIdx: acceptedEdges.length - 1 });
+            adjActive.get(e.b).push({ neighbor: e.a, kind: e.kind, edgeIdx: acceptedEdges.length - 1 });
+        }
+
+        const triCells = new Set();
+        adjActive.forEach((list, centerIdx) => {
+            if (!Array.isArray(list) || list.length < 2) return;
+            for (let i = 0; i < list.length; i++) {
+                for (let j = i + 1; j < list.length; j++) {
+                    const n1 = list[i].neighbor;
+                    const n2 = list[j].neighbor;
+                    if (isTriTriple(board, centerIdx, n1, n2)) {
+                        triCells.add(centerIdx);
+                        triCells.add(n1);
+                        triCells.add(n2);
+                        acceptedEdges[list[i].edgeIdx].isTriEdge = true;
+                        acceptedEdges[list[j].edgeIdx].isTriEdge = true;
+                    }
+                }
+            }
+        });
+
+        const byCell = {};
+        adjActive.forEach((list, cellIdx) => {
+            const links = list.slice(0, maxLinks).map(item => ({ neighborIndex: item.neighbor, kind: item.kind }));
+            const kinds = Array.from(new Set(links.map(l => l.kind)));
+            const hasConvection = links.some(l => l.kind === 'thermal_convection');
+            const superCount = links.filter(l => l.kind === 'superconduct_chill').length;
+            const overCount = links.filter(l => l.kind === 'high_volt_overload').length;
+            const hasTriFormation = triCells.has(cellIdx);
+            const rawBonus = hasTriFormation ? triDmgBonus : 0;
+            const damageBonus = Math.min(powerCap, Math.max(0, Number(rawBonus.toFixed(4))));
+            byCell[cellIdx] = {
+                links,
+                kinds,
+                hasConvection,
+                speedBonus: Number((superCount * superSpeedBonus).toFixed(4)),
+                critBonus: Number((overCount * overloadCritBonus).toFixed(4)),
+                hasTriFormation,
+                damageBonus
+            };
+        });
+
+        return {
+            signature: computeBoardSignature(board),
+            edges: acceptedEdges,
+            byCell,
+            triCells
+        };
+    }
+
+    function recalculateLeylines() {
+        if (!G || !G.state) return { signature: '', edges: [], byCell: {}, triCells: new Set() };
+        const network = computeLeylineNetworkForBoard(G.state.board);
+        G.state.leylineNetwork = network;
+        return network;
+    }
+
+    function getLeylineNetwork() {
+        if (!G || !G.state) return { signature: '', edges: [], byCell: {}, triCells: new Set() };
+        const sig = computeBoardSignature(G.state.board);
+        if (!G.state.leylineNetwork || G.state.leylineNetwork.signature !== sig) {
+            return recalculateLeylines();
+        }
+        return G.state.leylineNetwork;
+    }
+
+    function getTowerLeylineSummary(cellIndex) {
+        if (cellIndex === null || cellIndex === undefined || cellIndex < 0) return null;
+        const net = getLeylineNetwork();
+        return (net && net.byCell && net.byCell[cellIndex]) || null;
+    }
+
+    function previewLeylinesForPlacement(towerTypeOrObj, targetIndex, ignoreIndex = null) {
+        if (!G || !G.state || !Array.isArray(G.state.board) || targetIndex === null || targetIndex === undefined) {
+            return { edges: [], cellSummary: null };
+        }
+        const probe = typeof towerTypeOrObj === 'string'
+            ? { type: towerTypeOrObj, tier: 1 }
+            : (towerTypeOrObj || { type: 'fire_bud', tier: 1 });
+        const tempBoard = G.state.board.slice();
+        if (ignoreIndex !== null && ignoreIndex !== undefined && ignoreIndex >= 0 && ignoreIndex < tempBoard.length) {
+            tempBoard[ignoreIndex] = null;
+        }
+        if (targetIndex < 0 || targetIndex >= tempBoard.length || tempBoard[targetIndex] !== null) {
+            return { edges: [], cellSummary: null };
+        }
+        tempBoard[targetIndex] = probe;
+        const net = computeLeylineNetworkForBoard(tempBoard);
+        return {
+            edges: net.edges.filter(e => e.a === targetIndex || e.b === targetIndex),
+            cellSummary: net.byCell[targetIndex] || null
+        };
+    }
+
     function getTowerEffectiveRangeCells(index, towerObj) {
         const baseRange = getTowerBaseRangeCells(towerObj);
         const aura = (index !== null && index !== undefined) ? getScionAuraAtCell(index) : null;
         const auraRange = (aura && aura.active) ? aura.rangeBonus : 0;
+        const weather = G && G.state ? G.state.weatherType : null;
+        const wCatalog = (GameApp.data && GameApp.data.weather) || {};
+        const sunFireBonus = (weather === 'sun' && getTowerLeylineElements(towerObj).includes('fire'))
+            ? ((wCatalog.sun && Number.isFinite(wCatalog.sun.fireRangeBonus)) ? wCatalog.sun.fireRangeBonus : 0.4)
+            : 0;
         const TerrainSys = GameApp.systems && GameApp.systems.terrain;
         const rangeMult = (TerrainSys && index !== null && index !== undefined)
             ? TerrainSys.getTerrainBonusesAt(index).rangeMult
             : 1.0;
-        return Math.min(15.0, (baseRange + auraRange) * rangeMult);
+        return Math.min(15.0, (baseRange + auraRange + sunFireBonus) * rangeMult);
     }
 
     function getTowerRangePx(towerObj, index = null) {
@@ -113,6 +373,11 @@
         const aura = (index !== null && index !== undefined) ? getScionAuraAtCell(index) : null;
         if (aura && aura.active) {
             speedMult *= (1 + aura.speedBonus);
+        }
+
+        const ley = (index !== null && index !== undefined) ? getTowerLeylineSummary(index) : null;
+        if (ley && ley.speedBonus > 0) {
+            speedMult *= (1 + ley.speedBonus);
         }
 
         if (G && G.state && G.state.frenzyActiveMs > 0) {
@@ -253,6 +518,7 @@
         const terrainCap = Number.isFinite(constants.POWER_TERRAIN_CAP) ? constants.POWER_TERRAIN_CAP : 0.25;
         const blessingCap = Number.isFinite(constants.POWER_BLESSING_CAP) ? constants.POWER_BLESSING_CAP : 0.30;
         const dividendCap = Number.isFinite(constants.POWER_DIVIDEND_CAP) ? constants.POWER_DIVIDEND_CAP : 0.24;
+        const leylineCap = Number.isFinite(constants.LEYLINE_POWER_BONUS_CAP) ? constants.LEYLINE_POWER_BONUS_CAP : 0.18;
 
         const cfg = towerObj ? (getTowerCfg(towerObj.type, towerObj.tier) || {}) : {};
         const family = cfg.family || (towerObj && towerObj.type) || '';
@@ -301,12 +567,20 @@
                     : ((G && G.state && Number(G.state.infusionCount)) || 0)));
         const b_inf = Number.isFinite(options.b_infusion) ? Math.max(0, options.b_infusion) : b_infusion(infusionK);
 
-        const B_power = b_terrain + b_blessing + b_dividend + b_inf;
+        const cellIdx = Number.isFinite(options.cellIndex) ? options.cellIndex : null;
+        const ley = cellIdx !== null ? getTowerLeylineSummary(cellIdx) : null;
+        const rawLeyline = Number.isFinite(options.b_leyline)
+            ? options.b_leyline
+            : ((ley && Number.isFinite(ley.damageBonus)) ? ley.damageBonus : 0);
+        const b_leyline = Math.min(leylineCap, Math.max(0, rawLeyline));
+
+        const B_power = b_terrain + b_blessing + b_dividend + b_inf + b_leyline;
         return {
             b_terrain,
             b_blessing,
             b_dividend,
             b_infusion: b_inf,
+            b_leyline,
             B_power
         };
     }
@@ -440,9 +714,18 @@
                 ? (isEn ? '5★ Scion' : '5★ 神裔')
                 : (cfg.isTwinCrown ? (isEn ? '4★ Twin AB' : '4★ 雙生AB') : `${stars}${growthTag}`));
         const scionAura = (index !== null && index !== undefined) ? getScionAuraAtCell(index) : null;
+        const ley = (index !== null && index !== undefined) ? getTowerLeylineSummary(index) : null;
         const extraTags = [];
         if (cfg.isTriElement) {
             extraTags.push(isEn ? 'Tri 1.26x' : '三元 1.26x');
+        }
+        if (ley && Array.isArray(ley.links) && ley.links.length > 0) {
+            const leyParts = [];
+            if (ley.hasConvection) leyParts.push(isEn ? 'Convect' : '冷熱');
+            if (ley.speedBonus > 0) leyParts.push(isEn ? `Spd+${Math.round(ley.speedBonus * 100)}%` : `速+${Math.round(ley.speedBonus * 100)}%`);
+            if (ley.critBonus > 0) leyParts.push(isEn ? `Crit+${Math.round(ley.critBonus * 100)}%` : `暴+${Math.round(ley.critBonus * 100)}%`);
+            if (ley.hasTriFormation) leyParts.push(isEn ? `Tri+${Math.round((ley.damageBonus || 0) * 100)}%/+1💧` : `三元+${Math.round((ley.damageBonus || 0) * 100)}%/+1💧`);
+            extraTags.push(`${isEn ? 'Ley' : '靈脈'} ${ley.links.length}/2${leyParts.length ? `(${leyParts.join('·')})` : ''}`);
         }
         if ((towerObj.infusionCount || 0) > 0) {
             extraTags.push(isEn ? `Infuse +${towerObj.infusionCount}` : `灌注 +${towerObj.infusionCount}`);
@@ -633,11 +916,25 @@
 
         let finalDamage = result.damage;
         let isTeamCrit = false;
+        const ley = (towerIndex !== null && towerIndex !== undefined) ? getTowerLeylineSummary(towerIndex) : null;
+        const cc = getTowersData().COMBAT_CONSTANTS || {};
+        const critCap = Number.isFinite(cc.TOTAL_CRIT_RATE_CAP) ? cc.TOTAL_CRIT_RATE_CAP : 0.45;
         const teamCritRate = (G && G.state && Number(G.state.teamCritBonusRate)) || 0;
+        const leyCritBonus = (ley && Number.isFinite(ley.critBonus)) ? ley.critBonus : 0;
+        const weatherType = G && G.state ? G.state.weatherType : null;
+        const wCatalog = (GameApp.data && GameApp.data.weather) || {};
+        const weatherIceCrit = (weatherType === 'snow' && getTowerLeylineElements(towerObj).includes('ice'))
+            ? ((wCatalog.snow && Number.isFinite(wCatalog.snow.iceCritBonus)) ? wCatalog.snow.iceCritBonus : 0.15)
+            : 0;
+        const totalCritRate = Math.min(critCap, Math.max(0, teamCritRate + leyCritBonus + weatherIceCrit));
         const critRoll = (GameApp.helpers && typeof GameApp.helpers.nextRunRandom === 'function') ? GameApp.helpers.nextRunRandom() : Math.random();
-        if (!result.isWeakness && teamCritRate > 0 && !options.disableRandomCrit && critRoll < teamCritRate) {
+        if (!result.isWeakness && totalCritRate > 0 && !options.disableRandomCrit && critRoll < totalCritRate) {
             finalDamage = Math.max(1, Math.round(finalDamage * 1.5));
             isTeamCrit = true;
+        }
+        if (weatherType === 'eclipse') {
+            const eclipseRed = (wCatalog.eclipse && Number.isFinite(wCatalog.eclipse.monsterDmgReduction)) ? wCatalog.eclipse.monsterDmgReduction : 0.15;
+            finalDamage = Math.max(1, Math.round(finalDamage * (1 - eclipseRed)));
         }
         let shellReduced = false;
         if ((monster.shellHitsLeft || 0) > 0) {
@@ -686,6 +983,14 @@
             const baseRate = options.slowRate ?? fxParams.slowRate ?? 0.40;
             const baseDur = options.slowDurationMs ?? fxParams.slowDurationMs ?? 2000;
             MonsterSys.applySlowToMonster(monster, baseRate, baseDur, options.slowSourceId || towerObj.type);
+        }
+
+        // 鄰格靈脈 🔥+❄️ 冷熱對流：附加 10% 破甲與 10% 減速觸發
+        if (ley && ley.hasConvection && monster.hp > 0 && MonsterSys) {
+            const convShred = Number.isFinite(cc.LEYLINE_CONVECTION_SHRED) ? cc.LEYLINE_CONVECTION_SHRED : 0.10;
+            const convSlow = Number.isFinite(cc.LEYLINE_CONVECTION_SLOW) ? cc.LEYLINE_CONVECTION_SLOW : 0.10;
+            MonsterSys.applyArmorShred(monster, convShred, 2500);
+            MonsterSys.applySlowToMonster(monster, convSlow, 2000, 'leyline_convection');
         }
 
         // T4 聖冠覺醒被動效果（依六大血脈分流）
@@ -764,7 +1069,7 @@
         }
 
         if (monster.hp <= 0 && MonsterSys) {
-            MonsterSys.handleMonsterKilled(monster, towerObj, dealtTotal);
+            MonsterSys.handleMonsterKilled(monster, towerObj, dealtTotal, { killerCellIndex: towerIndex });
         }
         return result;
     }
@@ -1867,10 +2172,85 @@
         return true;
     }
 
+    function triggerWeatherStormBolt() {
+        const st = G && G.state;
+        const MonsterSys = GameApp.systems && GameApp.systems.monster;
+        const Renderer = GameApp.renderer;
+        if (!st || !Array.isArray(st.monsters) || st.monsters.length === 0) return false;
+
+        let primary = null;
+        for (let i = 0; i < st.monsters.length; i++) {
+            const m = st.monsters[i];
+            if (!m || m.hp <= 0 || m.isTargetable === false) continue;
+            if (!primary || m.hp > primary.hp) primary = m;
+        }
+        if (!primary) return false;
+
+        const w = Math.max(1, Number(st.currentWave) || 1);
+        const baseBoltDmg = Math.round(35 + 18 * w);
+        const radiusPx = 2.6 * ((G.boardMetrics && G.boardMetrics.step) || 37);
+        const scales = [1.0, 0.60, 0.40];
+        const hitSet = new Set([primary.id]);
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+
+        const strikeMonster = (target, scale, fromPos) => {
+            if (!target || target.hp <= 0) return;
+            const armMult = (MonsterSys && typeof MonsterSys.getMonsterArmorMultiplier === 'function')
+                ? MonsterSys.getMonsterArmorMultiplier(target, 0.15)
+                : (35 / (35 + Math.max(0, (target.armor || 0) * 0.85)));
+            const dealt = Math.max(1, Math.round(baseBoltDmg * scale * armMult));
+            target.hp = Math.max(0, target.hp - dealt);
+            if (MonsterSys && typeof MonsterSys.applyShockToMonster === 'function' && target.hp > 0) {
+                MonsterSys.applyShockToMonster(target, { shockDurationMs: 2500, shockBonusBase: 10, shockBonusPerWave: 2.5 });
+            }
+            if (Renderer) {
+                Renderer.emitCanvasAttackFX('thunder_B', fromPos, { left: target.pixelX, top: target.pixelY });
+                Renderer.spawnDamageNumber(dealt, false, target.pixelX, target.pixelY, isEn ? '⛈️Bolt ' : '⛈️天雷 ');
+            }
+            if (target.hp <= 0 && MonsterSys && typeof MonsterSys.handleMonsterKilled === 'function') {
+                MonsterSys.handleMonsterKilled(target, null, dealt, { isDotKill: false });
+            }
+        };
+
+        strikeMonster(primary, scales[0], { left: primary.pixelX, top: 0 });
+        let prevPos = { left: primary.pixelX, top: primary.pixelY };
+        for (let b = 1; b < scales.length; b++) {
+            let bestNext = null;
+            let bestDist = Infinity;
+            for (let i = 0; i < st.monsters.length; i++) {
+                const cand = st.monsters[i];
+                if (!cand || cand.hp <= 0 || cand.isTargetable === false || hitSet.has(cand.id)) continue;
+                const d = Math.hypot(cand.pixelX - prevPos.left, cand.pixelY - prevPos.top);
+                if (d <= radiusPx && d < bestDist) {
+                    bestDist = d;
+                    bestNext = cand;
+                }
+            }
+            if (!bestNext) break;
+            hitSet.add(bestNext.id);
+            strikeMonster(bestNext, scales[b], prevPos);
+            prevPos = { left: bestNext.pixelX, top: bestNext.pixelY };
+        }
+        if (GameApp.audio && typeof GameApp.audio.playTowerShot === 'function') {
+            GameApp.audio.playTowerShot('thunder_B');
+        }
+        return true;
+    }
+
     function updateTowersCombat(dtMs) {
         if (!G.callbacks.isGameplayActive()) return;
         const st = G.state;
         let didCombatAct = false;
+
+        if ((st.waveState === 'SPAWNING' || st.waveState === 'CLEARING') && st.weatherType === 'storm' && st.monsters.length > 0) {
+            const wCatalog = (GameApp.data && GameApp.data.weather) || {};
+            const boltInterval = (wCatalog.storm && wCatalog.storm.skyBoltIntervalMs) || 6000;
+            st.weatherBoltAccMs = (st.weatherBoltAccMs || 0) + dtMs;
+            if (st.weatherBoltAccMs >= boltInterval) {
+                st.weatherBoltAccMs -= boltInterval;
+                if (triggerWeatherStormBolt()) didCombatAct = true;
+            }
+        }
 
         if (st.pendingBolts.length > 0) {
             const prevQueue = st.pendingBolts, remainingQueue = [];
@@ -2033,6 +2413,12 @@
         triggerScionMapPulse,
         getPrimalCoreLinkedNeighbors,
         triggerPrimalGenesisPulse,
+        recalculateLeylines,
+        getLeylineNetwork,
+        getTowerLeylineSummary,
+        previewLeylinesForPlacement,
+        getTowerLeylineElements,
+        triggerWeatherStormBolt,
         performTowerAttack,
         updateTowersCombat,
         refreshAllTowerAttackReadiness

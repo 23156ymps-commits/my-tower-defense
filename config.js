@@ -43,7 +43,64 @@
         STORAGE_DAILY_RECORDS_KEY: 'merge_defense_daily_records',
         STORAGE_PUZZLE_RECORDS_KEY: 'merge_defense_puzzle_records',
         FIRST_CLEAR_HONOR_BONUS: 200,
-        WEATHER_TYPES: ['sun', 'snow', 'storm'],
+        WEATHER_TYPES: ['sun', 'snow', 'storm', 'eclipse'],
+        WEATHER_CATALOG: {
+            sun: {
+                id: 'sun',
+                icon: '☀️',
+                nameZh: '熾陽季',
+                nameEn: 'Sunlit Blaze',
+                shortZh: '火程+0.4 · 灼傷+25% · 冰緩-15% · 🔥股+10%',
+                shortEn: 'Fire Rng+0.4 · Burn+25% · Ice Slow-15% · 🔥Stock+10%',
+                stockElement: 'fire',
+                stockBias: 0.10,
+                stockVolMult: 1.0,
+                fireRangeBonus: 0.4,
+                burnMult: 1.25,
+                iceSlowMult: 0.85
+            },
+            snow: {
+                id: 'snow',
+                icon: '❄️',
+                nameZh: '霜雪季',
+                nameEn: 'Frost Drift',
+                shortZh: '怪速-10% · 冰暴+15% · 草地+5💰 · ❄️股+10%',
+                shortEn: 'Foe Spd-10% · Ice Crit+15% · Grass+5💰 · ❄️Stock+10%',
+                stockElement: 'ice',
+                stockBias: 0.10,
+                stockVolMult: 1.0,
+                monsterSpeedMult: 0.90,
+                iceCritBonus: 0.15,
+                grassBuildSurcharge: 5
+            },
+            storm: {
+                id: 'storm',
+                icon: '⛈️',
+                nameZh: '雷暴季',
+                nameEn: 'Tempest Surge',
+                shortZh: '6s 天雷劈最高血怪 · ⚡股波動×2',
+                shortEn: '6s Sky Bolt vs Highest HP · ⚡Stock Vol ×2',
+                stockElement: 'thunder',
+                stockBias: 0,
+                stockVolMult: 2.0,
+                skyBoltIntervalMs: 6000
+            },
+            eclipse: {
+                id: 'eclipse',
+                icon: '🌑',
+                nameZh: '蝕月黑潮',
+                nameEn: 'Eclipse Tide',
+                shortZh: '怪減傷15% · 賞金靈露+30% · 盲盒3★×2',
+                shortEn: 'Foe -15% DMG · Gold/Dew+30% · Box 3★ ×2',
+                stockElement: null,
+                stockBias: 0,
+                stockVolMult: 1.5,
+                monsterDmgReduction: 0.15,
+                killGoldBonusRate: 0.30,
+                killDewMult: 1.30,
+                blindBoxTier3Mult: 2.0
+            }
+        },
         PUZZLE_TRIALS: [
             {
                 id: 'puzzle_armor_breach',
@@ -223,15 +280,26 @@
         return `${y}-${m}-${day}`;
     }
 
+    function resolveWeatherForWave(waveNum, mapId = 'forest', seedOffset = 0) {
+        const w = Math.max(1, Math.floor(Number(waveNum) || 1));
+        if (w >= 10 && w % 5 === 0) return 'eclipse';
+        const cycle = ['sun', 'snow', 'storm'];
+        const baseIdx = mapId === 'frost' ? 1 : (mapId === 'lava' ? 2 : 0);
+        const offset = ((Math.floor(Number(seedOffset) || 0) % 3) + 3) % 3;
+        const block = Math.floor((w - 1) / 3);
+        return cycle[(baseIdx + offset + block) % 3];
+    }
+
     function getDailyChallengeSpec(dateKey) {
         const key = String(dateKey || getTodayDateKey());
         const rng = createSeededRng(`daily:${key}`);
         const maps = ['forest', 'lava', 'frost'];
-        const weathers = Array.isArray(GLOBAL_CONFIG.WEATHER_TYPES) && GLOBAL_CONFIG.WEATHER_TYPES.length
-            ? GLOBAL_CONFIG.WEATHER_TYPES
-            : ['sun', 'snow', 'storm'];
+        const weathers = ['sun', 'snow', 'storm'];
         const mapId = maps[Math.floor(rng() * maps.length)];
-        const weather = weathers[Math.floor(rng() * weathers.length)];
+        const weatherIdx = Math.floor(rng() * weathers.length);
+        const weather = weathers[weatherIdx];
+        const baseIdx = mapId === 'frost' ? 1 : (mapId === 'lava' ? 2 : 0);
+        const weatherSeedOffset = (weatherIdx - baseIdx + 3) % 3;
         const seedCode = hashSeedString(`daily:${key}`);
         return {
             dateKey: key,
@@ -239,6 +307,7 @@
             seedCode,
             mapId,
             weather,
+            weatherSeedOffset,
             contracts: []
         };
     }
@@ -258,6 +327,8 @@
         return typeof activeRunRng === 'function' ? activeRunRng() : Math.random();
     }
 
+    GameApp.data = GameApp.data || {};
+    GameApp.data.weather = GLOBAL_CONFIG.WEATHER_CATALOG;
     GameApp.config = GLOBAL_CONFIG;
     GameApp.helpers = {
         clampNumber,
@@ -269,6 +340,7 @@
         createSeededRng,
         getTodayDateKey,
         getDailyChallengeSpec,
+        resolveWeatherForWave,
         setActiveRunRng,
         nextRunRandom
     };

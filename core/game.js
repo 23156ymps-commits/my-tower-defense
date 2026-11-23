@@ -92,7 +92,7 @@
         ['terrainTooltipEl', 'terrain-tooltip'], ['towerTooltipEl', 'tower-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
         ['forecastToggleBtn', 'forecast-toggle-btn'], ['forecastBarTitleEl', 'forecast-bar-title'],
         ['forecastWeakChipsEl', 'forecast-weak-chips'],
-        ['forecastToggleIndicatorEl', 'forecast-toggle-indicator'], ['forecastInlineSummaryEl', 'forecast-inline-summary'],
+        ['forecastToggleIndicatorEl', 'forecast-toggle-indicator'], ['weatherStatusPillEl', 'weather-status-pill'], ['forecastInlineSummaryEl', 'forecast-inline-summary'],
         ['forecastDetailDrawerEl', 'forecast-detail-drawer'],
         ['forecastCurrentHeaderEl', 'forecast-current-header'], ['forecastCurrentListEl', 'forecast-current-list'],
         ['forecastNextHeaderEl', 'forecast-next-header'], ['forecastNextListEl', 'forecast-next-list'],
@@ -119,7 +119,7 @@
         ['guildCloseBtn', 'guild-drawer-close-btn'],
         ['guildTabBtnRoots', 'guild-tab-btn-roots'], ['guildTabBtnStocks', 'guild-tab-btn-stocks'], ['guildTabBtnFate', 'guild-tab-btn-fate'],
         ['guildTabRootsEl', 'guild-tab-roots'], ['guildTabStocksEl', 'guild-tab-stocks'], ['guildTabFateEl', 'guild-tab-fate'],
-        ['guildStockTitleEl', 'guild-stock-title'], ['guildStockSubEl', 'guild-stock-sub'], ['guildStockListEl', 'guild-stock-list'],
+        ['guildStockTitleEl', 'guild-stock-title'], ['guildStockSubEl', 'guild-stock-sub'], ['guildStockWeatherNoteEl', 'guild-stock-weather-note'], ['guildStockListEl', 'guild-stock-list'],
         ['stockPriceFireEl', 'stock-price-fire'], ['stockTrendFireEl', 'stock-trend-fire'], ['stockHoldFireEl', 'stock-hold-fire'],
         ['stockPriceIceEl', 'stock-price-ice'], ['stockTrendIceEl', 'stock-trend-ice'], ['stockHoldIceEl', 'stock-hold-ice'],
         ['stockPriceThunderEl', 'stock-price-thunder'], ['stockTrendThunderEl', 'stock-trend-thunder'], ['stockHoldThunderEl', 'stock-hold-thunder'],
@@ -187,10 +187,37 @@
         return 'sun';
     }
 
+    function getWeatherSeedOffset() {
+        const st = G && G.state;
+        return (st && st.gameMode === 'daily' && Number.isFinite(st.weatherSeedOffset)) ? st.weatherSeedOffset : 0;
+    }
+
+    function resolveCurrentRunWeather(waveNum = 1) {
+        const st = G && G.state;
+        const mapId = (st && st.currentMapId) || 'forest';
+        if (GameApp.helpers && typeof GameApp.helpers.resolveWeatherForWave === 'function') {
+            return GameApp.helpers.resolveWeatherForWave(waveNum, mapId, getWeatherSeedOffset());
+        }
+        return resolveDefaultWeatherForMap(mapId);
+    }
+
+    function getWeatherSpec(weatherType) {
+        const wCatalog = (GameApp.data && GameApp.data.weather) || (CONFIG && CONFIG.WEATHER_CATALOG) || {};
+        return wCatalog[weatherType] || {
+            id: weatherType || 'sun',
+            icon: weatherType === 'snow' ? '❄️' : (weatherType === 'storm' ? '⛈️' : (weatherType === 'eclipse' ? '🌑' : '☀️')),
+            nameZh: weatherType === 'snow' ? '霜雪季' : (weatherType === 'storm' ? '雷暴季' : (weatherType === 'eclipse' ? '蝕月黑潮' : '熾陽季')),
+            nameEn: weatherType === 'snow' ? 'Frost Drift' : (weatherType === 'storm' ? 'Tempest Surge' : (weatherType === 'eclipse' ? 'Eclipse Tide' : 'Sunlit Blaze')),
+            shortZh: '',
+            shortEn: ''
+        };
+    }
+
     function getWeatherLabel(weatherType) {
-        if (weatherType === 'snow') return L('霜雪寒林（微雪飄降）', 'Frost Drift (Light Snow)');
-        if (weatherType === 'storm') return L('雷暴微雨（偶發電閃）', 'Tempest Mist (Lightning)');
-        return L('熾陽暖森（金孢晨曦）', 'Sunlit Canopy (Amber Spores)');
+        const spec = getWeatherSpec(weatherType);
+        const name = L(spec.nameZh, spec.nameEn);
+        const eff = L(spec.shortZh, spec.shortEn);
+        return eff ? `${spec.icon} ${name}（${eff}）` : `${spec.icon} ${name}`;
     }
 
     function getPuzzleTrialById(puzzleId) {
@@ -311,6 +338,12 @@
             puzzleId: null,
             puzzleSpec: null,
             weatherType: resolveDefaultWeatherForMap(spec.id),
+            weatherSeedOffset: 0,
+            weatherBoltAccMs: 0,
+            lastTriLeyDewMs: -9999,
+            waveTriLeyDewCount: 0,
+            leylinePreviewEdges: null,
+            leylineNetwork: null,
             towerUidCounter: 1, totalTeamDamage: 0, totalGoldEarned: 0, fusionCount: 0,
             crownedUsedCount: 0, elapsedPlayMs: 0,
             peakTowerSnapshot: null, lastBreakerName: '',
@@ -1271,7 +1304,19 @@
             const triTag = tInfo && tInfo.isPrimalCore
                 ? L('全圖唯一 · 1.26x', 'Unique 1 · 1.26x')
                 : (tInfo && tInfo.isTriElement ? L('三元 1.26x', 'Tri 1.26x') : '');
-            const combinedTag = [terrainTag, auraSuffix, triTag].filter(Boolean).join(' · ');
+            const ley = (AttackSys && typeof AttackSys.getTowerLeylineSummary === 'function')
+                ? AttackSys.getTowerLeylineSummary(st.selectedIndex)
+                : null;
+            let leyTag = '';
+            if (ley && Array.isArray(ley.links) && ley.links.length > 0) {
+                const sub = [];
+                if (ley.hasConvection) sub.push(L('冷熱', 'Conv'));
+                if (ley.speedBonus > 0) sub.push(L(`速+${Math.round(ley.speedBonus * 100)}%`, `Spd+${Math.round(ley.speedBonus * 100)}%`));
+                if (ley.critBonus > 0) sub.push(L(`暴+${Math.round(ley.critBonus * 100)}%`, `Crit+${Math.round(ley.critBonus * 100)}%`));
+                if (ley.hasTriFormation) sub.push(L(`三元+${Math.round((ley.damageBonus || 0) * 100)}%/+1💧`, `Tri+${Math.round((ley.damageBonus || 0) * 100)}%/+1💧`));
+                leyTag = `${L('靈脈', 'Ley')} ${ley.links.length}/2${sub.length ? `(${sub.join('·')})` : ''}`;
+            }
+            const combinedTag = [terrainTag, auraSuffix, triTag, leyTag].filter(Boolean).join(' · ');
             dom.inspectorTerrainEl.classList.toggle('hidden', !combinedTag);
             dom.inspectorTerrainEl.innerText = combinedTag;
         }
@@ -1672,16 +1717,39 @@
                 );
             }
         }
+        const curWeatherType = st.weatherType || resolveCurrentRunWeather(curWave);
+        const curWeatherSpec = getWeatherSpec(curWeatherType);
+        const peekWeatherWave = isPrepPhase ? targetWave : nextWave;
+        const upcomingWeatherType = (!isPuzzleMode && !isFinalClear) ? resolveCurrentRunWeather(peekWeatherWave) : curWeatherType;
+        const upcomingWeatherSpec = getWeatherSpec(upcomingWeatherType);
+        const willWeatherShift = !isPuzzleMode && !isFinalClear && upcomingWeatherType !== curWeatherType;
+
+        if (dom.weatherStatusPillEl) {
+            dom.weatherStatusPillEl.innerText = willWeatherShift
+                ? `${curWeatherSpec.icon} ${L(curWeatherSpec.nameZh, curWeatherSpec.nameEn)} ▸ ${L('下波 ', 'Next ')}${upcomingWeatherSpec.icon}`
+                : `${curWeatherSpec.icon} ${L(curWeatherSpec.nameZh, curWeatherSpec.nameEn)}`;
+            dom.weatherStatusPillEl.classList.toggle('is-shifting', willWeatherShift);
+            dom.weatherStatusPillEl.classList.toggle('is-eclipse', curWeatherType === 'eclipse');
+            const curEff = L(curWeatherSpec.shortZh, curWeatherSpec.shortEn);
+            const nextEff = L(upcomingWeatherSpec.shortZh, upcomingWeatherSpec.shortEn);
+            dom.weatherStatusPillEl.title = willWeatherShift
+                ? `${curWeatherSpec.icon} ${L(curWeatherSpec.nameZh, curWeatherSpec.nameEn)}: ${curEff}\n${L('下波預告變天：', 'Next Wave Weather: ')}${upcomingWeatherSpec.icon} ${L(upcomingWeatherSpec.nameZh, upcomingWeatherSpec.nameEn)} (${nextEff})`
+                : `${curWeatherSpec.icon} ${L(curWeatherSpec.nameZh, curWeatherSpec.nameEn)}: ${curEff}`;
+        }
+
         if (dom.forecastInlineSummaryEl) {
+            const shiftBadge = willWeatherShift
+                ? ` · ${upcomingWeatherSpec.icon} ${L(`下波變天：${upcomingWeatherSpec.nameZh}`, `Weather▸${upcomingWeatherSpec.nameEn}`)}`
+                : '';
             if (isPuzzleMode) {
                 dom.forecastInlineSummaryEl.innerText = summarizePlanInline(resolveWaveForecastPlan(1));
             } else if (isPrepPhase) {
                 const plan = resolveWaveForecastPlan(targetWave);
-                dom.forecastInlineSummaryEl.innerText = summarizePlanInline(plan);
+                dom.forecastInlineSummaryEl.innerText = `${summarizePlanInline(plan)}${shiftBadge}`;
             } else {
                 const nextPlan = !isFinalClear ? resolveWaveForecastPlan(nextWave) : null;
                 dom.forecastInlineSummaryEl.innerText = nextPlan
-                    ? `${L(`下波 第 ${nextWave} 波：`, `Next W${nextWave}: `)}${summarizePlanInline(nextPlan)}`
+                    ? `${L(`下波 第 ${nextWave} 波：`, `Next W${nextWave}: `)}${summarizePlanInline(nextPlan)}${shiftBadge}`
                     : L('最終魔王決戰進行中', 'Final Boss Battle in Progress');
             }
             dom.forecastInlineSummaryEl.title = dom.forecastInlineSummaryEl.innerText;
@@ -2199,6 +2267,19 @@
                 ? L(`上限 10 股 · 單股 +${perSharePctNum.toFixed(1)}% · 賣出 ${sellFeePct}% 費`, `Max 10 · +${perSharePctNum.toFixed(1)}%/sh · ${sellFeePct}% fee`)
                 : L('尚未解鎖 · 請於「世界樹年輪 · 財富枝 ②」解鎖', 'Locked · Unlock Meta Wealth #2');
         }
+        if (dom.guildStockWeatherNoteEl) {
+            const wMods = (EconSys && typeof EconSys.getWeatherStockModifiers === 'function')
+                ? EconSys.getWeatherStockModifiers()
+                : { weatherType: st.weatherType || 'sun' };
+            const ws = getWeatherSpec(wMods.weatherType);
+            const stockNoteMap = {
+                sun: L('☀️ 熾陽天象：🔥 火股波末看漲 +10%（受 [10, 60] 與軟上限約束）', '☀️ Sunlit: 🔥 Fire stock gets +10% bias (within [10, 60] & cap)'),
+                snow: L('❄️ 霜雪天象：❄️ 冰股波末看漲 +10%（受 [10, 60] 與軟上限約束）', '❄️ Frost: ❄️ Ice stock gets +10% bias (within [10, 60] & cap)'),
+                storm: L('⛈️ 雷暴天象：⚡ 雷股波動率 ×2（高波動仍受 [10, 60] 鎖約束）', '⛈️ Tempest: ⚡ Thunder volatility ×2 (clamped [10, 60])'),
+                eclipse: L('🌑 蝕月黑潮：三股波動 ×1.5 · 賞金/靈露 +30%（受軟上限約束）', '🌑 Eclipse: All volatility ×1.5 · Bounty/Dew +30% (soft-capped)')
+            };
+            dom.guildStockWeatherNoteEl.innerText = stockNoteMap[ws.id] || '';
+        }
         const stockNameLabels = {
             fire: L('🔥 火股', '🔥 Fire Stock'),
             ice: L('❄️ 冰股', '❄️ Ice Stock'),
@@ -2284,11 +2365,14 @@
                 : L(`1★ 保底進度 ${streak} / ${pityNeed}（第 ${pityNeed + 1} 抽必出 2★+）`, `1★ Pity ${streak} / ${pityNeed} (Pull #${pityNeed + 1} 2★+)`);
         }
         if (dom.guildBoxDescEl) {
+            const eclipseBoxTag = st.weatherType === 'eclipse'
+                ? L(' · 🌑蝕月 3★翻倍(16%/保底50%)', ' · 🌑Eclipse 3★ ×2 (16%/50% Pity)')
+                : '';
             dom.guildBoxDescEl.innerText = (!boxUnlocked && freeTokens <= 0)
                 ? L('尚未解鎖 · 請於「世界樹年輪 · 命運枝 ①」解鎖（擊殺竊賊可獲免費代幣）', 'Locked · Unlock Meta Fate #1 (or Thief Free Token)')
                 : L(
-                    `1★ 48% · 2★ 32% · 萬能果實 12% · 3★ 8%（未出 2★+ 全隊暴擊 +${missCritLabel}，盲盒塔退費依實付價計）`,
-                    `1★ 48% · 2★ 32% · Fruit 12% · 3★ 8% (Non-2★+ adds +${missCritLabel} crit; refund by paid cost)`
+                    `1★ 48% · 2★ 32% · 萬能果實 12% · 3★ 8%${eclipseBoxTag}（未出 2★+ 全隊暴擊 +${missCritLabel}，退費依實付計）`,
+                    `1★ 48% · 2★ 32% · Fruit 12% · 3★ 8%${eclipseBoxTag} (Non-2★+ adds +${missCritLabel} crit; refund by cost)`
                 );
         }
         if (dom.blindBoxBuyBtn) {
@@ -2512,12 +2596,14 @@
         if (!isGameplayActive() || !towersDict[type]) return false;
         if (!TerrainSys.canBuildAt(targetIndex) || st.board[targetIndex] !== null) return false;
 
-        const deduct = EconSys.deductSummonCost(type);
+        const deduct = EconSys.deductSummonCost(type, targetIndex);
         if (!deduct.ok) {
             const btnRef = G.dom.spawnerBtns[type];
+            const snowNoteZh = deduct.snowSurcharge > 0 ? `（含霜雪草地 +${deduct.snowSurcharge}）` : '';
+            const snowNoteEn = deduct.snowSurcharge > 0 ? ` (incl. Snow Grass +${deduct.snowSurcharge})` : '';
             setStatusMsg(
-                `❌ 金幣不足，無法召喚【${towersDict[type].name}】！需要 ${deduct.cost} 💰`,
-                `Not enough Gold to summon ${towersDict[type].name} (${deduct.cost} 💰 required).`
+                `❌ 金幣不足，無法召喚【${towersDict[type].name}】！需要 ${deduct.cost} 💰${snowNoteZh}`,
+                `Not enough Gold to summon ${towersDict[type].name} (${deduct.cost} 💰 required${snowNoteEn}).`
             );
             if (btnElOrRef(btnRef)) {
                 btnRef.btn.classList.remove('shake-anim', 'insufficient-gold');
@@ -2568,8 +2654,11 @@
         }
 
         const dynTerrainTag = getTerrainShortTagForCell(targetIndex, tInfo);
-        const tagSuffixZh = dynTerrainTag ? `（${dynTerrainTag}）` : '';
-        const tagSuffixEn = dynTerrainTag ? ` (${dynTerrainTag})` : '';
+        const snowExtraTag = deduct.snowSurcharge > 0 ? L(`霜雪草地 +${deduct.snowSurcharge}💰`, `Snow Grass +${deduct.snowSurcharge}💰`) : '';
+        const mergedTag = [dynTerrainTag, snowExtraTag].filter(Boolean).join(' · ');
+        const tagSuffixZh = mergedTag ? `（${mergedTag}）` : '';
+        const tagSuffixEn = mergedTag ? ` (${mergedTag})` : '';
+        if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
         if (seedTriggered) {
             setStatusMsg(
                 `豐饒種子觸發：於 (${coords.x + 1},${coords.y + 1}) 召喚【${cfg.name} ★★】${tagSuffixZh}，花費 ${deduct.cost} 💰。`,
@@ -2913,6 +3002,7 @@
             }
             st.board[toIndex] = fromTower;
             st.board[fromIndex] = null;
+            if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
             recordZonePlacementTelemetry(toIndex);
             evaluateContextualOnboarding();
             Renderer.renderBoard([fromIndex, toIndex]);
@@ -2977,6 +3067,7 @@
             } else {
                 completeOnboardingStep('merge');
             }
+            if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
             evaluateContextualOnboarding();
             Renderer.renderBoard([fromIndex, toIndex]);
             updateHUD();
@@ -3235,6 +3326,7 @@
             `Blind Box (${costTagEn})${pityNoteEn} spawned ${cfg.icon} ${cfg.name} ${Renderer.getTierStars(roll.tier)} at (${coords.x + 1},${coords.y + 1}) (Invested ${boxCost} 💰, Refund ${refundPreview} 💰 | Team Crit +${critPct}%).`
         );
         evaluateContextualOnboarding();
+        if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
         Renderer.renderBoard([targetIndex]);
         updateHUD();
         return {
@@ -3322,6 +3414,7 @@
             completeOnboardingStep('merge');
         }
         evaluateContextualOnboarding();
+        if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
         Renderer.renderBoard([cellIndex]);
         updateHUD();
         return { ok: true, result: res };
@@ -3611,8 +3704,19 @@
         st.waveNonCombatGold = 0;
         st.nonCombatLedgerWave = waveNum;
         st.waveLeakedCount = 0;
+        st.waveTriLeyDewCount = 0;
+        st.weatherBoltAccMs = 0;
+        const prevWeather = st.weatherType;
+        st.weatherType = st.gameMode === 'puzzle' ? resolveDefaultWeatherForMap(st.currentMapId) : resolveCurrentRunWeather(waveNum);
+        const weatherShifted = Boolean(prevWeather && st.weatherType !== prevWeather);
+        if (Renderer && typeof Renderer.applyWeatherVisualClass === 'function') {
+            Renderer.applyWeatherVisualClass(st.weatherType);
+        }
         st.guildTimerHold = false;
         st.isApplyingFusionFruit = false;
+        if (EconSys && typeof EconSys.refreshStockForecastSignals === 'function') {
+            EconSys.refreshStockForecastSignals(waveNum + 1);
+        }
         if (EconSys && typeof EconSys.commitWaveWagerOnStart === 'function') {
             EconSys.commitWaveWagerOnStart();
         } else if (st.activeWager && st.activeWager.type === 'zero_leak') {
@@ -3677,6 +3781,13 @@
             setStatusMsg(
                 `第 ${waveNum} 波來襲：共 ${plan.queue.length} 隻敵軍進攻中${thiefSuffixZh}${bonusMsgZh}。`,
                 `Wave ${waveNum} incoming: ${plan.queue.length} enemies marching${thiefSuffixEn}${bonusMsgEn}.`
+            );
+        }
+        if (weatherShifted) {
+            const ws = getWeatherSpec(st.weatherType);
+            setStatusMsg(
+                `【天象變換 ▸ ${ws.icon} ${ws.nameZh}】${ws.shortZh}！`,
+                `[Weather Shift ▸ ${ws.icon} ${ws.nameEn}] ${ws.shortEn}!`
             );
         }
         updateHUD();
@@ -3928,7 +4039,8 @@
             st.currentMapId = spec.mapId;
             st.dailyDateKey = spec.dateKey;
             st.dailySeedCode = spec.seedCode;
-            st.weatherType = spec.weather;
+            st.weatherSeedOffset = Number.isFinite(spec.weatherSeedOffset) ? spec.weatherSeedOffset : 0;
+            st.weatherType = resolveCurrentRunWeather(1);
             st.activeContracts = new Set();
             setRng(spec.seedString);
             const mapSpec = WaveSys.getCurrentMapSpec();
@@ -3948,6 +4060,7 @@
                 st.currentMapId = trial.mapId;
                 st.puzzleId = trial.id;
                 st.puzzleSpec = trial;
+                st.weatherSeedOffset = 0;
                 st.weatherType = resolveDefaultWeatherForMap(trial.mapId);
                 st.activeContracts = new Set();
                 setRng(`puzzle:${trial.id}`);
@@ -3964,7 +4077,8 @@
         WaveSys.applyMapConfig(st.currentMapId);
         const mapSpec = WaveSys.getCurrentMapSpec();
         st.activeContracts = new Set(selectedContracts);
-        st.weatherType = resolveDefaultWeatherForMap(st.currentMapId);
+        st.weatherSeedOffset = 0;
+        st.weatherType = resolveCurrentRunWeather(1);
         st.maxBaseHp = st.activeContracts.has('fragile_heart') ? 12 : (treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20);
         st.baseHp = st.maxBaseHp;
         st.dewEnergy = st.activeContracts.has('dew_drought') ? 0 : (treeCfg.DEW_INITIAL || CONFIG.DEW_INITIAL || 20);
@@ -4289,6 +4403,7 @@
             st.crownedUsedCount = Math.max(0, (st.crownedUsedCount || 0) - 1);
         }
         st.currentGold += refund; st.board[sellIdx] = null;
+        if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
         st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
         Backend.trackFeel('Economy:SellTower', refund, { towerType: t.type, tier: t.tier, refund });
         setStatusMsg(

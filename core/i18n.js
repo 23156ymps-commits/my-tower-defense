@@ -433,7 +433,32 @@
         highground: { name: '⛰️ Highground', shortTag: 'Range +30%', tooltip: 'Highground: Tower Attack Range +30%' },
         mana_vein: { name: '✨ Mana Vein', shortTag: 'Spd +25%', tooltip: 'Mana Vein: Tower Attack Speed +25%' },
         world_tree: { name: '🌿 Tree Sanctuary', shortTag: 'DMG +20% max', tooltip: 'Sanctuary: Up to +20% DMG based on Tree HP' },
-        obstacle: { name: '🪨 Ancient Boulder', shortTag: '45 💰 Clear', tooltip: 'Ancient Boulder: Click to clear for 45 💰 and unearth terrain' }
+        obstacle: { name: '🪨 Ancient Boulder', shortTag: '45 💰 Clear', tooltip: 'Ancient Boulder: Click to clear for 45 💰 and unearth terrain' },
+        leyline_links: {
+            name: '🔗 Adjacent Leyline Links',
+            shortTag: 'Max 2 Links · +18% Cap',
+            tooltip: 'Adjacent (4-dir) cross-element links: 🔥+❄️ Convection (10% Shred+Slow), ❄️+⚡ Superconduct (+10% Spd), 🔥+⚡ Overload (+10% Crit), 🔺 Tri-Formation (+15% DMG in B_power +1💧/1.5s, cap 12/wave). Max 2 links & +18% DMG per tower.'
+        },
+        weather_sun: {
+            name: '☀️ Sunlit Blaze',
+            shortTag: 'Fire+ · 🔥Stock+10%',
+            tooltip: 'Rotates every 3 waves: Fire Range +0.4, Burn +25%, Ice Slow -15%; 🔥 Fire Stock gains +10% bullish bias.'
+        },
+        weather_snow: {
+            name: '❄️ Frost Drift',
+            shortTag: 'Slow+ · ❄️Stock+10%',
+            tooltip: 'Rotates every 3 waves: Monster Spd -10%, Ice Crit +15%, plain Grass summon +5 💰; ❄️ Ice Stock gains +10% bullish bias.'
+        },
+        weather_storm: {
+            name: '⛈️ Tempest Surge',
+            shortTag: '6s Bolt · ⚡Vol×2',
+            tooltip: 'Rotates every 3 waves: Sky lightning strikes highest-HP foe every 6s; ⚡ Thunder Stock volatility ×2.'
+        },
+        weather_eclipse: {
+            name: '🌑 Eclipse Tide',
+            shortTag: 'W10/15/20 Boss Weather',
+            tooltip: 'W10/15/20 Threat: Foes gain 15% DMG reduction, while Kill Gold +30% (soft-capped), Dew +30%, and Blind Box 3★ odds ×2.'
+        }
     };
 
     const EN_CODEX_CATS = {
@@ -957,8 +982,9 @@
             const guideTitles = document.querySelectorAll('#guide-overlay .guide-section-title');
             if (guideTitles[0]) guideTitles[0].innerText = isEn ? 'Elemental Counters' : '元素相剋速查';
             if (guideTitles[1]) guideTitles[1].innerText = isEn ? 'Terrain Bonuses (Hover tile on board)' : '戰術地形加成（懸停棋盤特殊格可檢視）';
-            if (guideTitles[2]) guideTitles[2].innerText = isEn ? 'Evolution Pyramid (1★ → 5★ 16U)' : '轉職與升星金字塔（1★ → 5★ 16U）';
-            if (guideTitles[3]) guideTitles[3].innerText = isEn ? 'Summary & Hotkeys' : '防線紀要與快捷鍵';
+            if (guideTitles[2]) guideTitles[2].innerText = isEn ? 'Adjacent Leylines & Dynamic Weather (Max 2 Links / +18%)' : '鄰格靈脈陣法與動態天象（上限 2 連線 / +18%）';
+            if (guideTitles[3]) guideTitles[3].innerText = isEn ? 'Evolution Pyramid (1★ → 5★ 16U)' : '轉職與升星金字塔（1★ → 5★ 16U）';
+            if (guideTitles[4]) guideTitles[4].innerText = isEn ? 'Summary & Hotkeys' : '防線紀要與快捷鍵';
             const guideRows = document.querySelectorAll('#guide-overlay .panel-row');
             const zhGuideRows = [
                 ['🔥 火塔 ▸ 蔓藤巨魔 / 史萊姆', '175% 暴擊 · 破甲 30%'],
@@ -967,7 +993,10 @@
                 ['✨ 跨元素融合塔 ▸ 任一親和弱點', '135% 親和增傷'],
                 ['制高點', '射程 +30%'],
                 ['元素靈脈', '攻速 +25%'],
-                ['世界樹庇護所', '依血量最高 +20% 傷害']
+                ['世界樹庇護所', '依血量最高 +20% 傷害'],
+                ['🔥+❄️ 對流 / ❄️+⚡ 超導 / 🔥+⚡ 過載', '10% 破減 · +10% 速 · +10% 暴'],
+                ['🔺 火冰雷三元陣法（最多 2 連線/+18%）', '+15% 傷（B_power）＋ 1💧/1.5s'],
+                ['☀️ 熾陽 / ❄️ 霜雪 / ⛈️ 雷暴 / 🌑 蝕月', '每 3 波變天 · 聯動股價與掉落']
             ];
             const enGuideRows = [
                 ['🔥 Fire ▸ Vine / Slime', '175% Crit · 30% Shred'],
@@ -976,7 +1005,10 @@
                 ['✨ Hybrid ▸ Affinity Weak', '135% Affinity DMG'],
                 ['Highground', 'Range +30%'],
                 ['Mana Vein', 'ATK Spd +25%'],
-                ['Tree Sanctuary', 'Up to +20% DMG by HP']
+                ['Tree Sanctuary', 'Up to +20% DMG by HP'],
+                ['🔥+❄️ Convect / ❄️+⚡ Super / 🔥+⚡ Over', '10% Shred/Slow · +10% Spd · +10% Crit'],
+                ['🔺 Tri-Formation (Max 2 Links / +18%)', '+15% DMG (B_power) + 1💧/1.5s'],
+                ['☀️ Sun / ❄️ Snow / ⛈️ Storm / 🌑 Eclipse', '3-Wave Cycle · Stock & Drop Synergy']
             ];
             (isEn ? enGuideRows : zhGuideRows).forEach((pair, idx) => {
                 const row = guideRows[idx];

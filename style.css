@@ -445,6 +445,31 @@ summary:focus-visible,
     text-overflow: ellipsis;
 }
 
+.weather-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background-color: var(--bg-grid-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.weather-status-pill.is-shifting {
+    border-color: var(--accent-cta);
+    color: var(--el-lightning);
+}
+.weather-status-pill.is-eclipse {
+    border-color: var(--el-fire);
+    background-color: #2B1B19;
+    color: #F4F1EA;
+}
+
 .info-legend-inline,
 .info-legend-inline.hidden {
     display: none !important;
@@ -2112,6 +2137,20 @@ body.map-frost .cell.path-cell {
 }
 
 /* A. 元素股市 */
+.guild-weather-note {
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    color: var(--el-lightning);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+.guild-weather-note:empty {
+    display: none;
+}
+
 .guild-stock-list {
     display: flex;
     flex-direction: column;
@@ -2809,6 +2848,9 @@ body.map-frost .cell.path-cell {
 }
 #board-stage.weather-storm {
     box-shadow: inset 0 0 42px rgba(18, 28, 25, 0.56), inset 0 0 12px rgba(74, 158, 191, 0.18);
+}
+#board-stage.weather-eclipse {
+    box-shadow: inset 0 0 46px rgba(15, 18, 16, 0.74), inset 0 0 14px rgba(201, 74, 56, 0.24);
 }
 
 .boss-entrance-banner {

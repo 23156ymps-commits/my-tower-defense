@@ -84,10 +84,22 @@
         return raw;
     }
 
+    function getSnowGrassSurcharge(targetIndex) {
+        if (targetIndex === null || targetIndex === undefined) return 0;
+        if (!G || !G.state || G.state.weatherType !== 'snow') return 0;
+        const TerrainSys = GameApp.systems && GameApp.systems.terrain;
+        const terrainKey = (TerrainSys && typeof TerrainSys.getTerrainAt === 'function')
+            ? TerrainSys.getTerrainAt(targetIndex)
+            : null;
+        if (terrainKey) return 0;
+        const wCatalog = (GameApp.data && GameApp.data.weather) || {};
+        return (wCatalog.snow && Number.isFinite(wCatalog.snow.grassBuildSurcharge)) ? wCatalog.snow.grassBuildSurcharge : 5;
+    }
+
     /**
-     * 計算指定元素下一次召喚所需金幣（支援 fire / fire_bud 雙向正規化查表）
+     * 計算指定元素下一次召喚所需金幣（支援 fire / fire_bud 雙向正規化查表與霜雪季草地建塔 +5 💰）
      */
-    function getSummonCost(type, spawnCountsOverride = null) {
+    function getSummonCost(type, spawnCountsOverride = null, targetIndex = null) {
         const d = getData();
         const shopKey = resolveShopTypeKey(type);
         const overrides = (d.ELEMENT_PRICE_OVERRIDES && (d.ELEMENT_PRICE_OVERRIDES[type] || d.ELEMENT_PRICE_OVERRIDES[shopKey])) || {};
@@ -96,39 +108,43 @@
         const rawCount = counts[type] !== undefined ? counts[type] : counts[shopKey];
         const count = Math.max(0, Math.floor(Number(rawCount) || 0));
 
+        let computed = null;
         const steps = Array.isArray(overrides.costSteps)
             ? overrides.costSteps
             : (!Number.isFinite(overrides.baseCost) && Array.isArray(d.SUMMON_COST_STEPS) ? d.SUMMON_COST_STEPS : null);
         if (steps && steps.length > 0) {
             const rawStepCost = Number(steps[Math.min(count, steps.length - 1)]);
             if (Number.isFinite(rawStepCost)) {
-                return Math.min(maxCost, Math.max(0, rawStepCost));
+                computed = Math.min(maxCost, Math.max(0, rawStepCost));
             }
         }
-
-        const baseCost = Number.isFinite(overrides.baseCost) ? overrides.baseCost : (d.BASE_COST ?? 10);
-        const step = Number.isFinite(overrides.costStep) ? overrides.costStep : (d.COST_STEP ?? 8);
-        return Math.min(maxCost, baseCost + count * step);
+        if (computed === null) {
+            const baseCost = Number.isFinite(overrides.baseCost) ? overrides.baseCost : (d.BASE_COST ?? 10);
+            const step = Number.isFinite(overrides.costStep) ? overrides.costStep : (d.COST_STEP ?? 8);
+            computed = Math.min(maxCost, baseCost + count * step);
+        }
+        return computed + getSnowGrassSurcharge(targetIndex);
     }
 
-    function canAffordSummon(type, currentGoldOverride = null, spawnCountsOverride = null) {
+    function canAffordSummon(type, currentGoldOverride = null, spawnCountsOverride = null, targetIndex = null) {
         const gold = currentGoldOverride !== null ? currentGoldOverride : (G && G.state ? G.state.currentGold : 0);
-        const cost = getSummonCost(type, spawnCountsOverride);
+        const cost = getSummonCost(type, spawnCountsOverride, targetIndex);
         return gold >= cost;
     }
 
-    function deductSummonCost(type) {
-        if (!G || !G.state) return { ok: false, cost: 0 };
+    function deductSummonCost(type, targetIndex = null) {
+        if (!G || !G.state) return { ok: false, cost: 0, snowSurcharge: 0 };
         const st = G.state;
         const shopKey = resolveShopTypeKey(type);
-        const cost = getSummonCost(type, st.spawnCounts);
-        if (st.currentGold < cost) return { ok: false, cost };
+        const snowSurcharge = getSnowGrassSurcharge(targetIndex);
+        const cost = getSummonCost(type, st.spawnCounts, targetIndex);
+        if (st.currentGold < cost) return { ok: false, cost, snowSurcharge };
         st.currentGold -= cost;
         const nextCount = (Number(st.spawnCounts[shopKey] ?? st.spawnCounts[type]) || 0) + 1;
         st.spawnCounts[shopKey] = nextCount;
         st.spawnCounts[type] = nextCount;
         st.spawnCounts[`${shopKey}_bud`] = nextCount;
-        return { ok: true, cost };
+        return { ok: true, cost, snowSurcharge };
     }
 
     function getSellRefundRate(rootLevelOverride = null) {
@@ -403,6 +419,36 @@
         };
     }
 
+    function getWeatherStockModifiers(waveNum = null, weatherOverride = null) {
+        const st = G && G.state;
+        const w = waveNum !== null
+            ? Math.max(1, Math.floor(Number(waveNum) || 1))
+            : (st ? (st.waveState === 'INTERMISSION' ? (st.currentWave || 1) + 1 : (st.currentWave || 1)) : 1);
+        const wCatalog = (GameApp.data && GameApp.data.weather) || {};
+        let weatherType = weatherOverride || null;
+        if (!weatherType) {
+            if (GameApp.helpers && typeof GameApp.helpers.resolveWeatherForWave === 'function') {
+                const mapId = (st && st.currentMapId) || 'forest';
+                const seedOffset = (st && Number.isFinite(st.weatherSeedOffset)) ? st.weatherSeedOffset : 0;
+                weatherType = GameApp.helpers.resolveWeatherForWave(w, mapId, seedOffset);
+            } else {
+                weatherType = (st && st.weatherType) || 'sun';
+            }
+        }
+        const spec = wCatalog[weatherType] || {};
+        const biasByEl = { fire: 0, ice: 0, thunder: 0 };
+        const volByEl = { fire: 1, ice: 1, thunder: 1 };
+        if (spec.stockElement && biasByEl[spec.stockElement] !== undefined) {
+            biasByEl[spec.stockElement] += Number(spec.stockBias) || 0;
+            volByEl[spec.stockElement] = Number.isFinite(spec.stockVolMult) ? spec.stockVolMult : 1;
+        } else if (weatherType === 'eclipse') {
+            STOCK_ELEMENTS.forEach((el) => {
+                volByEl[el] = Number.isFinite(spec.stockVolMult) ? spec.stockVolMult : 1.5;
+            });
+        }
+        return { weatherType, spec, biasByEl, volByEl, wave: w };
+    }
+
     function refreshStockForecastSignals(forecastWaveNum = null) {
         if (!G || !G.state) return null;
         if (!G.state.stocks) G.state.stocks = createInitialStockState();
@@ -413,14 +459,20 @@
                 ? (st.currentWave || 1) + 1
                 : (st.currentWave || 1));
         const ratios = getWaveElementWeaknessRatios(targetWave);
+        const wMods = getWeatherStockModifiers(targetWave);
 
         STOCK_ELEMENTS.forEach((el) => {
             const rec = st.stocks[el];
             if (!rec) return;
             const r_e = Number.isFinite(ratios[el]) ? ratios[el] : (1 / 3);
-            const mu = computeStockIntelSignal(r_e);
+            const weatherBias = (wMods.biasByEl && wMods.biasByEl[el]) || 0;
+            const weatherVolMult = (wMods.volByEl && wMods.volByEl[el]) || 1;
+            const mu = computeStockIntelSignal(r_e) + weatherBias;
             rec.weaknessRatio = r_e;
             rec.muIntel = mu;
+            rec.weatherBias = weatherBias;
+            rec.weatherVolMult = weatherVolMult;
+            rec.weatherType = wMods.weatherType;
             rec.trend = mu > 0.012 ? 'bull' : (mu < -0.012 ? 'bear' : 'neutral');
             rec.forecastWave = targetWave;
         });
@@ -428,7 +480,7 @@
     }
 
     /**
-     * 波末結算更新下一波股價（依下波預告 mu_intel = 0.24 * (r_e - 1/3) 搭配受控溫和波動，限制區間 [10, 60]）
+     * 波末結算更新下一波股價（結合下波預告 mu_intel 與動態天象偏置／波動，嚴格鎖定 [10, 60] 與軟上限）
      */
     function settleWaveStocks(nextWaveNum = null, options = {}) {
         if (!G || !G.state) return null;
@@ -446,15 +498,18 @@
             ? Math.max(1, Math.floor(Number(nextWaveNum) || 1))
             : (st.currentWave || 1) + 1;
         const ratios = options.ratiosOverride || getWaveElementWeaknessRatios(targetWave);
+        const wMods = getWeatherStockModifiers(targetWave, options.weatherTypeOverride || null);
 
         const changes = {};
         STOCK_ELEMENTS.forEach((el) => {
             const rec = st.stocks[el];
             const prevPrice = Number(rec.price) || 20;
             const r_e = Number.isFinite(ratios[el]) ? ratios[el] : (1 / 3);
-            const mu_intel = computeStockIntelSignal(r_e);
-            const rawNoise = options.deterministic ? 0 : (((((GameApp.helpers && GameApp.helpers.nextRunRandom) ? GameApp.helpers.nextRunRandom() : Math.random())) * 2 - 1) * noiseAmp);
-            let effectiveRate = mu_intel + rawNoise;
+            const weatherBias = (wMods.biasByEl && wMods.biasByEl[el]) || 0;
+            const weatherVolMult = (wMods.volByEl && wMods.volByEl[el]) || 1;
+            const mu_intel = computeStockIntelSignal(r_e) + weatherBias;
+            const rawNoise = options.deterministic ? 0 : (((((GameApp.helpers && GameApp.helpers.nextRunRandom) ? GameApp.helpers.nextRunRandom() : Math.random())) * 2 - 1) * noiseAmp * weatherVolMult);
+            let effectiveRate = (mu_intel * (weatherVolMult > 1 ? weatherVolMult : 1)) + rawNoise;
             // 控制噪聲幅度，避免預告訊號反轉失靈
             if (mu_intel > 0.012) {
                 effectiveRate = Math.max(0.018, effectiveRate);
@@ -475,6 +530,9 @@
             rec.lastDelta = nextPrice - prevPrice;
             rec.weaknessRatio = r_e;
             rec.muIntel = mu_intel;
+            rec.weatherBias = weatherBias;
+            rec.weatherVolMult = weatherVolMult;
+            rec.weatherType = wMods.weatherType;
             rec.trend = mu_intel > 0.012 ? 'bull' : (mu_intel < -0.012 ? 'bear' : 'neutral');
             rec.forecastWave = targetWave;
             changes[el] = {
@@ -483,6 +541,9 @@
                 delta: rec.lastDelta,
                 r_e,
                 mu_intel,
+                weatherBias,
+                weatherVolMult,
+                weatherType: wMods.weatherType,
                 trend: rec.trend
             };
         });
@@ -665,7 +726,16 @@
         const d = getData();
         const st = G && G.state;
         const pityThreshold = getBlindBoxPityThreshold();
-        const pityT3Chance = Number.isFinite(d.BLIND_BOX_PITY_TIER3_CHANCE) ? d.BLIND_BOX_PITY_TIER3_CHANCE : 0.25;
+        const isEclipse = Boolean(options.weatherType === 'eclipse' || (st && st.weatherType === 'eclipse'));
+        const wCatalog = (GameApp.data && GameApp.data.weather) || {};
+        const eclipseMult = isEclipse ? ((wCatalog.eclipse && Number.isFinite(wCatalog.eclipse.blindBoxTier3Mult)) ? wCatalog.eclipse.blindBoxTier3Mult : 2.0) : 1.0;
+        const baseT3Prob = Number.isFinite(d.BLIND_BOX_PROBS && d.BLIND_BOX_PROBS.TIER_3) ? d.BLIND_BOX_PROBS.TIER_3 : 0.08;
+        const effT3Prob = Math.min(0.40, baseT3Prob * eclipseMult);
+        const tier3Cutoff = 1 - effT3Prob;
+        const fruitCutoff = tier3Cutoff - 0.12;
+        const t2Cutoff = fruitCutoff - 0.32;
+        const basePityT3 = Number.isFinite(d.BLIND_BOX_PITY_TIER3_CHANCE) ? d.BLIND_BOX_PITY_TIER3_CHANCE : 0.25;
+        const pityT3Chance = Math.min(0.80, basePityT3 * eclipseMult);
         const critStep = hasBlessingActive('gambler_lucky_leaf')
             ? 0.02
             : (Number.isFinite(d.BLIND_BOX_CRIT_BONUS_STEP) ? d.BLIND_BOX_CRIT_BONUS_STEP : 0.015);
@@ -698,18 +768,18 @@
                 tier = 1;
             }
         } else if (isPityTriggered) {
-            // 連續 3 次 1★ 後第 4 抽必出 2★ 以上（25% 直出 3★，75% 出 2★）
+            // 連續 3 次 1★ 後第 4 抽必出 2★ 以上（預設 25% 直出 3★，蝕月黑潮翻倍為 50%）
             kind = 'tower';
             tier = r < pityT3Chance ? 3 : 2;
         } else {
-            // 1★: 0~0.48 (48%), 2★: 0.48~0.80 (32%), 萬能果實: 0.80~0.92 (12%), 3★: 0.92~1.00 (8%)
-            if (r < 0.48) {
+            // 預設 1★: 48%, 2★: 32%, 萬能果實: 12%, 3★: 8%；蝕月黑潮 3★ 翻倍為 16%
+            if (r < t2Cutoff) {
                 kind = 'tower';
                 tier = 1;
-            } else if (r < 0.80) {
+            } else if (r < fruitCutoff) {
                 kind = 'tower';
                 tier = 2;
-            } else if (r < 0.92) {
+            } else if (r < tier3Cutoff) {
                 const fruitFull = Boolean(st && (st.fusionFruitCount || 0) >= 1 && !options.allowFruitOverflow);
                 if (fruitFull) {
                     kind = 'tower';
@@ -1043,6 +1113,7 @@
         createInitialStockState,
         computeStockIntelSignal,
         getWaveElementWeaknessRatios,
+        getWeatherStockModifiers,
         refreshStockForecastSignals,
         settleWaveStocks,
         buyStock,

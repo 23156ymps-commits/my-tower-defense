@@ -1090,8 +1090,34 @@
             }
         }
 
-        // 唯一 5★ 創世世界樹·原初之核：周圍 8 格友軍金色靈脈連線
+        // 鄰格靈脈陣法（上下左右相鄰不同血脈防禦塔連線 ＋ 拖曳預覽連線）
         const AttackSysLey = GameApp.systems && GameApp.systems.towerAttack;
+        if (G.callbacks.isGameplayActive() && Array.isArray(st.board) && AttackSysLey && typeof AttackSysLey.getLeylineNetwork === 'function') {
+            const net = AttackSysLey.getLeylineNetwork();
+            const activeEdges = (net && Array.isArray(net.edges)) ? net.edges : [];
+            const previewEdges = Array.isArray(st.leylinePreviewEdges) ? st.leylinePreviewEdges : [];
+            const drawLeyPair = (edge, isPreview = false) => {
+                const cA = indexToCoords(edge.a), cB = indexToCoords(edge.b);
+                const pA = getCellCenter(cA.x, cA.y), pB = getCellCenter(cB.x, cB.y);
+                const c1 = edge.kind === 'superconduct_chill' ? '#4A9EBF' : '#C94A38';
+                const c2 = edge.kind === 'thermal_convection' ? '#4A9EBF' : '#E0B43C';
+                fxCtx.save();
+                if (isPreview) fxCtx.setLineDash([4, 3]);
+                strokeLine2D(fxCtx, pA.left, pA.top, pB.left, pB.top, c1, isPreview ? 2.2 : 1.9, isPreview ? 0.80 : (edge.isTriEdge ? 0.64 : 0.44));
+                strokeLine2D(fxCtx, pA.left, pA.top, pB.left, pB.top, c2, isPreview ? 1.2 : 1.0, isPreview ? 0.86 : (edge.isTriEdge ? 0.72 : 0.50));
+                if (edge.isTriEdge && !isPreview) {
+                    const tPhase = ((st.elapsedPlayMs || 0) % 1600) / 1600;
+                    const mx = pA.left + (pB.left - pA.left) * tPhase;
+                    const my = pA.top + (pB.top - pA.top) * tPhase;
+                    fillCircle2D(fxCtx, mx, my, 2.2, '#E0B43C', 0.88);
+                }
+                fxCtx.restore();
+            };
+            for (let i = 0; i < activeEdges.length; i++) drawLeyPair(activeEdges[i], false);
+            for (let i = 0; i < previewEdges.length; i++) drawLeyPair(previewEdges[i], true);
+        }
+
+        // 唯一 5★ 創世世界樹·原初之核：周圍 8 格友軍金色靈脈連線
         if (G.callbacks.isGameplayActive() && Array.isArray(st.board) && AttackSysLey && typeof AttackSysLey.getPrimalCoreLinkedNeighbors === 'function') {
             for (let idx = 0; idx < st.board.length; idx++) {
                 const t = st.board[idx];
@@ -1200,7 +1226,7 @@
         const weather = st.weatherType;
         if (G.callbacks.isGameplayActive() && weather && m.stageW > 0 && m.stageH > 0) {
             if (!Array.isArray(fx.weatherParticles)) fx.weatherParticles = [];
-            const targetCount = weather === 'storm' ? 28 : (weather === 'snow' ? 22 : 16);
+            const targetCount = weather === 'storm' ? 28 : (weather === 'snow' ? 22 : (weather === 'eclipse' ? 20 : 16));
             while (fx.weatherParticles.length < targetCount) {
                 fx.weatherParticles.push({
                     x: Math.random() * m.stageW,
@@ -1230,6 +1256,12 @@
                         wp.x = Math.random() * (m.stageW + 60);
                     }
                     strokeLine2D(fxCtx, wp.x, wp.y, wp.x + 5, wp.y - 12, '#B6CFD9', 1.1, 0.28);
+                } else if (weather === 'eclipse') {
+                    wp.x += Math.sin((st.elapsedPlayMs || 0) * 0.0015 + wp.phase) * 10 * dtSec;
+                    wp.y -= (16 * wp.scale) * dtSec;
+                    if (wp.y < -6) { wp.y = m.stageH + 6; wp.x = Math.random() * m.stageW; }
+                    const emberColor = (i % 3 === 0) ? '#C94A38' : '#B8C2BC';
+                    fillCircle2D(fxCtx, wp.x, wp.y, 1.7 * wp.scale, emberColor, 0.28);
                 } else {
                     wp.x += Math.sin((st.elapsedPlayMs || 0) * 0.0018 + wp.phase) * 9 * dtSec;
                     wp.y -= (14 * wp.scale) * dtSec;
@@ -2051,8 +2083,8 @@
     function applyWeatherVisualClass(weatherType) {
         if (!G || !G.dom || !G.dom.boardStageEl) return;
         const stage = G.dom.boardStageEl;
-        stage.classList.remove('weather-sun', 'weather-snow', 'weather-storm');
-        if (weatherType === 'sun' || weatherType === 'snow' || weatherType === 'storm') {
+        stage.classList.remove('weather-sun', 'weather-snow', 'weather-storm', 'weather-eclipse');
+        if (weatherType === 'sun' || weatherType === 'snow' || weatherType === 'storm' || weatherType === 'eclipse') {
             stage.classList.add(`weather-${weatherType}`);
         }
     }
