@@ -1738,12 +1738,16 @@
         } else if (towerObj.tier >= 5) {
             labelText = isEnBadge ? '5★S' : '5★神';
         } else if (isTriElement && towerObj.tier === 4) {
-            labelText = isEnBadge ? 'Tri4★' : '三4★';
+            labelText = isEnBadge ? 'TRI4★' : '三4★';
+        } else if (isTriElement) {
+            const starLabel = getTierStars(towerObj.tier);
+            labelText = isEnBadge ? `TRI${starLabel}` : `三${starLabel}`;
         } else if (towerObj.tier === 4) {
             labelText = `${branchCode || ''}4★`;
         } else {
             const starLabel = getTierStars(towerObj.tier);
-            labelText = branchCode ? `${branchCode}${starLabel}` : starLabel;
+            const localizedBranch = branchCode === '三' ? (isEnBadge ? 'TRI' : '三') : branchCode;
+            labelText = localizedBranch ? `${localizedBranch}${starLabel}` : starLabel;
         }
         name.innerText = labelText;
         const cellW = (G && G.boardMetrics && G.boardMetrics.cellW) || 34;

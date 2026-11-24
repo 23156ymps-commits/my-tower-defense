@@ -1735,6 +1735,12 @@
             ? WaveSys.getMapVictoryWave()
             : (CONFIG.VICTORY_WAVE || 10);
         if (isFinalClear) {
+            const isPuzzle = Boolean(G && G.state && G.state.gameMode === 'puzzle');
+            if (isPuzzle) {
+                headerEl.innerText = `${prefixLabel} · ${L('單波殘局試煉', 'Single-Wave Trial')}`;
+                listEl.innerHTML = `<li class="forecast-item forecast-boss">${L('本關僅 1 波，守住此波攻勢即可破局通關', 'Single-wave trial — hold this wave to clear')}</li>`;
+                return;
+            }
             headerEl.innerText = `${prefixLabel} · ${L('已達最終波', 'Final Wave')}`;
             listEl.innerHTML = `<li class="forecast-item forecast-boss">${L(`守住第 ${mapVWave} 波即可通關`, `Hold Wave ${mapVWave} to win`)}</li>`;
             return;
@@ -5515,6 +5521,9 @@
             updateHUD();
             updateSpeedButtonUI();
             updateSoundButtonUI();
+            if (Renderer && typeof Renderer.renderBoard === 'function') {
+                Renderer.renderBoard();
+            }
             Renderer.updateRangeIndicator();
             if (typeof Renderer.updateTerrainTooltip === 'function') {
                 Renderer.updateTerrainTooltip();

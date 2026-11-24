@@ -514,14 +514,14 @@
         mana_vein: { name: '✨ Mana Vein', shortTag: 'Spd +25%', tooltip: 'Mana Vein: Tower Attack Speed +25%' },
         world_tree: { name: '🌿 Tree Sanctuary', shortTag: 'DMG +20% max', tooltip: 'Sanctuary: Up to +20% DMG based on Tree HP' },
         obstacle: { name: '🪨 Ancient Boulder', shortTag: '45 💰 Clear', tooltip: 'Ancient Boulder: Click to clear for 45 💰 and unearth terrain' },
-        charged_stone: { name: '⚡ Charging Floatstone', shortTag: '+40% DMG Cycle', tooltip: 'Rotates 1 glowing stone every 2 waves: tower on glowing stone gains +40% DMG (B_power).' },
+        charged_stone: { name: '⚡ Charging Floatstone', shortTag: '+40% DMG Cycle', tooltip: 'Rotates 1 glowing stone every 2 waves: tower on glowing stone gains +40% DMG (Power Bonus).' },
         treasure_rock: { name: '🪨 Treasure Boulder', shortTag: '45 💰 Mine', tooltip: 'Click to mine for 45 💰: yields Gold (soft-capped), Universal Fruit, or a random 2★ tower.' },
         teleport_rift: { name: '🌀 One-Way Teleport Rift (A → B)', shortTag: 'Thunder Isles Rift', tooltip: 'Enemies stepping onto Entry A warp straight to Exit B along the second island.' },
         elite_affixes: { name: '🔱 W6+ / W10+ Elite Affixes', shortTag: 'Bounty · Frenzied · Regen · Link · Aegis · Prism', tooltip: 'W6+ Elites roll Bounty, Frenzied, Shield Regen, or Resonance Link (AoE counter); W10+/Endless adds Vanguard Aegis (Shred/Vuln shuts down) and Prismatic Ward (Weakness/Hybrid/Tri bonus DMG).' },
         leyline_links: {
             name: '🔗 Adjacent Leyline Links',
             shortTag: 'Max 2 Links · +18% Cap',
-            tooltip: 'Adjacent (4-dir) cross-element links: 🔥+❄️ Convection (10% Shred+Slow), ❄️+⚡ Superconduct (+10% Spd), 🔥+⚡ Overload (+10% Crit), 🔺 Tri-Formation (+15% DMG in B_power +1💧/1.5s, cap 12/wave). Max 2 links & +18% DMG per tower.'
+            tooltip: 'Adjacent (4-dir) cross-element links: 🔥+❄️ Convection (10% Shred+Slow), ❄️+⚡ Superconduct (+10% Spd), 🔥+⚡ Overload (+10% Crit), 🔺 Tri-Formation: +15% DMG (Power Bonus) + 1💧/1.5s (cap 12/wave). Max 2 links & +18% DMG per tower.'
         },
         weather_sun: {
             name: '☀️ Sunlit Blaze',
@@ -1167,7 +1167,7 @@
                 ['Mana Vein', 'ATK Spd +25%'],
                 ['Tree Sanctuary', 'Up to +20% DMG by HP'],
                 ['🔥+❄️ Convect / ❄️+⚡ Super / 🔥+⚡ Over', '10% Shred/Slow · +10% Spd · +10% Crit'],
-                ['🔺 Tri-Formation (Max 2 Links / +18%)', '+15% DMG (B_power) + 1💧/1.5s'],
+                ['🔺 Tri-Formation (Max 2 Links / +18%)', '+15% DMG (Power Bonus) + 1💧/1.5s'],
                 ['☀️ Sun / ❄️ Snow / ⛈️ Storm / 🌑 Eclipse', '3-Wave Cycle · Stock & Drop Synergy']
             ];
             (isEn ? enGuideRows : zhGuideRows).forEach((pair, idx) => {
