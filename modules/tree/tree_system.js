@@ -187,10 +187,6 @@
 
         const tc = getTreeConfig();
         monster._scorchBrandIcdMs = 350;
-        if (Array.isArray(G.state.groundHazards) && G.state.groundHazards.length >= 28) {
-            const oldIdx = G.state.groundHazards.findIndex(h => h.type === 'scorch_trail');
-            if (oldIdx !== -1) G.state.groundHazards.splice(oldIdx, 1);
-        }
         MonsterSys.spawnGroundHazard({
             type: 'scorch_trail',
             x: monster.pixelX,

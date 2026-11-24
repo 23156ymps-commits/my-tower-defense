@@ -146,10 +146,10 @@
         ice_A: '【1.5格60%群緩＋4擊永凍】',
         ice_B: '【直線穿透2體＋55%碎冰】',
         thunder_A: '【真4體連鎖天雷】',
-        thunder_B: '【第3發2.5x天罰穿甲】',
+        thunder_B: '【第3發2.6x天罰穿甲＋擊殺縮45%CD快充】',
         steam_A: '【65%穿甲濺射＋滾燙蒸氣池】',
         steam_B: '【1.6格霜霧減速＋20%易傷】',
-        magnet_A: '【群緩＋第3擊路徑回拉聚攏】',
+        magnet_A: '【1.65格群緩＋第2擊1.25x回拉0.65格＋12%易傷】',
         magnet_B: '【3體彈射＋3.5s感電附傷】',
         plasma_A: '【8層聚變死光＋45%穿甲】',
         plasma_B: '【4層主束＋雙副束折射】'
@@ -186,7 +186,7 @@
             resultType: crownAId,
             options: [crownAId],
             tier: 4,
-            previewLabel: `極意進化 ▸ ${titles.crownA || crownAId}`
+            previewLabel: `極意進化 ▸ ${titles.crownA || crownAId}（單路機制峰值）`
         };
         T3_TO_T4_RULES[`${bId}+${bId}`] = {
             mode: 'crown_mastery_t4',
@@ -195,7 +195,7 @@
             resultType: crownBId,
             options: [crownBId],
             tier: 4,
-            previewLabel: `極意進化 ▸ ${titles.crownB || crownBId}`
+            previewLabel: `極意進化 ▸ ${titles.crownB || crownBId}（單路機制峰值）`
         };
         T3_TO_T4_RULES[`${aId}+${bId}`] = {
             mode: 'twin_crown_t4',
@@ -204,7 +204,7 @@
             resultType: twinId,
             options: [twinId],
             tier: 4,
-            previewLabel: `雙生合體 ▸ ${titles.twinAB || twinId}（A+B 雙機制共存）`
+            previewLabel: `雙生合體 ▸ ${titles.twinAB || twinId}（A+B 雙機制全能共存）`
         };
 
         const t4Forms = [crownAId, crownBId, twinId];
@@ -222,9 +222,9 @@
             }
         }
 
-        LV4_ASCENSION_HINTS[crownAId] = '【4★ 極意古冠 · A 分支特化強化＋攻速與射程飛躍】';
-        LV4_ASCENSION_HINTS[crownBId] = '【4★ 極意古冠 · B 分支特化強化＋攻速與射程飛躍】';
-        LV4_ASCENSION_HINTS[twinId] = '【4★ 雙生神冠 AB · 同時繼承 A 與 B 雙核心機制】';
+        LV4_ASCENSION_HINTS[crownAId] = '【4★ 極意古冠 · A 分支單路峰值強化＋射程飛躍】';
+        LV4_ASCENSION_HINTS[crownBId] = '【4★ 極意古冠 · B 分支單路峰值強化＋射程飛躍】';
+        LV4_ASCENSION_HINTS[twinId] = '【4★ 雙生神冠 AB · A+B 雙核心機制共存泛用型（單項低於極意）】';
         LV5_ASCENSION_HINTS[scionId] = '【5★ 世界樹神裔 16U · 雙核心完全體＋2.2 格友軍光環＋6s 全圖脈動】';
     });
 
@@ -314,15 +314,15 @@
 
     Object.assign(LV3_ASCENSION_HINTS, {
         storm_tri: '【三元融合 3★ · 1.26x 全親和 · 2.2 格熾凍雷雲 (45% 穿甲) ＋ 雲內死亡 15% 殉爆】',
-        starforge_tri: '【三元融合 3★ · 1.26x 全親和 · 1.8 格聚怪凍結 0.5s ＋ 40% 破甲超新星】',
+        starforge_tri: '【三元融合 3★ · 1.26x 全親和 · 1.85 格聚怪凍結 ＋ 42% 破甲 ＋ 2.8s 熔核餘震場】',
         prism_tri: '【三元融合 3★ · 1.26x 全親和 · 3 光束折射 ＋ 5 層脆化 2.0x 碎晶冰封】'
     });
     Object.assign(LV4_ASCENSION_HINTS, {
         storm_tri_4: '【4★ 三元古冠 · 強化熾凍雷雲＋全場 1.26x 親和】',
-        starforge_tri_4: '【4★ 三元古冠 · 強化超新星聚怪凍結＋全場 1.26x 親和】',
+        starforge_tri_4: '【4★ 三元古冠 · 強化超新星聚怪凍結 ＋ 3.2s 熾裂餘震場 ＋ 全場 1.26x 親和】',
         prism_tri_4: '【4★ 三元古冠 · 強化三束零度折射＋全場 1.26x 親和】'
     });
-    LV5_ASCENSION_HINTS.primal_core = '【5★ 創世世界樹·原初之核（全圖限 1 座）· 周圍 8 格靈脈連線＋5s 創世脈動】';
+    LV5_ASCENSION_HINTS.primal_core = '【5★ 創世世界樹·原初之核（全圖唯一限 1 座）· 周圍至多 6 座友塔原初連動＋5s 創世脈動】';
 
     CONFIG.MAX_TIER = MAX_TIER;
 

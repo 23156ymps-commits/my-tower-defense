@@ -1076,6 +1076,25 @@
                     fxCtx.restore();
                     continue;
                 }
+                if (hz.type === 'starforge_aftershock') {
+                    fxCtx.save();
+                    fillCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx, '#592119', alpha * 0.28);
+                    fxCtx.globalAlpha = alpha * 0.84;
+                    fxCtx.strokeStyle = tk.elFire;
+                    fxCtx.lineWidth = 1.7;
+                    fxCtx.setLineDash([6, 3]);
+                    fxCtx.beginPath();
+                    fxCtx.arc(hz.x, hz.y, hz.radiusPx, 0, Math.PI * 2);
+                    fxCtx.stroke();
+                    fxCtx.strokeStyle = tk.elLightning;
+                    fxCtx.lineWidth = 1.1;
+                    fxCtx.setLineDash([3, 4]);
+                    fxCtx.beginPath();
+                    fxCtx.arc(hz.x, hz.y, hz.radiusPx * 0.58, 0, Math.PI * 2);
+                    fxCtx.stroke();
+                    fxCtx.restore();
+                    continue;
+                }
                 const isScorch = hz.type === 'scorch_trail';
                 fxCtx.save();
                 fillCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx, isScorch ? tk.elFire : tk.accentCta, alpha * (isScorch ? 0.28 : 0.22));
@@ -1163,6 +1182,74 @@
             }
         }
 
+        // W5+ 怪物光環與 W6+/W10+ 菁英共振連線／庇護圈／稜鏡護環
+        const MonsterSysFx = GameApp.systems && GameApp.systems.monster;
+        if (G.callbacks.isGameplayActive() && Array.isArray(st.monsters) && MonsterSysFx) {
+            const stepPx = m.step || 36;
+            const stageTraitsDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.WAVE_STAGE_TRAITS) || {};
+            const affixDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
+            for (let mi = 0; mi < st.monsters.length; mi++) {
+                const mon = st.monsters[mi];
+                if (!mon || mon.hp <= 0 || mon._dead || mon._killHandled) continue;
+                if (typeof MonsterSysFx.isHasteAuraActive === 'function' && MonsterSysFx.isHasteAuraActive(mon)) {
+                    const hSpec = mon.stageTraitSpec || stageTraitsDb[mon.typeKey] || {};
+                    const hRad = (Number(hSpec.auraRadiusCells) || 1.5) * stepPx;
+                    fxCtx.save();
+                    fxCtx.globalAlpha = 0.34;
+                    fxCtx.strokeStyle = mon.typeKey === 'air' ? tk.elIce : '#8AD19C';
+                    fxCtx.lineWidth = 1.3;
+                    fxCtx.setLineDash([4, 4]);
+                    fxCtx.beginPath();
+                    fxCtx.arc(mon.pixelX, mon.pixelY, hRad, 0, Math.PI * 2);
+                    fxCtx.stroke();
+                    fxCtx.restore();
+                }
+                if (!mon.isBoss && mon.eliteAffix === 'bulwark_aura' && typeof MonsterSysFx.isBulwarkAuraDisrupted === 'function' && !MonsterSysFx.isBulwarkAuraDisrupted(mon)) {
+                    const bSpec = mon.eliteAffixSpec || affixDb.bulwark_aura || {};
+                    const bRad = (Number(bSpec.auraRadiusCells) || 1.6) * stepPx;
+                    fxCtx.save();
+                    fillCircle2D(fxCtx, mon.pixelX, mon.pixelY, bRad, '#D98F3B', 0.08);
+                    fxCtx.globalAlpha = 0.48;
+                    fxCtx.strokeStyle = '#D98F3B';
+                    fxCtx.lineWidth = 1.6;
+                    fxCtx.setLineDash([5, 3]);
+                    fxCtx.beginPath();
+                    fxCtx.arc(mon.pixelX, mon.pixelY, bRad, 0, Math.PI * 2);
+                    fxCtx.stroke();
+                    fxCtx.restore();
+                }
+                if (!mon.isBoss && mon.eliteAffix === 'resonance_link' && typeof MonsterSysFx.getResonanceLinkTargets === 'function') {
+                    const targets = MonsterSysFx.getResonanceLinkTargets(mon);
+                    if (targets.length > 0) {
+                        fxCtx.save();
+                        fxCtx.setLineDash([4, 3]);
+                        for (let ti = 0; ti < targets.length; ti++) {
+                            const ally = targets[ti];
+                            strokeLine2D(fxCtx, mon.pixelX, mon.pixelY, ally.pixelX, ally.pixelY, '#B47AE8', 1.8, 0.72);
+                            fillCircle2D(fxCtx, ally.pixelX, ally.pixelY, 2.8, '#DFBEFF', 0.76);
+                        }
+                        fxCtx.restore();
+                    }
+                }
+                if (!mon.isBoss && mon.eliteAffix === 'prismatic_ward') {
+                    const pRad = Math.max(13, (m.cellW || 34) * 0.44);
+                    const rot = ((st.elapsedPlayMs || 0) * 0.0022) % (Math.PI * 2);
+                    const cols = [tk.elFire, tk.elIce, tk.elLightning];
+                    fxCtx.save();
+                    fxCtx.lineWidth = 2.0;
+                    fxCtx.globalAlpha = 0.74;
+                    for (let ci = 0; ci < 3; ci++) {
+                        const a0 = rot + ci * ((Math.PI * 2) / 3);
+                        fxCtx.strokeStyle = cols[ci];
+                        fxCtx.beginPath();
+                        fxCtx.arc(mon.pixelX, mon.pixelY, pRad, a0, a0 + (Math.PI * 0.48));
+                        fxCtx.stroke();
+                    }
+                    fxCtx.restore();
+                }
+            }
+        }
+
         // 拖曳合成懸停／子彈時間進化確認期間的金色血脈連線
         const tether = st.dragTether || (st.pendingEvolution
             ? { fromIndex: st.pendingEvolution.fromIndex, toIndex: st.pendingEvolution.toIndex, isValid: true }
@@ -1170,17 +1257,41 @@
         if (tether && Number.isFinite(tether.fromIndex) && Number.isFinite(tether.toIndex)) {
             const cFrom = indexToCoords(tether.fromIndex), cTo = indexToCoords(tether.toIndex);
             const pFrom = getCellCenter(cFrom.x, cFrom.y), pTo = getCellCenter(cTo.x, cTo.y);
-            const lineColor = tether.isValid === false ? tk.elFire : tk.elLightning;
+            const mKind = tether.isValid === false ? 'invalid' : (tether.mergeKind || 'upgrade');
             fxCtx.save();
-            fxCtx.strokeStyle = lineColor;
-            fxCtx.lineWidth = 2.4;
-            fxCtx.setLineDash([6, 4]);
-            fxCtx.beginPath();
-            fxCtx.moveTo(pFrom.left, pFrom.top);
-            fxCtx.lineTo(pTo.left, pTo.top);
-            fxCtx.stroke();
-            fillCircle2D(fxCtx, pFrom.left, pFrom.top, 4.5, lineColor, 0.9);
-            fillCircle2D(fxCtx, pTo.left, pTo.top, 5.5, lineColor, 0.95);
+            if (mKind === 'tri') {
+                fxCtx.strokeStyle = '#D97724';
+                fxCtx.lineWidth = 4.4;
+                fxCtx.globalAlpha = 0.42;
+                fxCtx.beginPath();
+                fxCtx.moveTo(pFrom.left, pFrom.top);
+                fxCtx.lineTo(pTo.left, pTo.top);
+                fxCtx.stroke();
+                fxCtx.globalAlpha = 1;
+                fxCtx.strokeStyle = tk.elLightning;
+                fxCtx.lineWidth = 2.4;
+                fxCtx.setLineDash([7, 4]);
+                fxCtx.beginPath();
+                fxCtx.moveTo(pFrom.left, pFrom.top);
+                fxCtx.lineTo(pTo.left, pTo.top);
+                fxCtx.stroke();
+                fillCircle2D(fxCtx, pFrom.left, pFrom.top, 4.8, tk.elLightning, 0.95);
+                fillCircle2D(fxCtx, pTo.left, pTo.top, 6.0, tk.elLightning, 0.98);
+            } else {
+                const lineColor = mKind === 'invalid'
+                    ? tk.elFire
+                    : (mKind === 'upgrade' ? '#4E9A68' : (mKind === 'transfer' ? '#D97724' : '#88C999'));
+                const dotColor = mKind === 'upgrade' ? '#A8D5B5' : lineColor;
+                fxCtx.strokeStyle = lineColor;
+                fxCtx.lineWidth = mKind === 'feed' ? 2.0 : 2.6;
+                fxCtx.setLineDash(mKind === 'feed' ? [4, 4] : [6, 4]);
+                fxCtx.beginPath();
+                fxCtx.moveTo(pFrom.left, pFrom.top);
+                fxCtx.lineTo(pTo.left, pTo.top);
+                fxCtx.stroke();
+                fillCircle2D(fxCtx, pFrom.left, pFrom.top, 4.5, dotColor, 0.9);
+                fillCircle2D(fxCtx, pTo.left, pTo.top, 5.5, dotColor, 0.95);
+            }
             fxCtx.restore();
         }
 
@@ -1344,7 +1455,14 @@
 
         const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         const armorPrefix = isEn ? 'ARM ' : '甲 ';
-        const armorHtml = monster.armor > 0 ? `<span class="m-armor-badge num">${armorPrefix}${monster.armor}</span>` : '';
+        const MonsterSysDom = GameApp.systems && GameApp.systems.monster;
+        const initBaseArmor = (MonsterSysDom && typeof MonsterSysDom.getMonsterBaseArmorWithStage === 'function')
+            ? MonsterSysDom.getMonsterBaseArmorWithStage(monster)
+            : (monster.armor || 0);
+        const shouldHaveArmorBadge = initBaseArmor > 0 || monster.stageTraitKey === 'magma_crust';
+        const armorHtml = shouldHaveArmorBadge
+            ? `<span class="m-armor-badge num${initBaseArmor > 0 ? '' : ' hidden'}">${initBaseArmor > 0 ? `${armorPrefix}${Math.round(initBaseArmor)}` : ''}</span>`
+            : '';
         const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
         const affixSpec = (!monster.isBoss && monster.eliteAffix) ? affixMap[monster.eliteAffix] : null;
         const affixText = affixSpec ? (isEn ? (affixSpec.shortBadgeEn || affixSpec.nameEn) : (affixSpec.shortBadge || affixSpec.name)) : '';
@@ -1400,6 +1518,12 @@
         const hasVuln = MonsterSys && typeof MonsterSys.getMonsterVulnerabilityMultiplier === 'function' && MonsterSys.getMonsterVulnerabilityMultiplier(m) > 1.01;
         if (hasShred || hasGrievous || hasVuln) {
             tags.push('<span class="m-debuff-tag debuff-wound">💔</span>');
+        }
+        const stageSt = (MonsterSys && typeof MonsterSys.getMonsterStageTraitStatus === 'function')
+            ? MonsterSys.getMonsterStageTraitStatus(m)
+            : null;
+        if (stageSt && stageSt.microTag) {
+            tags.push(`<span class="m-debuff-tag ${stageSt.countered ? 'stage-countered' : 'stage-active'}">${stageSt.microTag}</span>`);
         }
         return tags.join('');
     }
@@ -1469,12 +1593,19 @@
                     rec.shieldFillEl.style.width = `${Math.max(0, Math.min(100, (m.shield / m.maxShield) * 100))}%`;
                 }
             }
-            if (m.armor > 0 && rec.armorBadgeEl) {
+            if (rec.armorBadgeEl) {
                 const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
-                const isShredded = m.armorShredTimer > 0;
-                rec.armorBadgeEl.classList.toggle('shredded', isShredded);
-                const effArmor = MonsterSys ? MonsterSys.getMonsterEffectiveArmor(m) : m.armor;
-                rec.armorBadgeEl.innerText = isShredded ? `🔥${Math.round(effArmor)}` : `${isEn ? 'ARM ' : '甲 '}${m.armor}`;
+                const baseArmorNow = (MonsterSys && typeof MonsterSys.getMonsterBaseArmorWithStage === 'function')
+                    ? MonsterSys.getMonsterBaseArmorWithStage(m)
+                    : (m.armor || 0);
+                const hasArmorNow = baseArmorNow > 0;
+                rec.armorBadgeEl.classList.toggle('hidden', !hasArmorNow);
+                if (hasArmorNow) {
+                    const isShredded = m.armorShredTimer > 0;
+                    rec.armorBadgeEl.classList.toggle('shredded', isShredded);
+                    const effArmor = MonsterSys ? MonsterSys.getMonsterEffectiveArmor(m) : baseArmorNow;
+                    rec.armorBadgeEl.innerText = isShredded ? `🔥${Math.round(effArmor)}` : `${isEn ? 'ARM ' : '甲 '}${Math.round(baseArmorNow)}`;
+                }
             }
             const hpPct = Math.max(0, (m.hp / m.maxHp) * 100);
             if (rec.hpFillEl) {
@@ -1498,7 +1629,16 @@
     function clearCellDragHighlights() {
         if (!G || !G.cellElements) return;
         for (let i = 0; i < G.cellElements.length; i++) {
-            G.cellElements[i].classList.remove('drag-over', 'drag-valid-build', 'drag-invalid');
+            const cellEl = G.cellElements[i];
+            if (!cellEl) continue;
+            cellEl.classList.remove(
+                'drag-over', 'drag-valid-build', 'drag-invalid',
+                'drag-merge-upgrade', 'drag-merge-transfer', 'drag-merge-tri',
+                'drag-merge-feed', 'drag-merge-hover', 'drag-merge-tracked'
+            );
+            if (typeof cellEl.removeAttribute === 'function') {
+                cellEl.removeAttribute('data-merge-tag');
+            }
         }
     }
 
@@ -1866,12 +2006,16 @@
         tipEl.style.top = `${topPx}px`;
     }
 
-    function showDragEvolutionPreview(fromIndex, toIndex, labelText, isValid = true) {
+    function showDragEvolutionPreview(fromIndex, toIndex, labelText, isValid = true, mergeKind = '') {
         if (!G || !G.state) return;
-        G.state.dragTether = { fromIndex, toIndex, labelText: labelText || '', isValid: Boolean(isValid) };
+        const resolvedKind = mergeKind || (isValid ? 'upgrade' : 'invalid');
+        G.state.dragTether = { fromIndex, toIndex, labelText: labelText || '', isValid: Boolean(isValid), mergeKind: resolvedKind };
         const towerTipEl = G.dom.towerTooltipEl || (typeof document !== 'undefined' ? document.getElementById('tower-tooltip') : null);
         if (towerTipEl && labelText && Number.isFinite(toIndex)) {
-            towerTipEl.classList.remove('is-detail-card');
+            towerTipEl.classList.remove('is-detail-card', 'tooltip-merge-tri', 'tooltip-merge-upgrade', 'tooltip-merge-transfer', 'tooltip-merge-feed');
+            if (isValid && ['tri', 'upgrade', 'transfer', 'feed'].includes(resolvedKind)) {
+                towerTipEl.classList.add(`tooltip-merge-${resolvedKind}`);
+            }
             towerTipEl.innerText = labelText;
             positionBoardTooltip(towerTipEl, indexToCoords(toIndex), !isValid);
         }
@@ -1883,7 +2027,10 @@
         const hadTether = Boolean(G.state.dragTether);
         G.state.dragTether = null;
         if (G.dom && G.dom.towerTooltipEl) {
-            G.dom.towerTooltipEl.classList.remove('tooltip-invalid', 'is-detail-card');
+            G.dom.towerTooltipEl.classList.remove(
+                'tooltip-invalid', 'is-detail-card',
+                'tooltip-merge-tri', 'tooltip-merge-upgrade', 'tooltip-merge-transfer', 'tooltip-merge-feed'
+            );
         }
         if (hadTether) updateAndRenderCanvasFX(0);
     }
@@ -1898,7 +2045,10 @@
         if (st.dragTether && st.dragTether.labelText) {
             return;
         }
-        towerTipEl.classList.remove('tooltip-invalid');
+        towerTipEl.classList.remove(
+            'tooltip-invalid',
+            'tooltip-merge-tri', 'tooltip-merge-upgrade', 'tooltip-merge-transfer', 'tooltip-merge-feed'
+        );
         const isDraggingNow = GameApp.systems && GameApp.systems.drag && GameApp.systems.drag.isDragging();
         if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'
             || st.waveState === 'BLESSING_SELECT' || isDraggingNow || st.isTouchMode
@@ -1986,7 +2136,7 @@
             const isActive = TerrainSys && typeof TerrainSys.isChargedStoneActiveAt === 'function' ? TerrainSys.isChargedStoneActiveAt(idx) : false;
             const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
             tipEl.innerText = isActive
-                ? (isEn ? `${tCfg.name} · Active DMG +40%` : `${tCfg.name} · 發光充能 DMG +40%`)
+                ? (isEn ? `${tCfg.name} · Active DMG +40%` : `${tCfg.name} · 發光充能 傷害 +40%`)
                 : (isEn ? `${tCfg.name} · Dormant (2-Wave Cycle)` : `${tCfg.name} · 待機（每 2 波輪換）`);
         } else {
             tipEl.innerText = `${tCfg.name} · ${tCfg.shortTag}`;
@@ -2305,6 +2455,7 @@
     showDragEvolutionPreview,
     clearDragEvolutionPreview,
     updateTowerHoverTooltip,
+    updateTerrainTooltip,
     hideTerrainTooltip,
     resizeFxCanvas,
     measureBoardMetrics,

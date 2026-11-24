@@ -88,6 +88,10 @@
                     </button>
                     <span id="weather-status-pill" class="weather-status-pill num">☀️ 熾陽季</span>
                     <div id="forecast-inline-summary" class="forecast-inline-summary"></div>
+                    <div id="recipe-tracker-pill" class="recipe-tracker-pill hidden" role="status" aria-live="polite">
+                        <button id="recipe-tracker-pill-open" class="recipe-tracker-pill-open num" type="button"></button>
+                        <button id="recipe-tracker-pill-clear" class="recipe-tracker-pill-clear" type="button" aria-label="取消配方追蹤" title="取消配方追蹤">×</button>
+                    </div>
                     <div id="info-legend" class="info-legend-inline hidden">
                         <span><svg class="ui-ico ui-ico-fire" viewBox="0 0 16 16" aria-hidden="true">
                                 <path
@@ -127,6 +131,17 @@
         <!-- 桌面寬螢幕兩側石板資訊欄 + 中央 15x10 戰場舞台 -->
         <div class="battlefield-row">
             <aside id="side-panel-left" class="side-panel side-panel-left" aria-label="元素相剋與地形加成速查">
+                <div id="side-recipe-tracker" class="side-panel-section side-recipe-tracker hidden" aria-live="polite">
+                    <div class="side-tracker-head">
+                        <span id="side-tracker-title" class="side-tracker-title">📌 配方追蹤</span>
+                        <div class="side-tracker-actions">
+                            <button id="side-tracker-open-btn" class="side-tracker-btn" type="button">圖譜</button>
+                            <button id="side-tracker-clear-btn" class="side-tracker-btn side-tracker-clear" type="button" aria-label="取消配方追蹤" title="取消配方追蹤">×</button>
+                        </div>
+                    </div>
+                    <div id="side-tracker-target" class="side-tracker-target num"></div>
+                    <div id="side-tracker-missing" class="side-tracker-body num"></div>
+                </div>
                 <div class="side-panel-section">
                     <h2 class="side-panel-title">元素相剋速查</h2>
                     <ul class="side-panel-list">
@@ -150,8 +165,7 @@
                                 </svg><span class="el-counter-text">雷 ▸ 飛艇 / 魔像</span></span><span
                                 class="side-val num">175%</span>
                         </li>
-                        <li class="side-panel-row"><span><span class="el-counter-text">✨ 轉職 ▸
-                                    親和弱點</span></span><span class="side-val num">135%</span>
+                        <li class="side-panel-row"><span><span class="el-counter-text">✨ 轉職 ▸ 親和弱點</span></span><span class="side-val num">135%</span>
                         </li>
                     </ul>
                 </div>
@@ -267,7 +281,7 @@
                 </div>
             </div>
 
-            <aside id="side-panel-right" class="side-panel side-panel-right hidden" aria-label="本波與下波出怪詳情">
+            <aside id="side-panel-right" class="side-panel side-panel-right" aria-label="本波與下波出怪詳情">
                 <div id="side-wave-current-section" class="side-panel-section">
                     <h2 id="side-current-header" class="side-panel-title num">本波情報 · 第 1 波</h2>
                     <ul id="side-current-list" class="forecast-list"></ul>
@@ -592,7 +606,7 @@
             </div>
 
             <div id="guide-stage4-section" class="guide-section">
-                <h2 id="guide-stage4-title" class="guide-section-title">浮島裂隙 · 黑市開採 · W6+ 菁英詞條</h2>
+                <h2 id="guide-stage4-title" class="guide-section-title">浮島裂隙 · 黑市開採 · W6+/W10+ 菁英詞條</h2>
                 <ul id="guide-stage4-list" class="panel-list">
                     <li class="panel-row">
                         <span id="guide-s4-k0" class="panel-key">⚡ 充能浮石 / 🌀 裂隙 A→B（雷鳴浮島）</span>
@@ -603,8 +617,8 @@
                         <span id="guide-s4-v1" class="panel-val num">45 💰 開採寶藏 · 每波 1 免費盒</span>
                     </li>
                     <li class="panel-row">
-                        <span id="guide-s4-k2" class="panel-key">🔱 W6+ 菁英詞條（賞金首 / 狂躁 / 再生）</span>
-                        <span id="guide-s4-v2" class="panel-val num">掉金受軟上限 · 重傷減半回盾</span>
+                        <span id="guide-s4-k2" class="panel-key">🔱 W6+/W10+ 菁英詞條（含共振／庇護／稜鏡）</span>
+                        <span id="guide-s4-v2" class="panel-val num">範圍剋共振 · 破甲關庇護 · 複合剋稜鏡</span>
                     </li>
                 </ul>
             </div>
@@ -654,8 +668,7 @@
                     <h1 id="codex-title" class="codex-title">元素世界樹演化圖譜</h1>
                     <p class="modal-subtitle codex-subtitle">由世界樹原核向上生長：3 基礎 ＋ 3 雙元 ➔ 6 主幹 ➔ 12 冠枝 ＋ 3 三元傳奇 ➔ 唯一 5★ 原初之核（按 [T] 隨時暫停檢視）。</p>
                 </div>
-                <button id="codex-close-btn" class="codex-close-top-btn" type="button" aria-label="關閉圖鑑">關閉
-                    [Esc]</button>
+                <button id="codex-close-btn" class="codex-close-top-btn" type="button" aria-label="關閉圖鑑">關閉 [Esc]</button>
             </div>
             <div class="codex-tabs"></div>
             <div id="codex-tree-shell" class="codex-tree-shell"></div>
@@ -918,6 +931,7 @@
             <div id="victory-stars" class="victory-stars" aria-label="通關星級">★★★</div>
             <p id="victory-rank-text" class="modal-subtitle">成功守護世界樹，擊退第 10 波腐朽古樹王。</p>
             <div id="victory-mode-banner" class="outcome-mode-banner num hidden"></div>
+            <div id="victory-unlock-banner" class="outcome-unlock-banner hidden" role="status" aria-live="polite"></div>
 
             <div class="modal-stats">
                 <div class="stat-row">
@@ -973,6 +987,7 @@
             </div>
 
             <div class="modal-actions">
+                <button id="victory-next-puzzle-btn" class="primary-cta-btn hidden" type="button">挑戰下一試煉 ▸</button>
                 <button id="victory-restart-btn" class="primary-cta-btn" type="button">重新開始</button>
                 <button id="endless-btn" class="secondary-cta-btn" type="button">繼續無盡挑戰</button>
                 <button id="victory-menu-btn" class="menu-return-btn" type="button">切換地圖 / 主選單</button>
@@ -991,6 +1006,7 @@
             <h1 id="game-over-title" class="gameover-title">防線失守</h1>
             <p class="modal-subtitle">世界樹生命枯竭，本局戰役結束。</p>
             <div id="gameover-mode-banner" class="outcome-mode-banner num hidden"></div>
+            <div id="gameover-unlock-banner" class="outcome-unlock-banner hidden" role="status" aria-live="polite"></div>
             <div class="modal-stats">
                 <div class="stat-row">
                     <span>戰場地圖</span>

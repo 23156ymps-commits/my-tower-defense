@@ -166,7 +166,7 @@
                 titleZh: '殘局 IV：黑市裂殖疫潮',
                 titleEn: 'Trial IV: Market Fission Tide',
                 descZh: '癒合花妖為分裂史萊姆持續回血！靈活開採場上藏寶巨石或直接構築 🔥灼燒重傷與 ♨️濺射防線。',
-                descEn: 'Healer dryads sustain Splitting Slimes! Mine Treasure Rocks or build 🔥 Wound + ♨️ AoE.',
+                descEn: 'Bloom Healers sustain Split Slimes! Mine Treasure Boulders or build 🔥 Wound + ♨️ AoE.',
                 hintZh: '建議以 🔥灼燒重傷 抑制治療並搭配 ♨️蒸氣範圍清場',
                 hintEn: 'Tip: Inflict 🔥 Burn grievous wounds to halve healing and splash splits',
                 queueSpecs: [

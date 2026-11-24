@@ -114,6 +114,12 @@
             stunTimer: 0,
             stunImmuneMs: 0,
             _stunPendingImmuneMs: 0,
+            _pullIcdMs: 0,
+            spawnWave: 1,
+            stageTraitKey: null,
+            stageTraitSpec: null,
+            stageRegenTimerMs: 0,
+            stageFireSuppressMs: 0,
             status: createInitialStatusState(),
             ...fields
         };
@@ -154,6 +160,9 @@
         const spdGlobal = baseSpdScale * (hasContract('fast_tide') ? 1.15 : 1.0) * surgeSpeedMult;
         const hpGlobal = baseHpScale * (hasContract('frenzied_hp') ? 1.20 : 1.0) * surgeHpMult;
         const baseSpeedConst = rules.MONSTER_BASE_SPEED ?? CONFIG.MONSTER_BASE_SPEED ?? 2.6;
+        const spawnWave = Number.isFinite(Number(entry.waveLevel))
+            ? Math.max(1, Number(entry.waveLevel))
+            : (st.gameMode === 'puzzle' ? 1 : Math.max(1, Number(st.currentWave) || 1));
 
         if (GameApp.systems && GameApp.systems.codex && typeof GameApp.systems.codex.unlockEntry === 'function') {
             GameApp.systems.codex.unlockEntry(`monster:${entry.typeKey}`);
@@ -177,6 +186,7 @@
                 shield: bossShield,
                 maxShield: bossShield,
                 armor: bossArmor,
+                spawnWave,
                 isElite: true,
                 isBoss: true,
                 bossMechanic: bSpec.bossMechanic || '',
@@ -205,8 +215,12 @@
             return;
         }
 
-        const affixDb = getMonstersData().ELITE_AFFIXES || {};
+        const monstersData = getMonstersData();
+        const affixDb = monstersData.ELITE_AFFIXES || {};
         const affixSpec = (entry.isElite && !entry.isBoss && entry.eliteAffix) ? (affixDb[entry.eliteAffix] || null) : null;
+        const stageDb = monstersData.WAVE_STAGE_TRAITS || {};
+        const rawStageSpec = (!entry.isBoss && !entry.isSplitChild && stageDb[entry.typeKey]) ? stageDb[entry.typeKey] : null;
+        const stageSpec = (rawStageSpec && spawnWave >= (Number(rawStageSpec.minWave) || 5)) ? rawStageSpec : null;
         const hpMult = entry.isElite ? (wb.ELITE_HP_MULT || 2.1) : 1.0;
         const affixSpeedMult = (affixSpec && affixSpec.id === 'frenzied') ? (affixSpec.speedMult || 1.22) : 1.0;
         const speedMult = (cfg.speedMult || 1.0) * (entry.isElite ? (wb.ELITE_SPEED_MULT || 0.85) : 1.0) * affixSpeedMult;
@@ -231,6 +245,11 @@
             shield: maxShield,
             maxShield,
             armor: Math.max(0, Math.round((entry.armor || 0) * armorScale) + armorBonus),
+            spawnWave,
+            stageTraitKey: stageSpec ? stageSpec.id : null,
+            stageTraitSpec: stageSpec,
+            stageRegenTimerMs: stageSpec && stageSpec.regenIntervalMs ? stageSpec.regenIntervalMs : 0,
+            stageFireSuppressMs: 0,
             isElite: Boolean(entry.isElite),
             eliteAffix: affixSpec ? affixSpec.id : null,
             eliteAffixSpec: affixSpec,
@@ -338,10 +357,11 @@
     }
 
     /**
-     * 將非 Boss 怪物沿路徑往起點方向回拉指定格數（引力黑洞樹 magnet_A 專用，不低於起點 0）
+     * 將非 Boss 怪物沿路徑往起點方向回拉指定格數（引力黑洞樹 magnet_A 專用，受 700ms 單怪回拉冷卻約束且不低於起點 0）
      */
     function pullMonsterAlongPath(monster, distanceCells = 0.45) {
         if (!monster || monster.isBoss || monster.hp <= 0 || monster.isTargetable === false) return false;
+        if ((monster._pullIcdMs || 0) > 0) return false;
         const wps = monster.waypoints || (G && G.map && G.map.waypoints);
         const cum = monster.cumDist || (G && G.map && G.map.waypointCumDist);
         if (!wps || wps.length < 2 || !cum || cum.length < 2) return false;
@@ -365,6 +385,7 @@
         monster.wpIndex = segIdx;
         monster.gridX = wpA.x + (wpB.x - wpA.x) * ratio;
         monster.gridY = wpA.y + (wpB.y - wpA.y) * ratio;
+        monster._pullIcdMs = 700;
         if (GameApp.renderer && typeof GameApp.renderer.getCellCenter === 'function') {
             const pos = GameApp.renderer.getCellCenter(monster.gridX, monster.gridY);
             monster.pixelX = pos.left + (monster.visualOffsetX || 0);
@@ -373,8 +394,16 @@
         return true;
     }
 
+    function getMonsterBaseArmorWithStage(monster) {
+        const base = Math.max(0, Number(monster && (monster.A_base ?? monster.armor)) || 0);
+        if (!monster || monster.stageTraitKey !== 'magma_crust') return base;
+        if (isMonsterSlowed(monster) || isMonsterFrozen(monster)) return base;
+        const spec = monster.stageTraitSpec || ((getMonstersData().WAVE_STAGE_TRAITS || {}).lava) || {};
+        return base + Math.max(0, Number(spec.bonusArmor) || 6);
+    }
+
     function getMonsterEffectiveArmor(monster, armorPierce = 0) {
-        const A_base = Math.max(0, Number(monster && (monster.A_base ?? monster.armor)) || 0);
+        const A_base = getMonsterBaseArmorWithStage(monster);
         const R_shred = (monster && Number.isFinite(monster.R_shred))
             ? Math.max(0, Math.min(1, Number(monster.R_shred)))
             : ((monster && monster.armorShredTimer > 0) ? Math.max(0, Math.min(1, Number(monster.armorShredRate) || 0.30)) : 0);
@@ -387,6 +416,219 @@
         const A_eff = getMonsterEffectiveArmor(monster, armorPierce);
         const M_armor = 35 / (35 + A_eff);
         return M_armor;
+    }
+
+    // ==================== W5+ 波次階段反制 & 擴充菁英詞條查詢 ====================
+    function applyFireStageSuppression(monster, durationMs = 3500) {
+        if (!monster || monster.hp <= 0) return;
+        monster.stageFireSuppressMs = Math.max(monster.stageFireSuppressMs || 0, Math.max(0, Number(durationMs) || 3500));
+    }
+
+    function isMonsterRegenSuppressed(monster) {
+        if (!monster) return false;
+        const st = ensureMonsterStatus(monster);
+        if ((monster.stageFireSuppressMs || 0) > 0) return true;
+        if (st.burn && st.burn.stacks > 0 && st.burn.durationMs > 0) return true;
+        if (st.crownBurn && st.crownBurn.dps > 0 && st.crownBurn.durationMs > 0) return true;
+        if (st.grievousWound && st.grievousWound.durationMs > 0) return true;
+        return false;
+    }
+
+    function isHasteAuraActive(monster) {
+        if (!monster || monster.hp <= 0 || monster.isTargetable === false) return false;
+        if (monster.stageTraitKey !== 'pack_tailwind' && monster.stageTraitKey !== 'jetstream_aura') return false;
+        if (isMonsterSlowed(monster) || isMonsterFrozen(monster) || (monster.rootTimer || 0) > 0 || (monster.stunTimer || 0) > 0) return false;
+        return true;
+    }
+
+    function getMonsterHasteAuraBonus(monster) {
+        if (!monster || monster.hp <= 0 || !G || !G.state || !Array.isArray(G.state.monsters)) return 0;
+        const stepPx = (G.boardMetrics && G.boardMetrics.step) || 36;
+        const stageDb = getMonstersData().WAVE_STAGE_TRAITS || {};
+        let maxBonus = 0;
+        const list = G.state.monsters;
+        for (let i = 0; i < list.length; i++) {
+            const src = list[i];
+            if (!isHasteAuraActive(src)) continue;
+            const spec = src.stageTraitSpec || stageDb[src.typeKey] || {};
+            const radPx = (Number(spec.auraRadiusCells) || 1.5) * stepPx;
+            if (Math.hypot((monster.pixelX || 0) - (src.pixelX || 0), (monster.pixelY || 0) - (src.pixelY || 0)) <= radPx) {
+                maxBonus = Math.max(maxBonus, Number(spec.speedBonus) || 0.14);
+            }
+        }
+        return maxBonus;
+    }
+
+    function isReactivePlatingActive(monster, armorPierce = 0) {
+        if (!monster || monster.stageTraitKey !== 'reactive_plating') return false;
+        if ((monster.armorShredTimer || 0) > 0) return false;
+        if (Number(armorPierce) > 0) return false;
+        if (monster.status && monster.status.shock && monster.status.shock.durationMs > 0) return false;
+        return true;
+    }
+
+    function getResonanceLinkTargets(monster) {
+        if (!monster || monster.isBoss || monster.hp <= 0 || monster.eliteAffix !== 'resonance_link') return [];
+        if (isMonsterFrozen(monster) || (monster.rootTimer || 0) > 0 || (monster.stunTimer || 0) > 0) return [];
+        if (!G || !G.state || !Array.isArray(G.state.monsters)) return [];
+        const afSpec = monster.eliteAffixSpec || ((getMonstersData().ELITE_AFFIXES || {}).resonance_link) || {};
+        const stepPx = (G.boardMetrics && G.boardMetrics.step) || 36;
+        const radPx = (Number(afSpec.linkRadiusCells) || 1.8) * stepPx;
+        const maxLinks = Math.max(1, Number(afSpec.maxLinks) || 2);
+        const cands = [];
+        for (let i = 0; i < G.state.monsters.length; i++) {
+            const ally = G.state.monsters[i];
+            if (!ally || ally.id === monster.id || ally.isBoss || ally.hp <= 0 || ally._dead || ally._killHandled) continue;
+            const dist = Math.hypot((ally.pixelX || 0) - (monster.pixelX || 0), (ally.pixelY || 0) - (monster.pixelY || 0));
+            if (dist <= radPx) cands.push({ ally, dist });
+        }
+        cands.sort((a, b) => a.dist - b.dist);
+        return cands.slice(0, maxLinks).map(c => c.ally);
+    }
+
+    function isBulwarkAuraDisrupted(monster) {
+        if (!monster || monster.eliteAffix !== 'bulwark_aura') return false;
+        return (monster.armorShredTimer || 0) > 0 || getMonsterVulnerabilityBonus(monster) > 0.001;
+    }
+
+    function getMonsterBulwarkAuraReduction(monster) {
+        if (!monster || monster.isBoss || monster.hp <= 0 || !G || !G.state || !Array.isArray(G.state.monsters)) return 0;
+        const stepPx = (G.boardMetrics && G.boardMetrics.step) || 36;
+        const affixDb = getMonstersData().ELITE_AFFIXES || {};
+        let maxDr = 0;
+        for (let i = 0; i < G.state.monsters.length; i++) {
+            const src = G.state.monsters[i];
+            if (!src || src.id === monster.id || src.isBoss || src.hp <= 0 || src.eliteAffix !== 'bulwark_aura') continue;
+            if (isBulwarkAuraDisrupted(src)) continue;
+            const afSpec = src.eliteAffixSpec || affixDb.bulwark_aura || {};
+            const radPx = (Number(afSpec.auraRadiusCells) || 1.6) * stepPx;
+            if (Math.hypot((monster.pixelX || 0) - (src.pixelX || 0), (monster.pixelY || 0) - (src.pixelY || 0)) <= radPx) {
+                maxDr = Math.max(maxDr, Number(afSpec.auraDr) || 0.18);
+            }
+        }
+        return maxDr;
+    }
+
+    function getMonsterSpeedBreakdown(monster) {
+        const st = (G && G.state) || {};
+        const rules = getRules();
+        const cc = getCombatConstants();
+        const rawMin = Number.isFinite(rules.MIN_SPEED_RATIO) ? rules.MIN_SPEED_RATIO : cc.MIN_SPEED_FLOOR_RATIO;
+        const minSpeedRatio = Number.isFinite(rawMin) ? rawMin : 0.30;
+        const baseSpd = rules.MONSTER_BASE_SPEED ?? CONFIG.MONSTER_BASE_SPEED ?? 2.6;
+        const safeSpeed = clampNumber(monster && monster.baseSpeed, 0.2, baseSpd * 10, baseSpd);
+        const isRootedOrFrozen = !monster || (monster.rootTimer || 0) > 0 || (monster.stunTimer || 0) > 0 || isMonsterFrozen(monster);
+        if (isRootedOrFrozen) {
+            return { minSpeedRatio, safeSpeed, slowMult: 0, effectiveCellsPerSec: 0, displaySpeed: 0 };
+        }
+        const effSlowRate = getMonsterEffectiveSlowRate(monster);
+        const stealthSpeedMult = monster.isStealthed ? (1 + ((monster.pantherSpec && monster.pantherSpec.stealthSpeedBonus) || 0.65)) : 1.0;
+        const frenziedSpec = (monster.eliteAffix === 'frenzied')
+            ? (monster.eliteAffixSpec || ((getMonstersData().ELITE_AFFIXES || {}).frenzied) || {})
+            : null;
+        const frenziedLowHpMult = (frenziedSpec && (monster.hp / Math.max(1, monster.maxHp)) < 0.50)
+            ? (1 + (frenziedSpec.lowHpBonus || 0.15))
+            : 1.0;
+        const snowSpdMult = st.weatherType === 'snow'
+            ? (((GameApp.data && GameApp.data.weather && GameApp.data.weather.snow && GameApp.data.weather.snow.monsterSpeedMult)) || 0.90)
+            : 1.0;
+        const hasteAuraMult = 1 + getMonsterHasteAuraBonus(monster);
+        const slowMult = Math.max(minSpeedRatio, (1 - effSlowRate) * snowSpdMult) * stealthSpeedMult * frenziedLowHpMult * hasteAuraMult;
+        const effectiveCellsPerSec = safeSpeed * slowMult;
+        const displaySpeed = Math.round((effectiveCellsPerSec / Math.max(0.2, baseSpd)) * 40);
+        return { minSpeedRatio, safeSpeed, slowMult, effectiveCellsPerSec, displaySpeed };
+    }
+
+    function getMonsterEffectiveSpeed(monster) {
+        return getMonsterSpeedBreakdown(monster).displaySpeed;
+    }
+
+    function getMonsterStageTraitStatus(monster) {
+        if (!monster || !monster.stageTraitKey || monster.isBoss) return null;
+        const stageDb = getMonstersData().WAVE_STAGE_TRAITS || {};
+        const spec = stageDb[monster.typeKey] || monster.stageTraitSpec;
+        if (!spec) return null;
+        let countered = false;
+        let badgeActive = '🛡️';
+        let badgeCountered = '💔';
+        if (spec.id === 'bark_regen') {
+            countered = isMonsterRegenSuppressed(monster);
+            badgeActive = '🌿+';
+            badgeCountered = '🔥✕';
+        } else if (spec.id === 'bloom_surge') {
+            countered = isMonsterRegenSuppressed(monster);
+            badgeActive = '💚+';
+            badgeCountered = '🔥✕';
+        } else if (spec.id === 'pack_tailwind' || spec.id === 'jetstream_aura') {
+            countered = !isHasteAuraActive(monster);
+            badgeActive = spec.id === 'pack_tailwind' ? '💨' : '🌪️';
+            badgeCountered = '❄️✕';
+        } else if (spec.id === 'magma_crust') {
+            countered = isMonsterSlowed(monster) || isMonsterFrozen(monster);
+            badgeActive = '🪨+6';
+            badgeCountered = '❄️✕';
+        } else if (spec.id === 'reactive_plating') {
+            countered = !isReactivePlatingActive(monster, 0);
+            badgeActive = '🛡️-20%';
+            badgeCountered = '💔✕';
+        } else if (spec.id === 'rune_capacitor') {
+            countered = (monster.shield || 0) <= 0;
+            badgeActive = '⚡🛡️';
+            badgeCountered = '⚡✕';
+        }
+        return {
+            key: spec.id,
+            typeKey: monster.typeKey,
+            minWave: spec.minWave || 5,
+            name: spec.name,
+            nameEn: spec.nameEn || spec.name,
+            desc: spec.desc,
+            descEn: spec.descEn || spec.desc,
+            countered,
+            statusLabelZh: countered ? (spec.counteredLabel || '已反制') : (spec.activeLabel || '啟動中'),
+            statusLabelEn: countered ? (spec.counteredLabelEn || 'Countered') : (spec.activeLabelEn || 'Active'),
+            microTag: countered ? badgeCountered : badgeActive
+        };
+    }
+
+    function getEliteAffixLiveStatus(monster) {
+        if (!monster || monster.isBoss || !monster.eliteAffix) return null;
+        const af = (getMonstersData().ELITE_AFFIXES || {})[monster.eliteAffix] || monster.eliteAffixSpec;
+        if (!af) return null;
+        if (monster.eliteAffix === 'resonance_link') {
+            const links = getResonanceLinkTargets(monster);
+            const severed = isMonsterFrozen(monster) || (monster.rootTimer || 0) > 0 || (monster.stunTimer || 0) > 0;
+            return {
+                id: af.id,
+                countered: severed,
+                linkCount: links.length,
+                statusLabelZh: severed ? '❄️連結中斷' : `🔗共振×${links.length}`,
+                statusLabelEn: severed ? '❄️Link Severed' : `🔗Link×${links.length}`
+            };
+        }
+        if (monster.eliteAffix === 'bulwark_aura') {
+            const disrupted = isBulwarkAuraDisrupted(monster);
+            return {
+                id: af.id,
+                countered: disrupted,
+                statusLabelZh: disrupted ? '💔庇護關閉' : '🛡️庇護生效',
+                statusLabelEn: disrupted ? '💔Aegis Down' : '🛡️Aegis Active'
+            };
+        }
+        if (monster.eliteAffix === 'prismatic_ward') {
+            return {
+                id: af.id,
+                countered: false,
+                statusLabelZh: '🌈弱點/複合+20%',
+                statusLabelEn: '🌈Weak/Hybrid +20%'
+            };
+        }
+        return {
+            id: af.id,
+            countered: false,
+            statusLabelZh: af.shortBadge || af.name,
+            statusLabelEn: af.shortBadgeEn || af.nameEn || af.name
+        };
     }
 
     // ==================== Phase 2A 通用異常狀態機與上限鎖 ====================
@@ -671,7 +913,7 @@
 
         b.maxStacks = maxStacks;
         b.stacks = Math.min(maxStacks, (b.durationMs > 0 ? b.stacks : 0) + addStacks);
-        b.flatDps = Number(burnParams.burnFlatDps) || 8;
+        b.flatDps = Number(burnParams.burnFlatDps ?? burnParams.burnDps) || 8;
         b.pctMaxHp = Number(burnParams.burnPctMaxHp) || 0.0035;
         b.bossCapPerStack = Number(burnParams.burnBossCapPerStack) || 35;
         b.durationMs = Math.max(b.durationMs || 0, Number(burnParams.burnDurationMs) || 5000);
@@ -843,76 +1085,123 @@
     }
 
     /**
-     * 新增地面持續傷害區域（如焦熱蒸壓樹 steam_A 的 3s 滾燙蒸氣池，每秒 28 點傷害）
+     * 新增地面持續傷害區域（統一受單類上限與全場總上限 28 約束，防止長局卡頓）
      */
     function spawnGroundHazard(spec = {}) {
         if (!G || !G.state) return null;
         if (!Array.isArray(G.state.groundHazards)) G.state.groundHazards = [];
+        const list = G.state.groundHazards;
+        const cc = getCombatConstants();
+        const maxTotal = Math.max(1, Number(cc.GROUND_HAZARDS_MAX_TOTAL) || 28);
+        const defaultCaps = { steam_pool: 14, scorch_trail: 12, storm_cloud: 6, starforge_aftershock: 6 };
+        const typeCaps = Object.assign({}, defaultCaps, cc.GROUND_HAZARDS_TYPE_CAPS || {});
         const hazardType = spec.type || 'steam_pool';
-        if (hazardType === 'steam_pool') {
-            let steamCount = 0;
-            for (let i = 0; i < G.state.groundHazards.length; i++) {
-                if (G.state.groundHazards[i] && G.state.groundHazards[i].type === 'steam_pool') steamCount++;
-            }
-            while (steamCount >= 24) {
-                const oldIdx = G.state.groundHazards.findIndex(h => h && h.type === 'steam_pool');
-                if (oldIdx === -1) break;
-                G.state.groundHazards.splice(oldIdx, 1);
-                steamCount--;
-            }
-        } else if (hazardType === 'storm_cloud') {
-            if (spec.sourceTower && spec.sourceTower.uid) {
-                const existing = G.state.groundHazards.find(h => h && h.type === 'storm_cloud' && h.ownerUid === spec.sourceTower.uid);
-                if (existing) {
-                    existing.x = Number(spec.x) || existing.x;
-                    existing.y = Number(spec.y) || existing.y;
-                    existing.radiusPx = Number(spec.radiusPx) || existing.radiusPx;
-                    existing.dps = Number(spec.dps) || existing.dps;
-                    existing.remainingMs = Number(spec.durationMs) || 3600;
-                    existing.maxDurationMs = Number(spec.durationMs) || 3600;
-                    existing.armorPierce = Number(spec.armorPierce) || 0.45;
-                    existing.slowRate = Number(spec.slowRate) || 0.35;
-                    existing.slowDurationMs = Number(spec.slowDurationMs) || 2000;
+        const stepPx = (G.boardMetrics && G.boardMetrics.step) || 36;
+        const x = Number(spec.x) || 0;
+        const y = Number(spec.y) || 0;
+        const radiusPx = Number(spec.radiusPx) || (1.3 * stepPx);
+        const dps = Number(spec.dps) || 28;
+        const durationMs = Number(spec.durationMs) || 3000;
+
+        if ((hazardType === 'storm_cloud' || hazardType === 'starforge_aftershock') && spec.sourceTower && spec.sourceTower.uid) {
+            const existing = list.find(h => h && h.type === hazardType && h.ownerUid === spec.sourceTower.uid);
+            if (existing) {
+                existing.x = x;
+                existing.y = y;
+                existing.radiusPx = radiusPx;
+                existing.dps = dps;
+                existing.remainingMs = durationMs;
+                existing.maxDurationMs = durationMs;
+                existing.armorPierce = Number(spec.armorPierce) || (hazardType === 'storm_cloud' ? 0.45 : 0.25);
+                existing.slowRate = Number(spec.slowRate) || (hazardType === 'storm_cloud' ? 0.35 : 0.28);
+                existing.slowDurationMs = Number(spec.slowDurationMs) || (hazardType === 'storm_cloud' ? 2000 : 1200);
+                existing.shredRate = Number(spec.shredRate) || existing.shredRate || 0;
+                if (hazardType === 'storm_cloud') {
                     existing.martyrPct = Number(spec.martyrPct) || 0.15;
-                    existing.martyrRadiusPx = Number(spec.martyrRadiusPx) || (1.5 * G.boardMetrics.step);
+                    existing.martyrRadiusPx = Number(spec.martyrRadiusPx) || (1.5 * stepPx);
                     existing.martyrCapNormal = Number(spec.martyrCapNormal) || 420;
                     existing.martyrCapBoss = Number(spec.martyrCapBoss) || 650;
-                    return existing;
                 }
-            }
-            let cloudCount = 0;
-            for (let i = 0; i < G.state.groundHazards.length; i++) {
-                if (G.state.groundHazards[i] && G.state.groundHazards[i].type === 'storm_cloud') cloudCount++;
-            }
-            while (cloudCount >= 6) {
-                const oldCloudIdx = G.state.groundHazards.findIndex(h => h && h.type === 'storm_cloud');
-                if (oldCloudIdx === -1) break;
-                G.state.groundHazards.splice(oldCloudIdx, 1);
-                cloudCount--;
+                return existing;
             }
         }
+
+        if (hazardType === 'steam_pool' || hazardType === 'scorch_trail') {
+            const mergeDist = Math.max(12, radiusPx * 0.45);
+            const nearby = list.find(h => h && h.type === hazardType && Math.hypot((h.x || 0) - x, (h.y || 0) - y) <= mergeDist);
+            if (nearby) {
+                nearby.remainingMs = Math.max(nearby.remainingMs || 0, durationMs);
+                nearby.maxDurationMs = Math.max(nearby.maxDurationMs || 0, durationMs);
+                nearby.dps = Math.max(nearby.dps || 0, dps);
+                nearby.radiusPx = Math.max(nearby.radiusPx || 0, radiusPx);
+                if (spec.sourceTower) nearby.sourceTower = spec.sourceTower;
+                return nearby;
+            }
+        }
+
+        const typeCap = Math.max(1, Number(typeCaps[hazardType]) || 12);
+        let typeCount = 0;
+        for (let i = 0; i < list.length; i++) {
+            if (list[i] && list[i].type === hazardType) typeCount++;
+        }
+        while (typeCount >= typeCap) {
+            let minIdx = -1;
+            let minRem = Infinity;
+            for (let i = 0; i < list.length; i++) {
+                const h = list[i];
+                if (!h || h.type !== hazardType) continue;
+                const rem = Number(h.remainingMs) || 0;
+                if (rem < minRem) { minRem = rem; minIdx = i; }
+            }
+            if (minIdx === -1) break;
+            list.splice(minIdx, 1);
+            typeCount--;
+        }
+
         const hazard = {
             type: hazardType,
             ownerUid: (spec.sourceTower && spec.sourceTower.uid) || spec.ownerUid || null,
-            x: Number(spec.x) || 0,
-            y: Number(spec.y) || 0,
-            radiusPx: Number(spec.radiusPx) || (1.3 * G.boardMetrics.step),
-            dps: Number(spec.dps) || 28,
-            remainingMs: Number(spec.durationMs) || 3000,
-            maxDurationMs: Number(spec.durationMs) || 3000,
+            x,
+            y,
+            radiusPx,
+            dps,
+            remainingMs: durationMs,
+            maxDurationMs: durationMs,
             tickAccMs: 0,
             dmgCarry: 0,
             armorPierce: Number(spec.armorPierce) || 0,
             slowRate: Number(spec.slowRate) || 0,
             slowDurationMs: Number(spec.slowDurationMs) || 2000,
+            shredRate: Number(spec.shredRate) || 0,
             martyrPct: Number(spec.martyrPct) || 0,
-            martyrRadiusPx: Number(spec.martyrRadiusPx) || (1.5 * G.boardMetrics.step),
+            martyrRadiusPx: Number(spec.martyrRadiusPx) || (1.5 * stepPx),
             martyrCapNormal: Number(spec.martyrCapNormal) || 420,
             martyrCapBoss: Number(spec.martyrCapBoss) || 650,
             driftSpeedPx: Number(spec.driftSpeedPx) || 28,
             sourceTower: spec.sourceTower || null
         };
-        G.state.groundHazards.push(hazard);
+        list.push(hazard);
+
+        while (list.length > maxTotal) {
+            let evictIdx = -1;
+            let evictRem = Infinity;
+            for (let i = 0; i < list.length - 1; i++) {
+                const h = list[i];
+                if (!h || (h.type !== 'scorch_trail' && h.type !== 'steam_pool')) continue;
+                const rem = Number(h.remainingMs) || 0;
+                if (rem < evictRem) { evictRem = rem; evictIdx = i; }
+            }
+            if (evictIdx === -1) {
+                evictRem = Infinity;
+                for (let i = 0; i < list.length - 1; i++) {
+                    const h = list[i];
+                    const rem = h ? (Number(h.remainingMs) || 0) : -1;
+                    if (rem < evictRem) { evictRem = rem; evictIdx = i; }
+                }
+            }
+            if (evictIdx === -1) evictIdx = 0;
+            list.splice(evictIdx, 1);
+        }
         return hazard;
     }
 
@@ -1205,10 +1494,11 @@
             while (hz.tickAccMs >= 250) {
                 hz.tickAccMs -= 250;
                 const isCloud = hz.type === 'storm_cloud';
+                const isAftershock = hz.type === 'starforge_aftershock';
                 const rawTick = (hz.dps || 28) * 0.25 + (hz.dmgCarry || 0);
                 const tickDmg = Math.max(1, Math.floor(rawTick));
                 hz.dmgCarry = Math.max(0, rawTick - tickDmg);
-                const dmgIcon = isCloud ? '⛈️' : (hz.type === 'scorch_trail' ? '🔥' : '💨');
+                const dmgIcon = isCloud ? '⛈️' : (isAftershock ? '🌋' : (hz.type === 'scorch_trail' ? '🔥' : '💨'));
                 const victims = st.monsters.filter(m =>
                     m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - hz.x, m.pixelY - hz.y) <= hz.radiusPx
                 );
@@ -1223,6 +1513,15 @@
                         if ((hz.slowRate || 0) > 0) {
                             applySlowToMonster(m, hz.slowRate, hz.slowDurationMs || 2000, 'storm_cloud');
                         }
+                    } else if (isAftershock) {
+                        const armMult = getMonsterArmorMultiplier(m, hz.armorPierce ?? 0.25);
+                        dealtDmg = Math.max(1, Math.round(tickDmg * 1.26 * armMult));
+                        if ((hz.slowRate || 0) > 0) {
+                            applySlowToMonster(m, hz.slowRate, hz.slowDurationMs || 1200, 'starforge_aftershock');
+                        }
+                        if ((hz.shredRate || 0) > 0) {
+                            applyArmorShred(m, hz.shredRate, 1500);
+                        }
                     }
                     const before = m.hp;
                     m.hp = Math.max(0, before - dealtDmg);
@@ -1230,7 +1529,7 @@
                         AttackSys.recordTowerDamage(hz.sourceTower, Math.min(before, dealtDmg), 'dot');
                     }
                     if (GameApp.renderer) {
-                        GameApp.renderer.spawnDamageNumber(dealtDmg, false, m.pixelX, m.pixelY, dmgIcon, isCloud);
+                        GameApp.renderer.spawnDamageNumber(dealtDmg, false, m.pixelX, m.pixelY, dmgIcon, isCloud || isAftershock);
                     }
                     if (m.hp <= 0) {
                         handleMonsterKilled(m, hz.sourceTower, dealtDmg, { isDotKill: true });
@@ -1278,6 +1577,12 @@
         }
         if ((m._scorchBrandIcdMs || 0) > 0) {
             m._scorchBrandIcdMs = Math.max(0, m._scorchBrandIcdMs - dtMs);
+        }
+        if ((m._pullIcdMs || 0) > 0) {
+            m._pullIcdMs = Math.max(0, m._pullIcdMs - dtMs);
+        }
+        if ((m.stageFireSuppressMs || 0) > 0) {
+            m.stageFireSuppressMs = Math.max(0, m.stageFireSuppressMs - dtMs);
         }
 
         // 3. 破甲、纏繞與暈眩倒數
@@ -1412,29 +1717,54 @@
             }
         }
 
-        // 10. 癒合花妖週期治療 (每 3.0s 治療 1.5 格內友軍 6% 最大生命)
+        // 9.5 W5+ 蔓藤巨魔「再生樹皮」：每 2.5s 回復 3.5% 最大生命；灼燒／火系／重傷期間暫停回血
+        if (m.stageTraitKey === 'bark_regen' && m.hp > 0) {
+            const stSpec = m.stageTraitSpec || ((getMonstersData().WAVE_STAGE_TRAITS || {}).wood) || {};
+            m.stageRegenTimerMs = Math.max(0, (m.stageRegenTimerMs || 0) - dtMs);
+            if (m.stageRegenTimerMs <= 0) {
+                m.stageRegenTimerMs = stSpec.regenIntervalMs || 2500;
+                if (!isMonsterRegenSuppressed(m) && m.hp < m.maxHp) {
+                    const gained = applyHealToMonster(m, m.maxHp * (stSpec.regenRatio || 0.035));
+                    if (gained > 0 && GameApp.renderer) {
+                        GameApp.renderer.spawnDamageNumber(gained, false, m.pixelX, m.pixelY, '+💚');
+                    }
+                }
+            }
+        }
+
+        // 10. 癒合花妖週期治療（W8+ 盛放湧泉強化至 8.5%，受火系／灼燒／重傷時暫停施放）
         if (m.healSpec && m.hp > 0) {
             m.healTimerMs = Math.max(0, (m.healTimerMs || 0) - dtMs);
             if (m.healTimerMs <= 0) {
                 m.healTimerMs = m.healSpec.healIntervalMs || 3000;
-                const healRadiusPx = (m.healSpec.healRadiusCells || 1.5) * G.boardMetrics.step;
-                const healRatio = m.healSpec.healMaxHpRatio || 0.06;
-                let healedAny = false;
-                for (let j = 0; j < G.state.monsters.length; j++) {
-                    const ally = G.state.monsters[j];
-                    if (!ally || ally.hp <= 0 || ally.hp >= ally.maxHp) continue;
-                    if (Math.hypot(ally.pixelX - m.pixelX, ally.pixelY - m.pixelY) <= healRadiusPx) {
-                        const gained = applyHealToMonster(ally, ally.maxHp * healRatio);
-                        if (gained > 0) {
-                            healedAny = true;
-                            if (GameApp.renderer) {
-                                GameApp.renderer.spawnDamageNumber(gained, false, ally.pixelX, ally.pixelY, '+💚');
+                if (m.stageTraitKey === 'bloom_surge' && isMonsterRegenSuppressed(m)) {
+                    if (GameApp.renderer && typeof GameApp.renderer.spawnFloatingNotice === 'function') {
+                        const isEnHeal = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                        GameApp.renderer.spawnFloatingNotice(isEnHeal ? '🔥 Heal Halted' : '🔥 治療中斷', m.pixelX, m.pixelY, 'pity-seed');
+                    }
+                } else {
+                    const surgeSpec = m.stageTraitKey === 'bloom_surge' ? (m.stageTraitSpec || ((getMonstersData().WAVE_STAGE_TRAITS || {}).healer) || {}) : null;
+                    const extraRad = surgeSpec ? (Number(surgeSpec.bonusRadiusCells) || 0.25) : 0;
+                    const extraRatio = surgeSpec ? (Number(surgeSpec.bonusHealRatio) || 0.025) : 0;
+                    const healRadiusPx = ((m.healSpec.healRadiusCells || 1.5) + extraRad) * G.boardMetrics.step;
+                    const healRatio = (m.healSpec.healMaxHpRatio || 0.06) + extraRatio;
+                    let healedAny = false;
+                    for (let j = 0; j < G.state.monsters.length; j++) {
+                        const ally = G.state.monsters[j];
+                        if (!ally || ally.hp <= 0 || ally.hp >= ally.maxHp) continue;
+                        if (Math.hypot(ally.pixelX - m.pixelX, ally.pixelY - m.pixelY) <= healRadiusPx) {
+                            const gained = applyHealToMonster(ally, ally.maxHp * healRatio);
+                            if (gained > 0) {
+                                healedAny = true;
+                                if (GameApp.renderer) {
+                                    GameApp.renderer.spawnDamageNumber(gained, false, ally.pixelX, ally.pixelY, '+💚');
+                                }
                             }
                         }
                     }
-                }
-                if (healedAny && GameApp.renderer) {
-                    GameApp.renderer.emitRingFX(m.pixelX, m.pixelY, healRadiusPx, '#4E9A68', 0.22, 340);
+                    if (healedAny && GameApp.renderer) {
+                        GameApp.renderer.emitRingFX(m.pixelX, m.pixelY, healRadiusPx, '#4E9A68', 0.22, 340);
+                    }
                 }
             }
         }
@@ -1547,10 +1877,7 @@
 
         updateGroundHazards(dtMs);
 
-        // 減速後移速下限鎖定為 0.30（總減速上限 70%）
-        const minSpeedRatio = Number.isFinite(cc.MIN_SPEED_FLOOR_RATIO) ? cc.MIN_SPEED_FLOOR_RATIO : 0.30;
-        const baseSpd = rules.MONSTER_BASE_SPEED ?? CONFIG.MONSTER_BASE_SPEED ?? 2.6;
-
+        // 減速後移速下限統一鎖定為 MIN_SPEED_RATIO = 0.30（總減速上限 70%）
         for (let i = st.monsters.length - 1; i >= 0; i--) {
             const m = st.monsters[i];
             if (!m || m.hp <= 0) continue;
@@ -1559,23 +1886,8 @@
             if (killedByDot || m.hp <= 0) continue;
 
             const routeWps = m.waypoints || G.map.waypoints;
-            const isRootedOrFrozen = (m.rootTimer || 0) > 0 || (m.stunTimer || 0) > 0 || isMonsterFrozen(m);
-            const effSlowRate = getMonsterEffectiveSlowRate(m);
-            const stealthSpeedMult = m.isStealthed ? (1 + ((m.pantherSpec && m.pantherSpec.stealthSpeedBonus) || 0.65)) : 1.0;
-            const frenziedSpec = (m.eliteAffix === 'frenzied')
-                ? (m.eliteAffixSpec || ((getMonstersData().ELITE_AFFIXES || {}).frenzied) || {})
-                : null;
-            const frenziedLowHpMult = (frenziedSpec && (m.hp / Math.max(1, m.maxHp)) < 0.50)
-                ? (1 + (frenziedSpec.lowHpBonus || 0.15))
-                : 1.0;
-            const snowSpdMult = st.weatherType === 'snow'
-                ? (((GameApp.data && GameApp.data.weather && GameApp.data.weather.snow && GameApp.data.weather.snow.monsterSpeedMult)) || 0.90)
-                : 1.0;
-            const slowMult = isRootedOrFrozen
-                ? 0
-                : Math.max(minSpeedRatio, (1 - effSlowRate) * snowSpdMult) * stealthSpeedMult * frenziedLowHpMult;
-            const safeSpeed = clampNumber(m.baseSpeed, 0.2, baseSpd * 10, baseSpd);
-            let step = safeSpeed * slowMult * dtSec, reachedEnd = false;
+            const spdInfo = getMonsterSpeedBreakdown(m);
+            let step = spdInfo.effectiveCellsPerSec * dtSec, reachedEnd = false;
 
             const emitRiftWarpFX = (fromWp, toWp) => {
                 if (!Renderer || !fromWp || !toWp) return;
@@ -1705,8 +2017,21 @@
         getMonsterProgress,
         getMonsterProgressRatio,
         pullMonsterAlongPath,
+        getMonsterBaseArmorWithStage,
         getMonsterEffectiveArmor,
         getMonsterArmorMultiplier,
+        applyFireStageSuppression,
+        isMonsterRegenSuppressed,
+        isHasteAuraActive,
+        getMonsterHasteAuraBonus,
+        isReactivePlatingActive,
+        getResonanceLinkTargets,
+        isBulwarkAuraDisrupted,
+        getMonsterBulwarkAuraReduction,
+        getMonsterSpeedBreakdown,
+        getMonsterEffectiveSpeed,
+        getMonsterStageTraitStatus,
+        getEliteAffixLiveStatus,
         getMonsterEffectiveSlowRate,
         applySlowToMonster,
         isMonsterSlowed,

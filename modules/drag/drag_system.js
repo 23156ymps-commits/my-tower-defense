@@ -42,6 +42,102 @@
         return (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
     }
 
+    function classifyDragMergeKind(fusion) {
+        if (!fusion) return '';
+        const triModes = ['tri_genesis_t3', 'tri_genesis_t4', 'tri_ascend_t4', 'primal_core_t5', 'feed_evolve_tri_t4', 'feed_evolve_primal_core'];
+        if (fusion.isPrimalCore || fusion.isTriElement || triModes.includes(fusion.mode)) return 'tri';
+        if (fusion.isFeedUpgrade && !fusion.isFeedEvolve) return 'feed';
+        if (fusion.mode === 'transfer_t1') return 'transfer';
+        return 'upgrade';
+    }
+
+    function getDragMergeBadgeText(mergeKind, fusion, isEn) {
+        if (mergeKind === 'tri') {
+            return (fusion && fusion.isPrimalCore) ? (isEn ? 'CORE' : '原核') : (isEn ? 'TRI' : '三元');
+        }
+        if (mergeKind === 'upgrade') {
+            if (fusion && fusion.isTwinCrown) return isEn ? 'TWIN' : '雙生';
+            if (fusion && fusion.isScion) return isEn ? '5★' : '神裔';
+            return isEn ? 'UP' : '升階';
+        }
+        if (mergeKind === 'transfer') return isEn ? 'JOB' : '轉職';
+        if (mergeKind === 'feed') return `+${(fusion && fusion.feedU) || 1}U`;
+        return '';
+    }
+
+    function isFusionMatchingTrackedRecipe(fusion, trackedId) {
+        if (!fusion || !trackedId) return false;
+        if (fusion.type === trackedId) return true;
+        return Array.isArray(fusion.options) && fusion.options.includes(trackedId);
+    }
+
+    function scanAndHighlightBoardMergeTargets(sourceIndex, srcTower) {
+        const summary = { upgradeCount: 0, transferCount: 0, triCount: 0, feedCount: 0, trackedCount: 0, triNames: [] };
+        if (!G || !G.state || !Array.isArray(G.state.board) || !srcTower) return summary;
+        const EvoSys = GameApp.systems && GameApp.systems.evolution;
+        if (!EvoSys || typeof EvoSys.getFusionResult !== 'function') return summary;
+        const CodexSys = GameApp.systems && GameApp.systems.codex;
+        const trackedId = (CodexSys && typeof CodexSys.getTrackedRecipeId === 'function') ? CodexSys.getTrackedRecipeId() : null;
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+        const dict = getTowersDict();
+
+        for (let i = 0; i < G.state.board.length; i++) {
+            if (i === sourceIndex) continue;
+            const dstTower = G.state.board[i];
+            const cellEl = G.cellElements && G.cellElements[i];
+            if (!dstTower || !cellEl) continue;
+            const fusion = EvoSys.getFusionResult(srcTower, dstTower);
+            if (!fusion) continue;
+            const kind = classifyDragMergeKind(fusion);
+            if (!kind) continue;
+            cellEl.classList.add(`drag-merge-${kind}`);
+            const badge = getDragMergeBadgeText(kind, fusion, isEn);
+            if (badge) cellEl.setAttribute('data-merge-tag', badge);
+            if (trackedId && isFusionMatchingTrackedRecipe(fusion, trackedId)) {
+                cellEl.classList.add('drag-merge-tracked');
+                summary.trackedCount++;
+            }
+            if (kind === 'tri') {
+                summary.triCount++;
+                const cfg = dict[fusion.type] || {};
+                const triLabel = cfg.shortName || cfg.name || fusion.type;
+                if (triLabel && !summary.triNames.includes(triLabel)) summary.triNames.push(triLabel);
+            } else if (kind === 'upgrade') {
+                summary.upgradeCount++;
+            } else if (kind === 'transfer') {
+                summary.transferCount++;
+            } else if (kind === 'feed') {
+                summary.feedCount++;
+            }
+        }
+        return summary;
+    }
+
+    function buildDragStatusHint(tCfg, tier, scanSummary, isEn) {
+        const stars = GameApp.renderer ? GameApp.renderer.getTierStars(tier) : `${tier}★`;
+        const parts = [];
+        if (scanSummary.triCount > 0) {
+            const triTarget = scanSummary.triNames.length > 0 ? ` ▸ ${scanSummary.triNames.join('/')}` : '';
+            parts.push(isEn ? `Tri-Fusion ${scanSummary.triCount}${triTarget}` : `三元融合 ${scanSummary.triCount} 處（金框${triTarget}）`);
+        }
+        if (scanSummary.upgradeCount > 0) {
+            parts.push(isEn ? `Same-Tier Up ${scanSummary.upgradeCount}` : `同星升階 ${scanSummary.upgradeCount} 處（綠框）`);
+        }
+        if (scanSummary.transferCount > 0) {
+            parts.push(isEn ? `Transfer ${scanSummary.transferCount}` : `異系轉職 ${scanSummary.transferCount} 處（琥珀框）`);
+        }
+        if (scanSummary.feedCount > 0) {
+            parts.push(isEn ? `Feed +U ${scanSummary.feedCount}` : `充能餵養 ${scanSummary.feedCount} 處`);
+        }
+        if (parts.length > 0) {
+            const head = isEn ? `${tCfg.name} ${stars}` : `拖曳【${tCfg.name} ${stars}】`;
+            return `${head}：${parts.join(' · ')}`;
+        }
+        return isEn
+            ? `Moving ${tCfg.name} ${stars}: Drop on empty tile or merge with a compatible tower.`
+            : `移動【${tCfg.name} ${stars}】：放至空地移位，或拖向相容防禦塔融合。`;
+    }
+
     /**
      * 建立半透明 2.5D 砲塔拖曳預覽 Ghost 元素
      */
@@ -243,33 +339,53 @@
             const srcTower = G.state.board[activeDrag.sourceIndex];
             if (!srcTower) return;
             const EvoSys = GameApp.systems && GameApp.systems.evolution;
-            if (cellIndex !== null && G.cellElements[cellIndex] && cellIndex !== activeDrag.sourceIndex) {
-                const valid = isBoardDropValidAt(activeDrag.sourceIndex, cellIndex);
-                const cellEl = G.cellElements[cellIndex];
-                cellEl.classList.add(valid ? 'drag-valid-build' : 'drag-invalid');
-                if (valid) cellEl.classList.add('drag-over');
+            const CodexSys = GameApp.systems && GameApp.systems.codex;
+            const trackedId = (CodexSys && typeof CodexSys.getTrackedRecipeId === 'function') ? CodexSys.getTrackedRecipeId() : null;
+            scanAndHighlightBoardMergeTargets(activeDrag.sourceIndex, srcTower);
 
+            if (cellIndex !== null && G.cellElements[cellIndex] && cellIndex !== activeDrag.sourceIndex) {
+                const cellEl = G.cellElements[cellIndex];
                 const dstTower = G.state.board[cellIndex];
+                const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
                 G.state.leylinePreviewEdges = null;
-                if (dstTower && typeof Renderer.showDragEvolutionPreview === 'function') {
-                    const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+
+                if (dstTower) {
                     const fusion = EvoSys && typeof EvoSys.getFusionResult === 'function' ? EvoSys.getFusionResult(srcTower, dstTower) : null;
                     if (fusion) {
-                        Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, fusion.previewLabel || (isEn ? 'Can Evolve' : '可融合進化'), true);
+                        const mergeKind = classifyDragMergeKind(fusion);
+                        cellEl.classList.add(`drag-merge-${mergeKind}`, 'drag-merge-hover');
+                        if (typeof Renderer.showDragEvolutionPreview === 'function') {
+                            let previewText = fusion.previewLabel || (isEn ? 'Can Evolve' : '可融合進化');
+                            if (trackedId && isFusionMatchingTrackedRecipe(fusion, trackedId)) {
+                                previewText = `📌 ${previewText}`;
+                            }
+                            Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, previewText, true, mergeKind);
+                        }
                     } else {
-                        const reason = EvoSys && typeof EvoSys.getIncompatibilityReason === 'function'
-                            ? EvoSys.getIncompatibilityReason(srcTower, dstTower)
-                            : (isEn ? 'Incompatible lineage' : '血脈不相容');
-                        Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, `⚠️ ${reason}`, false);
+                        cellEl.classList.add('drag-invalid');
+                        if (typeof Renderer.showDragEvolutionPreview === 'function') {
+                            const reason = EvoSys && typeof EvoSys.getIncompatibilityReason === 'function'
+                                ? EvoSys.getIncompatibilityReason(srcTower, dstTower)
+                                : (isEn ? 'Incompatible lineage' : '血脈不相容');
+                            Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, `⚠️ ${reason}`, false, 'invalid');
+                        }
                     }
-                } else if (typeof Renderer.clearDragEvolutionPreview === 'function') {
-                    Renderer.clearDragEvolutionPreview();
+                    const coords = indexToCoords(cellIndex);
+                    const center = Renderer.getCellCenter(coords.x, coords.y);
+                    const radiusPx = AttackSys ? AttackSys.getTowerRangePx(srcTower, fusion ? cellIndex : activeDrag.sourceIndex) : (2.0 * G.boardMetrics.step);
+                    Renderer.showDragRangePreview(center.left, center.top, radiusPx, srcTower.type);
+                } else {
+                    const valid = isBoardDropValidAt(activeDrag.sourceIndex, cellIndex);
+                    cellEl.classList.add(valid ? 'drag-valid-build' : 'drag-invalid');
+                    if (valid) cellEl.classList.add('drag-over');
+                    if (typeof Renderer.clearDragEvolutionPreview === 'function') {
+                        Renderer.clearDragEvolutionPreview();
+                    }
+                    const coords = indexToCoords(cellIndex);
+                    const center = Renderer.getCellCenter(coords.x, coords.y);
+                    const radiusPx = AttackSys ? AttackSys.getTowerRangePx(srcTower, valid ? cellIndex : activeDrag.sourceIndex) : (2.0 * G.boardMetrics.step);
+                    Renderer.showDragRangePreview(center.left, center.top, radiusPx, srcTower.type);
                 }
-
-                const coords = indexToCoords(cellIndex);
-                const center = Renderer.getCellCenter(coords.x, coords.y);
-                const radiusPx = AttackSys ? AttackSys.getTowerRangePx(srcTower, valid ? cellIndex : activeDrag.sourceIndex) : (2.0 * G.boardMetrics.step);
-                Renderer.showDragRangePreview(center.left, center.top, radiusPx, srcTower.type);
             } else {
                 G.state.leylinePreviewEdges = null;
                 if (typeof Renderer.clearDragEvolutionPreview === 'function') {
@@ -450,12 +566,11 @@
             G.state.hoveredIndex = null;
             if (activeDrag.towerEl) activeDrag.towerEl.classList.add('dragging');
             activeDrag.ghostEl = createGhostElement(activeDrag.towerType, activeDrag.tier);
+            const scanSummary = scanAndHighlightBoardMergeTargets(activeDrag.sourceIndex, activeDrag.towerObj);
             const tCfg = getTowersDict()[activeDrag.towerType];
             if (G.dom.msgText && tCfg) {
                 const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
-                G.dom.msgText.innerText = isEn
-                    ? `Moving ${tCfg.name} ${GameApp.renderer.getTierStars(activeDrag.tier)}: Drop on empty tile or merge with a compatible tower.`
-                    : `移動【${tCfg.name} ${GameApp.renderer.getTierStars(activeDrag.tier)}】：放至空地移位，或拖向相容防禦塔融合。`;
+                G.dom.msgText.innerText = buildDragStatusHint(tCfg, activeDrag.tier, scanSummary, isEn);
             }
             G.callbacks.updateTowerInspector();
         }

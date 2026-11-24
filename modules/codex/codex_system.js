@@ -19,8 +19,15 @@
     let G = null;
     let currentCategory = 'fusion';
     let selectedTreeNodeId = 'fire_bud';
-    // Phase 5：圖鑑改為單局重置（僅保存於本局記憶體，開新局或重開一律重置為尚未合成）
+    let trackedRecipeNodeId = null;
+    let preserveTreeSelectionOnce = false;
+    const CODEX_DISCOVERY_STORAGE_KEY = 'merge_defense_codex_discovered_v1';
+    // Phase 5：圖鑑改為單局重置（僅保存於本局記憶體，開新局或重開一律重置為尚未合成）；另於本地記錄首次探索以驅動結算正回饋
     const unlockedSet = new Set();
+    const defaultEntryIdSet = new Set();
+    const lifetimeDiscoveredSet = new Set();
+    const runFirstUnlockedSet = new Set();
+    let runFirstUnlockedIds = [];
 
     const EN_TREE_NODE_LABELS = {
         world_core: 'World Tree Core',
@@ -174,8 +181,30 @@
         primal_core: '#E0B43C'
     };
 
+    function loadLifetimeDiscovered() {
+        try {
+            if (typeof localStorage === 'undefined') return;
+            const raw = localStorage.getItem(CODEX_DISCOVERY_STORAGE_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                parsed.forEach((id) => {
+                    if (typeof id === 'string' && id.length > 0) lifetimeDiscoveredSet.add(id);
+                });
+            }
+        } catch (_) {}
+    }
+
+    function saveLifetimeDiscovered() {
+        try {
+            if (typeof localStorage === 'undefined') return;
+            localStorage.setItem(CODEX_DISCOVERY_STORAGE_KEY, JSON.stringify(Array.from(lifetimeDiscoveredSet)));
+        } catch (_) {}
+    }
+
     function bind(ctx) {
         G = ctx;
+        loadLifetimeDiscovered();
         syncDefaultUnlockedEntries();
         initCodexModalDom();
     }
@@ -184,29 +213,50 @@
         const entries = getCodexData().CODEX_ENTRIES || {};
         if (entries.towers) {
             Object.keys(entries.towers).forEach(k => {
-                if (entries.towers[k] && entries.towers[k].defaultUnlocked) unlockedSet.add(`tower:${k}`);
+                if (entries.towers[k] && entries.towers[k].defaultUnlocked) {
+                    const eid = `tower:${k}`;
+                    unlockedSet.add(eid);
+                    defaultEntryIdSet.add(eid);
+                    lifetimeDiscoveredSet.add(eid);
+                }
             });
         }
         // 相容舊版 fire/ice/thunder 解鎖映射到 *_bud
         ['fire', 'ice', 'thunder'].forEach(k => {
-            unlockedSet.add(`tower:${k}_bud`);
+            const eid = `tower:${k}_bud`;
+            unlockedSet.add(eid);
+            defaultEntryIdSet.add(eid);
+            lifetimeDiscoveredSet.add(eid);
         });
         if (entries.monsters) {
             Object.keys(entries.monsters).forEach(k => {
-                if (entries.monsters[k] && entries.monsters[k].defaultUnlocked) unlockedSet.add(`monster:${k}`);
+                if (entries.monsters[k] && entries.monsters[k].defaultUnlocked) {
+                    const eid = `monster:${k}`;
+                    unlockedSet.add(eid);
+                    defaultEntryIdSet.add(eid);
+                    lifetimeDiscoveredSet.add(eid);
+                }
             });
         }
         if (entries.terrain) {
             Object.keys(entries.terrain).forEach(k => {
-                if (entries.terrain[k] && entries.terrain[k].defaultUnlocked !== false) unlockedSet.add(`terrain:${k}`);
+                if (entries.terrain[k] && entries.terrain[k].defaultUnlocked !== false) {
+                    const eid = `terrain:${k}`;
+                    unlockedSet.add(eid);
+                    defaultEntryIdSet.add(eid);
+                }
             });
         }
     }
 
     function resetRunCodex() {
         unlockedSet.clear();
+        runFirstUnlockedSet.clear();
+        runFirstUnlockedIds = [];
+        trackedRecipeNodeId = null;
         selectedTreeNodeId = 'fire_bud';
         syncDefaultUnlockedEntries();
+        updateRecipeTrackerUI();
         if (isCodexOpen()) renderCodexModal(currentCategory);
     }
 
@@ -224,9 +274,44 @@
         if (!entryId) return;
         const wasLocked = !unlockedSet.has(entryId);
         unlockedSet.add(entryId);
+        const isTrackableType = entryId.startsWith('tower:') || entryId.startsWith('monster:');
+        if (isTrackableType && !defaultEntryIdSet.has(entryId) && !lifetimeDiscoveredSet.has(entryId)) {
+            lifetimeDiscoveredSet.add(entryId);
+            saveLifetimeDiscovered();
+            if (!runFirstUnlockedSet.has(entryId)) {
+                runFirstUnlockedSet.add(entryId);
+                runFirstUnlockedIds.push(entryId);
+            }
+        }
+        if (trackedRecipeNodeId && entryId.startsWith('tower:')) {
+            updateRecipeTrackerUI();
+        }
         if (wasLocked && isCodexOpen()) {
             renderCodexModal(currentCategory);
         }
+    }
+
+    function getEntryDisplayLabel(entryId) {
+        if (!entryId) return '';
+        const [kind, key] = String(entryId).split(':');
+        if (kind === 'tower') {
+            const dict = (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
+            const cfg = dict[key];
+            if (cfg) return `${cfg.icon || ''}${cfg.name || key}`.trim();
+        } else if (kind === 'monster') {
+            const mDict = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
+            const mCfg = mDict[key];
+            if (mCfg) return `${mCfg.icon || ''}${mCfg.name || key}`.trim();
+        }
+        return key || entryId;
+    }
+
+    function getRunUnlockSummary() {
+        return {
+            firstTimeIds: runFirstUnlockedIds.slice(),
+            firstTimeCount: runFirstUnlockedIds.length,
+            firstTimeLabels: runFirstUnlockedIds.map(getEntryDisplayLabel)
+        };
     }
 
     function getCodexData() {
@@ -304,6 +389,270 @@
             craftableT3Set: craftableNodeSet,
             readyNowT3Set: readyNowNodeSet
         };
+    }
+
+    function getTrackedRecipeId() {
+        return trackedRecipeNodeId;
+    }
+
+    function getIngredientDisplayName(nodeId) {
+        const meta = WORLD_TREE_LAYOUT[nodeId];
+        const dict = (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
+        const cfg = dict[nodeId] || {};
+        const baseName = (GameApp.i18n && GameApp.i18n.isEnglish())
+            ? getTreeNodeLabel(nodeId, meta)
+            : (cfg.name || (meta && meta.label) || nodeId);
+        return cfg.icon ? `${cfg.icon} ${baseName}` : baseName;
+    }
+
+    function getIngredientSubHint(nodeId) {
+        const subMap = {
+            steam_bud: L('🔥+❄️', 'Fire+Ice'),
+            magnet_bud: L('❄️+⚡', 'Ice+Bolt'),
+            plasma_bud: L('🔥+⚡', 'Fire+Bolt')
+        };
+        if (subMap[nodeId]) return subMap[nodeId];
+        const evoData = (GameApp.data && GameApp.data.evolutions) || {};
+        const t1Rules = evoData.T1_RECIPES || {};
+        const pairKey = Object.keys(t1Rules).find(k => t1Rules[k] && t1Rules[k].resultType === nodeId && t1Rules[k].mode !== 'infusion_single');
+        if (pairKey) {
+            const [a, b] = pairKey.split('+');
+            if (a === b) return `${getIngredientDisplayName(a)} ×2`;
+            return `${getIngredientDisplayName(a)}+${getIngredientDisplayName(b)}`;
+        }
+        return '';
+    }
+
+    function findDirectRecipesForNode(targetNodeId) {
+        const evoData = (GameApp.data && GameApp.data.evolutions) || {};
+        const candidates = [];
+        const addDict = (rules, isMultiOption = false, resolvePriority = null) => {
+            if (!rules) return;
+            Object.keys(rules).forEach((ruleKey) => {
+                const rule = rules[ruleKey];
+                if (!rule) return;
+                const matched = isMultiOption
+                    ? (Array.isArray(rule.options) && rule.options.includes(targetNodeId))
+                    : (rule.resultType === targetNodeId);
+                if (!matched) return;
+                const parts = ruleKey.split('+');
+                if (parts.length !== 2) return;
+                const priority = typeof resolvePriority === 'function' ? resolvePriority(rule, parts) : 2;
+                candidates.push({ ingredients: parts, priority, mode: rule.mode || '' });
+            });
+        };
+        addDict(evoData.T1_RECIPES || evoData.T1_TO_T2_RECIPES, false, (r) => (r.mode === 'infusion_single' ? 0 : 3));
+        addDict(evoData.T2_TO_T3_RULES, true, () => 2);
+        addDict(evoData.TRI_RECIPES_T2_TO_T3, false, () => 3);
+        addDict(evoData.T3_TO_T4_RULES, false, () => 2);
+        addDict(evoData.TRI_RECIPES_T3_TO_T4, false, (r) => (r.mode === 'tri_ascend_t4' ? 3 : 2));
+        addDict(evoData.T4_TO_T5_RULES, false, (_r, parts) => (parts[0] === parts[1] ? 3 : 2));
+        addDict(evoData.PRIMAL_RECIPES_T4_TO_T5, false, (_r, parts) => (parts[0] === parts[1] ? 3 : 2));
+        return candidates;
+    }
+
+    function computeRecipeTrackerStatus(targetNodeId = trackedRecipeNodeId) {
+        if (!targetNodeId || !WORLD_TREE_LAYOUT[targetNodeId] || targetNodeId === 'world_core') return null;
+        const meta = WORLD_TREE_LAYOUT[targetNodeId];
+        const codexData = getCodexData();
+        const custom = (codexData.CODEX_ENTRIES && codexData.CODEX_ENTRIES.towers && codexData.CODEX_ENTRIES.towers[targetNodeId]) || {};
+        const dict = (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
+        const tCfg = dict[targetNodeId] || {};
+        const unlocked = isEntryUnlocked(`tower:${targetNodeId}`, Boolean(custom.defaultUnlocked));
+        const tierNum = meta.tier || Number(tCfg.nodeTier) || 1;
+        const starStr = '★'.repeat(Math.max(1, Math.min(5, tierNum)));
+        const branchEnMap = { '神': '5★ Scion', '三': 'Tri', '核': 'Core' };
+        const lockedBranch = meta.branch ? L(meta.branch, branchEnMap[meta.branch] || meta.branch) : '';
+        const lockedLabel = lockedBranch ? `${lockedBranch} ??? (${starStr})` : `??? (${starStr})`;
+        const displayTargetName = unlocked
+            ? `${tCfg.icon ? `${tCfg.icon} ` : ''}${getTreeNodeLabel(targetNodeId, meta)}`
+            : lockedLabel;
+
+        const scanState = scanBoardCraftableState();
+        const boardCounts = scanState.boardNodeCounts || {};
+        const isBaseBud = ['fire_bud', 'ice_bud', 'thunder_bud'].includes(targetNodeId);
+        if ((boardCounts[targetNodeId] || 0) > 0) {
+            return {
+                targetNodeId,
+                displayTargetName,
+                unlocked,
+                status: 'completed',
+                haveItems: [{ id: targetNodeId, label: getIngredientDisplayName(targetNodeId), have: boardCounts[targetNodeId], need: 1 }],
+                missingItems: [],
+                summaryZh: `場上已持有 ${boardCounts[targetNodeId]} 座，可直接實戰或繼續升階`,
+                summaryEn: `${boardCounts[targetNodeId]} on board · Ready`
+            };
+        }
+        if (targetNodeId === 'primal_core') {
+            const EvoSys = GameApp.systems && GameApp.systems.evolution;
+            if (EvoSys && typeof EvoSys.hasPrimalCoreOnBoard === 'function' && EvoSys.hasPrimalCoreOnBoard()) {
+                return {
+                    targetNodeId,
+                    displayTargetName,
+                    unlocked,
+                    status: 'completed',
+                    haveItems: [],
+                    missingItems: [],
+                    summaryZh: '場上已有唯一 5★ 原初之核',
+                    summaryEn: 'Primal Core already on board'
+                };
+            }
+        }
+        if (isBaseBud) {
+            return {
+                targetNodeId,
+                displayTargetName,
+                unlocked,
+                status: 'shop',
+                haveItems: [],
+                missingItems: [{ id: targetNodeId, label: getIngredientDisplayName(targetNodeId), need: 1, have: 0, subHint: '' }],
+                summaryZh: `從下方商店召喚 ${getIngredientDisplayName(targetNodeId)}`,
+                summaryEn: `Summon ${getIngredientDisplayName(targetNodeId)} from shop`
+            };
+        }
+
+        const candidates = findDirectRecipesForNode(targetNodeId);
+        if (candidates.length === 0) return null;
+
+        let bestPlan = null;
+        candidates.forEach((cand) => {
+            const [ingA, ingB] = cand.ingredients;
+            const needCounts = {};
+            needCounts[ingA] = (needCounts[ingA] || 0) + 1;
+            needCounts[ingB] = (needCounts[ingB] || 0) + 1;
+            const haveItems = [];
+            const missingItems = [];
+            let totalNeed = 0;
+            let totalHave = 0;
+            Object.keys(needCounts).forEach((id) => {
+                const need = needCounts[id];
+                const have = Math.min(need, boardCounts[id] || 0);
+                totalNeed += need;
+                totalHave += have;
+                const label = getIngredientDisplayName(id);
+                if (have > 0) haveItems.push({ id, label, have, need });
+                if (have < need) missingItems.push({ id, label, have, need, missing: need - have, subHint: getIngredientSubHint(id) });
+            });
+            const missingTotal = Math.max(0, totalNeed - totalHave);
+            const score = -missingTotal * 100 + cand.priority * 10 + totalHave;
+            if (!bestPlan || score > bestPlan.score) {
+                bestPlan = { score, haveItems, missingItems, missingTotal, ingredients: cand.ingredients };
+            }
+        });
+
+        if (!bestPlan) return null;
+        if (bestPlan.missingTotal === 0) {
+            return {
+                targetNodeId,
+                displayTargetName,
+                unlocked,
+                status: 'ready',
+                haveItems: bestPlan.haveItems,
+                missingItems: [],
+                summaryZh: '素材已齊全！拖曳場上兩塔即可融合',
+                summaryEn: 'Materials ready! Drag & merge on board'
+            };
+        }
+
+        const missingText = bestPlan.missingItems.map((it) => {
+            const qty = it.missing > 1 ? ` ×${it.missing}` : '';
+            return `${it.label}${qty}`;
+        }).join(' + ');
+        return {
+            targetNodeId,
+            displayTargetName,
+            unlocked,
+            status: 'missing',
+            haveItems: bestPlan.haveItems,
+            missingItems: bestPlan.missingItems,
+            summaryZh: `還缺：${missingText}`,
+            summaryEn: `Need: ${missingText}`
+        };
+    }
+
+    function updateRecipeTrackerUI() {
+        if (typeof document === 'undefined') return;
+        const sideBox = document.getElementById('side-recipe-tracker');
+        const sideTargetEl = document.getElementById('side-tracker-target');
+        const sideMissingEl = document.getElementById('side-tracker-missing');
+        const pillBox = document.getElementById('recipe-tracker-pill');
+        const pillOpenBtn = document.getElementById('recipe-tracker-pill-open');
+
+        const st = G && G.state;
+        const activeMatch = Boolean(st && st.waveState !== 'WAITING_START' && !st.isGameOver);
+        const status = (activeMatch && trackedRecipeNodeId) ? computeRecipeTrackerStatus(trackedRecipeNodeId) : null;
+
+        if (!status) {
+            if (sideBox) sideBox.classList.add('hidden');
+            if (pillBox) pillBox.classList.add('hidden');
+            return;
+        }
+
+        const isReady = status.status === 'ready' || status.status === 'completed';
+        if (sideBox) {
+            sideBox.classList.remove('hidden');
+            sideBox.classList.toggle('is-ready', isReady);
+        }
+        if (sideTargetEl) {
+            sideTargetEl.innerText = status.displayTargetName;
+        }
+        if (sideMissingEl) {
+            sideMissingEl.innerHTML = '';
+            status.haveItems.forEach((it) => {
+                const chip = document.createElement('span');
+                chip.className = 'side-tracker-chip is-have';
+                chip.innerText = `✓ ${it.label}${it.have > 1 ? ` ×${it.have}` : ''}`;
+                sideMissingEl.appendChild(chip);
+            });
+            if (status.status === 'ready') {
+                const chip = document.createElement('span');
+                chip.className = 'side-tracker-chip is-ready';
+                chip.innerText = L('✨ 拖曳兩塔即可合成！', '✨ Ready to merge!');
+                sideMissingEl.appendChild(chip);
+            } else if (status.status === 'completed') {
+                const chip = document.createElement('span');
+                chip.className = 'side-tracker-chip is-ready';
+                chip.innerText = L(status.summaryZh, status.summaryEn);
+                sideMissingEl.appendChild(chip);
+            } else {
+                status.missingItems.forEach((it) => {
+                    const chip = document.createElement('span');
+                    chip.className = 'side-tracker-chip is-missing';
+                    const qty = it.missing > 1 ? ` ×${it.missing}` : '';
+                    const hint = it.subHint ? ` (${it.subHint})` : '';
+                    chip.innerText = `${L('缺 ', 'Need ')}${it.label}${qty}${hint}`;
+                    sideMissingEl.appendChild(chip);
+                });
+            }
+        }
+        if (pillBox) {
+            pillBox.classList.remove('hidden');
+            pillBox.classList.toggle('is-ready', isReady);
+        }
+        if (pillOpenBtn) {
+            const msg = L(status.summaryZh, status.summaryEn);
+            pillOpenBtn.innerText = `📌 ${status.displayTargetName} · ${msg}`;
+            pillOpenBtn.title = `${status.displayTargetName} — ${msg}`;
+        }
+    }
+
+    function setTrackedRecipe(nodeId = null) {
+        if (!nodeId || nodeId === 'world_core' || !WORLD_TREE_LAYOUT[nodeId] || trackedRecipeNodeId === nodeId) {
+            trackedRecipeNodeId = null;
+            if (nodeId && WORLD_TREE_LAYOUT[nodeId]) {
+                selectedTreeNodeId = nodeId;
+                preserveTreeSelectionOnce = true;
+            }
+        } else {
+            trackedRecipeNodeId = nodeId;
+            selectedTreeNodeId = nodeId;
+            preserveTreeSelectionOnce = true;
+        }
+        updateRecipeTrackerUI();
+        if (isCodexOpen() && currentCategory === 'fusion') {
+            renderCodexModal('fusion');
+        }
+        return trackedRecipeNodeId;
     }
 
     /**
@@ -422,6 +771,15 @@
             portraitWrap.appendChild(qMark);
         }
 
+        const isTracked = trackedRecipeNodeId === nodeId;
+        const trackBtnLabel = isTracked ? L('📌 追蹤中 ✓', '📌 Tracking ✓') : L('📌 追蹤配方', '📌 Track Recipe');
+        const trackerInfo = computeRecipeTrackerStatus(nodeId);
+        const trackerHintText = trackerInfo
+            ? L(trackerInfo.summaryZh, trackerInfo.summaryEn)
+            : L('點擊追蹤配方，戰鬥時將顯示還缺少的素材。', 'Track this recipe to see missing materials during battle.');
+        const trackActionHtml = `<button type="button" id="wt-track-recipe-btn" class="wt-track-btn${isTracked ? ' is-tracking' : ''}" aria-pressed="${isTracked ? 'true' : 'false'}">${trackBtnLabel}</button>`;
+        const trackerRowHtml = `<div class="wt-detail-row wt-detail-tracker-row${trackerInfo && trackerInfo.status === 'ready' ? ' is-ready' : ''}"><strong>${L('素材追蹤：', 'Materials: ')}</strong><span class="num">${trackerHintText}</span></div>`;
+
         const bodyEl = document.createElement('div');
         bodyEl.className = 'wt-detail-body';
         if (unlocked) {
@@ -429,8 +787,9 @@
                 <div class="wt-detail-top">
                     <span class="wt-detail-title">${custom.title || tCfg.name || nodeId} <span class="num">${starStr}</span></span>
                     <span class="wt-detail-tag num">Tier ${tierNum} · ${L('成本', 'Cost')} ${costMult}</span>
-                    ${statusBadge}${craftBadge}
+                    ${statusBadge}${craftBadge}${trackActionHtml}
                 </div>
+                ${trackerRowHtml}
                 <div class="wt-detail-row"><strong>${L('進化合成路徑：', 'Recipe: ')}</strong><span class="num">${custom.formula || tCfg.lineagePath || L('基礎召喚', 'Base Summon')}</span></div>
                 <div class="wt-detail-row"><strong>${L('核心機制：', 'Mechanic: ')}</strong><span class="num">${custom.mech || custom.desc || ''}</span></div>
                 <div class="wt-detail-row"><strong>${L('推薦搭配：', 'Synergy: ')}</strong>${custom.synergy || ''}</div>
@@ -440,8 +799,9 @@
                 <div class="wt-detail-top">
                     <span class="wt-detail-title">${L('？？？ · 未知世界樹節點', '??? · Unknown Node')} <span class="num">${starStr}</span></span>
                     <span class="wt-detail-tag num">Tier ${tierNum} · ${L('成本', 'Cost')} ${costMult}</span>
-                    ${statusBadge}${craftBadge}
+                    ${statusBadge}${craftBadge}${trackActionHtml}
                 </div>
+                ${trackerRowHtml}
                 <div class="wt-detail-row"><strong>${L('解鎖條件：', 'Unlock Rule: ')}</strong>${custom.unlockRule || L('於戰場合成此防禦塔即可點亮枝脈。', 'Synthesize this tower in battle to unlock.')}</div>
                 <div class="wt-detail-row">${isCraftable ? L('⚡ 戰術提醒：當前場上已持有可通往此冠枝的素材，於棋盤拖曳合成即可於本局點亮！', '⚡ Ready: You already have matching towers on board—merge them to unlock!') : L('每局開局圖譜皆重新探索；本局成功合成該防禦塔後即立刻點亮。', 'Codex resets each run; synthesize this tower to illuminate the node.')}</div>
             `;
@@ -450,6 +810,14 @@
         detailEl.innerHTML = '';
         detailEl.appendChild(portraitWrap);
         detailEl.appendChild(bodyEl);
+
+        const trackBtn = detailEl.querySelector('#wt-track-recipe-btn');
+        if (trackBtn) {
+            trackBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setTrackedRecipe(nodeId);
+            });
+        }
 
         if (GameApp.renderer && typeof GameApp.renderer.drawPortrait === 'function') {
             GameApp.renderer.drawPortrait(canvasEl, 'tower', nodeId, {
@@ -680,6 +1048,7 @@
                     isCraftable ? 'wt-craftable' : '',
                     isReadyNow ? 'wt-ready-now' : '',
                     isPresentOnBoard ? 'wt-on-board' : '',
+                    trackedRecipeNodeId === nodeId ? 'is-tracked' : '',
                     selectedTreeNodeId === nodeId ? 'is-selected' : ''
                 ].filter(Boolean).join(' ');
 
@@ -706,10 +1075,18 @@
                     bTag.title = L('當前棋盤持有數量', 'Count on board');
                     canvasWrap.appendChild(bTag);
                 }
+                if (trackedRecipeNodeId === nodeId) {
+                    const pinTag = document.createElement('span');
+                    pinTag.className = 'wt-track-pin';
+                    pinTag.setAttribute('aria-hidden', 'true');
+                    pinTag.innerText = '📌';
+                    canvasWrap.appendChild(pinTag);
+                }
 
                 const cap = document.createElement('span');
                 cap.className = 'wt-node-caption num';
-                const branchLabel = meta.branch === '神' ? L('神', '5★ Scion') : meta.branch;
+                const branchEnMap = { '神': '5★ Scion', '三': 'Tri', '核': 'Core' };
+                const branchLabel = meta.branch ? L(meta.branch, branchEnMap[meta.branch] || meta.branch) : '';
                 const displayNodeLabel = unlocked ? getTreeNodeLabel(nodeId, meta) : (branchLabel ? `${branchLabel} ???` : '???');
                 cap.innerText = displayNodeLabel;
                 btn.setAttribute('aria-label', unlocked
@@ -924,9 +1301,11 @@
             }
         });
 
-        // 預設預選場上素材已就緒或可進化的目標節點，讓玩家一打開即可看到戰術建議
+        // 若指定聚焦節點或已追蹤配方則優先保留，其餘情況預設預選場上素材已就緒或可進化的目標節點
+        const shouldAutoPick = !preserveTreeSelectionOnce && (!trackedRecipeNodeId || selectedTreeNodeId !== trackedRecipeNodeId);
+        preserveTreeSelectionOnce = false;
         const autoPickSet = scanState.readyNowNodeSet.size > 0 ? scanState.readyNowNodeSet : scanState.craftableNodeSet;
-        if (autoPickSet.size > 0 && !autoPickSet.has(selectedTreeNodeId)) {
+        if (shouldAutoPick && autoPickSet.size > 0 && !autoPickSet.has(selectedTreeNodeId)) {
             selectedTreeNodeId = Array.from(autoPickSet)[0];
             nodeButtons.forEach(el => el.classList.toggle('is-selected', el.dataset.nodeId === selectedTreeNodeId));
         }
@@ -1031,7 +1410,7 @@
                     ? `<span class="codex-status-badge unlocked">${L('已解鎖', 'Unlocked')}</span>`
                     : `<span class="codex-status-badge locked">${L('未解鎖', 'Locked')}</span>`;
                 const headerHtml = unlocked
-                    ? `<strong>${card.title}</strong> <span class="num" style="font-size:12px;color:#E0B43C;">｜${card.subtitle || ''}</span> ${statusBadge}`
+                    ? `<strong>${card.title}</strong> <span class="num" style="font-size:12px;color:#E0B43C;">${L('｜', ' | ')}${card.subtitle || ''}</span> ${statusBadge}`
                     : `<strong>${L('？？？ · 未知魔物', '??? · Unknown Enemy')}</strong> ${statusBadge}`;
                 const descHtml = unlocked
                     ? card.desc
@@ -1061,7 +1440,7 @@
                     defaultUnlocked: true
                 };
                 const unlocked = isEntryUnlocked(`terrain:${key}`, card.defaultUnlocked !== false);
-                const headerHtml = `<strong>${card.title}</strong> <span class="num" style="font-size:12px;color:#4A9EBF;">｜${card.subtitle || ''}</span>`;
+                const headerHtml = `<strong>${card.title}</strong> <span class="num" style="font-size:12px;color:#4A9EBF;">${L('｜', ' | ')}${card.subtitle || ''}</span>`;
 
                 listEl.appendChild(createCodexCardElement({
                     portraitCat: 'terrain',
@@ -1137,8 +1516,16 @@
         return Boolean(G && G.dom && G.dom.codexOverlayEl && !G.dom.codexOverlayEl.classList.contains('hidden'));
     }
 
-    function openCodex() {
+    function openCodex(focusNodeId = null) {
         if (!G || !G.dom || !G.dom.codexOverlayEl || isCodexOpen()) return;
+        if (focusNodeId && WORLD_TREE_LAYOUT[focusNodeId]) {
+            selectedTreeNodeId = focusNodeId;
+            preserveTreeSelectionOnce = true;
+            currentCategory = 'fusion';
+        } else if (trackedRecipeNodeId && WORLD_TREE_LAYOUT[trackedRecipeNodeId]) {
+            selectedTreeNodeId = trackedRecipeNodeId;
+            preserveTreeSelectionOnce = true;
+        }
         const st = G.state;
         const guideEl = G.dom.guideOverlayEl;
         const wasGuideOpen = Boolean(guideEl && !guideEl.classList.contains('hidden'));
@@ -1182,7 +1569,12 @@
         openCodex,
         closeCodex,
         renderCodexModal,
-        scanBoardCraftableState
+        scanBoardCraftableState,
+        setTrackedRecipe,
+        getTrackedRecipeId,
+        computeRecipeTrackerStatus,
+        updateRecipeTrackerUI,
+        getRunUnlockSummary
     };
 
     GameApp.systems = GameApp.systems || {};

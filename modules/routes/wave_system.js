@@ -363,7 +363,20 @@
         const hasAltRoute = Boolean(mapSpec && Array.isArray(mapSpec.altWaypoints) && mapSpec.altWaypoints.length >= 2);
         const createRng = GameApp.helpers && GameApp.helpers.createSeededRng;
         const affixSeedKey = (G && G.state && (G.state.dailySeedCode || G.state.runSeedCode || G.state.sessionId)) || 1;
-        const affixIds = ['bounty', 'frenzied', 'shield_regen'];
+        const affixDict = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
+        const eligibleAffixes = Object.keys(affixDict)
+            .map((k) => affixDict[k])
+            .filter((af) => af && (Number(af.minWave) || 6) <= waveNum);
+        const affixPool = [];
+        if (eligibleAffixes.length > 0) {
+            for (let ai = 0; ai < eligibleAffixes.length; ai++) {
+                const af = eligibleAffixes[ai];
+                const weight = (waveNum >= 10 && (Number(af.minWave) || 6) >= 10) ? 2 : 1;
+                for (let w = 0; w < weight; w++) affixPool.push(af.id);
+            }
+        } else {
+            affixPool.push('bounty', 'frenzied', 'shield_regen');
+        }
         const eliteAffixCounts = {};
         const queue = [];
         let crisisSeq = 0;
@@ -383,10 +396,10 @@
             if (waveNum >= 6 && isElite) {
                 const affixRng = typeof createRng === 'function' ? createRng(`${affixSeedKey}:eliteAffix:${waveNum}:${i}`) : null;
                 const roll = affixRng ? affixRng() : (((waveNum * 7 + i * 13) % 97) / 97);
-                eliteAffix = affixIds[Math.floor(roll * affixIds.length) % affixIds.length];
+                eliteAffix = affixPool[Math.floor(roll * affixPool.length) % affixPool.length];
                 eliteAffixCounts[eliteAffix] = (eliteAffixCounts[eliteAffix] || 0) + 1;
             }
-            queue.push({ typeKey, hpScale, rewardBonus, isElite, eliteAffix, isBoss: false, armor, useAltRoute: hasAltRoute && (i % 2 === 1) });
+            queue.push({ typeKey, waveLevel: waveNum, hpScale, rewardBonus, isElite, eliteAffix, isBoss: false, armor, useAltRoute: hasAltRoute && (i % 2 === 1) });
         }
 
         let hasThief = false;
@@ -395,6 +408,7 @@
             const insertIdx = Math.max(1, Math.floor(queue.length * 0.45));
             queue.splice(insertIdx, 0, {
                 typeKey: 'thief',
+                waveLevel: waveNum,
                 hpScale,
                 rewardBonus: 0,
                 isElite: false,
@@ -411,7 +425,7 @@
             const bossSpec = getBossSpecForWave(waveNum);
             const hpScaleGlobal = clampNumber(monsterRules.MONSTER_HP_SCALE ?? CONFIG.MONSTER_HP_SCALE ?? 1.0, 0.1, 20.0, 1.0);
             queue.push({
-                typeKey: bossSpec.typeKey, bossName: bossSpec.name, bossIcon: bossSpec.icon, hpScale: 1, rewardBonus,
+                typeKey: bossSpec.typeKey, waveLevel: waveNum, bossName: bossSpec.name, bossIcon: bossSpec.icon, hpScale: 1, rewardBonus,
                 isElite: true, isBoss: true, armor: bossSpec.armor, bossHp: bossSpec.hp, bossBaseDamage: bossSpec.baseDamage, bossReward: bossSpec.reward,
                 bossSpec, useAltRoute: false
             });

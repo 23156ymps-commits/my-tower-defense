@@ -80,9 +80,14 @@
         ['victoryDailyShareBoxEl', 'victory-daily-share-box'], ['victoryDailyShareTextEl', 'victory-daily-share-text'], ['victoryDailyCopyBtn', 'victory-daily-copy-btn'],
         ['gameoverDailyShareBoxEl', 'gameover-daily-share-box'], ['gameoverDailyShareTextEl', 'gameover-daily-share-text'], ['gameoverDailyCopyBtn', 'gameover-daily-copy-btn'],
         ['victoryOverlayEl', 'victory-overlay'], ['victoryStarsEl', 'victory-stars'], ['victoryRankTextEl', 'victory-rank-text'],
+        ['victoryUnlockBannerEl', 'victory-unlock-banner'], ['gameoverUnlockBannerEl', 'gameover-unlock-banner'],
+        ['recipeTrackerPillEl', 'recipe-tracker-pill'], ['recipeTrackerPillOpenBtn', 'recipe-tracker-pill-open'], ['recipeTrackerPillClearBtn', 'recipe-tracker-pill-clear'],
+        ['sideRecipeTrackerEl', 'side-recipe-tracker'], ['sideTrackerTitleEl', 'side-tracker-title'],
+        ['sideTrackerOpenBtn', 'side-tracker-open-btn'], ['sideTrackerClearBtn', 'side-tracker-clear-btn'],
+        ['sideTrackerTargetEl', 'side-tracker-target'], ['sideTrackerMissingEl', 'side-tracker-missing'],
         ['victoryMapTextEl', 'victory-map-text'], ['victoryKillsTextEl', 'victory-kills-text'], ['victoryHpTextEl', 'victory-hp-text'],
         ['victoryGoldTextEl', 'victory-gold-text'], ['victoryMvpTextEl', 'victory-mvp-text'], ['victoryGoldEarnedTextEl', 'victory-gold-earned-text'],
-        ['victoryFusionTextEl', 'victory-fusion-text'], ['victoryRestartBtn', 'victory-restart-btn'], ['victoryMenuBtn', 'victory-menu-btn'], ['endlessBtn', 'endless-btn'],
+        ['victoryFusionTextEl', 'victory-fusion-text'], ['victoryRestartBtn', 'victory-restart-btn'], ['victoryNextPuzzleBtn', 'victory-next-puzzle-btn'], ['victoryMenuBtn', 'victory-menu-btn'], ['endlessBtn', 'endless-btn'],
         ['victoryRatingStatusEl', 'victory-rating-status'], ['victoryCopyReportBtn', 'victory-copy-report-btn'],
         ['victoryFeedbackToggle', 'victory-feedback-toggle'], ['victoryFeedbackBox', 'victory-feedback-box'],
         ['gameOverOverlayEl', 'game-over-overlay'], ['gameoverMapTextEl', 'gameover-map-text'], ['finalWaveTextEl', 'final-wave-text'],
@@ -221,12 +226,22 @@
         const spec = getWeatherSpec(weatherType);
         const name = L(spec.nameZh, spec.nameEn);
         const eff = L(spec.shortZh, spec.shortEn);
-        return eff ? `${spec.icon} ${name}（${eff}）` : `${spec.icon} ${name}`;
+        if (!eff) return `${spec.icon} ${name}`;
+        return L(`${spec.icon} ${name}（${eff}）`, `${spec.icon} ${name} (${eff})`);
     }
 
     function getPuzzleTrialById(puzzleId) {
         const list = Array.isArray(CONFIG.PUZZLE_TRIALS) ? CONFIG.PUZZLE_TRIALS : [];
         return list.find(p => p && p.id === puzzleId) || list[0] || null;
+    }
+
+    function getNextPuzzleTrial(currentPuzzleId = null) {
+        const list = Array.isArray(CONFIG.PUZZLE_TRIALS) ? CONFIG.PUZZLE_TRIALS : [];
+        if (list.length === 0) return null;
+        const curId = currentPuzzleId || (G.state && G.state.puzzleId) || selectedPuzzleId;
+        const idx = list.findIndex(p => p && p.id === curId);
+        if (idx < 0 || idx + 1 >= list.length) return null;
+        return list[idx + 1] || null;
     }
 
     function buildPuzzleWavePlan(trialSpec) {
@@ -354,6 +369,7 @@
             guildActiveTab: 'roots',
             guildAutoHoldTimer: false,
             guildTimerHold: false,
+            guildDrawerTempHold: false,
             blindBoxTokens: 0,
             blackmarketFreeBoxAvailable: Boolean(spec && spec.freeBlindBoxPerWave),
             blackmarketFreeBoxWaveGranted: (spec && spec.freeBlindBoxPerWave) ? 1 : 0,
@@ -703,7 +719,7 @@
         if (G.dom.modeMetaDailyEl) {
             G.dom.modeMetaDailyEl.innerText = dailyRec && dailyRec.cleared
                 ? L(`${dailySpec.dateKey} · 已通關`, `${dailySpec.dateKey} · Cleared`)
-                : `${dailySpec.dateKey} · ${getWeatherLabel(dailySpec.weather).split('（')[0]}`;
+                : `${dailySpec.dateKey} · ${getWeatherLabel(dailySpec.weather).split(/[（(]/)[0].trim()}`;
         }
         if (G.dom.modeMetaPuzzleEl) {
             G.dom.modeMetaPuzzleEl.innerText = L(`已完成 ${puzzleClearedCnt} / 5 關`, `Solved ${puzzleClearedCnt} / 5`);
@@ -821,6 +837,8 @@
     function closeMetaTreeModal() {
         if (G.dom.metaTreeOverlayEl) G.dom.metaTreeOverlayEl.classList.add('hidden');
         updateMetaTreeEntryUI();
+        if (G.state && G.state.waveState === 'VICTORY') renderOutcomeUnlockBanner('victory');
+        else if (G.state && (G.state.isGameOver || G.state.waveState === 'GAMEOVER')) renderOutcomeUnlockBanner('gameover');
     }
 
     function handleResetMetaTree() {
@@ -1012,8 +1030,9 @@
         const towersDict = getTowersDict();
         const weakCfg = towersDict[m.weakness];
         const weakStr = weakCfg ? `${weakCfg.icon}${getWeaknessShortName(m.weakness)}` : getWeaknessShortName(m.weakness);
-        const effArmor = Math.round(MonsterSys ? MonsterSys.getMonsterEffectiveArmor(m) : (m.armor || 0));
-        const armorStr = m.armorShredTimer > 0 ? `🔥 ${effArmor}/${m.armor}` : `${effArmor}`;
+        const baseArmor = Math.round(MonsterSys && typeof MonsterSys.getMonsterBaseArmorWithStage === 'function' ? MonsterSys.getMonsterBaseArmorWithStage(m) : (m.armor || 0));
+        const effArmor = Math.round(MonsterSys ? MonsterSys.getMonsterEffectiveArmor(m) : baseArmor);
+        const armorStr = m.armorShredTimer > 0 ? `🔥 ${effArmor}/${baseArmor}` : `${effArmor}`;
         const status = [];
         if ((m.rootTimer || 0) > 0) status.push(`${L('纏繞', 'Root')} ${(m.rootTimer / 1000).toFixed(1)}s`);
         if (m.slowTimer > 0) status.push(`${L('緩速', 'Slow')} ${Math.round((m.slowRate || 0) * 100)}%`);
@@ -1022,7 +1041,9 @@
         const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
         const af = (!m.isBoss && m.eliteAffix) ? affixMap[m.eliteAffix] : null;
         const afTag = af ? `[${L(af.shortBadge || af.name, af.shortBadgeEn || af.nameEn)}] ` : '';
-        return `${m.icon || '👾'} ${afTag}${m.name}${sep}HP ${m.hp}/${m.maxHp}${sep}${L('護甲', 'ARM')} ${armorStr}${sep}${L('弱點', 'Weak')} ${weakStr}${status.length ? `${sep}${status.join(' · ')}` : ''}`;
+        const stageSt = (MonsterSys && typeof MonsterSys.getMonsterStageTraitStatus === 'function') ? MonsterSys.getMonsterStageTraitStatus(m) : null;
+        const stageTag = stageSt ? `${sep}${L(stageSt.name, stageSt.nameEn)}: ${L(stageSt.statusLabelZh, stageSt.statusLabelEn)}` : '';
+        return `${m.icon || '👾'} ${afTag}${m.name}${sep}HP ${m.hp}/${m.maxHp}${sep}${L('護甲', 'ARM')} ${armorStr}${sep}${L('弱點', 'Weak')} ${weakStr}${stageTag}${status.length ? `${sep}${status.join(' · ')}` : ''}`;
     }
 
     function findMonsterNearCell(index) {
@@ -1145,6 +1166,18 @@
         if (st.shock && st.shock.durationMs > 0) list.push(L('感電', 'Shock'));
         if (st.grievousWound && st.grievousWound.durationMs > 0) list.push(L('重傷 -50%治療', 'Wound -50% Heal'));
         if ((m.armorShredTimer || 0) > 0) list.push(`${L('破甲', 'Shred')} ${Math.round((m.armorShredRate || 0.3) * 100)}%`);
+        const stageSt = (MonsterSys && typeof MonsterSys.getMonsterStageTraitStatus === 'function')
+            ? MonsterSys.getMonsterStageTraitStatus(m)
+            : null;
+        if (stageSt) {
+            list.push(L(stageSt.statusLabelZh, stageSt.statusLabelEn));
+        }
+        const afSt = (MonsterSys && typeof MonsterSys.getEliteAffixLiveStatus === 'function')
+            ? MonsterSys.getEliteAffixLiveStatus(m)
+            : null;
+        if (afSt && (m.eliteAffix === 'resonance_link' || m.eliteAffix === 'bulwark_aura' || m.eliteAffix === 'prismatic_ward')) {
+            list.push(L(afSt.statusLabelZh, afSt.statusLabelEn));
+        }
         return list;
     }
 
@@ -1165,11 +1198,16 @@
 
         if (liveM) {
             const slowFactor = MonsterSys ? (1 - MonsterSys.getMonsterEffectiveSlowRate(liveM)) : 1;
-            const effSpeed = (MonsterSys && (MonsterSys.isMonsterFrozen(liveM) || (liveM.rootTimer || 0) > 0))
-                ? 0
-                : Math.round((liveM.speed || 40) * (liveM.isStealthed ? 1.65 : 1.0) * slowFactor);
+            const effSpeed = (MonsterSys && typeof MonsterSys.getMonsterEffectiveSpeed === 'function')
+                ? MonsterSys.getMonsterEffectiveSpeed(liveM)
+                : ((MonsterSys && (MonsterSys.isMonsterFrozen(liveM) || (liveM.rootTimer || 0) > 0))
+                    ? 0
+                    : Math.round((liveM.speed || 40) * (liveM.isStealthed ? 1.65 : 1.0) * slowFactor));
             const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
             const af = (!liveM.isBoss && liveM.eliteAffix) ? affixMap[liveM.eliteAffix] : null;
+            const liveStageArmor = Math.round(MonsterSys && typeof MonsterSys.getMonsterBaseArmorWithStage === 'function' ? MonsterSys.getMonsterBaseArmorWithStage(liveM) : (liveM.armor || 0));
+            const stageTrait = (MonsterSys && typeof MonsterSys.getMonsterStageTraitStatus === 'function') ? MonsterSys.getMonsterStageTraitStatus(liveM) : null;
+            const affixStatus = (MonsterSys && typeof MonsterSys.getEliteAffixLiveStatus === 'function') ? MonsterSys.getEliteAffixLiveStatus(liveM) : null;
             st.hoverLockMonster = {
                 id: liveM.id,
                 typeKey: liveM.typeKey,
@@ -1178,8 +1216,8 @@
                 maxHp: liveM.maxHp,
                 shield: liveM.shield || 0,
                 maxShield: liveM.maxShield || 0,
-                armor: liveM.armor || 0,
-                effArmor: Math.round(MonsterSys ? MonsterSys.getMonsterEffectiveArmor(liveM) : (liveM.armor || 0)),
+                armor: liveStageArmor,
+                effArmor: Math.round(MonsterSys ? MonsterSys.getMonsterEffectiveArmor(liveM) : liveStageArmor),
                 armorShredTimer: liveM.armorShredTimer || 0,
                 weakness: liveM.weakness,
                 effSpeed,
@@ -1190,6 +1228,8 @@
                 affixBadgeEn: af ? (af.shortBadgeEn || af.nameEn) : '',
                 affixDesc: af ? (af.desc || '') : '',
                 affixDescEn: af ? (af.descEn || '') : '',
+                affixStatus,
+                stageTrait,
                 bossMechanic: liveM.bossMechanic || '',
                 traitDesc: liveM.traitDesc || '',
                 debuffs: buildMonsterActiveDebuffList(liveM)
@@ -1253,8 +1293,18 @@
         const tierBadge = m.isBoss ? 'Boss' : (m.isElite ? L('菁英', 'Elite') : L('敵軍', 'Foe'));
         const affixBadgeText = m.eliteAffix ? L(m.affixBadge, m.affixBadgeEn || m.affixBadge) : '';
         const affixLine = m.eliteAffix ? L(m.affixDesc, m.affixDescEn || m.affixDesc) : '';
+        const stageTraitLine = m.stageTrait
+            ? `[${L(m.stageTrait.name, m.stageTrait.nameEn)} · ${L(m.stageTrait.statusLabelZh, m.stageTrait.statusLabelEn)}] ${L(m.stageTrait.desc, m.stageTrait.descEn)}`
+            : '';
         const baseTraitText = m.traitDesc || mCfg.traitDesc || (m.isBoss ? L('階段首領 · 留意頭像旁弱點屬性', 'Stage Boss · Check weakness icon') : L('沿路徑前進攻擊世界樹', 'Marches toward the World Tree'));
-        const traitText = affixLine ? `${affixLine} | ${baseTraitText}` : baseTraitText;
+        const traitParts = [];
+        if (affixLine) {
+            const afLiveBit = m.affixStatus ? ` (${L(m.affixStatus.statusLabelZh, m.affixStatus.statusLabelEn)})` : '';
+            traitParts.push(`${affixLine}${afLiveBit}`);
+        }
+        if (stageTraitLine) traitParts.push(stageTraitLine);
+        if (baseTraitText) traitParts.push(baseTraitText);
+        const traitText = traitParts.join(' | ');
 
         if (dom.sideMonsterCardEl) {
             dom.sideMonsterCardEl.classList.remove('hidden');
@@ -1374,10 +1424,20 @@
         setDomText(dom.inspectorRangeEl, `${L('射程', 'Rng')} ${stats.rangeStr}`);
         if (dom.inspectorTerrainEl) {
             const terrainTag = getTerrainShortTagForCell(st.selectedIndex, tInfo, stats.damageMult);
-            const auraSuffix = stats.hasScionAura ? L('光環 +16%', 'Aura +16%') : '';
-            const triTag = tInfo && tInfo.isPrimalCore
-                ? L('全圖唯一 · 1.26x', 'Unique 1 · 1.26x')
-                : (tInfo && tInfo.isTriElement ? L('三元 1.26x', 'Tri 1.26x') : '');
+            const auraSuffix = stats.hasScionAura
+                ? (stats.hasPrimalLink ? L('原初光環 +20%', 'Primal Aura +20%') : L('光環 +16%', 'Aura +16%'))
+                : '';
+            let triTag = '';
+            if (cfg && cfg.isPrimalCore) {
+                const ccPrimal = (GameApp.data && GameApp.data.towers && GameApp.data.towers.COMBAT_CONSTANTS) || {};
+                const maxLinks = (cfg.effectParams && cfg.effectParams.maxLinkedAllies) || ccPrimal.PRIMAL_CORE_MAX_LINKED_ALLIES || 6;
+                const linkedCnt = (AttackSys && typeof AttackSys.getPrimalCoreLinkedNeighbors === 'function')
+                    ? AttackSys.getPrimalCoreLinkedNeighbors(st.selectedIndex).length
+                    : 0;
+                triTag = L(`唯一限 1 · 連動 ${linkedCnt}/${maxLinks} · 1.26x`, `Unique 1 · Link ${linkedCnt}/${maxLinks} · 1.26x`);
+            } else if (cfg && cfg.isTriElement) {
+                triTag = L('三元 1.26x', 'Tri 1.26x');
+            }
             const ley = (AttackSys && typeof AttackSys.getTowerLeylineSummary === 'function')
                 ? AttackSys.getTowerLeylineSummary(st.selectedIndex)
                 : null;
@@ -1695,15 +1755,24 @@
         }
         const items = [];
         if (plan.crisisSpec) {
-            items.push(`<li class="forecast-crisis-item">⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)}：${L(plan.crisisSpec.hintZh, plan.crisisSpec.hintEn)}</li>`);
+            items.push(`<li class="forecast-crisis-item">⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)}${L('：', ': ')}${L(plan.crisisSpec.hintZh, plan.crisisSpec.hintEn)}</li>`);
         }
+        const stageDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.WAVE_STAGE_TRAITS) || {};
+        const stageHints = [];
         counts.forEach((cnt, key) => {
             const mCfg = monsterDb[key];
             if (!mCfg) return;
             const wCfg = towersDict[mCfg.weakness];
             const weakTag = wCfg ? `${L('弱 ', 'Weak: ')}${getWeaknessShortName(mCfg.weakness)}` : '';
+            const stSpec = stageDb[key];
+            if (waveNum >= 5 && stSpec && waveNum >= (Number(stSpec.minWave) || 5)) {
+                stageHints.push(L(stSpec.name, stSpec.nameEn || stSpec.name));
+            }
             items.push(`<li class="forecast-item"><span>${mCfg.name} <span class="num">×${cnt}</span></span><span class="forecast-weak weak-${mCfg.weakness}">${weakTag}</span></li>`);
         });
+        if (stageHints.length > 0) {
+            items.push(`<li class="forecast-meta">⚙️ ${L(`階段機制：${stageHints.join(' / ')}`, `Stage Traits: ${stageHints.join(' / ')}`)}</li>`);
+        }
         if (plan.eliteCount > 0) {
             const afEntries = plan.eliteAffixCounts ? Object.entries(plan.eliteAffixCounts).filter(([, c]) => c > 0) : [];
             const afSummary = afEntries.length > 0
@@ -2224,6 +2293,7 @@
         if (!vis.hasAnyGuildFeature) {
             st.guildDrawerOpen = false;
             st.guildTimerHold = false;
+            st.guildDrawerTempHold = false;
             dom.guildPanelEl.classList.add('hidden');
             if (dom.guildBodyEl) dom.guildBodyEl.classList.add('hidden');
             return;
@@ -2591,6 +2661,7 @@
         updateWavePhaseUI(); Renderer.updateWorldTreeVisualState(); updateSkillButtonsUI();
         updateSeedPityUI(); updateTreasureRootUI(); updateGuildDrawerUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
         updateWaveForecastUI(); updateMonsterHoverCardUI();
+        if (CodexSys && typeof CodexSys.updateRecipeTrackerUI === 'function') CodexSys.updateRecipeTrackerUI();
 
         const activePlay = isGameplayActive();
         const shopTypes = getShopTowerTypes();
@@ -3229,6 +3300,8 @@
         const st = G.state;
         if (st.waveState === 'PREP' || st.waveState === 'INTERMISSION') {
             st.guildTimerHold = true;
+            // 進行實際商會交易或操作時升級為正式波間保留，關閉抽屜不再撤銷暫停
+            st.guildDrawerTempHold = false;
             updateWavePhaseUI();
         }
     }
@@ -3239,6 +3312,7 @@
         if (!vis.hasAnyGuildFeature) {
             st.guildDrawerOpen = false;
             st.guildTimerHold = false;
+            st.guildDrawerTempHold = false;
             if (forceState !== false) {
                 setStatusMsg(
                     '「世界樹商會」尚未啟用：請先於主選單「世界樹年輪」解鎖元環節點。',
@@ -3249,11 +3323,19 @@
             return;
         }
         Backend.recordPlayerAction();
+        const isPrepOrInter = st.waveState === 'PREP' || st.waveState === 'INTERMISSION';
         st.guildDrawerOpen = typeof forceState === 'boolean' ? forceState : !st.guildDrawerOpen;
-        if (st.guildDrawerOpen && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION')) {
-            st.guildTimerHold = true;
-        } else if (!st.guildDrawerOpen && st.guildTimerHold) {
-            st.guildTimerHold = false;
+        if (st.guildDrawerOpen && isPrepOrInter) {
+            if (!st.guildTimerHold) {
+                st.guildTimerHold = true;
+                st.guildDrawerTempHold = true;
+            }
+        } else if (!st.guildDrawerOpen) {
+            // 僅釋放由「展開抽屜」臨時觸發的暫停，不覆寫手動暫停、自動保留或交易保留
+            if (st.guildDrawerTempHold && !st.guildAutoHoldTimer) {
+                st.guildTimerHold = false;
+            }
+            st.guildDrawerTempHold = false;
         }
         updateHUD();
     }
@@ -3268,9 +3350,13 @@
             return;
         }
         Backend.recordPlayerAction();
+        const wasOpen = Boolean(st.guildDrawerOpen);
         st.guildActiveTab = tabId;
         st.guildDrawerOpen = true;
-        holdIntermissionTimerIfPrep();
+        if (!wasOpen && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION') && !st.guildTimerHold) {
+            st.guildTimerHold = true;
+            st.guildDrawerTempHold = true;
+        }
         updateGuildDrawerUI();
     }
 
@@ -3280,6 +3366,7 @@
         if (st.waveState === 'PREP' || st.waveState === 'INTERMISSION') {
             st.guildTimerHold = !st.guildTimerHold;
             st.guildAutoHoldTimer = st.guildTimerHold;
+            st.guildDrawerTempHold = false;
             setStatusMsg(
                 st.guildTimerHold
                     ? '已暫停波間休整倒數，完成股市、盲盒或懸賞配置後可點「立即開波」或再次點擊恢復倒數。'
@@ -3861,6 +3948,7 @@
             Renderer.applyWeatherVisualClass(st.weatherType);
         }
         st.guildTimerHold = false;
+        st.guildDrawerTempHold = false;
         st.isApplyingFusionFruit = false;
         if (EconSys && typeof EconSys.refreshStockForecastSignals === 'function') {
             EconSys.refreshStockForecastSignals(waveNum + 1);
@@ -3962,6 +4050,45 @@
         }
     }
 
+    function syncVictoryActionButtonsUI() {
+        const st = G.state;
+        const isPuzzle = Boolean(st && st.gameMode === 'puzzle');
+        if (G.dom.endlessBtn) {
+            G.dom.endlessBtn.classList.toggle('hidden', isPuzzle || Boolean(st && st.gameMode === 'daily'));
+        }
+        if (G.dom.victoryNextPuzzleBtn) {
+            const nextTrial = isPuzzle ? getNextPuzzleTrial(st.puzzleId) : null;
+            const showNext = Boolean(isPuzzle && nextTrial);
+            G.dom.victoryNextPuzzleBtn.classList.toggle('hidden', !showNext);
+            if (showNext) {
+                const nextTitle = L(nextTrial.titleZh, nextTrial.titleEn);
+                G.dom.victoryNextPuzzleBtn.innerText = L('挑戰下一試煉 ▸', 'Next Trial ▸');
+                G.dom.victoryNextPuzzleBtn.title = nextTitle;
+                G.dom.victoryNextPuzzleBtn.setAttribute('aria-label', L(`挑戰下一試煉：${nextTitle}`, `Start next trial: ${nextTitle}`));
+            }
+        }
+        if (G.dom.victoryRestartBtn) {
+            G.dom.victoryRestartBtn.innerText = isPuzzle
+                ? L('重玩本關', 'Retry Trial')
+                : L('重新開始', 'Play Again');
+        }
+    }
+
+    function startNextPuzzleTrial() {
+        const st = G.state;
+        const nextTrial = getNextPuzzleTrial(st && st.puzzleId);
+        if (!nextTrial) {
+            returnToMainMenu();
+            return;
+        }
+        selectedGameMode = 'puzzle';
+        selectedPuzzleId = nextTrial.id;
+        st.gameMode = 'puzzle';
+        st.puzzleId = nextTrial.id;
+        renderPuzzleSelectorUI();
+        restartGame();
+    }
+
     function triggerVictory() {
         const st = G.state;
         if (st.isGameOver || st.waveState === 'VICTORY') return;
@@ -4030,7 +4157,7 @@
                     });
                 }
                 const seedHex = Number(st.dailySeedCode || 0).toString(16).toUpperCase().padStart(8, '0');
-                const wName = getWeatherLabel(st.weatherType).split('（')[0];
+                const wName = getWeatherLabel(st.weatherType).split(/[（(]/)[0].trim();
                 bannerText = L(
                     `每日戰績卡 · ${st.dailyDateKey} · 種子 #${seedHex} · ${wName} · 榮譽 ${honor.honorScore.toLocaleString()} ★`,
                     `Daily Scorecard · ${st.dailyDateKey} · #${seedHex} · Honor ${honor.honorScore.toLocaleString()} ★`
@@ -4043,10 +4170,9 @@
             }
         }
 
-        if (G.dom.endlessBtn) {
-            G.dom.endlessBtn.classList.toggle('hidden', st.gameMode === 'puzzle' || st.gameMode === 'daily');
-        }
+        syncVictoryActionButtonsUI();
         setOutcomeModeBanner(G.dom.victoryModeBannerEl, bannerText);
+        renderOutcomeUnlockBanner('victory');
         renderMapSelectorUI();
         renderDailyBriefingUI();
         renderPuzzleSelectorUI();
@@ -4072,6 +4198,72 @@
             }
         }
         if (G.dom.victoryOverlayEl) G.dom.victoryOverlayEl.classList.remove('hidden');
+    }
+
+    function renderOutcomeUnlockBanner(mode = 'victory') {
+        const el = mode === 'gameover' ? G.dom.gameoverUnlockBannerEl : G.dom.victoryUnlockBannerEl;
+        if (!el) return;
+        const codexSummary = (CodexSys && typeof CodexSys.getRunUnlockSummary === 'function')
+            ? CodexSys.getRunUnlockSummary()
+            : { firstTimeCount: 0, firstTimeLabels: [] };
+        const metaSummary = (Backend && typeof Backend.getUnlockableMetaNodes === 'function')
+            ? Backend.getUnlockableMetaNodes()
+            : { honorPoints: 0, unlockableNodes: [] };
+
+        const unlockCount = codexSummary.firstTimeCount || 0;
+        const unlockableNodes = Array.isArray(metaSummary.unlockableNodes) ? metaSummary.unlockableNodes : [];
+        const honorPts = Math.max(0, Number(metaSummary.honorPoints) || 0);
+
+        if (unlockCount === 0 && unlockableNodes.length === 0) {
+            el.innerHTML = '';
+            el.classList.add('hidden');
+            return;
+        }
+
+        const lines = [];
+        if (unlockCount > 0) {
+            const previewLabels = (codexSummary.firstTimeLabels || []).slice(0, 3).join(L('、', ', '));
+            const moreSuffix = unlockCount > 3 ? L(` 等 ${unlockCount} 項`, ` +${unlockCount - 3} more`) : '';
+            lines.push(
+                `<div class="unlock-banner-line is-codex"><span class="unlock-line-icon" aria-hidden="true">✨</span><span>${L(
+                    `本局首開圖譜新條目（+${unlockCount}）：<strong>${previewLabels}</strong>${moreSuffix}`,
+                    `New Codex Discoveries (+${unlockCount}): <strong>${previewLabels}</strong>${moreSuffix}`
+                )}</span></div>`
+            );
+        }
+        if (unlockableNodes.length > 0) {
+            const topNode = unlockableNodes[0];
+            const topName = L(topNode.name, topNode.nameEn || topNode.name);
+            lines.push(
+                `<div class="unlock-banner-line is-meta"><span class="unlock-line-icon" aria-hidden="true">🌳</span><span>${L(
+                    `榮譽 <strong>${honorPts.toLocaleString()} ★</strong> 已達標！可前往「世界樹年輪」點亮 <strong>${unlockableNodes.length}</strong> 項新元環（如「${topName}」${topNode.cost} ★）`,
+                    `Honor <strong>${honorPts.toLocaleString()} ★</strong> ready! Light up <strong>${unlockableNodes.length}</strong> Meta Ring(s), e.g. <strong>${topName}</strong> (${topNode.cost} ★)`
+                )}</span></div>`
+            );
+        } else if (unlockCount > 0) {
+            lines.push(
+                `<div class="unlock-banner-line is-next"><span class="unlock-line-icon" aria-hidden="true">🧭</span><span>${L(
+                    '再接再厲！下一局試著合成更深層三元塔並累積榮譽 ★ 解鎖更多功能。',
+                    'Keep exploring next run to craft Tri-Element fusions and earn more Honor ★!'
+                )}</span></div>`
+            );
+        }
+
+        const actionBtns = [];
+        if (unlockableNodes.length > 0) {
+            actionBtns.push(
+                `<button type="button" class="unlock-cta-btn" data-unlock-action="meta">${L('前往點亮元環 ▸', 'Light Meta Ring ▸')}</button>`
+            );
+        }
+        if (unlockCount > 0) {
+            actionBtns.push(
+                `<button type="button" class="unlock-secondary-btn" data-unlock-action="codex">${L('查看新圖譜', 'View Codex')}</button>`
+            );
+        }
+
+        el.innerHTML = `<div class="unlock-banner-lines">${lines.join('')}</div>`
+            + (actionBtns.length > 0 ? `<div class="unlock-banner-actions">${actionBtns.join('')}</div>` : '');
+        el.classList.remove('hidden');
     }
 
     function triggerGameOver() {
@@ -4119,6 +4311,7 @@
             }
         }
         setOutcomeModeBanner(G.dom.gameoverModeBannerEl, bannerText);
+        renderOutcomeUnlockBanner('gameover');
         renderMapSelectorUI();
         renderDailyBriefingUI();
         renderPuzzleSelectorUI();
@@ -4372,7 +4565,7 @@
 
     function continueEndlessMode() {
         const st = G.state;
-        if (st.waveState !== 'VICTORY') return;
+        if (st.waveState !== 'VICTORY' || st.gameMode === 'puzzle' || st.gameMode === 'daily') return;
         st.isEndlessMode = true;
         if (G.dom.victoryOverlayEl) G.dom.victoryOverlayEl.classList.add('hidden');
         const baseInterMs = CONFIG.WAVE_INTERMISSION_MS || 4000;
@@ -4476,6 +4669,7 @@
                     st.pendingBlessingWave = st.currentWave;
                     st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
                     st.guildTimerHold = Boolean(st.guildAutoHoldTimer);
+                    st.guildDrawerTempHold = false;
                     setStatusMsg(
                         `第 ${st.currentWave} 波防禦完成${rootMsgZh}，完成進化選擇後將開啟枝枒祝福。`,
                         `Wave ${st.currentWave} cleared${rootMsgEn}! Blessing selection opens after evolution.`
@@ -4493,6 +4687,7 @@
             }
             st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
             st.guildTimerHold = Boolean(st.guildAutoHoldTimer);
+            st.guildDrawerTempHold = false;
             setStatusMsg(
                 `第 ${st.currentWave} 波防禦完成${rootMsgZh}，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後開始。`,
                 `Wave ${st.currentWave} cleared${rootMsgEn}! Next wave begins in ${Math.ceil(intermissionMs / 1000)}s.`
@@ -4531,7 +4726,8 @@
         if (st.isPaused) {
             st.forecastDrawerOpen = false;
             st.guildDrawerOpen = false;
-            if (!st.guildAutoHoldTimer) st.guildTimerHold = false;
+            if (st.guildDrawerTempHold && !st.guildAutoHoldTimer) st.guildTimerHold = false;
+            st.guildDrawerTempHold = false;
             if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
             Renderer.clearTouchDragVisuals(); st.draggedIndex = null; st.hoveredIndex = null; Renderer.updateRangeIndicator();
             if (!silent) {
@@ -4798,7 +4994,7 @@
         ['codexBtn', () => CodexSys.openCodex()], ['codexCloseBtn', () => CodexSys.closeCodex()],
         ['helpBtn', () => { if (isGuideOpen()) closeGuide(); else openGuide(); }], ['guideXBtn', closeGuide], ['guideCloseBtn', closeGuide], ['guideMenuBtn', () => { closeGuide(); returnToMainMenu(); }],
         ['forecastToggleBtn', toggleForecastDrawer], ['speedBtn', cycleGameSpeed], ['startGameBtn', startGame],
-        ['victoryRestartBtn', restartGame], ['victoryMenuBtn', returnToMainMenu], ['endlessBtn', continueEndlessMode],
+        ['victoryRestartBtn', restartGame], ['victoryNextPuzzleBtn', startNextPuzzleTrial], ['victoryMenuBtn', returnToMainMenu], ['endlessBtn', continueEndlessMode],
         ['restartBtn', restartGame], ['gameoverMenuBtn', returnToMainMenu],
         ['evoCancelBtn', cancelPendingEvolution],
         ['treeRootUpgradeBtn', () => {
@@ -4816,10 +5012,26 @@
         ['blindBoxBuyBtn', () => { SoundEngine.ensureContext(); openBlindBox(); }],
         ['wagerZeroLeakBtn', () => { SoundEngine.ensureContext(); handleWagerSelect('zero_leak'); }],
         ['wagerSurgeBtn', () => { SoundEngine.ensureContext(); handleWagerSelect('monster_surge'); }],
+        ['recipeTrackerPillOpenBtn', () => { SoundEngine.ensureContext(); if (CodexSys && typeof CodexSys.openCodex === 'function') CodexSys.openCodex(CodexSys.getTrackedRecipeId ? CodexSys.getTrackedRecipeId() : null); }],
+        ['recipeTrackerPillClearBtn', () => { SoundEngine.ensureContext(); if (CodexSys && typeof CodexSys.setTrackedRecipe === 'function') CodexSys.setTrackedRecipe(null); }],
+        ['sideTrackerOpenBtn', () => { SoundEngine.ensureContext(); if (CodexSys && typeof CodexSys.openCodex === 'function') CodexSys.openCodex(CodexSys.getTrackedRecipeId ? CodexSys.getTrackedRecipeId() : null); }],
+        ['sideTrackerClearBtn', () => { SoundEngine.ensureContext(); if (CodexSys && typeof CodexSys.setTrackedRecipe === 'function') CodexSys.setTrackedRecipe(null); }],
         ['onboardingCloseBtn', () => { SoundEngine.ensureContext(); dismissOnboarding(false); }],
         ['addGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold += 500; setStatusMsg('已增加 500 💰。', 'Added 500 💰.'); updateHUD(); } }],
         ['clearGoldBtn', () => { if (CONFIG.DEBUG_MODE && isGameplayActive()) { G.state.currentGold = 0; setStatusMsg('金幣已歸零。', 'Gold cleared to 0.'); updateHUD(); } }]
     ].forEach(([domKey, fn]) => { if (G.dom[domKey] && typeof fn === 'function') G.dom[domKey].addEventListener('click', fn); });
+
+    [G.dom.victoryUnlockBannerEl, G.dom.gameoverUnlockBannerEl].forEach((bannerEl) => {
+        if (!bannerEl) return;
+        bannerEl.addEventListener('click', (e) => {
+            const actBtn = e && e.target && e.target.closest ? e.target.closest('[data-unlock-action]') : null;
+            if (!actBtn) return;
+            SoundEngine.ensureContext();
+            const act = actBtn.dataset.unlockAction;
+            if (act === 'meta') openMetaTreeModal();
+            else if (act === 'codex' && CodexSys && typeof CodexSys.openCodex === 'function') CodexSys.openCodex();
+        });
+    });
 
     if (G.dom.guildStockListEl) {
         G.dom.guildStockListEl.addEventListener('click', (e) => {
@@ -5247,12 +5459,15 @@
                 renderMetaTreeModal();
             }
             if (st.waveState === 'VICTORY') {
+                syncVictoryActionButtonsUI();
+                renderOutcomeUnlockBanner('victory');
                 populateBattleRecap('victory');
                 if (st.gameMode === 'daily' && G.dom.victoryDailyShareTextEl && Backend && typeof Backend.generateDailyShareCardText === 'function') {
                     G.dom.victoryDailyShareTextEl.innerText = Backend.generateDailyShareCardText(G, 'victory');
                 }
             }
             if (st.isGameOver || st.waveState === 'GAMEOVER') {
+                renderOutcomeUnlockBanner('gameover');
                 populateBattleRecap('gameover');
                 if (st.gameMode === 'daily' && G.dom.gameoverDailyShareTextEl && Backend && typeof Backend.generateDailyShareCardText === 'function') {
                     G.dom.gameoverDailyShareTextEl.innerText = Backend.generateDailyShareCardText(G, 'gameover');
@@ -5301,6 +5516,9 @@
             updateSpeedButtonUI();
             updateSoundButtonUI();
             Renderer.updateRangeIndicator();
+            if (typeof Renderer.updateTerrainTooltip === 'function') {
+                Renderer.updateTerrainTooltip();
+            }
         });
         GameApp.i18n.applyLanguage();
     }

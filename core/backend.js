@@ -1210,6 +1210,31 @@
         return { ok: true, refund, state: nextState };
     }
 
+    function getUnlockableMetaNodes() {
+        const state = loadMetaTreeState();
+        const catalog = getMetaTreeNodesCatalog();
+        const unlockedSet = new Set(state.unlockedNodes || []);
+        const honorPoints = Math.max(0, Number(state.honorPoints) || 0);
+        const allIds = Object.keys(catalog);
+        const unlockableNodes = [];
+        allIds.forEach((id) => {
+            const spec = catalog[id];
+            if (!spec || unlockedSet.has(id)) return;
+            if (spec.requires && !unlockedSet.has(spec.requires)) return;
+            const cost = Math.max(0, Math.round(Number(spec.cost) || 0));
+            if (honorPoints >= cost) {
+                unlockableNodes.push(spec);
+            }
+        });
+        unlockableNodes.sort((a, b) => (a.cost - b.cost) || ((a.tier || 0) - (b.tier || 0)));
+        return {
+            honorPoints,
+            unlockedCount: unlockedSet.size,
+            totalNodes: allIds.length,
+            unlockableNodes
+        };
+    }
+
     function saveMapRecord(mapId, wave, stars = null, options = {}) {
         const records = loadMapRecords();
         const target = records[mapId] || { bestWave: 1, bestStars: 0 };
@@ -1302,6 +1327,7 @@
         grantMetaHonorPoints,
         purchaseMetaNode,
         resetMetaTreeNodes,
+        getUnlockableMetaNodes,
         saveMapRecord,
         getMapBestWave,
         init

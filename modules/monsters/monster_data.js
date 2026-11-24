@@ -20,7 +20,7 @@
         MONSTER_BASE_SPEED: 2.6,            // 怪物基礎移動速度 (格/秒)
         MONSTER_SPEED_SCALE: 1.0,           // 全局移動速度倍率（可由雲端 Remote Config 動態覆寫）
         MONSTER_HP_SCALE: 1.0,              // 全局最大血量倍率（可由雲端 Remote Config 動態覆寫）
-        MIN_SPEED_RATIO: 0.20,              // 最低保底緩速後殘餘移速比例（20%，定身狀態除外）
+        MIN_SPEED_RATIO: 0.30,              // 最低保底緩速後殘餘移速比例（30%，與 70% 總減速上限對齊，定身／凍結除外）
         CORNER_SMOOTHING: 1.0,              // 路徑轉彎切角平滑係數
         SLIME_SPLIT_COUNT: 2,               // 分裂型怪物死亡時預設分裂數量
         SLIME_SPLIT_HP_RATIO: 0.30          // 分裂子體繼承母體最大血量比例 (30%)
@@ -335,9 +335,114 @@
         }
     ];
 
+    // W5+ 既有怪物波次階段機制表（不新增怪物種類／圖鑑條目，隨波次解鎖策略反制點）
+    const WAVE_STAGE_TRAITS = {
+        wood: {
+            id: 'bark_regen',
+            minWave: 5,
+            name: '再生樹皮',
+            nameEn: 'Bark Regen',
+            activeLabel: '🌿回血中',
+            activeLabelEn: '🌿Regen Active',
+            counteredLabel: '🔥回血中斷',
+            counteredLabelEn: '🔥Regen Halted',
+            regenIntervalMs: 2500,
+            regenRatio: 0.035,
+            fireSuppressMs: 3500,
+            desc: 'W5+ 每 2.5 秒回復 3.5% 最大生命；受到火系命中、灼燒或重傷時暫停回血。',
+            descEn: 'W5+: Restores 3.5% MaxHP every 2.5s; paused by Fire hits, Burn, or Grievous Wound.'
+        },
+        healer: {
+            id: 'bloom_surge',
+            minWave: 8,
+            name: '盛放湧泉',
+            nameEn: 'Bloom Surge',
+            activeLabel: '💚盛放強化',
+            activeLabelEn: '💚Surge Active',
+            counteredLabel: '🔥治療中斷',
+            counteredLabelEn: '🔥Heal Halted',
+            bonusHealRatio: 0.025,
+            bonusRadiusCells: 0.25,
+            fireSuppressMs: 3500,
+            desc: 'W8+ 治療脈衝強化至 8.5% 最大生命（範圍 +0.25 格）；受火系、灼燒或重傷時暫停施放治療。',
+            descEn: 'W8+: Boosts heal pulse to 8.5% MaxHP (+0.25 range); paused by Fire hits, Burn, or Wound.'
+        },
+        hound: {
+            id: 'pack_tailwind',
+            minWave: 5,
+            name: '疾風領跑',
+            nameEn: 'Pack Tailwind',
+            activeLabel: '💨加速光環',
+            activeLabelEn: '💨Haste Aura',
+            counteredLabel: '❄️光環中斷',
+            counteredLabelEn: '❄️Aura Disrupted',
+            auraRadiusCells: 1.6,
+            speedBonus: 0.16,
+            desc: 'W5+ 賦予 1.6 格內友軍 +16% 移速光環（不疊加）；自身受減速、凍結或定身時立即中斷。',
+            descEn: 'W5+: Grants +16% speed aura to allies within 1.6 cells (non-stacking); disrupted by Slow/Freeze/Root.'
+        },
+        air: {
+            id: 'jetstream_aura',
+            minWave: 6,
+            name: '噴射氣流',
+            nameEn: 'Jetstream Aura',
+            activeLabel: '🌪️氣流加速',
+            activeLabelEn: '🌪️Jetstream',
+            counteredLabel: '❄️氣流中斷',
+            counteredLabelEn: '❄️Stream Halted',
+            auraRadiusCells: 1.5,
+            speedBonus: 0.14,
+            desc: 'W6+ 展開 1.5 格氣流光環使友軍 +14% 移速（不疊加）；自身受減速、凍結或定身時立即中斷。',
+            descEn: 'W6+: Projects a 1.5-cell +14% speed aura (non-stacking); disrupted by Slow/Freeze/Root.'
+        },
+        lava: {
+            id: 'magma_crust',
+            minWave: 5,
+            name: '熔核硬殼',
+            nameEn: 'Magma Crust',
+            activeLabel: '🪨硬殼 +6甲',
+            activeLabelEn: '🪨Crust +6 ARM',
+            counteredLabel: '❄️硬殼碎裂',
+            counteredLabelEn: '❄️Crust Cracked',
+            bonusArmor: 6,
+            desc: 'W5+ 常駐 +6 熔岩護甲（遵循 K=35）；受減速或冰凍冷卻時立即碎裂失去額外護甲。',
+            descEn: 'W5+: Gains +6 magma armor (K=35); shatters immediately while Slowed or Frozen.'
+        },
+        golem: {
+            id: 'reactive_plating',
+            minWave: 5,
+            name: '複合重甲',
+            nameEn: 'Reactive Plating',
+            activeLabel: '🛡️重甲 -20%',
+            activeLabelEn: '🛡️Plating -20%',
+            counteredLabel: '💔重甲擊穿',
+            counteredLabelEn: '💔Plating Broken',
+            unshreddedDr: 0.20,
+            desc: 'W5+ 未受破甲、穿甲或感電時額外減傷 20%；任一破甲／穿甲攻擊或感電即可完全擊穿。',
+            descEn: 'W5+: -20% damage taken while un-shredded/un-pierced; fully bypassed by Armor Shred, Pierce, or Shock.'
+        },
+        guardian: {
+            id: 'rune_capacitor',
+            minWave: 7,
+            name: '符文電容盾',
+            nameEn: 'Rune Capacitor',
+            activeLabel: '⚡電容持盾',
+            activeLabelEn: '⚡Capacitor Active',
+            counteredLabel: '⚡護盾已破',
+            counteredLabelEn: '⚡Shield Broken',
+            nonThunderShieldDr: 0.22,
+            thunderShieldMult: 1.65,
+            breakShredRate: 0.20,
+            breakShredMs: 3500,
+            desc: 'W7+ 持盾時非雷／三元傷害 -22%；雷系（雷／磁／電漿）或三元破盾倍率提升至 1.65x，破盾時附加 20% 破甲。',
+            descEn: 'W7+: While shielded, non-Thunder/Tri hits deal -22% DMG; Thunder-lineage/Tri breaks shield at 1.65x and inflicts 20% Shred.'
+        }
+    };
+
     const ELITE_AFFIXES = {
         bounty: {
             id: 'bounty',
+            minWave: 6,
             name: '賞金首',
             nameEn: 'Bounty',
             shortBadge: '💰賞金',
@@ -349,6 +454,7 @@
         },
         frenzied: {
             id: 'frenzied',
+            minWave: 6,
             name: '狂躁',
             nameEn: 'Frenzied',
             shortBadge: '⚡狂躁',
@@ -360,6 +466,7 @@
         },
         shield_regen: {
             id: 'shield_regen',
+            minWave: 6,
             name: '護盾再生',
             nameEn: 'Shield Regen',
             shortBadge: '🛡️再生',
@@ -370,6 +477,44 @@
             regenRatio: 0.04,
             desc: '進場附帶能量護盾，每 2.5 秒回復 4% 最大護盾（受灼燒重傷減半）。',
             descEn: 'Spawns with energy shield; regenerates 4% max shield every 2.5s (halved by Grievous Wound).'
+        },
+        resonance_link: {
+            id: 'resonance_link',
+            minWave: 6,
+            name: '群體共振',
+            nameEn: 'Resonance Link',
+            shortBadge: '🔗共振',
+            shortBadgeEn: '🔗Link',
+            linkRadiusCells: 1.8,
+            maxLinks: 2,
+            shareRatio: 0.30,
+            aoeBonusRate: 0.15,
+            desc: '連結 1.8 格內至多 2 名非王友軍分攤 30% 單體傷害；範圍／連鎖攻擊改為 +15% 增傷，凍結／暈眩／定身會中斷連結。',
+            descEn: 'Links up to 2 non-Boss allies within 1.8 cells to split 30% single-target DMG; AoE/Chain deals +15% bonus DMG, and Freeze/Stun/Root severs the link.'
+        },
+        bulwark_aura: {
+            id: 'bulwark_aura',
+            minWave: 10,
+            name: '戰陣庇護',
+            nameEn: 'Vanguard Aegis',
+            shortBadge: '🛡️庇護',
+            shortBadgeEn: '🛡️Aegis',
+            auraRadiusCells: 1.6,
+            auraDr: 0.18,
+            desc: 'W10+ 詞條：使 1.6 格內周圍非王友軍承傷 -18%（不疊加）；對本體施加破甲或易傷將立即關閉庇護。',
+            descEn: 'W10+ Affix: Grants nearby non-Boss allies within 1.6 cells -18% DMG taken (non-stacking); disabled immediately by Shred or Vulnerability.'
+        },
+        prismatic_ward: {
+            id: 'prismatic_ward',
+            minWave: 10,
+            name: '稜鏡護膜',
+            nameEn: 'Prismatic Ward',
+            shortBadge: '🌈稜鏡',
+            shortBadgeEn: '🌈Prism',
+            singleElemResist: 0.25,
+            affinityWeakBonus: 0.20,
+            desc: 'W10+ 詞條：非弱點單元素攻擊承傷 -25%；元素弱點、複合親和或三元融合塔命中時改為 +20% 增傷。',
+            descEn: 'W10+ Affix: -25% DMG taken from non-weakness single-element hits; takes +20% bonus DMG from Weakness, Hybrid Affinity, or Tri-Element towers.'
         }
     };
 
@@ -381,6 +526,7 @@
         MONSTER_BASE_SPEED: GLOBAL_MONSTER_RULES.MONSTER_BASE_SPEED,
         MONSTER_SPEED_SCALE: GLOBAL_MONSTER_RULES.MONSTER_SPEED_SCALE,
         MONSTER_HP_SCALE: GLOBAL_MONSTER_RULES.MONSTER_HP_SCALE,
+        MIN_SPEED_RATIO: GLOBAL_MONSTER_RULES.MIN_SPEED_RATIO,
         SLIME_SPLIT_COUNT: GLOBAL_MONSTER_RULES.SLIME_SPLIT_COUNT,
         SLIME_SPLIT_HP_RATIO: GLOBAL_MONSTER_RULES.SLIME_SPLIT_HP_RATIO
     });
@@ -390,6 +536,7 @@
         GLOBAL_MONSTER_RULES,
         MONSTER_DATABASE,
         BOSS_ROSTER,
+        WAVE_STAGE_TRAITS,
         ELITE_AFFIXES,
         SPECIAL_MECHANIC_MONSTERS
     };
@@ -398,6 +545,7 @@
         Object.assign(global.GameConfig, {
             MONSTER_DATABASE,
             BOSS_ROSTER,
+            WAVE_STAGE_TRAITS,
             ELITE_AFFIXES,
             SPECIAL_MECHANIC_MONSTERS
         });

@@ -134,8 +134,8 @@
         },
         thunder_B: {
             name: 'Sky Judgment', shortName: 'B Judgment',
-            roleSummary: 'Every 3rd Hit 2.2x + 40% Pierce',
-            tooltipSummary: 'Every 3rd thunder hit deals 2.2x dmg, ignores 40% armor',
+            roleSummary: 'Every 3rd Hit 2.6x + 45% Pierce · Kill -45% CD',
+            tooltipSummary: 'Every 3rd thunder hit deals 2.6x DMG (45% pierce); kills refund 45% CD + charge',
             lineagePath: '⚡ Volt 2★ ▸ B Sky Judgment'
         },
         steam_A: {
@@ -147,13 +147,13 @@
         steam_B: {
             name: 'Frostmist Maze', shortName: 'B Frostmist',
             roleSummary: 'Mist +20% Vuln +15% Kill Gold',
-            tooltipSummary: '1.6-cell mist slow 35% + +20% dmg taken + +15% kill gold',
+            tooltipSummary: '1.6-cell mist slow 35%, +20% dmg taken, +15% kill gold',
             lineagePath: '💨 Hi-Steam 2★ ▸ B Frostmist Maze'
         },
         magnet_A: {
             name: 'Gravity Well', shortName: 'A Blackhole',
-            roleSummary: 'AoE Slow + Pull Every 3rd Pulse',
-            tooltipSummary: '1.5-cell 45% slow; 3rd pulse pulls foes 0.45 cells',
+            roleSummary: '1.65-Cell 50% Slow + 2nd Pulse Pull 0.65 & +12% Vuln',
+            tooltipSummary: '1.65-cell 50% slow; every 2nd pulse deals 1.25x, +12% vuln & pulls 0.65 cells',
             lineagePath: '💠 Hi-Magnet 2★ ▸ A Gravity Well'
         },
         magnet_B: {
@@ -164,8 +164,8 @@
         },
         plasma_A: {
             name: 'Fusion Deathray', shortName: 'A Deathray',
-            roleSummary: '8-Stack Lock (+18%/stk) + 45% Pierce',
-            tooltipSummary: 'Up to 8 focus stacks; drops only 2 on retarget',
+            roleSummary: '8-Stack Lock (+16%/stk) + 45% Pierce',
+            tooltipSummary: 'Up to 8 focus stacks (+16%/stk); ≥5 stk 45% pierce, drops 2 on retarget',
             lineagePath: '☄️ Hi-Plasma 2★ ▸ A Fusion Deathray'
         },
         plasma_B: {
@@ -178,19 +178,19 @@
         fire_crown_A: {
             name: 'Solar Forge Crown', shortName: '🔥A Mastery',
             roleSummary: '1.6 Splash + 55% AoE Shred (4★ Mastery)',
-            tooltipSummary: '1.6-cell 72% splash + 55% shred (4.5s) · Faster ATK',
+            tooltipSummary: '1.6-cell 72% splash + 55% shred (4.5s) · Peak Bombard',
             lineagePath: '🔥 Ember 2★ ▸ A Core Bombardier ▸ Solar Forge 4★'
         },
         fire_crown_B: {
             name: 'Eternal Cinder Crown', shortName: '🔥B Mastery',
             roleSummary: '7-Stack Burn + 60% Wound + <16% Exec (4★ Mastery)',
-            tooltipSummary: '7-stack contagious burn + 60% wound + <16% exec · Faster ATK',
+            tooltipSummary: '7-stack contagious burn + 60% wound + <16% exec · Peak Burn',
             lineagePath: '🔥 Ember 2★ ▸ B Cinder Sovereign ▸ Eternal Cinder 4★'
         },
         fire_twin_AB: {
             name: 'Twin Cinderforge Crown', shortName: '🔥AB Twin Crown',
-            roleSummary: '1.4 Splash Shred (45%) + 5-Stack Burn (<14% Exec)',
-            tooltipSummary: '1.4-cell 65% splash shred (45%) + 5-stack burn (<14% exec)',
+            roleSummary: '1.4 Splash Shred (42%) + 5-Stack Burn (<12% Exec)',
+            tooltipSummary: '1.4-cell 58% splash shred (42%) + 5-stack burn (<12% exec)',
             lineagePath: '🔥 Bombardier + Cinder ▸ Twin Cinderforge 4★'
         },
         fire_scion: {
@@ -201,44 +201,44 @@
         },
         ice_crown_A: {
             name: 'Whiteout Prison Crown', shortName: '❄️A Mastery',
-            roleSummary: '1.8 Slow 65% + 3-Hit Freeze (4★ Mastery)',
-            tooltipSummary: '1.8-cell 65% slow · 3rd hit freezes 1.1s · Faster ATK',
+            roleSummary: '1.8 Slow 65% + 3-Hit Freeze 1.75x Burst (4★ Mastery)',
+            tooltipSummary: '1.8-cell 65% slow · 3rd hit freezes 1.1s + 1.75x Ice Burst',
             lineagePath: '❄️ Frost 2★ ▸ A Permafrost Domain ▸ Whiteout 4★'
         },
         ice_crown_B: {
             name: 'Worldpierce Ice Crown', shortName: '❄️B Mastery',
-            roleSummary: '3-Target Pierce +75% Shatter (4★ Mastery)',
-            tooltipSummary: 'Pierces 3 targets · +75% shatter vs slow/freeze · Faster ATK',
+            roleSummary: '3-Target Pierce +70% Shatter (4★ Mastery)',
+            tooltipSummary: 'Pierces 3 targets (68%/45%) · +70% shatter vs controlled',
             lineagePath: '❄️ Frost 2★ ▸ B Icicle Piercer ▸ Worldpierce 4★'
         },
         ice_twin_AB: {
             name: 'Twin Frostedge Crown', shortName: '❄️AB Twin Crown',
-            roleSummary: '1.6 Slow 60% Freeze + 2-Pierce (+60% Shatter)',
-            tooltipSummary: '1.6-cell 60% slow (4-hit freeze) + 2-pierce (+60% shatter)',
+            roleSummary: '1.55 Slow 55% Freeze + 2-Pierce (+50% Shatter)',
+            tooltipSummary: '1.55-cell 55% slow (4-hit freeze) + 2-pierce (+50% shatter)',
             lineagePath: '❄️ Permafrost + Icicle ▸ Twin Frostedge 4★'
         },
         ice_scion: {
             name: 'Absolutefrost Scion', shortName: '❄️World Scion',
-            roleSummary: 'Full Freeze + Pierce Scion · +15% Brittle · 2.2 Aura + Pulse',
-            tooltipSummary: 'Full Freeze + Pierce Scion · +15% Brittle · 2.2 Aura + Pulse',
+            roleSummary: 'Full Freeze + 3-Pierce Scion · +15% Brittle · 2.2 Aura + Pulse',
+            tooltipSummary: 'Full Freeze + 3-Pierce Scion · +15% Brittle · 2.2 Aura + Pulse',
             lineagePath: '❄️ Ice 2★ ▸ Twin Frostedge 4★ ▸ Absolutefrost Scion 5★'
         },
         thunder_crown_A: {
             name: 'Skynet Tempest Crown', shortName: '⚡A Mastery',
             roleSummary: '5-Target Chain Lightning (4★ Mastery)',
-            tooltipSummary: '5-target chain lightning (3.0-cell arc) · Faster ATK',
+            tooltipSummary: '5-target chain lightning (3.0-cell arc) · Peak Chain',
             lineagePath: '⚡ Volt 2★ ▸ A Tempest Chain ▸ Skynet 4★'
         },
         thunder_crown_B: {
             name: 'Doomsday Verdict Crown', shortName: '⚡B Mastery',
-            roleSummary: '3rd Hit 2.8x + 55% Armor Pierce (4★ Mastery)',
-            tooltipSummary: 'Every 3rd thunder hit 2.8x DMG + 55% pierce · Faster ATK',
+            roleSummary: '3rd Hit 2.9x + 60% Pierce · Kill -55% CD (4★ Mastery)',
+            tooltipSummary: 'Every 3rd hit 2.9x DMG + 60% pierce · Kills refund 55% CD + charge',
             lineagePath: '⚡ Volt 2★ ▸ B Sky Judgment ▸ Verdict 4★'
         },
         thunder_twin_AB: {
             name: 'Twin Skybolt Crown', shortName: '⚡AB Twin Crown',
-            roleSummary: '4-Target Chain + Every 3rd Hit 2.4x Pierce',
-            tooltipSummary: '4-target lightning chain + every 3rd hit 2.4x pierce judgment',
+            roleSummary: '4-Target Chain + Every 3rd Hit 2.2x Pierce',
+            tooltipSummary: '4-target lightning chain + every 3rd hit 2.2x pierce + kill -25% CD',
             lineagePath: '⚡ Tempest + Judgment ▸ Twin Skybolt 4★'
         },
         thunder_scion: {
@@ -250,19 +250,19 @@
         steam_crown_A: {
             name: 'Abyssal Boiler Crown', shortName: '💨A Mastery',
             roleSummary: '75% Pierce Splash + 3.6s Steam Pool (4★ Mastery)',
-            tooltipSummary: '75% pierce + 1.65 splash + 3.6s steam pool (52/s) · Faster ATK',
+            tooltipSummary: '75% pierce + 1.65 splash + 3.6s steam pool (52/s)',
             lineagePath: '💨 Hi-Steam 2★ ▸ A Pressure ▸ Abyssal Boiler 4★'
         },
         steam_crown_B: {
             name: 'Eternal Bonefog Crown', shortName: '💨B Mastery',
             roleSummary: '1.9 Mist 45% Slow +30% Vuln +15% Gold (4★ Mastery)',
-            tooltipSummary: '1.9-cell fog 45% slow + 30% vuln + 15% kill gold · Faster ATK',
+            tooltipSummary: '1.9-cell fog 45% slow + 30% vuln + 15% kill gold',
             lineagePath: '💨 Hi-Steam 2★ ▸ B Frostmist ▸ Eternal Bonefog 4★'
         },
         steam_twin_AB: {
             name: 'Twin Steammist Crown', shortName: '💨AB Twin Crown',
-            roleSummary: '65% Pierce Splash + 36/s Pool + 1.6 Fog (+22% Vuln)',
-            tooltipSummary: '65% pierce splash + 36/s steam pool + 1.6 mist (+22% vuln)',
+            roleSummary: '60% Pierce Splash + 34/s Pool + 1.6 Fog (+20% Vuln)',
+            tooltipSummary: '60% pierce splash + 34/s steam pool + 1.6 mist (+20% vuln)',
             lineagePath: '💨 Pressure + Frostmist ▸ Twin Steammist 4★'
         },
         steam_scion: {
@@ -273,20 +273,20 @@
         },
         magnet_crown_A: {
             name: 'Singularity Crown', shortName: '💠A Mastery',
-            roleSummary: '1.8 Slow 52% + Pull Every 2nd Hit (4★ Mastery)',
-            tooltipSummary: '1.8-cell 52% slow · 2nd pulse pulls 0.55 cells · Faster ATK',
+            roleSummary: '1.9 Slow 58% + Pull 0.85 & +18% Vuln (4★ Mastery)',
+            tooltipSummary: '1.9-cell 58% slow · 2nd pulse 1.35x, +18% vuln & pulls 0.85 cells',
             lineagePath: '💠 Hi-Magnet 2★ ▸ A Gravity ▸ Singularity 4★'
         },
         magnet_crown_B: {
             name: 'Overclock Grid Crown', shortName: '💠B Mastery',
             roleSummary: '4-Bounce + 4.2s Heavy Shock (4★ Mastery)',
-            tooltipSummary: '4 bounces (82%) + 4.2s heavy Shock aura · Faster ATK',
+            tooltipSummary: '4 bounces (82%) + 4.2s heavy Shock aura (16+3.2*W)',
             lineagePath: '💠 Hi-Magnet 2★ ▸ B Overload ▸ Overclock Grid 4★'
         },
         magnet_twin_AB: {
             name: 'Twin Fluxdome Crown', shortName: '💠AB Twin Crown',
-            roleSummary: '1.6 Slow + 0.5 Pull + 3-Target Shock (10+2.5*W)',
-            tooltipSummary: '1.6-cell slow + 0.5-cell pull + 3-target Shock (10+2.5*Wave)',
+            roleSummary: '1.55 Slow + 0.45 Pull + 3-Target Shock (10+2.5*W)',
+            tooltipSummary: '1.55-cell slow + 0.45-cell pull + 3-target Shock (10+2.5*Wave)',
             lineagePath: '💠 Gravity + Overload ▸ Twin Fluxdome 4★'
         },
         magnet_scion: {
@@ -297,26 +297,26 @@
         },
         plasma_crown_A: {
             name: 'Starburst Annihilation Crown', shortName: '☄️A Mastery',
-            roleSummary: '10-Stack Focus (+20%/stk) + 55% Pierce (4★ Mastery)',
-            tooltipSummary: '10 focus stacks (+20%/stk) + 55% pierce (≥4 stk) · Faster ATK',
+            roleSummary: '10-Stack Focus (+16%/stk) + 55% Pierce (4★ Mastery)',
+            tooltipSummary: '10 focus stacks (+16%/stk, 2.60x) + 55% pierce (≥4 stk)',
             lineagePath: '☄️ Hi-Plasma 2★ ▸ A Deathray ▸ Starburst 4★'
         },
         plasma_crown_B: {
             name: 'Prismatic Horizon Crown', shortName: '☄️B Mastery',
             roleSummary: '5-Stack Focus + 3 Refract Beams (4★ Mastery)',
-            tooltipSummary: '5 focus stacks (+18%/stk) + 3 refract beams (62%) · Faster ATK',
+            tooltipSummary: '5 focus stacks (+15%/stk) + 3 refract beams (58%)',
             lineagePath: '☄️ Hi-Plasma 2★ ▸ B Prism ▸ Prismatic 4★'
         },
         plasma_twin_AB: {
             name: 'Twin Arcprism Crown', shortName: '☄️AB Twin Crown',
-            roleSummary: '8-Stack Focus (≥5 Stk 45% Pierce) + 2 Refract Beams',
-            tooltipSummary: '8-stack focus (45% pierce) + 2 refract beams (55% dmg)',
+            roleSummary: '6-Stack Focus (≥4 Stk 38% Pierce) + 2 Refract Beams',
+            tooltipSummary: '6-stack focus (38% pierce) + 2 refract beams (48% dmg)',
             lineagePath: '☄️ Deathray + Prism ▸ Twin Arcprism 4★'
         },
         plasma_scion: {
             name: 'Radiantbeam Scion', shortName: '☄️World Scion',
-            roleSummary: 'Full Beam + Prism Scion (Max 12 Stacks) · 2.2 Aura + Pulse',
-            tooltipSummary: 'Full Beam + Prism Scion (Max 12 Stacks) · 2.2 Aura + Pulse',
+            roleSummary: 'Full Beam + Prism Scion (Max 9 Stacks) · 2.2 Aura + Pulse',
+            tooltipSummary: 'Full Beam + Prism Scion (Max 9 Stacks + 2 Refract) · 2.2 Aura + Pulse',
             lineagePath: '☄️ Plasma 2★ ▸ Twin Arcprism 4★ ▸ Radiantbeam Scion 5★'
         },
         storm_tri: {
@@ -333,14 +333,14 @@
         },
         starforge_tri: {
             name: 'Astral Forged Tree', shortName: '🌋Starforge',
-            roleSummary: '1.8-Cell Vortex Pull + 0.5s Freeze + 40% Shred Nova + Grievous Wound',
-            tooltipSummary: '1.8-Cell Pull + 0.5s Freeze + 40% Shred + Wound · 1.26x Affinity',
+            roleSummary: '1.85-Cell Vortex Pull + Freeze + 42% Shred + 2.8s Aftershock Field',
+            tooltipSummary: '1.85-Cell Pull + 0.55s Freeze + 42% Shred + 2.8s Molten Aftershock · 1.26x Affinity',
             lineagePath: '💠 Magnet 2★ + 🔥 Fire 2★ ▸ 🌋 Astral Forged Tree 3★ (4U)'
         },
         starforge_tri_4: {
             name: 'Ancient Astral Forged Tree', shortName: '🌋Forge 4★',
-            roleSummary: 'Ascended 1.8-Cell Vortex Pull + 0.5s Freeze + 40% Shred Nova + Wound',
-            tooltipSummary: 'Ascended Vortex Pull + 0.5s Freeze + 40% Shred + Wound · 1.26x Affinity',
+            roleSummary: '2.05-Cell Vortex Pull + Freeze + 50% Shred + 3.2s Aftershock Field',
+            tooltipSummary: '2.05-Cell Pull + 0.6s Freeze + 50% Shred + 3.2s Molten Aftershock · 1.26x Affinity',
             lineagePath: '💠 Magnet 3★ + 🔥 Fire 3★ (or 8U) ▸ 🌋 Ancient Starforge 4★'
         },
         prism_tri: {
@@ -351,14 +351,14 @@
         },
         prism_tri_4: {
             name: 'Ancient Zero Prism', shortName: '❄️Zero 4★',
-            roleSummary: 'Ascended 3-Beam Refraction · 5-Stack Thermal Brittle -> Shatter Burst + 0.8s Freeze',
-            tooltipSummary: 'Ascended 3-Beam · 5-Stack Thermal Brittle Shatter + 0.8s Freeze · 1.26x Affinity',
+            roleSummary: 'Ascended 3-Beam Refraction · 5-Stack Thermal Brittle -> Shatter Burst + 0.9s Freeze',
+            tooltipSummary: 'Ascended 3-Beam · 5-Stack Thermal Brittle Shatter + 0.9s Freeze · 1.26x Affinity',
             lineagePath: '☄️ Plasma 3★ + ❄️ Ice 3★ (or 8U) ▸ ❄️ Ancient Zero Prism 4★'
         },
         primal_core: {
             name: 'Genesis World Tree: Primal Core', shortName: '✦Primal Core',
-            roleSummary: 'Board Unique (Max 1) · Links 8 Adjacent Allies + 5s Full-Element Genesis Pulse',
-            tooltipSummary: 'Unique 5★ Core · 8-Neighbor Golden Ley-Lines + 5s Genesis Pulse · 1.26x Affinity',
+            roleSummary: 'Board Unique (Max 1) · Up to 6 Linked Allies + 5s Genesis Pulse',
+            tooltipSummary: 'Unique 5★ Core · Links up to 6 Neighbors + 5s Genesis Pulse · 1.26x Affinity',
             lineagePath: 'Any Tri-Element 4★ (16U) or 2 Distinct Tri 4★ ▸ ✦ Primal Core 5★'
         }
     };
@@ -444,6 +444,66 @@
             name: 'Shield Regen',
             shortBadge: '🛡️Regen',
             desc: 'Spawns with energy shield; restores 4% max shield every 2.5s (halved by Wound).'
+        },
+        resonance_link: {
+            name: 'Resonance Link',
+            shortBadge: '🔗Link',
+            desc: 'Links up to 2 non-Boss allies within 1.8 cells to split 30% single-target DMG; AoE/Chain deals +15% bonus DMG, and Freeze/Stun/Root severs the link.'
+        },
+        bulwark_aura: {
+            name: 'Vanguard Aegis',
+            shortBadge: '🛡️Aegis',
+            desc: 'W10+ Affix: Grants nearby non-Boss allies within 1.6 cells -18% DMG taken (non-stacking); disabled immediately by Shred or Vulnerability.'
+        },
+        prismatic_ward: {
+            name: 'Prismatic Ward',
+            shortBadge: '🌈Prism',
+            desc: 'W10+ Affix: -25% DMG taken from non-weakness single-element hits; takes +20% bonus DMG from Weakness, Hybrid Affinity, or Tri-Element towers.'
+        }
+    };
+
+    const EN_WAVE_STAGE_TRAITS = {
+        wood: {
+            name: 'Bark Regen',
+            activeLabel: '🌿Regen Active',
+            counteredLabel: '🔥Regen Halted',
+            desc: 'W5+: Restores 3.5% MaxHP every 2.5s; paused by Fire hits, Burn, or Grievous Wound.'
+        },
+        healer: {
+            name: 'Bloom Surge',
+            activeLabel: '💚Surge Active',
+            counteredLabel: '🔥Heal Halted',
+            desc: 'W8+: Boosts heal pulse to 8.5% MaxHP (+0.25 range); paused by Fire hits, Burn, or Wound.'
+        },
+        hound: {
+            name: 'Pack Tailwind',
+            activeLabel: '💨Haste Aura',
+            counteredLabel: '❄️Aura Disrupted',
+            desc: 'W5+: Grants +16% speed aura to allies within 1.6 cells (non-stacking); disrupted by Slow/Freeze/Root.'
+        },
+        air: {
+            name: 'Jetstream Aura',
+            activeLabel: '🌪️Jetstream',
+            counteredLabel: '❄️Stream Halted',
+            desc: 'W6+: Projects a 1.5-cell +14% speed aura (non-stacking); disrupted by Slow/Freeze/Root.'
+        },
+        lava: {
+            name: 'Magma Crust',
+            activeLabel: '🪨Crust +6 ARM',
+            counteredLabel: '❄️Crust Cracked',
+            desc: 'W5+: Gains +6 magma armor (K=35); shatters immediately while Slowed or Frozen.'
+        },
+        golem: {
+            name: 'Reactive Plating',
+            activeLabel: '🛡️Plating -20%',
+            counteredLabel: '💔Plating Broken',
+            desc: 'W5+: -20% damage taken while un-shredded/un-pierced; fully bypassed by Armor Shred, Pierce, or Shock.'
+        },
+        guardian: {
+            name: 'Rune Capacitor',
+            activeLabel: '⚡Capacitor Active',
+            counteredLabel: '⚡Shield Broken',
+            desc: 'W7+: While shielded, non-Thunder/Tri hits deal -22% DMG; Thunder-lineage/Tri breaks shield at 1.65x and inflicts 20% Shred.'
         }
     };
 
@@ -457,7 +517,7 @@
         charged_stone: { name: '⚡ Charging Floatstone', shortTag: '+40% DMG Cycle', tooltip: 'Rotates 1 glowing stone every 2 waves: tower on glowing stone gains +40% DMG (B_power).' },
         treasure_rock: { name: '🪨 Treasure Boulder', shortTag: '45 💰 Mine', tooltip: 'Click to mine for 45 💰: yields Gold (soft-capped), Universal Fruit, or a random 2★ tower.' },
         teleport_rift: { name: '🌀 One-Way Teleport Rift (A → B)', shortTag: 'Thunder Isles Rift', tooltip: 'Enemies stepping onto Entry A warp straight to Exit B along the second island.' },
-        elite_affixes: { name: '🔱 W6+ Elite Affixes', shortTag: 'Bounty / Frenzied / Regen', tooltip: 'From Wave 6+, each Elite rolls 1 affix: Bounty (soft-capped bonus gold), Frenzied (haste burst), or Shield Regen (halved by Grievous Wound).' },
+        elite_affixes: { name: '🔱 W6+ / W10+ Elite Affixes', shortTag: 'Bounty · Frenzied · Regen · Link · Aegis · Prism', tooltip: 'W6+ Elites roll Bounty, Frenzied, Shield Regen, or Resonance Link (AoE counter); W10+/Endless adds Vanguard Aegis (Shred/Vuln shuts down) and Prismatic Ward (Weakness/Hybrid/Tri bonus DMG).' },
         leyline_links: {
             name: '🔗 Adjacent Leyline Links',
             shortTag: 'Max 2 Links · +18% Cap',
@@ -495,6 +555,8 @@
         towers: null,
         monsters: null,
         bosses: null,
+        eliteAffixes: null,
+        waveStageTraits: null,
         blessings: null,
         skills: null,
         contracts: null,
@@ -535,6 +597,11 @@
             Object.keys(d.monsters.ELITE_AFFIXES || {}).forEach((k) => {
                 const af = d.monsters.ELITE_AFFIXES[k];
                 if (af) snapshots.eliteAffixes[k] = { name: af.name, desc: af.desc, shortBadge: af.shortBadge };
+            });
+            snapshots.waveStageTraits = {};
+            Object.keys(d.monsters.WAVE_STAGE_TRAITS || {}).forEach((k) => {
+                const st = d.monsters.WAVE_STAGE_TRAITS[k];
+                if (st) snapshots.waveStageTraits[k] = { name: st.name, desc: st.desc, activeLabel: st.activeLabel, counteredLabel: st.counteredLabel };
             });
         }
         if (!snapshots.blessings && d.tree && d.tree.BLESSINGS_MAP) {
@@ -644,6 +711,16 @@
                     af.shortBadge = src.shortBadge;
                 }
             });
+            Object.keys(snapshots.waveStageTraits || {}).forEach((k) => {
+                const st = d.monsters.WAVE_STAGE_TRAITS && d.monsters.WAVE_STAGE_TRAITS[k];
+                const src = (isEn ? EN_WAVE_STAGE_TRAITS[k] : null) || snapshots.waveStageTraits[k];
+                if (st && src) {
+                    st.name = src.name;
+                    st.desc = src.desc;
+                    st.activeLabel = src.activeLabel;
+                    st.counteredLabel = src.counteredLabel;
+                }
+            });
         }
 
         if (d.tree && d.tree.BLESSINGS_MAP && snapshots.blessings) {
@@ -692,10 +769,18 @@
                 const en = EN_MONSTERS[k];
                 if (!cm[k] || !zh) return;
                 if (isEn && en) {
-                    cm[k].title = en.name;
-                    cm[k].subtitle = 'Invasion Unit';
+                    const mDbEntry = d.monsters && d.monsters.MONSTER_DATABASE && d.monsters.MONSTER_DATABASE[k];
+                    const iconPrefix = mDbEntry && mDbEntry.icon ? `${mDbEntry.icon} ` : '';
+                    const minW = mDbEntry && mDbEntry.minWave ? Number(mDbEntry.minWave) : 0;
+                    const weakName = mDbEntry && mDbEntry.weakness ? getWeaknessLabel(mDbEntry.weakness) : '';
+                    const wTower = mDbEntry && mDbEntry.weakness && d.towers && d.towers.TOWERS && d.towers.TOWERS[mDbEntry.weakness];
+                    const weakIcon = wTower && wTower.icon ? `${wTower.icon} ` : '';
+                    cm[k].title = (iconPrefix && !en.name.startsWith(iconPrefix)) ? `${iconPrefix}${en.name}` : en.name;
+                    cm[k].subtitle = weakName ? `Weak: ${weakIcon}${weakName}` : 'Invasion Unit';
                     cm[k].desc = en.traitDesc;
-                    cm[k].unlockRule = `Unlocks in-run upon encountering ${en.name}`;
+                    cm[k].unlockRule = minW > 1
+                        ? `Unlocks in-run upon encountering this enemy (Wave ${minW}+).`
+                        : 'Unlocks in-run upon encountering this enemy.';
                 } else {
                     Object.assign(cm[k], zh);
                 }
@@ -786,6 +871,19 @@
         if (metaGridEl) metaGridEl.setAttribute('aria-label', isEn ? 'World Tree Meta Ring Branches' : '世界樹年輪天賦分支');
         const codexCloseBtn = document.getElementById('codex-close-btn');
         if (codexCloseBtn) codexCloseBtn.setAttribute('aria-label', isEn ? 'Close Codex' : '關閉圖鑑');
+        const lobbyStepHubEl = document.getElementById('lobby-step-hub');
+        if (lobbyStepHubEl) lobbyStepHubEl.setAttribute('aria-label', isEn ? 'Game Mode Lobby' : '遊戲模式選擇大廳');
+        const lobbyStepSetupEl = document.getElementById('lobby-step-setup');
+        if (lobbyStepSetupEl) lobbyStepSetupEl.setAttribute('aria-label', isEn ? 'Battlefield Setup' : '出戰戰場與條件配置');
+        const lobbyBottomBarEl = document.querySelector('.lobby-bottom-bar');
+        if (lobbyBottomBarEl) lobbyBottomBarEl.setAttribute('aria-label', isEn ? 'Codex & Field Guide' : '遊戲百科與戰術手冊');
+        const onboardingToastEl = document.getElementById('onboarding-toast');
+        if (onboardingToastEl) onboardingToastEl.setAttribute('aria-label', isEn ? 'Commander Onboarding Hint' : '新手引導提示');
+        const onboardingCloseBtn = document.getElementById('onboarding-close-btn');
+        if (onboardingCloseBtn) {
+            onboardingCloseBtn.title = isEn ? 'Dismiss Onboarding Hints' : '略過新手提示';
+            onboardingCloseBtn.setAttribute('aria-label', isEn ? 'Dismiss Onboarding Hints' : '略過新手提示');
+        }
         const victoryStarsEl = document.getElementById('victory-stars');
         if (victoryStarsEl) victoryStarsEl.setAttribute('aria-label', isEn ? 'Clear Stars' : '通關星級');
         const guideXBtn = document.getElementById('guide-x-btn');
@@ -835,6 +933,20 @@
                 if (texts[0]) texts[0].innerText = isEn ? 'Fire ▸ Vine' : '火 ▸ 蔓藤';
                 if (texts[1]) texts[1].innerText = isEn ? 'Ice ▸ Lava' : '冰 ▸ 熔岩';
                 if (texts[2]) texts[2].innerText = isEn ? 'Thunder ▸ Air' : '雷 ▸ 機械';
+            }
+
+            setElText('side-tracker-title', isEn ? '📌 Recipe Tracker' : '📌 配方追蹤');
+            setElText('side-tracker-open-btn', isEn ? 'Tree' : '圖譜');
+            const trackerClearLbl = isEn ? 'Clear tracked recipe' : '取消配方追蹤';
+            const sideClearBtn = document.getElementById('side-tracker-clear-btn');
+            if (sideClearBtn) {
+                sideClearBtn.title = trackerClearLbl;
+                sideClearBtn.setAttribute('aria-label', trackerClearLbl);
+            }
+            const pillClearBtn = document.getElementById('recipe-tracker-pill-clear');
+            if (pillClearBtn) {
+                pillClearBtn.title = trackerClearLbl;
+                pillClearBtn.setAttribute('aria-label', trackerClearLbl);
             }
 
             // 左右側欄靜態標題
@@ -929,7 +1041,7 @@
                 : '以今日日期固定生成地圖、天氣、股市波動、盲盒與枝枒賜福序列，公平一戰。');
             setElText('mode-enter-daily', isEn ? 'Briefing ▸' : '查看簡報 ▸');
             setElText('mode-title-puzzle', isEn ? 'World Tree Trials' : '世界樹殘局試煉');
-            setElText('mode-badge-puzzle', isEn ? '5 Tactile Trials' : '單波解謎');
+            setElText('mode-badge-puzzle', isEn ? '5 Tactical Trials' : '單波解謎');
             setElText('mode-desc-puzzle', isEn
                 ? '5 fixed-gold single-wave tactical puzzles. Solve elemental counters and high-tier merges to clear.'
                 : '5 道固定資金與極端怪潮殘局，唯有算準元素相剋與轉職合成方能一次破局。');
@@ -959,6 +1071,7 @@
             setElText('victory-rank-text', isEn
                 ? 'Protected the World Tree and repelled the Wave 10 Blighted Treant King.'
                 : '成功守護世界樹，擊退第 10 波腐朽古樹王。');
+            setElText('victory-next-puzzle-btn', isEn ? 'Next Trial ▸' : '挑戰下一試煉 ▸');
             setElText('victory-restart-btn', isEn ? 'Restart' : '重新開始');
             setElText('endless-btn', isEn ? 'Endless Mode' : '繼續無盡挑戰');
             setElText('victory-menu-btn', isEn ? 'Change Map / Menu' : '切換地圖 / 主選單');
@@ -1025,7 +1138,8 @@
             // 戰術手冊彈窗 (#guide-overlay)
             const guideSub = document.querySelector('#guide-overlay .modal-subtitle');
             if (guideSub) guideSub.innerText = isEn ? 'Master elemental counters and tactical terrains to defend the World Tree.' : '掌握屬性相剋與特殊地形加成，穩固世界樹防線。';
-            const guideTitles = document.querySelectorAll('#guide-overlay .guide-section-title');
+            const guideTitles = Array.from(document.querySelectorAll('#guide-overlay .guide-section-title'))
+                .filter(el => el && el.id !== 'guide-stage4-title');
             if (guideTitles[0]) guideTitles[0].innerText = isEn ? 'Elemental Counters' : '元素相剋速查';
             if (guideTitles[1]) guideTitles[1].innerText = isEn ? 'Terrain Bonuses (Hover tile on board)' : '戰術地形加成（懸停棋盤特殊格可檢視）';
             if (guideTitles[2]) guideTitles[2].innerText = isEn ? 'Adjacent Leylines & Dynamic Weather (Max 2 Links / +18%)' : '鄰格靈脈陣法與動態天象（上限 2 連線 / +18%）';
@@ -1120,13 +1234,13 @@
             setElText('gameover-daily-share-title', isEn ? 'Daily Seed Scorecard' : '每日種子戰績卡');
             setElText('victory-daily-copy-btn', isEn ? 'Copy Scorecard' : '複製日期戰績卡');
             setElText('gameover-daily-copy-btn', isEn ? 'Copy Scorecard' : '複製日期戰績卡');
-            setElText('guide-stage4-title', isEn ? 'Float Isles · Black Market · W6+ Affixes' : '浮島裂隙 · 黑市開採 · W6+ 菁英詞條');
+            setElText('guide-stage4-title', isEn ? 'Float Isles · Black Market · W6+/W10+ Affixes' : '浮島裂隙 · 黑市開採 · W6+/W10+ 菁英詞條');
             setElText('guide-s4-k0', isEn ? '⚡ Floatstones / 🌀 Rift A→B (Thunder Isles)' : '⚡ 充能浮石 / 🌀 裂隙 A→B（雷鳴浮島）');
             setElText('guide-s4-v0', isEn ? '2-Wave +40% DMG · One-Way Warp' : '2 波輪充 +40% 傷 · 單向躍遷');
             setElText('guide-s4-k1', isEn ? '🪨 Treasure Boulders / 🎁 Free Box (Black Market)' : '🪨 藏寶巨石 / 🎁 免費盲盒（荒蕪黑市）');
             setElText('guide-s4-v1', isEn ? '45 💰 Mine · 1 Free Box/Wave' : '45 💰 開採寶藏 · 每波 1 免費盒');
-            setElText('guide-s4-k2', isEn ? '🔱 W6+ Elite Affixes (Bounty / Frenzied / Regen)' : '🔱 W6+ 菁英詞條（賞金首 / 狂躁 / 再生）');
-            setElText('guide-s4-v2', isEn ? 'Soft-Capped Gold · Wound Halves Regen' : '掉金受軟上限 · 重傷減半回盾');
+            setElText('guide-s4-k2', isEn ? '🔱 W6+/W10+ Elite Affixes (Link / Aegis / Prism)' : '🔱 W6+/W10+ 菁英詞條（含共振／庇護／稜鏡）');
+            setElText('guide-s4-v2', isEn ? 'AoE Breaks Link · Shred Disables Aegis · Tri Breaks Prism' : '範圍剋共振 · 破甲關庇護 · 複合剋稜鏡');
         }
 
         function getWeaknessLabel(weakness) {

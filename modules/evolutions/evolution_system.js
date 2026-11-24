@@ -487,14 +487,16 @@
 
         // ==================== 漸進式吞噬充能（同血脈低星塔餵養 3★ / 4★ 主力塔） ====================
         if (canFeedTower(fromTower, toTower)) {
-            const feedU = getFeedNutritionValue(fromTower);
+            const rawFeedU = getFeedNutritionValue(fromTower);
             const curU = getTowerNutritionU(toTower);
-            let nextU = Math.min(16, curU + feedU);
+            let nextU = Math.min(16, curU + rawFeedU);
             const isTriDest = isTriElementTower(toTower);
             if (toTower.tier === 4 && nextU >= 16 && ((isTriDest && hasPrimalCoreOnBoard()) || isScionCrownCapReached())) {
                 if (curU >= 15) return null;
                 nextU = 15;
             }
+            const feedU = Math.max(0, nextU - curU);
+            if (feedU <= 0) return null;
             const fromNode = normalizeNodeId(fromTower);
             const fromCfg = towersDict[fromNode] || {};
             const addedBranch = (fromTower.tier === 3 && (fromCfg.branchCode === 'A' || fromCfg.branchCode === 'B')) ? fromCfg.branchCode : null;
@@ -725,6 +727,7 @@
         const targetType = (chosenBranchType && fusion.options.includes(chosenBranchType))
             ? chosenBranchType
             : fusion.type;
+        if (targetType === 'primal_core' && hasPrimalCoreOnBoard()) return null;
         const lineagePath = buildMergedLineagePath(fromTower, toTower, targetType, fusion.tier, fusion.mode);
         const lineageIds = buildMergedLineageIds(fromTower, toTower, targetType, fusion.tier, fusion.mode);
         st.fusionCount++;
@@ -960,6 +963,11 @@
         const preview = getFruitUpgradePreview(towerObj);
         if (!preview) return null;
 
+        const targetType = (!preview.isFeedChargeOnly && chosenBranchType && preview.options.includes(chosenBranchType))
+            ? chosenBranchType
+            : preview.type;
+        if (!preview.isFeedChargeOnly && targetType === 'primal_core' && hasPrimalCoreOnBoard()) return null;
+
         st.fusionFruitCount = Math.max(0, (st.fusionFruitCount || 0) - 1);
         st.isApplyingFusionFruit = false;
         st.fusionCount++;
@@ -972,10 +980,6 @@
                 bonusHint: L(`【萬能果實 +${preview.feedU || 4}U，目前 ${preview.nextNutritionU}/16 U】`, ` [Fruit +${preview.feedU || 4}U, now ${preview.nextNutritionU}/16 U]`)
             };
         }
-
-        const targetType = (chosenBranchType && preview.options.includes(chosenBranchType))
-            ? chosenBranchType
-            : preview.type;
 
         const baseCost = (GameApp.data && GameApp.data.economy && GameApp.data.economy.BASE_COST) || 10;
         const keptInvestedGold = Number.isFinite(towerObj.investedGold)
