@@ -47,7 +47,7 @@ html, body {
     justify-content: center;
 }
 
-html, body, .modal-card, .side-panel, .wt-tree-viewport {
+html, body, .modal-card, .side-panel {
     scrollbar-width: thin;
     scrollbar-color: #46544C #1B211E;
 }
@@ -514,18 +514,10 @@ summary:focus-visible,
     flex-shrink: 0;
 }
 .hud-hp .ui-ico-heart { color: #EE9B8F; }
-.hud-gold .ui-ico-coin,
-.wave-btn .ui-ico-coin { color: var(--el-lightning); }
 .info-legend-inline > span,
 .side-panel-row > span:first-child {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-}
-.awaken-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     gap: 4px;
 }
 .lang-dropdown {
@@ -1315,9 +1307,6 @@ body.map-frost .cell:nth-child(even) { background-color: #233138; }
 }
 
 /* 新手教學無阻斷聚光燈高亮（嚴格 pointer-events: none 絕不攔截點擊與拖曳） */
-#element-spawner-container {
-    position: relative;
-}
 #element-spawner-container.onboarding-spotlight-ring::after {
     content: "";
     position: absolute;
@@ -3223,6 +3212,7 @@ body.map-frost .cell.path-cell {
 
 /* 3 欄等寬緊湊召喚卡 */
 #element-spawner-container {
+    position: relative;
     width: 100%;
     height: 100%;
     display: grid;
@@ -3545,7 +3535,6 @@ body.map-frost .cell.path-cell {
 .wave-btn:not(:disabled) { color: #E8F6FA; background-color: #223842; }
 .wave-btn-bonus { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
 .wave-btn-bonus.hidden { display: none; }
-.wave-btn .ui-ico-coin { width: 14px; height: 14px; }
 .debug-btn, .debug-btn-danger { background-color: var(--bg-grid-elevated); }
 .debug-only { display: none; }
 
@@ -3594,15 +3583,6 @@ body.map-frost .cell.path-cell {
     padding: 18px 20px;
     text-align: center;
     color: var(--text-primary);
-}
-
-.start-top-bar {
-    position: relative;
-    z-index: 30;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    margin-bottom: 4px;
 }
 
 .guide-header-bar {
@@ -5232,8 +5212,8 @@ body.map-frost .cell.path-cell {
 }
 .wt-detail-row strong { color: var(--text-primary); }
 
-.codex-list, .rules-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; text-align: left; }
-.codex-item, .rule-item {
+.codex-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; text-align: left; }
+.codex-item {
     padding: 12px;
     border-radius: 8px;
     background-color: var(--bg-grid-elevated);
@@ -5307,7 +5287,7 @@ body.map-frost .cell.path-cell {
 .codex-magnet { border-left: 4px solid var(--el-ice); }
 .codex-plasma { border-left: 4px solid var(--el-fire); }
 .codex-recipe { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-.codex-desc, .rule-content {
+.codex-desc {
     font-size: 13px;
     font-weight: 400;
     line-height: 1.5;
@@ -5317,35 +5297,9 @@ body.map-frost .cell.path-cell {
     min-width: 0;
     text-wrap: pretty;
 }
-.codex-note, .modal-subtitle, .blessing-choice-desc {
+.modal-subtitle, .blessing-choice-desc {
     text-wrap: pretty;
 }
-.codex-note {
-    font-size: 12px;
-    line-height: 1.6;
-    color: #9BD3E8;
-    background-color: var(--bg-canvas);
-    border-left: 4px solid var(--el-ice);
-    border-radius: 4px;
-    padding: 8px 12px;
-    margin-bottom: 16px;
-}
-
-.rule-item { display: flex; align-items: flex-start; gap: 12px; }
-.rule-num {
-    flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    background-color: var(--bg-canvas);
-    color: var(--el-lightning);
-    font-size: 14px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.rule-content strong { color: var(--text-primary); }
 
 /* 結算戰報與 CTA 按鈕（#D97724 實心底必須配 #1B211E 深色文字） */
 .modal-stats {
@@ -5611,7 +5565,7 @@ body.map-frost .cell.path-cell {
     .hud-stats { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 4px 6px; }
     .hud-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 4px; margin-left: 0; }
     .hud-ctrl-btn { min-height: 40px; padding: 4px 8px; font-size: 12px; }
-    .contract-chip, .pause-banner-btn, .codex-close-top-btn, .forecast-toggle-btn, .lang-option { min-height: 40px; }
+    .contract-chip, .codex-close-top-btn, .forecast-toggle-btn, .lang-option { min-height: 40px; }
     .hud-sub-slot { height: auto; min-height: 28px; }
     .wave-forecast-bar { height: auto; min-height: 28px; padding: 3px 6px; }
     .forecast-bar-main { flex-wrap: wrap; gap: 4px 6px; }
@@ -5766,9 +5720,6 @@ body.map-frost .cell.path-cell {
     pointer-events: none;
     box-shadow: 0 6px 18px rgba(10, 14, 12, 0.88);
 }
-.mobile-monster-card {
-    display: none !important;
-}
 .side-monster-card.hidden,
 .side-panel-section.hidden {
     display: none;
@@ -5816,6 +5767,7 @@ body.map-frost .cell.path-cell {
 }
 
 .mobile-monster-card {
+    display: none !important;
     position: absolute;
     top: 8px;
     right: 8px;
@@ -6012,6 +5964,26 @@ body.map-frost .cell.path-cell {
     :root {
         --arena-width: max(var(--board-width), min(calc(100vw - 32px), 940px));
     }
+
+    html, body {
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+        max-height: none;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+
+    body {
+        justify-content: flex-start;
+    }
+
+    .center-arena {
+        margin: auto 0;
+        height: auto;
+        max-height: none;
+        overflow: visible;
+    }
 }
 
 @media (min-width: 1180px) {
@@ -6103,6 +6075,12 @@ body.map-frost .cell.path-cell {
     .codex-card { padding: 12px; }
     .tree-viewport { height: clamp(270px, 44dvh, 360px); }
     .wt-detail-card { padding: 8px 12px; min-height: 76px; }
+    .side-panel { padding: 6px 8px; gap: 5px; }
+    .side-panel-section { gap: 3px; padding-bottom: 4px; }
+    .side-panel-title { font-size: 11.5px; line-height: 1.2; }
+    .side-panel-list { gap: 2px; }
+    .side-panel-row { padding: 2px 5px; font-size: 10.5px; line-height: 1.2; column-gap: 4px; }
+    .side-val { font-size: 10.5px; }
 }
 
 /* EN 雙語模式緊湊字級微調，防止英語詞彙溢出或撐爆按鈕 */

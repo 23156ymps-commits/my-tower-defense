@@ -21,7 +21,6 @@
         MONSTER_SPEED_SCALE: 1.0,           // 全局移動速度倍率（可由雲端 Remote Config 動態覆寫）
         MONSTER_HP_SCALE: 1.0,              // 全局最大血量倍率（可由雲端 Remote Config 動態覆寫）
         MIN_SPEED_RATIO: 0.30,              // 最低保底緩速後殘餘移速比例（30%，與 70% 總減速上限對齊，定身／凍結除外）
-        CORNER_SMOOTHING: 1.0,              // 路徑轉彎切角平滑係數
         SLIME_SPLIT_COUNT: 2,               // 分裂型怪物死亡時預設分裂數量
         SLIME_SPLIT_HP_RATIO: 0.30          // 分裂子體繼承母體最大血量比例 (30%)
     };

@@ -39,11 +39,9 @@
         STORAGE_CAREER_STATS_KEY: 'merge_defense_career_stats',
         STORAGE_LOCAL_BALANCE_KEY: 'merge_defense_local_balance_override',
         STORAGE_MUTE_KEY: 'merge_defense_muted',
-        STORAGE_CODEX_KEY: 'merge_defense_codex_unlocked',
         STORAGE_DAILY_RECORDS_KEY: 'merge_defense_daily_records',
         STORAGE_PUZZLE_RECORDS_KEY: 'merge_defense_puzzle_records',
         FIRST_CLEAR_HONOR_BONUS: 200,
-        WEATHER_TYPES: ['sun', 'snow', 'storm', 'eclipse'],
         WEATHER_CATALOG: {
             sun: {
                 id: 'sun',

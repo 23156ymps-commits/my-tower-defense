@@ -36,7 +36,6 @@
         NON_COMBAT_GAIN_PER_WAVE: 8,        // 單波非戰鬥淨收益軟上限每波成長值：8 * w
         INFUSION_BASE_COST: 150,            // 無盡靈脈灌注第 k 次費用基礎值：150 + 75 * k
         INFUSION_STEP_COST: 75,             // 無盡靈脈灌注第 k 次費用步長：75 * k
-        TREASURE_ROOTS_COSTS: [0, 55, 90, 125],
         TREASURE_ROOTS_FIXED_GAIN: [0, 15, 32, 42],
         TREASURE_ROOTS_LV3_INTEREST_RATE: 0.08,
         TREASURE_ROOTS_LV3_INTEREST_CAP: 35,
@@ -81,7 +80,6 @@
         FUSION_FRUIT_MAX_SLOTS: 3,          // 萬能融合果實庫存上限 (3 顆)
         FUSION_FRUIT_OVERFLOW_GOLD: 80,     // 滿 3/3 顆時溢出自動折現補償 (+80 💰，不受軟上限截斷)
         WAGER_ZERO_LEAK_STAKE: 40,          // 零封懸賞押注金幣 (40 金)
-        WAGER_ZERO_LEAK_RETURN: 70,         // 零封懸賞成功返還總金幣 (70 金，淨賺 +30 金)
         WAGER_ZERO_LEAK_NET_PROFIT: 30,     // 零封懸賞成功淨利 (+30 金，受單波非戰鬥軟上限約束)
         WAGER_ZERO_LEAK_FAIL_DEW: 15,       // 零封懸賞失敗補償靈露 (+15 靈露)
         WAGER_SURGE_HP_MULT: 1.25,          // 魔潮加碼：本波怪物血量 +25%

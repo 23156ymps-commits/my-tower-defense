@@ -567,23 +567,29 @@
         const seedInterval = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG && GameApp.data.tree.TREE_CONFIG.BLESSING_SEED_INTERVAL) || 5;
         const nextTier = (TreeSys && TreeSys.hasBlessing('abundant_seed') && (G.state.seedPityCount + 1) >= seedInterval) ? 2 : 1;
 
-        activeDrag = {
+        activeDrag = Object.assign({
             dragSource: 'shop',
             pointerId,
             towerType,
             tier: nextTier,
-            btnEl,
+            btnEl
+        }, createDragPointerState(clientX, clientY), {
+            hoveredCellIndex: null,
+            ghostEl: null
+        });
+        return true;
+    }
+
+    function createDragPointerState(clientX, clientY) {
+        return {
             startX: clientX,
             startY: clientY,
             currentX: clientX,
             currentY: clientY,
             isDragging: false,
             handled: false,
-            movedDistance: 0,
-            hoveredCellIndex: null,
-            ghostEl: null
+            movedDistance: 0
         };
-        return true;
     }
 
     function hideBoardTooltipsNow() {
@@ -633,24 +639,18 @@
         cancelActiveDrag({ silent: true });
         hideBoardTooltipsNow();
 
-        activeDrag = {
+        activeDrag = Object.assign({
             dragSource: 'board',
             pointerId,
             sourceIndex,
             towerEl,
             towerObj,
             towerType: towerObj.type,
-            tier: towerObj.tier,
-            startX: clientX,
-            startY: clientY,
-            currentX: clientX,
-            currentY: clientY,
-            isDragging: false,
-            handled: false,
-            movedDistance: 0,
+            tier: towerObj.tier
+        }, createDragPointerState(clientX, clientY), {
             hoveredCellIndex: sourceIndex,
             ghostEl: null
-        };
+        });
         return true;
     }
 
@@ -658,20 +658,14 @@
         if (!G || !G.state || (G.state.fusionFruitCount || 0) <= 0) return false;
         if (!canTacticalAct()) return false;
         cancelActiveDrag({ silent: true, resetTimestamps: true });
-        activeDrag = {
+        activeDrag = Object.assign({
             dragSource: 'fruit',
             pointerId,
-            btnEl,
-            startX: clientX,
-            startY: clientY,
-            currentX: clientX,
-            currentY: clientY,
-            isDragging: false,
-            handled: false,
-            movedDistance: 0,
+            btnEl
+        }, createDragPointerState(clientX, clientY), {
             hoveredCellIndex: null,
             ghostEl: null
-        };
+        });
         return true;
     }
 
@@ -855,11 +849,7 @@
         }
     }
 
-    /**
-     * 綁定下方商店召喚卡片的拖拉召喚與點擊雙模式事件（支援 Pointer / Mouse / Touch，含防重複落點鎖）
-     */
-    function bindShopCardElement(btnEl, towerType, onCardClick = null) {
-        if (!btnEl) return;
+    function bindDragSourceListeners(btnEl, startDrag) {
         btnEl.style.touchAction = 'none';
         btnEl.setAttribute('draggable', 'false');
         btnEl.addEventListener('dragstart', e => e.preventDefault());
@@ -872,7 +862,7 @@
             lastPointerEventTs = now;
             if (e.pointerType === 'touch') G.callbacks.activateTouchMode();
             GameApp.audio.ensureContext();
-            startShopDrag(towerType, btnEl, e.clientX, e.clientY, e.pointerId !== undefined ? e.pointerId : null);
+            startDrag(e.clientX, e.clientY, e.pointerId !== undefined ? e.pointerId : null);
         });
 
         btnEl.addEventListener('mousedown', (e) => {
@@ -880,7 +870,7 @@
             if (now - lastPointerDownTs < 250 || now - lastPointerEventTs < 250 || (e.button !== undefined && e.button !== 0)) return;
             if (activeDrag) return;
             GameApp.audio.ensureContext();
-            startShopDrag(towerType, btnEl, e.clientX, e.clientY, null);
+            startDrag(e.clientX, e.clientY, null);
         });
 
         btnEl.addEventListener('touchstart', (e) => {
@@ -890,8 +880,16 @@
             G.callbacks.activateTouchMode();
             const t = e.touches[0];
             GameApp.audio.ensureContext();
-            startShopDrag(towerType, btnEl, t.clientX, t.clientY, null);
+            startDrag(t.clientX, t.clientY, null);
         }, { passive: true });
+    }
+
+    /**
+     * 綁定下方商店召喚卡片的拖拉召喚與點擊雙模式事件（支援 Pointer / Mouse / Touch，含防重複落點鎖）
+     */
+    function bindShopCardElement(btnEl, towerType, onCardClick = null) {
+        if (!btnEl) return;
+        bindDragSourceListeners(btnEl, (x, y, pid) => startShopDrag(towerType, btnEl, x, y, pid));
 
         btnEl.addEventListener('click', (e) => {
             if (performance.now() - lastShopDragCompleteTs < 180) {
@@ -1033,38 +1031,7 @@
 
     function bindFusionFruitElement(btnEl, onFruitClick = null) {
         if (!btnEl) return;
-        btnEl.style.touchAction = 'none';
-        btnEl.setAttribute('draggable', 'false');
-        btnEl.addEventListener('dragstart', e => e.preventDefault());
-        btnEl.addEventListener('drop', e => e.preventDefault());
-
-        btnEl.addEventListener('pointerdown', (e) => {
-            if (e.button !== undefined && e.button !== 0) return;
-            const now = Date.now();
-            lastPointerDownTs = now;
-            lastPointerEventTs = now;
-            if (e.pointerType === 'touch') G.callbacks.activateTouchMode();
-            GameApp.audio.ensureContext();
-            startFruitDrag(btnEl, e.clientX, e.clientY, e.pointerId !== undefined ? e.pointerId : null);
-        });
-
-        btnEl.addEventListener('mousedown', (e) => {
-            const now = Date.now();
-            if (now - lastPointerDownTs < 250 || now - lastPointerEventTs < 250 || (e.button !== undefined && e.button !== 0)) return;
-            if (activeDrag) return;
-            GameApp.audio.ensureContext();
-            startFruitDrag(btnEl, e.clientX, e.clientY, null);
-        });
-
-        btnEl.addEventListener('touchstart', (e) => {
-            const now = Date.now();
-            if (now - lastPointerDownTs < 250 || now - lastPointerEventTs < 250 || e.touches.length !== 1) return;
-            if (activeDrag) return;
-            G.callbacks.activateTouchMode();
-            const t = e.touches[0];
-            GameApp.audio.ensureContext();
-            startFruitDrag(btnEl, t.clientX, t.clientY, null);
-        }, { passive: true });
+        bindDragSourceListeners(btnEl, (x, y, pid) => startFruitDrag(btnEl, x, y, pid));
 
         btnEl.addEventListener('click', (e) => {
             if (performance.now() - lastShopDragCompleteTs < 180) {

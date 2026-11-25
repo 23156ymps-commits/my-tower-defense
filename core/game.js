@@ -187,6 +187,53 @@
         return (GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS) || {};
     }
 
+    function getTerrainsDict() {
+        return (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
+    }
+
+    function applyFirstTowerPrepTimer(st, wasZeroTowers) {
+        if (wasZeroTowers && st.gameMode !== 'puzzle' && st.waveState === 'PREP' && st.currentWave === 1) {
+            const basePrepMs = CONFIG.INITIAL_PREP_MS || 6000;
+            st.waveTimerMs = (st.activeContracts && st.activeContracts.has('rapid_waves'))
+                ? Math.round(basePrepMs * 0.5)
+                : basePrepMs;
+        }
+    }
+
+    function flushPendingBlessingWave(st) {
+        if (st.pendingBlessingWave !== null) {
+            const queuedWave = st.pendingBlessingWave;
+            st.pendingBlessingWave = null;
+            if (!st.blessingGrantedWaves.has(queuedWave)) {
+                TreeSys.triggerBlessingSelection(queuedWave);
+            }
+        }
+    }
+
+    function hideLobbyForBattle(st) {
+        if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.add('hidden');
+        if (Renderer && typeof Renderer.stopLobbyAmbientCanvas === 'function') {
+            Renderer.stopLobbyAmbientCanvas();
+        }
+        if (Renderer && typeof Renderer.applyWeatherVisualClass === 'function') {
+            Renderer.applyWeatherVisualClass(st.weatherType);
+        }
+    }
+
+    function enterIntermissionHold(st, intermissionMs) {
+        st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
+        st.guildTimerHold = Boolean(st.guildAutoHoldTimer);
+        st.guildDrawerTempHold = false;
+        resetAllTowerRepositionCooldowns();
+    }
+
+    function renderLobbySelectorsUI() {
+        renderMapSelectorUI();
+        renderContractSelectorUI();
+        renderDailyBriefingUI();
+        renderPuzzleSelectorUI();
+    }
+
     function getShopTowerTypes() {
         if (GameApp.data && GameApp.data.towers && typeof GameApp.data.towers.getShopTowerTypes === 'function') {
             return GameApp.data.towers.getShopTowerTypes();
@@ -1226,8 +1273,8 @@
         const seedInput = st.gameMode === 'daily' ? `daily:${st.dailyDateKey}` : st.runSeedCode;
         if (GameApp.helpers && typeof GameApp.helpers.restoreActiveRunRngState === 'function' && Number.isFinite(snap.rngState)) {
             GameApp.helpers.restoreActiveRunRngState(seedInput, snap.rngState);
-        } else {
-            setRng(seedInput);
+        } else if (GameApp.helpers && typeof GameApp.helpers.setActiveRunRng === 'function') {
+            GameApp.helpers.setActiveRunRng(seedInput);
         }
 
         st.currentWave = Math.max(1, Math.floor(Number(snap.currentWave) || 1));
@@ -1325,13 +1372,7 @@
         st.onboardingActive = false;
         hideOnboardingToast();
 
-        if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.add('hidden');
-        if (Renderer && typeof Renderer.stopLobbyAmbientCanvas === 'function') {
-            Renderer.stopLobbyAmbientCanvas();
-        }
-        if (Renderer && typeof Renderer.applyWeatherVisualClass === 'function') {
-            Renderer.applyWeatherVisualClass(st.weatherType);
-        }
+        hideLobbyForBattle(st);
         Renderer.initBoard();
         if (Renderer && typeof Renderer.syncChargedStoneVisuals === 'function') {
             Renderer.syncChargedStoneVisuals(st.currentWave);
@@ -2061,7 +2102,7 @@
     function updateTowerInspector() {
         const dom = G.dom, st = G.state;
         if (!dom.inspectorEmptyEl || !dom.inspectorActiveEl) return;
-        const terrainsDict = (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
+        const terrainsDict = getTerrainsDict();
         const targetLabels = (GameApp.data && GameApp.data.towers && GameApp.data.towers.TARGET_MODE_LABELS) || { first: '最前', armor: '高護甲', lowhp: '殘血' };
 
         const hasTower = st.selectedIndex !== null && st.board[st.selectedIndex] !== null && !st.isGameOver && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT';
@@ -2526,6 +2567,7 @@
     }
 
     function summarizePlanInline(plan) {
+        if (!plan || !Array.isArray(plan.queue)) return '';
         const monsterDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.MONSTER_DATABASE) || {};
         const towersDict = getTowersDict();
         const counts = new Map();
@@ -2552,6 +2594,13 @@
         } else if (plan.eliteCount > 0) {
             parts.push(`${L('菁英', 'Elite')} ×${plan.eliteCount}`);
         }
+        const crisisPrefix = plan.crisisSpec
+            ? `⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)} · `
+            : '';
+        const hasThief = Boolean(
+            plan.hasThief || plan.queue.some(q => q && (q.isTreasureThief || q.typeKey === 'thief'))
+        );
+        const thiefNote = hasThief ? ` · ${L('🦊 靈脈竊賊', '🦊 Vein Thief')}` : '';
         const esc = plan.escalationInfo || {};
         const escTags = [];
         if (esc.isDualAffix) escTags.push(L('雙詞條菁英', 'Dual-Affix Elites'));
@@ -3827,16 +3876,11 @@
         st.selectedObstacleIndex = null;
         st.inspectedMonsterId = null;
         clearPendingSellConfirm();
-        if (wasZeroTowers && st.gameMode !== 'puzzle' && st.waveState === 'PREP' && st.currentWave === 1) {
-            const basePrepMs = CONFIG.INITIAL_PREP_MS || 6000;
-            st.waveTimerMs = (st.activeContracts && st.activeContracts.has('rapid_waves'))
-                ? Math.round(basePrepMs * 0.5)
-                : basePrepMs;
-        }
+        applyFirstTowerPrepTimer(st, wasZeroTowers);
 
         const cfg = towersDict[placedTower.type] || towersDict[type];
         const terrainKey = TerrainSys.getTerrainAt(targetIndex);
-        const terrainsDict = (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
+        const terrainsDict = getTerrainsDict();
         const tInfo = terrainKey ? terrainsDict[terrainKey] : null;
         const coords = indexToCoords(targetIndex);
 
@@ -4026,7 +4070,7 @@
 
     function tryClearObstacleCell(index) {
         const st = G.state;
-        const terrainsDict = (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
+        const terrainsDict = getTerrainsDict();
         const terrainKey = TerrainSys.getTerrainAt(index);
         if ((terrainKey !== 'obstacle' && terrainKey !== 'treasure_rock') || typeof TerrainSys.clearObstacleAt !== 'function') return false;
         clearPendingSellConfirm();
@@ -4076,12 +4120,7 @@
                 );
             } else if (clearRes.treasureType === 'tower' && clearRes.spawnedTowerType) {
                 const tCfg = getTowersDict()[clearRes.spawnedTowerType] || { icon: '✨', name: clearRes.spawnedTowerType };
-                if (wasZeroTowers && st.gameMode !== 'puzzle' && st.waveState === 'PREP' && st.currentWave === 1) {
-                    const basePrepMs = CONFIG.INITIAL_PREP_MS || 6000;
-                    st.waveTimerMs = (st.activeContracts && st.activeContracts.has('rapid_waves'))
-                        ? Math.round(basePrepMs * 0.5)
-                        : basePrepMs;
-                }
+                applyFirstTowerPrepTimer(st, wasZeroTowers);
                 Renderer.spawnFloatingNotice(L(`🪨 掘出 ${tCfg.name} ★★`, `🪨 Found ${tCfg.name} ★★`), center.left, center.top, 'pity-seed');
                 setStatusMsg(
                     `開採藏寶巨石（-${clearRes.cost} 💰）：發掘出【${tCfg.icon || ''} ${tCfg.name} ★★】（實付鎖定 ${clearRes.cost} 💰）！`,
@@ -4126,7 +4165,7 @@
     function handleCellClick(index) {
         const st = G.state;
         const towersDict = getTowersDict();
-        const terrainsDict = (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
+        const terrainsDict = getTerrainsDict();
         Backend.recordPlayerAction();
         st.inspectedMonsterId = null;
 
@@ -4686,12 +4725,7 @@
         st.buildTargetIndex = null;
         st.pendingSpawnType = null;
         clearPendingSellConfirm();
-        if (wasZeroTowers && st.gameMode !== 'puzzle' && st.waveState === 'PREP' && st.currentWave === 1) {
-            const basePrepMs = CONFIG.INITIAL_PREP_MS || 6000;
-            st.waveTimerMs = (st.activeContracts && st.activeContracts.has('rapid_waves'))
-                ? Math.round(basePrepMs * 0.5)
-                : basePrepMs;
-        }
+        applyFirstTowerPrepTimer(st, wasZeroTowers);
 
         const cfg = towersDict[spawnedTower.type] || { icon: '🔥', name: spawnedTower.type };
         const coords = indexToCoords(targetIndex);
@@ -5028,25 +5062,13 @@
             completeOnboardingStep('merge');
             evaluateContextualOnboarding();
             syncTacticalBoardVisuals([pending.fromIndex, pending.toIndex]);
-            if (st.pendingBlessingWave !== null) {
-                const queuedWave = st.pendingBlessingWave;
-                st.pendingBlessingWave = null;
-                if (!st.blessingGrantedWaves.has(queuedWave)) {
-                    TreeSys.triggerBlessingSelection(queuedWave);
-                }
-            }
+            flushPendingBlessingWave(st);
             if (isGameplayActive()) startMainLoop();
             return true;
         }
         Renderer.renderBoard([]);
         updateHUD();
-        if (st.pendingBlessingWave !== null) {
-            const queuedWave = st.pendingBlessingWave;
-            st.pendingBlessingWave = null;
-            if (!st.blessingGrantedWaves.has(queuedWave)) {
-                TreeSys.triggerBlessingSelection(queuedWave);
-            }
-        }
+        flushPendingBlessingWave(st);
         if (isGameplayActive()) startMainLoop();
         return false;
     }
@@ -5063,13 +5085,7 @@
         setStatusMsg('已取消進化確認，防禦塔維持原位且未消耗。', 'Evolution cancelled; towers remain unchanged.');
         Renderer.renderBoard([fromIndex, toIndex]);
         updateHUD();
-        if (st.pendingBlessingWave !== null) {
-            const queuedWave = st.pendingBlessingWave;
-            st.pendingBlessingWave = null;
-            if (!st.blessingGrantedWaves.has(queuedWave)) {
-                TreeSys.triggerBlessingSelection(queuedWave);
-            }
-        }
+        flushPendingBlessingWave(st);
         if (isGameplayActive()) startMainLoop();
         return true;
     }
@@ -5727,10 +5743,7 @@
         }
         showLobbyHub();
         renderLobbyResumeBannerUI();
-        renderMapSelectorUI();
-        renderContractSelectorUI();
-        renderDailyBriefingUI();
-        renderPuzzleSelectorUI();
+        renderLobbySelectorsUI();
         if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.remove('hidden');
         if (Renderer && typeof Renderer.startLobbyAmbientCanvas === 'function') {
             Renderer.startLobbyAmbientCanvas();
@@ -5748,13 +5761,7 @@
             CodexSys.resetRunCodex();
         }
         Backend.resetRunTelemetry(st.currentMapId, mapSpec.name);
-        if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.add('hidden');
-        if (Renderer && typeof Renderer.stopLobbyAmbientCanvas === 'function') {
-            Renderer.stopLobbyAmbientCanvas();
-        }
-        if (Renderer && typeof Renderer.applyWeatherVisualClass === 'function') {
-            Renderer.applyWeatherVisualClass(st.weatherType);
-        }
+        hideLobbyForBattle(st);
         const basePrepMs = st.gameMode === 'puzzle' ? 15000 : (CONFIG.INITIAL_PREP_MS || 6000);
         st.waveState = 'PREP';
         st.waveTimerMs = st.activeContracts.has('rapid_waves') ? Math.round(basePrepMs * 0.5) : basePrepMs;
@@ -5899,10 +5906,7 @@
             if (st.currentWave % blessingInterval === 0 && !st.blessingGrantedWaves.has(st.currentWave)) {
                 if (st.pendingEvolution || isOverlayVisible(G.dom.evoConfirmOverlayEl)) {
                     st.pendingBlessingWave = st.currentWave;
-                    st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
-                    st.guildTimerHold = Boolean(st.guildAutoHoldTimer);
-                    st.guildDrawerTempHold = false;
-                    resetAllTowerRepositionCooldowns();
+                    enterIntermissionHold(st, intermissionMs);
                     setStatusMsg(
                         `第 ${st.currentWave} 波防禦完成${rootMsgZh}，完成進化選擇後將開啟枝枒祝福。`,
                         `Wave ${st.currentWave} cleared${rootMsgEn}! Blessing selection opens after evolution.`
@@ -5919,10 +5923,7 @@
                     return;
                 }
             }
-            st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
-            st.guildTimerHold = Boolean(st.guildAutoHoldTimer);
-            st.guildDrawerTempHold = false;
-            resetAllTowerRepositionCooldowns();
+            enterIntermissionHold(st, intermissionMs);
             setStatusMsg(
                 `第 ${st.currentWave} 波防禦完成${rootMsgZh}，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後開始。`,
                 `Wave ${st.currentWave} cleared${rootMsgEn}! Next wave begins in ${Math.ceil(intermissionMs / 1000)}s.`
@@ -6857,10 +6858,7 @@
             Renderer.initBoard();
             Renderer.renderBoard();
             Renderer.renderMonsterLayer();
-            renderMapSelectorUI();
-            renderContractSelectorUI();
-            renderDailyBriefingUI();
-            renderPuzzleSelectorUI();
+            renderLobbySelectorsUI();
             renderLobbyHubUI();
             if (CodexSys && typeof CodexSys.isCodexOpen === 'function' && CodexSys.isCodexOpen()) {
                 CodexSys.renderCodexModal();
@@ -6968,10 +6966,7 @@
     renderSpawnerButtons();
     Renderer.initBoard();
     Renderer.renderBoard();
-    renderMapSelectorUI();
-    renderContractSelectorUI();
-    renderDailyBriefingUI();
-    renderPuzzleSelectorUI();
+    renderLobbySelectorsUI();
     renderLobbyHubUI();
     if (Renderer && typeof Renderer.startLobbyAmbientCanvas === 'function') {
         Renderer.startLobbyAmbientCanvas();

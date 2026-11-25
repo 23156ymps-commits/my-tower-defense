@@ -1051,6 +1051,12 @@
         ctx.fill();
     }
 
+    function strokeCircle2D(ctx, x, y, radius) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
     function updateAndRenderCanvasFX(dtMs) {
         const dtSec = dtMs / 1000, fx = G.fxEntities, st = G.state, m = G.boardMetrics, tk = getThemeTokens();
         const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
@@ -1110,15 +1116,11 @@
                     fxCtx.strokeStyle = tk.elIce;
                     fxCtx.lineWidth = 1.6;
                     fxCtx.setLineDash([7, 4]);
-                    fxCtx.beginPath();
-                    fxCtx.arc(hz.x, hz.y, hz.radiusPx, 0, Math.PI * 2);
-                    fxCtx.stroke();
+                    strokeCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx);
                     fxCtx.strokeStyle = tk.elLightning;
                     fxCtx.lineWidth = 1.1;
                     fxCtx.setLineDash([3, 5]);
-                    fxCtx.beginPath();
-                    fxCtx.arc(hz.x, hz.y, hz.radiusPx * 0.62, 0, Math.PI * 2);
-                    fxCtx.stroke();
+                    strokeCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx * 0.62);
                     fxCtx.restore();
                     continue;
                 }
@@ -1129,15 +1131,11 @@
                     fxCtx.strokeStyle = tk.elFire;
                     fxCtx.lineWidth = 1.7;
                     fxCtx.setLineDash([6, 3]);
-                    fxCtx.beginPath();
-                    fxCtx.arc(hz.x, hz.y, hz.radiusPx, 0, Math.PI * 2);
-                    fxCtx.stroke();
+                    strokeCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx);
                     fxCtx.strokeStyle = tk.elLightning;
                     fxCtx.lineWidth = 1.1;
                     fxCtx.setLineDash([3, 4]);
-                    fxCtx.beginPath();
-                    fxCtx.arc(hz.x, hz.y, hz.radiusPx * 0.58, 0, Math.PI * 2);
-                    fxCtx.stroke();
+                    strokeCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx * 0.58);
                     fxCtx.restore();
                     continue;
                 }
@@ -1148,9 +1146,7 @@
                 fxCtx.strokeStyle = isScorch ? tk.accentCta : tk.elFire;
                 fxCtx.lineWidth = isScorch ? 1.4 : 1.6;
                 fxCtx.setLineDash(isScorch ? [3, 3] : [5, 3]);
-                fxCtx.beginPath();
-                fxCtx.arc(hz.x, hz.y, hz.radiusPx, 0, Math.PI * 2);
-                fxCtx.stroke();
+                strokeCircle2D(fxCtx, hz.x, hz.y, hz.radiusPx);
                 fxCtx.restore();
             }
         }
@@ -1248,9 +1244,7 @@
                     fxCtx.strokeStyle = mon.typeKey === 'air' ? tk.elIce : '#8AD19C';
                     fxCtx.lineWidth = 1.3;
                     fxCtx.setLineDash([4, 4]);
-                    fxCtx.beginPath();
-                    fxCtx.arc(mon.pixelX, mon.pixelY, hRad, 0, Math.PI * 2);
-                    fxCtx.stroke();
+                    strokeCircle2D(fxCtx, mon.pixelX, mon.pixelY, hRad);
                     fxCtx.restore();
                 }
                 const hasAffix = (id) => (typeof MonsterSysFx.hasMonsterAffix === 'function' ? MonsterSysFx.hasMonsterAffix(mon, id) : mon.eliteAffix === id);
@@ -1261,9 +1255,7 @@
                     fxCtx.strokeStyle = '#E0B43C';
                     fxCtx.lineWidth = 1.6;
                     fxCtx.setLineDash([6, 4]);
-                    fxCtx.beginPath();
-                    fxCtx.arc(mon.pixelX, mon.pixelY, vRad, 0, Math.PI * 2);
-                    fxCtx.stroke();
+                    strokeCircle2D(fxCtx, mon.pixelX, mon.pixelY, vRad);
                     fxCtx.restore();
                 }
                 if (!mon.isBoss && hasAffix('bulwark_aura') && typeof MonsterSysFx.isBulwarkAuraDisrupted === 'function' && !MonsterSysFx.isBulwarkAuraDisrupted(mon)) {
@@ -1275,9 +1267,7 @@
                     fxCtx.strokeStyle = '#D98F3B';
                     fxCtx.lineWidth = 1.6;
                     fxCtx.setLineDash([5, 3]);
-                    fxCtx.beginPath();
-                    fxCtx.arc(mon.pixelX, mon.pixelY, bRad, 0, Math.PI * 2);
-                    fxCtx.stroke();
+                    strokeCircle2D(fxCtx, mon.pixelX, mon.pixelY, bRad);
                     fxCtx.restore();
                 }
                 if (!mon.isBoss && hasAffix('resonance_link') && typeof MonsterSysFx.getResonanceLinkTargets === 'function') {
@@ -1983,9 +1973,7 @@
                 const terrain = map.terrainMap.get(index) || null;
                 if (terrain && terrainsDict[terrain]) {
                     const tCfg = terrainsDict[terrain];
-                    cell.classList.add(`terrain-${terrain}`);
-                    if (tCfg.buildable === false) cell.classList.add('obstacle-cell');
-                    if (tCfg.tooltip) cell.setAttribute('title', tCfg.tooltip);
+                    applyTerrainCellBase(cell, terrain, tCfg);
                     const art = document.createElement('div');
                     art.classList.add('terrain-art');
                     art.setAttribute('aria-hidden', 'true');
@@ -2025,6 +2013,12 @@
         measureBoardMetrics();
     }
 
+    function applyTerrainCellBase(cell, terrain, tCfg) {
+        cell.classList.add(`terrain-${terrain}`);
+        if (tCfg.buildable === false) cell.classList.add('obstacle-cell');
+        if (tCfg.tooltip) cell.setAttribute('title', tCfg.tooltip);
+    }
+
     function refreshCellTerrain(index) {
         const cell = G && G.cellElements ? G.cellElements[index] : null;
         if (!cell) return;
@@ -2037,9 +2031,7 @@
         const terrain = G.map && G.map.terrainMap ? G.map.terrainMap.get(index) : null;
         if (terrain && terrainsDict[terrain]) {
             const tCfg = terrainsDict[terrain];
-            cell.classList.add(`terrain-${terrain}`);
-            if (tCfg.buildable === false) cell.classList.add('obstacle-cell');
-            if (tCfg.tooltip) cell.setAttribute('title', tCfg.tooltip);
+            applyTerrainCellBase(cell, terrain, tCfg);
             if (TERRAIN_SVG_BY_TYPE[terrain]) {
                 const art = document.createElement('div');
                 art.classList.add('terrain-art');

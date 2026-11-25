@@ -14,7 +14,6 @@
     'use strict';
 
     const GameApp = global.GameApp = global.GameApp || {};
-    const CONFIG = GameApp.config || {};
 
     let G = null;
     let currentCategory = 'fusion';
