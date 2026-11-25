@@ -41,7 +41,9 @@
                 <button id="speed-btn" class="hud-ctrl-btn speed-btn num" type="button"
                     title="切換遊戲倍速 [Tab/S]">1x</button>
                 <button id="pause-btn" class="hud-ctrl-btn hud-pause-btn" type="button" disabled
-                    title="暫停或繼續 [Space]">暫停</button>
+                    title="戰術暫停 / 恢復 [Space]">⏸ 暫停</button>
+                <button id="system-menu-btn" class="hud-ctrl-btn hud-menu-btn" type="button" disabled
+                    title="開啟系統選單 [Esc]">☰ 選單</button>
                 <button id="sound-btn" class="hud-ctrl-btn hud-sound-btn" type="button" title="切換音效">音效</button>
                 <button id="quick-ref-btn" class="hud-ctrl-btn hud-ref-btn" type="button" aria-expanded="false"
                     aria-controls="quick-ref-popover" title="元素相剋、地形加成與三元素配方速查">速查</button>
@@ -149,11 +151,8 @@
             </div>
 
             <div id="pause-banner" class="pause-banner hidden" role="status" aria-live="polite">
-                <span class="pause-banner-text">遊戲已暫停 — 點擊繼續或按 [Space] 恢復</span>
-                <div class="pause-banner-actions">
-                    <button id="pause-resume-btn" class="pause-banner-btn pause-resume-btn" type="button">繼續</button>
-                    <button id="pause-menu-btn" class="pause-banner-btn pause-menu-btn" type="button">切換地圖</button>
-                </div>
+                <button id="pause-resume-btn" class="tactical-pause-pill" type="button"
+                    title="點擊恢復戰鬥 [Space]">⏸ 戰術部署中 · 點擊恢復 [Space]</button>
             </div>
         </div>
 
@@ -358,6 +357,16 @@
                     </div>
                 </div>
             </div>
+            <div id="inspector-obstacle" class="inspector-obstacle hidden">
+                <div class="inspector-obstacle-info">
+                    <span id="inspector-obstacle-name" class="inspector-badge">古代巨岩</span>
+                    <span id="inspector-obstacle-desc" class="inspector-obstacle-desc"></span>
+                </div>
+                <div class="inspector-actions">
+                    <button id="inspector-obstacle-clear-btn" class="inspector-btn obstacle-clear-btn num"
+                        type="button">開採岩石 (-45 💰)</button>
+                </div>
+            </div>
         </div>
 
         <!-- 世界樹商會 · 波間抽屜（0 元環時收斂隱藏；解鎖對應元環節點後顯示） -->
@@ -376,9 +385,6 @@
                     <button id="guild-harvest-btn" class="guild-hold-timer-btn guild-harvest-shortcut num" type="button"
                         title="消耗 50 靈露：立即收穫黃金並刷新全場攻擊冷卻（快捷鍵 [E]）">
                         豐收 50💧 [E]
-                    </button>
-                    <button id="guild-hold-timer-btn" class="guild-hold-timer-btn num" type="button">
-                        暫停倒數
                     </button>
                 </div>
             </div>
@@ -561,9 +567,12 @@
                     <span class="skill-sub num">差 30 💧</span>
                 </button>
                 <button id="codex-btn" class="codex-btn" type="button">世界樹圖譜</button>
-                <button id="next-wave-btn" class="wave-btn" type="button" disabled><span
-                        id="next-wave-label">立即開波</span><span id="next-wave-bonus"
-                        class="wave-btn-bonus num hidden"></span></button>
+                <div class="wave-control-pair">
+                    <button id="guild-hold-timer-btn" class="hold-timer-btn num" type="button">暫停倒數</button>
+                    <button id="next-wave-btn" class="wave-btn" type="button" disabled><span
+                            id="next-wave-label">立即開波</span><span id="next-wave-bonus"
+                            class="wave-btn-bonus num hidden"></span></button>
+                </div>
                 <button id="add-gold-btn" class="debug-btn debug-only" type="button">+500 💰</button>
                 <button id="clear-gold-btn" class="debug-btn-danger debug-only" type="button">清空金幣</button>
             </div>
@@ -679,7 +688,29 @@
 
             <div class="modal-actions">
                 <button id="guide-close-btn" class="primary-cta-btn" type="button">返回戰場</button>
+                <button id="guide-replay-tutorial-btn" class="menu-return-btn" type="button">重新開啟新手引導</button>
                 <button id="guide-menu-btn" class="menu-return-btn hidden" type="button">切換地圖 / 返回封面</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系統選單彈窗（由 ☰ 選單 或 Esc 開啟；開啟時暫停並鎖定背景操作） -->
+    <div id="system-menu-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true"
+        aria-labelledby="system-menu-title">
+        <div class="modal-card system-menu-card">
+            <div class="guide-header-bar">
+                <h1 id="system-menu-title" class="codex-title">系統選單</h1>
+                <button id="system-menu-x-btn" class="modal-x-btn" type="button" aria-label="關閉系統選單">×</button>
+            </div>
+            <p id="system-menu-subtitle" class="modal-subtitle">戰局已暫停並鎖定背景操作，請選擇系統功能。</p>
+            <div class="system-menu-actions">
+                <button id="sysmenu-resume-btn" class="primary-cta-btn" type="button">繼續遊戲</button>
+                <button id="sysmenu-restart-btn" class="menu-return-btn" type="button">重新開始本局</button>
+                <button id="sysmenu-mainmenu-btn" class="menu-return-btn" type="button">切換地圖 / 回主大廳</button>
+                <div class="system-menu-utility-row">
+                    <button id="sysmenu-sound-btn" class="hud-ctrl-btn" type="button">音效：開</button>
+                    <button id="sysmenu-lang-btn" class="hud-ctrl-btn" type="button">語言：繁體中文</button>
+                </div>
             </div>
         </div>
     </div>

@@ -1135,7 +1135,10 @@
         }
 
         // 鄰格靈脈陣法（上下左右相鄰不同血脈防禦塔連線 ＋ 拖曳預覽連線）
-        if (G.callbacks.isGameplayActive() && G && G.map && G.map.teleportRift && G.map.teleportRift.from && G.map.teleportRift.to) {
+        const showTacticalOverlays = (G.callbacks && typeof G.callbacks.canPerformTacticalAction === 'function')
+            ? G.callbacks.canPerformTacticalAction()
+            : G.callbacks.isGameplayActive();
+        if (showTacticalOverlays && G && G.map && G.map.teleportRift && G.map.teleportRift.from && G.map.teleportRift.to) {
             const rFrom = getCellCenter(G.map.teleportRift.from.x, G.map.teleportRift.from.y);
             const rTo = getCellCenter(G.map.teleportRift.to.x, G.map.teleportRift.to.y);
             const cx = (rFrom.left + rTo.left) * 0.5;
@@ -1157,7 +1160,7 @@
             fxCtx.restore();
         }
         const AttackSysLey = GameApp.systems && GameApp.systems.towerAttack;
-        if (G.callbacks.isGameplayActive() && Array.isArray(st.board) && AttackSysLey && typeof AttackSysLey.getLeylineNetwork === 'function') {
+        if (showTacticalOverlays && Array.isArray(st.board) && AttackSysLey && typeof AttackSysLey.getLeylineNetwork === 'function') {
             const net = AttackSysLey.getLeylineNetwork();
             const activeEdges = (net && Array.isArray(net.edges)) ? net.edges : [];
             const previewEdges = Array.isArray(st.leylinePreviewEdges) ? st.leylinePreviewEdges : [];
@@ -1183,7 +1186,7 @@
         }
 
         // 唯一 5★ 創世世界樹·原初之核：周圍 8 格友軍金色靈脈連線
-        if (G.callbacks.isGameplayActive() && Array.isArray(st.board) && AttackSysLey && typeof AttackSysLey.getPrimalCoreLinkedNeighbors === 'function') {
+        if (showTacticalOverlays && Array.isArray(st.board) && AttackSysLey && typeof AttackSysLey.getPrimalCoreLinkedNeighbors === 'function') {
             for (let idx = 0; idx < st.board.length; idx++) {
                 const t = st.board[idx];
                 if (!t || t.type !== 'primal_core') continue;
@@ -1209,7 +1212,7 @@
 
         // W5+ 怪物光環與 W6+/W10+ 菁英共振連線／庇護圈／稜鏡護環
         const MonsterSysFx = GameApp.systems && GameApp.systems.monster;
-        if (G.callbacks.isGameplayActive() && Array.isArray(st.monsters) && MonsterSysFx) {
+        if (showTacticalOverlays && Array.isArray(st.monsters) && MonsterSysFx) {
             const stepPx = m.step || 36;
             const stageTraitsDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.WAVE_STAGE_TRAITS) || {};
             const affixDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
@@ -1305,11 +1308,11 @@
             } else {
                 const lineColor = mKind === 'invalid'
                     ? tk.elFire
-                    : (mKind === 'upgrade' ? '#4E9A68' : (mKind === 'transfer' ? '#D97724' : '#88C999'));
+                    : (mKind === 'swap' ? '#67B7D1' : (mKind === 'upgrade' ? '#4E9A68' : (mKind === 'transfer' ? '#D97724' : '#88C999')));
                 const dotColor = mKind === 'upgrade' ? '#A8D5B5' : lineColor;
                 fxCtx.strokeStyle = lineColor;
                 fxCtx.lineWidth = mKind === 'feed' ? 2.0 : 2.6;
-                fxCtx.setLineDash(mKind === 'feed' ? [4, 4] : [6, 4]);
+                fxCtx.setLineDash((mKind === 'feed' || mKind === 'swap') ? [4, 4] : [6, 4]);
                 fxCtx.beginPath();
                 fxCtx.moveTo(pFrom.left, pFrom.top);
                 fxCtx.lineTo(pTo.left, pTo.top);
@@ -1659,7 +1662,8 @@
             cellEl.classList.remove(
                 'drag-over', 'drag-valid-build', 'drag-invalid',
                 'drag-merge-upgrade', 'drag-merge-transfer', 'drag-merge-tri',
-                'drag-merge-feed', 'drag-merge-hover', 'drag-merge-tracked'
+                'drag-merge-feed', 'drag-merge-hover', 'drag-merge-tracked',
+                'drag-swap-target'
             );
             if (typeof cellEl.removeAttribute === 'function') {
                 cellEl.removeAttribute('data-merge-tag');
@@ -1997,6 +2001,9 @@
         if (st.lastRenderedSelected !== null && st.lastRenderedSelected !== st.selectedIndex && cells[st.lastRenderedSelected]) cells[st.lastRenderedSelected].classList.remove('selected');
         if (st.selectedIndex !== null && cells[st.selectedIndex]) cells[st.selectedIndex].classList.add('selected');
         st.lastRenderedSelected = st.selectedIndex;
+        if (st.lastRenderedSelectedObstacle !== null && st.lastRenderedSelectedObstacle !== st.selectedObstacleIndex && cells[st.lastRenderedSelectedObstacle]) cells[st.lastRenderedSelectedObstacle].classList.remove('selected-obstacle');
+        if (st.selectedObstacleIndex !== null && cells[st.selectedObstacleIndex]) cells[st.selectedObstacleIndex].classList.add('selected-obstacle');
+        st.lastRenderedSelectedObstacle = st.selectedObstacleIndex;
         if (st.lastRenderedBuildTarget !== null && st.lastRenderedBuildTarget !== st.buildTargetIndex && cells[st.lastRenderedBuildTarget]) cells[st.lastRenderedBuildTarget].classList.remove('build-target');
         if (st.buildTargetIndex !== null && cells[st.buildTargetIndex]) cells[st.buildTargetIndex].classList.add('build-target');
         st.lastRenderedBuildTarget = st.buildTargetIndex;
@@ -2032,6 +2039,9 @@
             measureBoardMetrics();
         }
         updateRangeIndicator();
+        if (G.callbacks && typeof G.callbacks.syncOnboardingSpotlights === 'function') {
+            G.callbacks.syncOnboardingSpotlights();
+        }
         G.callbacks.updateTowerInspector();
     }
 
@@ -2076,8 +2086,8 @@
         G.state.dragTether = { fromIndex, toIndex, labelText: labelText || '', isValid: Boolean(isValid), mergeKind: resolvedKind };
         const towerTipEl = G.dom.towerTooltipEl || (typeof document !== 'undefined' ? document.getElementById('tower-tooltip') : null);
         if (towerTipEl && labelText && Number.isFinite(toIndex)) {
-            towerTipEl.classList.remove('is-detail-card', 'tooltip-merge-tri', 'tooltip-merge-upgrade', 'tooltip-merge-transfer', 'tooltip-merge-feed');
-            if (isValid && ['tri', 'upgrade', 'transfer', 'feed'].includes(resolvedKind)) {
+            towerTipEl.classList.remove('is-detail-card', 'tooltip-merge-tri', 'tooltip-merge-upgrade', 'tooltip-merge-transfer', 'tooltip-merge-feed', 'tooltip-merge-swap');
+            if (isValid && ['tri', 'upgrade', 'transfer', 'feed', 'swap'].includes(resolvedKind)) {
                 towerTipEl.classList.add(`tooltip-merge-${resolvedKind}`);
             }
             towerTipEl.innerText = labelText;
@@ -2093,8 +2103,9 @@
         if (G.dom && G.dom.towerTooltipEl) {
             G.dom.towerTooltipEl.classList.remove(
                 'tooltip-invalid', 'is-detail-card',
-                'tooltip-merge-tri', 'tooltip-merge-upgrade', 'tooltip-merge-transfer', 'tooltip-merge-feed'
+                'tooltip-merge-tri', 'tooltip-merge-upgrade', 'tooltip-merge-transfer', 'tooltip-merge-feed', 'tooltip-merge-swap'
             );
+            G.dom.towerTooltipEl.classList.add('hidden');
         }
         if (hadTether) updateAndRenderCanvasFX(0);
     }
@@ -2111,7 +2122,7 @@
         }
         towerTipEl.classList.remove(
             'tooltip-invalid',
-            'tooltip-merge-tri', 'tooltip-merge-upgrade', 'tooltip-merge-transfer', 'tooltip-merge-feed'
+            'tooltip-merge-tri', 'tooltip-merge-upgrade', 'tooltip-merge-transfer', 'tooltip-merge-feed', 'tooltip-merge-swap'
         );
         const isDraggingNow = GameApp.systems && GameApp.systems.drag && GameApp.systems.drag.isDragging();
         if (st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY'

@@ -34,6 +34,14 @@
         return Boolean(activeDrag && activeDrag.isDragging);
     }
 
+    function canTacticalAct() {
+        if (!G || !G.callbacks) return false;
+        if (typeof G.callbacks.canPerformTacticalAction === 'function') {
+            return G.callbacks.canPerformTacticalAction();
+        }
+        return Boolean(G.callbacks.isGameplayActive && G.callbacks.isGameplayActive());
+    }
+
     function getActiveDrag() {
         return activeDrag;
     }
@@ -134,8 +142,8 @@
             return `${head}：${parts.join(' · ')}`;
         }
         return isEn
-            ? `Moving ${tCfg.name} ${stars}: Drop on empty tile or merge with a compatible tower.`
-            : `移動【${tCfg.name} ${stars}】：放至空地移位，或拖向相容防禦塔融合。`;
+            ? `Moving ${tCfg.name} ${stars}: Drop on tile to move, or on another tower to merge/swap.`
+            : `移動【${tCfg.name} ${stars}】：放至空地移位，或拖向他塔融合／互換位置。`;
     }
 
     /**
@@ -212,28 +220,136 @@
         return true;
     }
 
+    function formatBoardHoverPreviewLabel(fromTower, toTower, fusion, mergeKind, trackedId, isEn) {
+        if (!fusion) return '';
+        const dict = getTowersDict();
+        if (mergeKind === 'feed') {
+            const uVal = fusion.feedU || 1;
+            let txt = isEn ? `Feed Charge +${uVal}U` : `餵養充能 +${uVal}U`;
+            if (trackedId && isFusionMatchingTrackedRecipe(fusion, trackedId)) txt = `📌 ${txt}`;
+            return txt;
+        }
+        let label = '';
+        if (fusion.mode === 'transfer_t1') {
+            const fromCfg = dict[fromTower.type] || {};
+            const toCfg = dict[toTower.type] || {};
+            const resCfg = dict[fusion.type] || {};
+            const resName = resCfg.shortName || resCfg.name || fusion.type;
+            label = `${fromCfg.icon || ''}+${toCfg.icon || ''} ➔ ${resName} 1★`;
+        } else {
+            label = fusion.previewLabel || (isEn ? 'Can Evolve' : '可融合進化');
+        }
+        if (trackedId && isFusionMatchingTrackedRecipe(fusion, trackedId)) {
+            label = `📌 ${label}`;
+        }
+        return label;
+    }
+
     /**
-     * 判定棋盤現有防禦塔拖拉至目標格是否合法（合法移位或合法同星合成）
+     * 嚴格依優先序評估棋盤拖曳意圖：
+     *   1. 優先級 1：進化 / 升星 / 轉職 / 分岔 / 三元融合
+     *   2. 優先級 2：3★ / 4★ 餵養充能 (Feeding)
+     *   3. 優先級 3：非合成雙塔互換位置 (Swap)
      */
-    function isBoardDropValidAt(sourceIndex, targetIndex) {
-        if (targetIndex === null || targetIndex === undefined || sourceIndex === targetIndex || !G || !G.state) return false;
+    function evaluateBoardDropIntent(sourceIndex, targetIndex) {
+        const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+        if (targetIndex === null || targetIndex === undefined || sourceIndex === targetIndex || !G || !G.state) {
+            return { valid: false, kind: 'invalid', mergeKind: 'invalid', label: '' };
+        }
         const st = G.state;
         const fromTower = st.board[sourceIndex];
-        if (!fromTower) return false;
+        if (!fromTower) {
+            return { valid: false, kind: 'invalid', mergeKind: 'invalid', label: '' };
+        }
 
         const TerrainSys = GameApp.systems && GameApp.systems.terrain;
         const canBuild = TerrainSys ? TerrainSys.canBuildAt(targetIndex) : !G.map.pathCellIndices.has(targetIndex);
-        if (!canBuild) return false;
-
-        const toTower = st.board[targetIndex];
-        if (toTower === null) {
-            const EconSys = GameApp.systems && GameApp.systems.economy;
-            const freeMove = G.callbacks.isRelocationFree();
-            return EconSys ? EconSys.canAffordCombatMove(freeMove) : (freeMove || st.currentGold >= 5);
+        if (!canBuild) {
+            return { valid: false, kind: 'terrain_blocked', mergeKind: 'invalid', label: '' };
         }
 
+        const EconSys = GameApp.systems && GameApp.systems.economy;
+        const freeMove = G.callbacks.isRelocationFree();
+        const moveCost = EconSys && typeof EconSys.getCombatMoveCost === 'function' ? EconSys.getCombatMoveCost() : 5;
+        const toTower = st.board[targetIndex];
+
+        if (toTower === null) {
+            if (!freeMove) {
+                if ((fromTower.repositionCooldownMs || 0) > 0) {
+                    return { valid: false, kind: 'rooted', mergeKind: 'invalid', label: isEn ? 'Rooted (CD)' : '紮根冷卻中' };
+                }
+                const canPay = EconSys ? EconSys.canAffordCombatMove(false) : (st.currentGold >= moveCost);
+                if (!canPay) {
+                    return {
+                        valid: false,
+                        kind: 'no_gold',
+                        mergeKind: 'invalid',
+                        label: isEn ? `Need ${moveCost} 💰` : `金幣不足 (-${moveCost} 💰)`
+                    };
+                }
+            }
+            return { valid: true, kind: 'move', mergeKind: '', label: '' };
+        }
+
+        // 優先級 1 & 2：先交由 EvolutionSystem 判定融合／轉職／升星／餵養充能
         const EvoSys = GameApp.systems && GameApp.systems.evolution;
-        return EvoSys ? EvoSys.canCombineTowers(fromTower, toTower) : false;
+        const fusion = EvoSys && typeof EvoSys.getFusionResult === 'function'
+            ? EvoSys.getFusionResult(fromTower, toTower)
+            : null;
+        if (fusion) {
+            const mergeKind = classifyDragMergeKind(fusion);
+            const CodexSys = GameApp.systems && GameApp.systems.codex;
+            const trackedId = (CodexSys && typeof CodexSys.getTrackedRecipeId === 'function') ? CodexSys.getTrackedRecipeId() : null;
+            const label = formatBoardHoverPreviewLabel(fromTower, toTower, fusion, mergeKind, trackedId, isEn);
+            return {
+                valid: true,
+                kind: mergeKind === 'feed' ? 'feed' : 'merge',
+                mergeKind,
+                fusion,
+                label
+            };
+        }
+
+        // 優先級 3（兜底）：不可合成也不可餵養 -> 雙塔互換位置 (Swap)
+        if (!freeMove) {
+            if ((fromTower.repositionCooldownMs || 0) > 0 || (toTower.repositionCooldownMs || 0) > 0) {
+                return {
+                    valid: false,
+                    kind: 'rooted',
+                    mergeKind: 'invalid',
+                    label: isEn ? 'Rooted (Cooldown)' : '紮根冷卻中'
+                };
+            }
+            const canPay = EconSys ? EconSys.canAffordCombatMove(false) : (st.currentGold >= moveCost);
+            if (!canPay) {
+                return {
+                    valid: false,
+                    kind: 'no_gold',
+                    mergeKind: 'invalid',
+                    label: isEn ? `Swap (-${moveCost} 💰)` : `互換位置 (-${moveCost} 💰 金幣不足)`
+                };
+            }
+            return {
+                valid: true,
+                kind: 'swap',
+                mergeKind: 'swap',
+                label: isEn ? `Swap (-${moveCost} 💰)` : `互換位置 (-${moveCost} 💰)`
+            };
+        }
+
+        return {
+            valid: true,
+            kind: 'swap',
+            mergeKind: 'swap',
+            label: isEn ? 'Swap Positions' : '互換位置'
+        };
+    }
+
+    /**
+     * 判定棋盤現有防禦塔拖拉至目標格是否合法（合法移位、合成／餵養或雙塔互換）
+     */
+    function isBoardDropValidAt(sourceIndex, targetIndex) {
+        return evaluateBoardDropIntent(sourceIndex, targetIndex).valid;
     }
 
     /**
@@ -346,39 +462,40 @@
             if (cellIndex !== null && G.cellElements[cellIndex] && cellIndex !== activeDrag.sourceIndex) {
                 const cellEl = G.cellElements[cellIndex];
                 const dstTower = G.state.board[cellIndex];
-                const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
                 G.state.leylinePreviewEdges = null;
+                const intent = evaluateBoardDropIntent(activeDrag.sourceIndex, cellIndex);
 
                 if (dstTower) {
-                    const fusion = EvoSys && typeof EvoSys.getFusionResult === 'function' ? EvoSys.getFusionResult(srcTower, dstTower) : null;
-                    if (fusion) {
-                        const mergeKind = classifyDragMergeKind(fusion);
-                        cellEl.classList.add(`drag-merge-${mergeKind}`, 'drag-merge-hover');
+                    if (intent.kind === 'merge' || intent.kind === 'feed') {
+                        cellEl.classList.add(`drag-merge-${intent.mergeKind}`, 'drag-merge-hover');
                         if (typeof Renderer.showDragEvolutionPreview === 'function') {
-                            let previewText = fusion.previewLabel || (isEn ? 'Can Evolve' : '可融合進化');
-                            if (trackedId && isFusionMatchingTrackedRecipe(fusion, trackedId)) {
-                                previewText = `📌 ${previewText}`;
-                            }
-                            Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, previewText, true, mergeKind);
+                            Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, intent.label, true, intent.mergeKind);
+                        }
+                    } else if (intent.kind === 'swap') {
+                        cellEl.classList.add('drag-swap-target', 'drag-over');
+                        if (typeof Renderer.showDragEvolutionPreview === 'function') {
+                            Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, intent.label, true, 'swap');
                         }
                     } else {
                         cellEl.classList.add('drag-invalid');
-                        if (typeof Renderer.showDragEvolutionPreview === 'function') {
-                            const reason = EvoSys && typeof EvoSys.getIncompatibilityReason === 'function'
-                                ? EvoSys.getIncompatibilityReason(srcTower, dstTower)
-                                : (isEn ? 'Incompatible lineage' : '血脈不相容');
-                            Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, `⚠️ ${reason}`, false, 'invalid');
+                        if (typeof Renderer.showDragEvolutionPreview === 'function' && intent.label) {
+                            Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, intent.label, false, 'invalid');
+                        } else if (typeof Renderer.clearDragEvolutionPreview === 'function') {
+                            Renderer.clearDragEvolutionPreview();
                         }
                     }
                     const coords = indexToCoords(cellIndex);
                     const center = Renderer.getCellCenter(coords.x, coords.y);
-                    const radiusPx = AttackSys ? AttackSys.getTowerRangePx(srcTower, fusion ? cellIndex : activeDrag.sourceIndex) : (2.0 * G.boardMetrics.step);
+                    const willMoveToDest = intent.kind === 'merge' || intent.kind === 'swap';
+                    const radiusPx = AttackSys ? AttackSys.getTowerRangePx(srcTower, willMoveToDest ? cellIndex : activeDrag.sourceIndex) : (2.0 * G.boardMetrics.step);
                     Renderer.showDragRangePreview(center.left, center.top, radiusPx, srcTower.type);
                 } else {
-                    const valid = isBoardDropValidAt(activeDrag.sourceIndex, cellIndex);
+                    const valid = intent.valid;
                     cellEl.classList.add(valid ? 'drag-valid-build' : 'drag-invalid');
                     if (valid) cellEl.classList.add('drag-over');
-                    if (typeof Renderer.clearDragEvolutionPreview === 'function') {
+                    if (!valid && intent.label && typeof Renderer.showDragEvolutionPreview === 'function') {
+                        Renderer.showDragEvolutionPreview(activeDrag.sourceIndex, cellIndex, intent.label, false, 'invalid');
+                    } else if (typeof Renderer.clearDragEvolutionPreview === 'function') {
                         Renderer.clearDragEvolutionPreview();
                     }
                     const coords = indexToCoords(cellIndex);
@@ -403,7 +520,7 @@
      * 啟動商店卡片拖拉指定召喚（dragSource: 'shop'）
      */
     function startShopDrag(towerType, btnEl, clientX, clientY, pointerId = null) {
-        if (!G || !G.callbacks.isGameplayActive()) return false;
+        if (!G || !canTacticalAct()) return false;
         const towersDict = getTowersDict();
         const tCfg = towersDict[towerType];
         if (!tCfg) return false;
@@ -495,7 +612,7 @@
      * 啟動棋盤防禦塔拖拉移位或合成（dragSource: 'board'）
      */
     function startBoardDrag(sourceIndex, towerEl, towerObj, clientX, clientY, pointerId = null) {
-        if (!G || !G.callbacks.isGameplayActive() || !towerObj) return false;
+        if (!G || !canTacticalAct() || !towerObj) return false;
         if (GameApp.backend && typeof GameApp.backend.recordPlayerAction === 'function') {
             GameApp.backend.recordPlayerAction();
         }
@@ -525,10 +642,7 @@
 
     function startFruitDrag(btnEl, clientX, clientY, pointerId = null) {
         if (!G || !G.state || (G.state.fusionFruitCount || 0) <= 0) return false;
-        const canAct = G.callbacks && typeof G.callbacks.isMatchPhaseActive === 'function'
-            ? G.callbacks.isMatchPhaseActive()
-            : !G.state.isGameOver;
-        if (!canAct) return false;
+        if (!canTacticalAct()) return false;
         cancelActiveDrag({ silent: true, resetTimestamps: true });
         activeDrag = {
             dragSource: 'fruit',

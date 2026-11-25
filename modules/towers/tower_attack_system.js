@@ -412,6 +412,10 @@
         return Math.max(floorMs, Math.round(baseInterval / clampedSpeed));
     }
 
+    function isCombatPhaseState(st) {
+        return Boolean(st && (st.waveState === 'SPAWNING' || st.waveState === 'CLEARING'));
+    }
+
     function createTowerObj(type, tier, investedGold, initialAccMs = null, options = {}) {
         const st = G.state;
         const td = getTowersData();
@@ -449,7 +453,11 @@
             focusTargetId: null,
             focusStacks: 0,
             isCrowned: Boolean(options.isCrowned || actualTier >= 5 || cfg.isScion),
-            stunnedMs: Number.isFinite(options.stunnedMs) ? options.stunnedMs : 0
+            stunnedMs: Number.isFinite(options.stunnedMs) ? options.stunnedMs : 0,
+            repositionCooldownMs: Number.isFinite(options.repositionCooldownMs) ? Math.max(0, options.repositionCooldownMs) : 0,
+            wakeupDelayMs: Number.isFinite(options.wakeupDelayMs)
+                ? Math.max(0, options.wakeupDelayMs)
+                : (isCombatPhaseState(st) ? 350 : 0)
         };
     }
 
@@ -2591,6 +2599,15 @@
             const towerObj = st.board[idx];
             if (towerObj === null) continue;
 
+            // 鎖 2：戰時移位／互換後 1.5s 紮根冷卻遞減（僅於非暫停的戰鬥時間推進）
+            if (isCombatPhaseState(st) && (towerObj.repositionCooldownMs || 0) > 0) {
+                towerObj.repositionCooldownMs = Math.max(0, towerObj.repositionCooldownMs - dtMs);
+            }
+            // 鎖 1：戰時新建或合成防禦塔 350ms 甦醒前搖倒數
+            if ((towerObj.wakeupDelayMs || 0) > 0) {
+                towerObj.wakeupDelayMs = Math.max(0, towerObj.wakeupDelayMs - dtMs);
+            }
+
             // 自爆或 Boss EMP 癱瘓倒數與外觀切換
             if ((towerObj.stunnedMs || 0) > 0 || towerObj._hadStunClass) {
                 towerObj.stunnedMs = Math.max(0, (towerObj.stunnedMs || 0) - dtMs);
@@ -2608,7 +2625,7 @@
             if (!Number.isFinite(towerObj.accMs)) towerObj.accMs = 0;
             const intervalMs = getTowerAttackInterval(towerObj, idx);
             towerObj.accMs = towerObj.accMs + dtMs;
-            if (towerObj.accMs >= intervalMs && st.monsters.length > 0 && performTowerAttack(idx, towerObj)) {
+            if ((towerObj.wakeupDelayMs || 0) <= 0 && towerObj.accMs >= intervalMs && st.monsters.length > 0 && performTowerAttack(idx, towerObj)) {
                 const ccCombat = getTowersData().COMBAT_CONSTANTS || {};
                 const floorMsCombat = Number.isFinite(ccCombat.ATTACK_COOLDOWN_FLOOR_MS) ? ccCombat.ATTACK_COOLDOWN_FLOOR_MS : 120;
                 let nextAcc = Math.min(intervalMs, Math.max(0, towerObj.accMs - intervalMs));

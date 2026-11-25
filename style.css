@@ -928,6 +928,19 @@ summary:focus-visible,
     background-color: var(--bg-surface);
     overflow: hidden;
     touch-action: manipulation;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+#board-stage.is-paused {
+    border-color: var(--accent-cta);
+    animation: tacticalPauseGlow 2.2s ease-in-out infinite;
+}
+@keyframes tacticalPauseGlow {
+    0%, 100% {
+        box-shadow: 0 0 0 1px rgba(217, 119, 36, 0.55), 0 0 12px rgba(217, 119, 36, 0.22);
+    }
+    50% {
+        box-shadow: 0 0 0 2px rgba(217, 119, 36, 0.88), 0 0 20px rgba(217, 119, 36, 0.42);
+    }
 }
 
 .terrain-tooltip {
@@ -1027,6 +1040,11 @@ summary:focus-visible,
     background-color: #1F2A24;
     color: #D2F0DA;
 }
+.tower-tooltip.tooltip-merge-swap {
+    border-color: #67B7D1;
+    background-color: #1F2D33;
+    color: #E1F3FA;
+}
 
 /* 新手首局不擋路情境提示（pointer-events 穿透棋盤，僅略過按鈕可點） */
 .onboarding-toast {
@@ -1112,63 +1130,71 @@ summary:focus-visible,
     color: var(--text-primary);
 }
 
-/* 輕量級暫停提示條：固定於頂部 HUD 下方，完全不遮擋下方 15x10 戰場 */
+/* 戰術暫停頂部精簡浮動膠囊（不遮擋戰場與預告列，不蓋黑幕） */
 .pause-banner {
     position: absolute;
-    inset: 0;
-    z-index: 35;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 45;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 4px 12px;
-    border-radius: 8px;
-    background-color: #362B1D;
-    border: 1px solid var(--accent-cta);
+    justify-content: center;
+    pointer-events: none;
 }
 
 .pause-banner.hidden { display: none; }
 
-.pause-banner-text {
-    font-size: 14px;
-    font-weight: 700;
+.tactical-pause-pill {
+    pointer-events: auto;
+    padding: 3px 14px;
+    min-height: 24px;
+    border-radius: 999px;
+    background-color: #362B1D;
+    border: 1px solid var(--accent-cta);
     color: var(--el-lightning);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-}
-
-.pause-banner-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
-.pause-banner-btn {
-    padding: 4px 12px;
-    min-height: 28px;
-    border-radius: 4px;
     font-size: 12px;
     font-weight: 700;
-    cursor: pointer;
+    line-height: 1.2;
     white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(10, 14, 12, 0.78);
     transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
 }
-.pause-resume-btn {
-    background-color: var(--accent-cta);
-    border: 1px solid var(--accent-cta);
-    color: #1B211E;
+.tactical-pause-pill:hover {
+    background-color: #463623;
+    border-color: var(--el-lightning);
 }
-.pause-resume-btn:hover { background-color: #E28533; }
-.pause-menu-btn {
-    background-color: var(--bg-grid-elevated);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
+.tactical-pause-pill:active {
+    transform: scale(0.98);
 }
-.pause-menu-btn:hover { background-color: #38443D; border-color: var(--accent-cta); }
-.pause-banner-btn:active { transform: scale(0.98); }
+
+/* 系統選單彈窗 */
+.system-menu-card {
+    max-width: 360px;
+}
+.system-menu-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+.system-menu-actions .primary-cta-btn,
+.system-menu-actions .menu-return-btn {
+    width: 100%;
+    min-height: 38px;
+    text-align: center;
+}
+.system-menu-utility-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 2px;
+}
+.system-menu-utility-row .hud-ctrl-btn {
+    width: 100%;
+    min-height: 36px;
+}
 
 #board-stage.tree-hit-shake { animation: treeHitShake 150ms ease-out; }
 @keyframes treeHitShake {
@@ -1222,6 +1248,57 @@ body.map-frost .cell:nth-child(even) { background-color: #233138; }
 .cell.selected {
     border: 2px solid var(--accent-cta);
     background-color: #323D37;
+}
+.cell.selected-obstacle {
+    border: 2px solid var(--accent-cta) !important;
+    outline: 2px solid var(--el-lightning);
+    outline-offset: -3px;
+    box-shadow: inset 0 0 10px rgba(217, 119, 36, 0.45);
+}
+
+/* 新手教學無阻斷聚光燈高亮（嚴格 pointer-events: none 絕不攔截點擊與拖曳） */
+#element-spawner-container {
+    position: relative;
+}
+#element-spawner-container.onboarding-spotlight-ring::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 8px;
+    border: 2px solid var(--accent-cta);
+    box-shadow: 0 0 0 2px rgba(217, 119, 36, 0.28);
+    pointer-events: none;
+    z-index: 20;
+    animation: onboardingPulseRing 1.4s ease-in-out infinite;
+}
+.cell.onboarding-spotlight-cell::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 3px;
+    border: 1.5px solid #63C284;
+    pointer-events: none;
+    z-index: 12;
+    animation: onboardingCellPulse 1.5s ease-in-out infinite;
+}
+.cell.onboarding-spotlight-tower::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 6px;
+    border: 2px solid var(--el-lightning);
+    box-shadow: 0 0 10px rgba(217, 119, 36, 0.55);
+    pointer-events: none;
+    z-index: 18;
+    animation: onboardingPulseRing 1.2s ease-in-out infinite;
+}
+@keyframes onboardingPulseRing {
+    0%, 100% { opacity: 0.72; }
+    50% { opacity: 1; }
+}
+@keyframes onboardingCellPulse {
+    0%, 100% { border-color: rgba(99, 194, 132, 0.45); }
+    50% { border-color: rgba(217, 119, 36, 0.9); }
 }
 
 .cell.build-target {
@@ -1357,6 +1434,11 @@ body.map-frost .cell:nth-child(even) { background-color: #233138; }
 .cell.drag-merge-feed {
     background-color: #213429 !important;
     border: 2px dashed #88C999 !important;
+}
+.cell.drag-swap-target {
+    background-color: #20343D !important;
+    border: 2px dashed #67B7D1 !important;
+    box-shadow: inset 0 0 8px rgba(103, 183, 209, 0.3);
 }
 .cell.drag-merge-tracked {
     outline: 2px solid #F4F1EA;
@@ -2180,9 +2262,55 @@ body.map-frost .cell.path-cell {
 .inspector-btn:active:not(:disabled) { transform: scale(0.98); }
 .inspector-btn:disabled { opacity: 0.48; filter: grayscale(0.6); cursor: not-allowed; }
 .inspector-btn.sell-btn { border-color: var(--accent-cta); color: var(--el-lightning); }
+.inspector-btn.sell-btn.is-confirm-danger {
+    background-color: #7C2420;
+    border-color: #E05A4F;
+    color: #FFF5F4;
+}
+.inspector-btn.sell-btn.is-confirm-danger:hover:not(:disabled) {
+    background-color: #932B26;
+    border-color: #FF7A70;
+}
 .inspector-btn.infuse-btn { border-color: var(--accent-cta); background-color: #3A2A1C; color: var(--text-primary); }
 .inspector-btn.infuse-btn:hover:not(:disabled) { background-color: #4D3520; border-color: var(--el-lightning); }
+.inspector-btn.obstacle-clear-btn:not(:disabled) {
+    background-color: var(--accent-cta);
+    border-color: var(--accent-cta);
+    color: #1B211E;
+    font-weight: 700;
+}
+.inspector-btn.obstacle-clear-btn:not(:disabled):hover {
+    background-color: #E68736;
+}
+.inspector-btn.obstacle-clear-btn.insufficient-gold-btn {
+    border-color: var(--el-fire);
+    color: #EE9B8F;
+}
 .inspector-btn.hidden { display: none; }
+
+.inspector-obstacle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+.inspector-obstacle.hidden { display: none; }
+.inspector-obstacle-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.inspector-obstacle-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 /* ==================== 5B. 世界樹「聚寶根鬚（Lv.0 → Lv.3）」互動經營面板 ==================== */
 .tree-root-panel {
@@ -3262,8 +3390,33 @@ body.map-frost .cell.path-cell {
 }
 .skill-harvest:not(:disabled) .skill-sub { color: #F7DC88; }
 
-.action-controls .wave-btn {
+.action-controls .wave-control-pair {
     grid-column: span 2;
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    min-width: 0;
+    height: 100%;
+}
+.action-controls .hold-timer-btn {
+    flex: 0.85 1 0;
+    min-width: 0;
+    border-color: var(--border-subtle);
+    color: var(--text-secondary);
+}
+.action-controls .hold-timer-btn.is-holding {
+    background-color: #362B1D;
+    border-color: var(--accent-cta) !important;
+    color: var(--el-lightning);
+}
+.action-controls .wave-btn {
+    flex: 1.35 1 0;
+    min-width: 0;
+}
+.skill-btn.skill-pause-locked {
+    opacity: 0.54;
+    filter: grayscale(0.55);
+    cursor: pointer;
 }
 
 .skill-btn.skill-active {
@@ -5267,7 +5420,10 @@ body.map-frost .cell.path-cell {
     .spawn-card-role .role-short { display: inline; }
     .action-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; gap: 6px; height: auto; }
     .action-controls button { min-height: 42px; padding: 5px 6px; font-size: 12px; }
+    .action-controls .wave-control-pair { grid-column: span 2; gap: 6px; height: auto; }
     .action-controls .wave-btn { min-height: 44px; }
+    .inspector-obstacle { flex-direction: column; align-items: stretch; gap: 4px; }
+    .inspector-obstacle-desc { white-space: normal; }
     #msg-text { margin: 6px 0 4px 0; font-size: 11.5px; min-height: 18px; }
 
     .modal-overlay { padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
@@ -5791,16 +5947,16 @@ html[lang="en"] .inspector-btn { font-size: 11px; }
         padding: 4px 7px;
         font-size: 11px;
     }
-    .wave-forecast-bar.hidden-by-pause { display: none; }
     .pause-banner {
         position: static;
-        flex-wrap: wrap;
-        padding: 6px 8px;
-        gap: 6px;
+        transform: none;
+        margin: 4px auto 0 auto;
+        width: fit-content;
     }
-    .pause-banner-text {
+    .tactical-pause-pill {
         white-space: normal;
-        font-size: 12px;
+        font-size: 11px;
+        padding: 4px 10px;
     }
     .forecast-inline-summary { display: none; }
     .spawn-card-btn {

@@ -45,12 +45,16 @@
         ['inspectorDpsEl', 'inspector-dps'], ['inspectorAoeDpsEl', 'inspector-aoe-dps'], ['inspectorTotalDmgEl', 'inspector-total-dmg'],
         ['inspectorRangeEl', 'inspector-range'], ['inspectorTerrainEl', 'inspector-terrain'], ['inspectorGrowthBadgeEl', 'inspector-growth-badge'],
         ['inspectorInfuseBtn', 'inspector-infuse-btn'], ['inspectorInfuseTextEl', 'inspector-infuse-text'], ['inspectorTargetBtn', 'inspector-target-btn'], ['inspectorSellBtn', 'inspector-sell-btn'],
+        ['inspectorObstacleEl', 'inspector-obstacle'], ['inspectorObstacleNameEl', 'inspector-obstacle-name'], ['inspectorObstacleDescEl', 'inspector-obstacle-desc'], ['inspectorObstacleClearBtn', 'inspector-obstacle-clear-btn'],
         ['evoConfirmOverlayEl', 'evo-confirm-overlay'], ['evoConfirmTitleEl', 'evo-confirm-title'],
         ['evoConfirmOptionsEl', 'evo-confirm-options'], ['evoCancelBtn', 'evo-cancel-btn'],
         ['codexBtn', 'codex-btn'], ['codexOverlayEl', 'codex-overlay'], ['codexCloseBtn', 'codex-close-btn'],
         ['blessingOverlayEl', 'blessing-overlay'], ['blessingWaveSubtitleEl', 'blessing-wave-subtitle'], ['blessingChoicesEl', 'blessing-choices'],
-        ['skillEntangleBtn', 'skill-entangle-btn'], ['skillFrenzyBtn', 'skill-frenzy-btn'], ['skillHarvestBtn', 'skill-harvest-btn'], ['guildHarvestBtn', 'guild-harvest-btn'], ['blessingRerollBtn', 'blessing-reroll-btn'], ['metaTreeBtn', 'meta-tree-btn'], ['metaTreeOverlayEl', 'meta-tree-overlay'], ['metaTreeHonorBadgeEl', 'meta-tree-honor-badge'], ['metaTreeBranchesEl', 'meta-tree-branches-grid'], ['metaTreeResetBtn', 'meta-tree-reset-btn'], ['metaTreeCloseBtn', 'meta-tree-close-btn'], ['pauseBtn', 'pause-btn'], ['soundBtn', 'sound-btn'], ['langBtn', 'lang-btn'], ['langMenuEl', 'lang-menu'], ['startLangBtn', 'start-lang-btn'], ['startLangMenuEl', 'start-lang-menu'],
-        ['pauseBannerEl', 'pause-banner'], ['pauseResumeBtn', 'pause-resume-btn'], ['pauseMenuBtn', 'pause-menu-btn'],
+        ['skillEntangleBtn', 'skill-entangle-btn'], ['skillFrenzyBtn', 'skill-frenzy-btn'], ['skillHarvestBtn', 'skill-harvest-btn'], ['guildHarvestBtn', 'guild-harvest-btn'], ['blessingRerollBtn', 'blessing-reroll-btn'], ['metaTreeBtn', 'meta-tree-btn'], ['metaTreeOverlayEl', 'meta-tree-overlay'], ['metaTreeHonorBadgeEl', 'meta-tree-honor-badge'], ['metaTreeBranchesEl', 'meta-tree-branches-grid'], ['metaTreeResetBtn', 'meta-tree-reset-btn'], ['metaTreeCloseBtn', 'meta-tree-close-btn'], ['pauseBtn', 'pause-btn'], ['systemMenuBtn', 'system-menu-btn'], ['soundBtn', 'sound-btn'], ['langBtn', 'lang-btn'], ['langMenuEl', 'lang-menu'], ['startLangBtn', 'start-lang-btn'], ['startLangMenuEl', 'start-lang-menu'],
+        ['pauseBannerEl', 'pause-banner'], ['pauseResumeBtn', 'pause-resume-btn'],
+        ['systemMenuOverlayEl', 'system-menu-overlay'], ['systemMenuXBtn', 'system-menu-x-btn'],
+        ['sysmenuResumeBtn', 'sysmenu-resume-btn'], ['sysmenuRestartBtn', 'sysmenu-restart-btn'], ['sysmenuMainmenuBtn', 'sysmenu-mainmenu-btn'],
+        ['sysmenuSoundBtn', 'sysmenu-sound-btn'], ['sysmenuLangBtn', 'sysmenu-lang-btn'],
         ['addGoldBtn', 'add-gold-btn'], ['clearGoldBtn', 'clear-gold-btn'], ['nextWaveBtn', 'next-wave-btn'], ['speedBtn', 'speed-btn'],
         ['goldDisplay', 'gold-display'], ['baseHpDisplay', 'base-hp-display'], ['dewDisplay', 'dew-display'], ['dewBarFillEl', 'dew-bar-fill'],
         ['waveDisplay', 'wave-display'], ['wavePhaseTagEl', 'wave-phase-tag'], ['bestWaveDisplay', 'best-wave-display'], ['msgText', 'msg-text'],
@@ -97,7 +101,7 @@
         ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn'], ['gameoverMenuBtn', 'gameover-menu-btn'],
         ['gameoverRatingStatusEl', 'gameover-rating-status'], ['gameoverCopyReportBtn', 'gameover-copy-report-btn'],
         ['gameoverFeedbackToggle', 'gameover-feedback-toggle'], ['gameoverFeedbackBox', 'gameover-feedback-box'],
-        ['helpBtn', 'help-btn'], ['quickRefBtn', 'quick-ref-btn'], ['quickRefPopoverEl', 'quick-ref-popover'], ['contractsDrawerEl', 'contracts-drawer'], ['guideOverlayEl', 'guide-overlay'], ['guideXBtn', 'guide-x-btn'], ['guideCloseBtn', 'guide-close-btn'], ['guideMenuBtn', 'guide-menu-btn'],
+        ['helpBtn', 'help-btn'], ['quickRefBtn', 'quick-ref-btn'], ['quickRefPopoverEl', 'quick-ref-popover'], ['contractsDrawerEl', 'contracts-drawer'], ['guideOverlayEl', 'guide-overlay'], ['guideXBtn', 'guide-x-btn'], ['guideCloseBtn', 'guide-close-btn'], ['guideReplayTutorialBtn', 'guide-replay-tutorial-btn'], ['guideMenuBtn', 'guide-menu-btn'],
         ['terrainTooltipEl', 'terrain-tooltip'], ['towerTooltipEl', 'tower-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
         ['forecastToggleBtn', 'forecast-toggle-btn'], ['forecastBarTitleEl', 'forecast-bar-title'],
         ['forecastWeakChipsEl', 'forecast-weak-chips'],
@@ -395,17 +399,19 @@
             towerUidCounter: 1, totalTeamDamage: 0, totalGoldEarned: 0, fusionCount: 0,
             crownedUsedCount: 0, elapsedPlayMs: 0,
             peakTowerSnapshot: null, lastBreakerName: '',
-            isPaused: false, pausedBeforeCodex: false, pausedBeforeGuide: false, forecastDrawerOpen: false,
+            isPaused: false, pausedBeforeCodex: false, pausedBeforeGuide: false,
+            isSystemMenuOpen: false, pausedBeforeSystemMenu: false, forecastDrawerOpen: false,
             isGameOver: false, isEndlessMode: false, isNewRecordThisRun: false,
             gameSpeed: keepSpeed,
             spawnCounts,
             board: Array(CONFIG.BOARD_SIZE || 150).fill(null), monsters: [], monsterIdCounter: 1,
             groundHazards: [], dragTether: null, pendingEvolution: null, pendingBlessingWave: null,
-            selectedIndex: null, buildTargetIndex: null, pendingSpawnType: null, hoveredIndex: null,
+            selectedIndex: null, selectedObstacleIndex: null, buildTargetIndex: null, pendingSpawnType: null, hoveredIndex: null,
+            pendingSellConfirm: null,
             hoveredMonsterId: null, hoverLockMonster: null, isCursorOnHoveredMonster: false,
             hoverStickUntilPerfMs: 0, hoverKillUntilPerfMs: 0,
             draggedIndex: null, inspectedMonsterId: null,
-            lastRenderedSelected: null, lastRenderedBuildTarget: null, lastRenderedPendingSpawn: null,
+            lastRenderedSelected: null, lastRenderedSelectedObstacle: null, lastRenderedBuildTarget: null, lastRenderedPendingSpawn: null,
             isTouchMode: false, touchDragState: null, lastTouchDragEndTime: 0,
             onboardingActive: false, onboardingStepId: null,
             sessionId: nextSessionId, activeTimers: new Set(), pendingBolts: [], pendingOverchargeShots: [], towerPhaseSeq: 0,
@@ -438,9 +444,11 @@
     function isOverlayVisible(el) { return Boolean(el && !el.classList.contains('hidden')); }
     function isCodexOpen() { return CodexSys ? CodexSys.isCodexOpen() : isOverlayVisible(G.dom.codexOverlayEl); }
     function isGuideOpen() { return isOverlayVisible(G.dom.guideOverlayEl); }
+    function isSystemMenuOpen() { return Boolean((G.state && G.state.isSystemMenuOpen) || isOverlayVisible(G.dom.systemMenuOverlayEl)); }
     function isAnyModalOpen() {
         const dom = G.dom, st = G.state;
         return isOverlayVisible(dom.startOverlayEl)
+            || isSystemMenuOpen()
             || isCodexOpen()
             || isGuideOpen()
             || isOverlayVisible(dom.evoConfirmOverlayEl)
@@ -457,13 +465,62 @@
     }
     function isGameplayActive() {
         const st = G.state;
-        return !st.isGameOver && !st.isPaused && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen() && !isGuideOpen() && !isOverlayVisible(G.dom.evoConfirmOverlayEl) && !st.pendingEvolution;
+        return !st.isGameOver && !st.isPaused && !isSystemMenuOpen() && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen() && !isGuideOpen() && !isOverlayVisible(G.dom.evoConfirmOverlayEl) && !st.pendingEvolution;
     }
     function isMatchPhaseActive() {
         const st = G.state;
-        return !st.isGameOver && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen() && !isGuideOpen();
+        return !st.isGameOver && !isSystemMenuOpen() && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen() && !isGuideOpen();
+    }
+    function canPerformTacticalAction() {
+        const st = G.state;
+        return !st.isGameOver
+            && !isSystemMenuOpen()
+            && st.waveState !== 'WAITING_START'
+            && st.waveState !== 'VICTORY'
+            && st.waveState !== 'BLESSING_SELECT'
+            && !isCodexOpen()
+            && !isGuideOpen()
+            && !isOverlayVisible(G.dom.evoConfirmOverlayEl)
+            && !st.pendingEvolution;
     }
     function isRelocationFree() { return G.state.waveState === 'PREP' || G.state.waveState === 'INTERMISSION'; }
+    function countBoardTowers(st = G.state) {
+        if (!st || !Array.isArray(st.board)) return 0;
+        let cnt = 0;
+        for (let i = 0; i < st.board.length; i++) {
+            if (st.board[i] !== null) cnt++;
+        }
+        return cnt;
+    }
+    function isWave1WaitingFirstTower(st = G.state) {
+        return Boolean(st && st.gameMode !== 'puzzle' && st.waveState === 'PREP' && st.currentWave === 1 && countBoardTowers(st) === 0);
+    }
+    function resetAllTowerRepositionCooldowns() {
+        const board = G.state && G.state.board;
+        if (!Array.isArray(board)) return;
+        for (let i = 0; i < board.length; i++) {
+            if (board[i]) board[i].repositionCooldownMs = 0;
+        }
+    }
+    function clearPendingSellConfirm() {
+        const st = G.state;
+        if (!st || !st.pendingSellConfirm) return;
+        if (st.pendingSellConfirm.timerId) {
+            clearTimeout(st.pendingSellConfirm.timerId);
+        }
+        st.pendingSellConfirm = null;
+    }
+    function syncTacticalBoardVisuals(dirtyIndices = []) {
+        if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') {
+            AttackSys.recalculateLeylines();
+        }
+        Renderer.renderBoard(dirtyIndices);
+        Renderer.updateRangeIndicator();
+        if (typeof Renderer.updateAndRenderCanvasFX === 'function') {
+            Renderer.updateAndRenderCanvasFX(0);
+        }
+        updateHUD();
+    }
 
     function scheduleGameTimeout(callback, delayMs) {
         const capturedSessionId = G.state.sessionId;
@@ -478,6 +535,7 @@
 
     function clearAllGameTimers() {
         const st = G.state;
+        clearPendingSellConfirm();
         st.activeTimers.forEach(id => clearTimeout(id));
         st.activeTimers.clear();
         if (st.treeHitShakeTimer) { clearTimeout(st.treeHitShakeTimer); st.treeHitShakeTimer = null; }
@@ -1443,16 +1501,48 @@
         const hasTower = st.selectedIndex !== null && st.board[st.selectedIndex] !== null && !st.isGameOver && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT';
         if (!hasTower) {
             dom.inspectorActiveEl.classList.add('hidden');
-            dom.inspectorEmptyEl.classList.remove('hidden');
             if (dom.inspectorAwakenBtn) dom.inspectorAwakenBtn.classList.add('hidden');
+            const obsTerrain = st.selectedObstacleIndex !== null ? TerrainSys.getTerrainAt(st.selectedObstacleIndex) : null;
+            const hasObstacle = st.selectedObstacleIndex !== null
+                && (obsTerrain === 'obstacle' || obsTerrain === 'treasure_rock')
+                && !st.isGameOver && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT';
+            if (hasObstacle && dom.inspectorObstacleEl) {
+                dom.inspectorEmptyEl.classList.add('hidden');
+                dom.inspectorObstacleEl.classList.remove('hidden');
+                const isTreasure = obsTerrain === 'treasure_rock';
+                const cost = (TerrainSys && typeof TerrainSys.getObstacleClearCost === 'function')
+                    ? TerrainSys.getObstacleClearCost(st.selectedObstacleIndex)
+                    : 45;
+                if (dom.inspectorObstacleNameEl) {
+                    dom.inspectorObstacleNameEl.innerText = isTreasure
+                        ? L('🪨 藏寶巨石', '🪨 Treasure Boulder')
+                        : L('🪨 古代巨岩', '🪨 Ancient Boulder');
+                }
+                if (dom.inspectorObstacleDescEl) {
+                    dom.inspectorObstacleDescEl.innerText = isTreasure
+                        ? L('開採必定獲得金庫退款、2★ 塔或萬能融合果實！', 'Mine for Gold refund, 2★ tower, or Universal Fruit!')
+                        : L('清除巨岩騰出可建格（岩層下可能蘊含戰術地形）。', 'Clear boulder for build space (may reveal terrain).');
+                }
+                if (dom.inspectorObstacleClearBtn) {
+                    const canClear = canPerformTacticalAction() && st.currentGold >= cost;
+                    dom.inspectorObstacleClearBtn.innerText = L(`開採岩石 (-${cost} 💰)`, `Clear Rock (-${cost} 💰)`);
+                    dom.inspectorObstacleClearBtn.disabled = !canClear;
+                    dom.inspectorObstacleClearBtn.classList.toggle('insufficient-gold-btn', st.currentGold < cost);
+                }
+                return;
+            }
+            if (!hasObstacle) st.selectedObstacleIndex = null;
+            if (dom.inspectorObstacleEl) dom.inspectorObstacleEl.classList.add('hidden');
+            dom.inspectorEmptyEl.classList.remove('hidden');
             const inspectedMonster = st.inspectedMonsterId !== null ? st.monsters.find(m => m.id === st.inspectedMonsterId && m.hp > 0) : null;
             if (inspectedMonster) {
                 dom.inspectorEmptyEl.innerText = formatMonsterInspectText(inspectedMonster);
             } else {
-                dom.inspectorEmptyEl.innerText = L('點選場上防禦塔、古代巨岩 (45 金爆破) 或懸停敵軍檢視情報', 'Select a tower, Boulder (45g clear), or hover a monster');
+                dom.inspectorEmptyEl.innerText = L('點選場上防禦塔、巨岩或懸停敵軍檢視情報', 'Select a tower, boulder, or hover a monster');
             }
             return;
         }
+        if (dom.inspectorObstacleEl) dom.inspectorObstacleEl.classList.add('hidden');
 
         const towerObj = st.board[st.selectedIndex], cfg = getTowersDict()[towerObj.type] || { icon: '✨', name: towerObj.type };
         const stats = AttackSys.getTowerInspectorStats(st.selectedIndex, towerObj), mode = towerObj.targetMode || 'first';
@@ -1548,14 +1638,30 @@
                 } else {
                     labelEl.innerText = L(`灌注 #${nextK} (${cost}💰)`, `Infuse #${nextK} (${cost}💰)`);
                     dom.inspectorInfuseBtn.title = L(`靈脈灌注 #${nextK}：消耗 ${cost} 💰 提升 +${stepPct}% 戰力`, `Vein Infuse #${nextK}: Spend ${cost} 💰 for +${stepPct}% power`);
-                    dom.inspectorInfuseBtn.disabled = !isGameplayActive() || !canAfford;
+                    dom.inspectorInfuseBtn.disabled = !canPerformTacticalAction() || !canAfford;
                 }
             }
         }
         setDomText(dom.inspectorTargetBtn, `${L('索敵：', 'Aim: ')}${targetLabels[mode] || L('最前', 'First')}`);
-        if (dom.inspectorTargetBtn) dom.inspectorTargetBtn.disabled = !isMatchPhaseActive();
-        setDomText(dom.inspectorSellBtn, `${L('出售', 'Sell')} +${EconSys.getTowerSellRefund(towerObj)}💰`);
-        if (dom.inspectorSellBtn) dom.inspectorSellBtn.disabled = !isGameplayActive();
+        if (dom.inspectorTargetBtn) dom.inspectorTargetBtn.disabled = !canPerformTacticalAction();
+        const sellRefund = EconSys.getTowerSellRefund(towerObj);
+        const isSellConfirming = Boolean(
+            (towerObj.tier || 1) >= 3
+            && st.pendingSellConfirm
+            && st.pendingSellConfirm.index === st.selectedIndex
+            && st.pendingSellConfirm.towerUid === towerObj.uid
+            && Date.now() < st.pendingSellConfirm.expiresAt
+        );
+        if (dom.inspectorSellBtn) {
+            dom.inspectorSellBtn.classList.toggle('is-confirm-danger', isSellConfirming);
+            dom.inspectorSellBtn.disabled = !canPerformTacticalAction();
+        }
+        setDomText(
+            dom.inspectorSellBtn,
+            isSellConfirming
+                ? L(`確認出售？ (+${sellRefund} 💰)`, `Confirm? (+${sellRefund} 💰)`)
+                : `${L('出售', 'Sell')} +${sellRefund}💰`
+        );
     }
 
     function updateBossStatusBar() {
@@ -1602,7 +1708,9 @@
                 : (fullDesc || L(`消耗 ${cost} 靈露立即施放`, `Spend ${cost} Dew to cast`)));
         btn.title = tooltipStr;
         btn.setAttribute('aria-label', `${skillName} ${cost} ${L('靈露', 'Dew')} [${hotkey}] · ${tooltipStr}`);
-        btn.disabled = !isGameplayActive() || activeMs > 0 || isCooling || isLowDew;
+        const blockedByPause = Boolean(G.state.isPaused && canPerformTacticalAction());
+        btn.classList.toggle('skill-pause-locked', blockedByPause);
+        btn.disabled = !canPerformTacticalAction() || activeMs > 0 || isCooling || isLowDew;
     }
 
     function updateSkillButtonsUI() {
@@ -1634,14 +1742,17 @@
                 }
                 dom.guildHarvestBtn.title = L('消耗 50 靈露：立即收穫黃金並刷新全場攻擊冷卻（快捷鍵 [E]）', 'Spend 50 Dew: Gain Gold + reset team attack CDs [E]');
                 dom.guildHarvestBtn.setAttribute('aria-label', dom.guildHarvestBtn.title);
-                dom.guildHarvestBtn.disabled = !isGameplayActive() || hCd > 0 || hMissing > 0;
+                dom.guildHarvestBtn.classList.toggle('skill-pause-locked', Boolean(st.isPaused && canPerformTacticalAction()));
+                dom.guildHarvestBtn.disabled = !canPerformTacticalAction() || hCd > 0 || hMissing > 0;
             }
         }
     }
 
     const WAVE_STATE_TEXT = {
         WAITING_START: () => L('等待開始', 'Standby'), BLESSING_SELECT: () => L('賜福選擇', 'Blessing'),
-        PREP: st => st.guildTimerHold ? L('備戰暫護', 'Prep Hold') : `${L('備戰', 'Prep')} ${Math.max(1, Math.ceil(st.waveTimerMs / 1000))}s`,
+        PREP: st => isWave1WaitingFirstTower(st)
+            ? L('待放首塔', 'Place 1st Tower')
+            : (st.guildTimerHold ? L('備戰暫護', 'Prep Hold') : `${L('備戰', 'Prep')} ${Math.max(1, Math.ceil(st.waveTimerMs / 1000))}s`),
         INTERMISSION: st => st.guildTimerHold ? L('波間整備', 'Guild Hold') : `${L('下波', 'Next')} ${Math.max(1, Math.ceil(st.waveTimerMs / 1000))}s`,
         SPAWNING: (_, b) => (b ? L('魔王決戰', 'Boss Wave') : L('出怪中', 'Spawning')), CLEARING: (_, b) => (b ? L('魔王決戰', 'Boss Wave') : L('清場中', 'Clearing')),
         VICTORY: () => L('通關勝利', 'Victory')
@@ -1649,21 +1760,58 @@
 
     function syncPauseUI() {
         const dom = G.dom, st = G.state;
-        const canPause = isMatchPhaseActive();
-        const showPaused = Boolean(st.isPaused && canPause);
+        const canMatch = !st.isGameOver && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen() && !isGuideOpen();
+        const showTacticalPause = Boolean(st.isPaused && canMatch && !isSystemMenuOpen());
         if (dom.pauseBtn) {
-            dom.pauseBtn.disabled = !canPause;
-            dom.pauseBtn.classList.toggle('is-paused', showPaused);
-            dom.pauseBtn.innerText = showPaused ? L('恢復', 'Unpause') : L('暫停', 'Pause');
+            dom.pauseBtn.disabled = !canMatch || isSystemMenuOpen();
+            dom.pauseBtn.classList.toggle('is-paused', showTacticalPause);
+            dom.pauseBtn.innerText = showTacticalPause ? L('▶ 繼續', '▶ Resume') : L('⏸ 暫停', '⏸ Pause');
+            dom.pauseBtn.title = showTacticalPause
+                ? L('恢復戰鬥運行 [Space]', 'Resume combat [Space]')
+                : L('戰術暫停（可佈陣與調整）[Space]', 'Tactical Pause [Space]');
+        }
+        if (dom.systemMenuBtn) {
+            dom.systemMenuBtn.disabled = !canMatch;
+            dom.systemMenuBtn.innerText = L('☰ 選單', '☰ Menu');
         }
         if (dom.pauseBannerEl) {
-            dom.pauseBannerEl.classList.toggle('hidden', !showPaused);
+            dom.pauseBannerEl.classList.toggle('hidden', !showTacticalPause);
+        }
+        if (dom.pauseResumeBtn) {
+            dom.pauseResumeBtn.innerText = L('⏸ 戰術部署中 · 點擊恢復 [Space]', '⏸ Tactical Pause · Click to Resume [Space]');
         }
         if (dom.boardStageEl) {
-            dom.boardStageEl.classList.toggle('is-paused', showPaused);
+            dom.boardStageEl.classList.toggle('is-paused', showTacticalPause);
         }
         if (dom.waveForecastBarEl) {
-            dom.waveForecastBarEl.classList.toggle('hidden-by-pause', showPaused);
+            dom.waveForecastBarEl.classList.remove('hidden-by-pause');
+        }
+    }
+
+    function updateHoldTimerButtonUI() {
+        const dom = G.dom, st = G.state;
+        if (!dom.guildHoldTimerBtn) return;
+        const canAct = canPerformTacticalAction();
+        const isPrepOrInter = canAct && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION');
+        const holding = Boolean(st.guildTimerHold && isPrepOrInter);
+        dom.guildHoldTimerBtn.classList.toggle('is-holding', holding || (!isPrepOrInter && Boolean(st.guildAutoHoldTimer)));
+        if (isPrepOrInter) {
+            dom.guildHoldTimerBtn.innerText = holding
+                ? L('倒數：暫停', 'Timer: Held')
+                : L('暫停倒數', 'Hold Timer');
+            dom.guildHoldTimerBtn.title = holding
+                ? L('波間倒數已暫停（點擊恢復倒數）', 'Prep/intermission countdown held (click to resume)')
+                : L('暫停備戰／波間倒數計時', 'Hold prep / intermission countdown');
+            dom.guildHoldTimerBtn.disabled = false;
+        } else {
+            dom.guildHoldTimerBtn.innerText = st.guildAutoHoldTimer
+                ? L('自動暫停：開', 'Auto-Hold: ON')
+                : L('自動暫停：關', 'Auto-Hold: OFF');
+            dom.guildHoldTimerBtn.title = L(
+                '切換下一次進入波間整備時是否自動暫停倒數',
+                'Toggle auto-holding intermission countdown between waves'
+            );
+            dom.guildHoldTimerBtn.disabled = !canAct;
         }
     }
 
@@ -1673,10 +1821,11 @@
         const isBoss = WaveSys.isBossWaveNumber(st.currentWave);
         dom.wavePhaseTagEl.classList.toggle('boss-wave', !st.isPaused && isBoss && (st.waveState === 'SPAWNING' || st.waveState === 'CLEARING'));
         dom.wavePhaseTagEl.classList.toggle('paused', st.isPaused);
-        dom.wavePhaseTagEl.innerText = st.isPaused ? L('已暫停', 'Paused') : ((WAVE_STATE_TEXT[st.waveState] && WAVE_STATE_TEXT[st.waveState](st, isBoss)) || L('已結束', 'Ended'));
+        dom.wavePhaseTagEl.innerText = st.isPaused ? L('戰術暫停', 'Tactical Pause') : ((WAVE_STATE_TEXT[st.waveState] && WAVE_STATE_TEXT[st.waveState](st, isBoss)) || L('已結束', 'Ended'));
         syncPauseUI();
+        updateHoldTimerButtonUI();
         if (dom.nextWaveBtn) {
-            const canSkip = isGameplayActive() && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION');
+            const canSkip = canPerformTacticalAction() && (st.waveState === 'PREP' || st.waveState === 'INTERMISSION');
             dom.nextWaveBtn.disabled = !canSkip;
             const labelText = canSkip
                 ? (st.waveState === 'PREP' ? L('立即開波', 'Start Wave') : L('提前下波', 'Next Wave'))
@@ -1743,6 +1892,18 @@
         else btn.innerText = '1x';
     }
 
+    function updateSystemMenuUI() {
+        const dom = G.dom;
+        if (dom.sysmenuSoundBtn) {
+            dom.sysmenuSoundBtn.classList.toggle('muted', SoundEngine.isMuted);
+            dom.sysmenuSoundBtn.innerText = SoundEngine.isMuted ? L('音效：關', 'Audio: Off') : L('音效：開', 'Audio: On');
+        }
+        if (dom.sysmenuLangBtn) {
+            const isEnNow = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+            dom.sysmenuLangBtn.innerText = isEnNow ? 'Language: English' : '語言：繁體中文';
+        }
+    }
+
     function updateSoundButtonUI() {
         if (G.dom.soundBtn) {
             G.dom.soundBtn.classList.toggle('muted', SoundEngine.isMuted);
@@ -1752,6 +1913,7 @@
             G.dom.lobbySoundBtn.classList.toggle('muted', SoundEngine.isMuted);
             G.dom.lobbySoundBtn.innerText = SoundEngine.isMuted ? L('音效：關', 'Audio: Off') : L('音效：開', 'Audio: On');
         }
+        updateSystemMenuUI();
     }
 
     function summarizePlanInline(plan) {
@@ -2167,7 +2329,8 @@
         const fallback = {
             completed: false,
             firstRunStarted: false,
-            shown: { build: false, merge: false, feed: false }
+            shown: { build: false, merge: false, feed: false },
+            done: { build: false, merge: false, feed: false }
         };
         try {
             const raw = (typeof localStorage !== 'undefined') ? localStorage.getItem(STORAGE_ONBOARDING_KEY) : null;
@@ -2179,7 +2342,8 @@
                     return {
                         completed: true,
                         firstRunStarted: true,
-                        shown: { build: true, merge: true, feed: true }
+                        shown: { build: true, merge: true, feed: true },
+                        done: { build: true, merge: true, feed: true }
                     };
                 }
                 return fallback;
@@ -2187,13 +2351,20 @@
             const parsed = JSON.parse(raw);
             if (!parsed || typeof parsed !== 'object') return fallback;
             const s = (parsed.shown && typeof parsed.shown === 'object') ? parsed.shown : {};
+            const d = (parsed.done && typeof parsed.done === 'object') ? parsed.done : {};
+            const isCompleted = Boolean(parsed.completed);
             const normalized = {
-                completed: Boolean(parsed.completed),
+                completed: isCompleted,
                 firstRunStarted: Boolean(parsed.firstRunStarted),
                 shown: {
                     build: Boolean(s.build),
                     merge: Boolean(s.merge),
                     feed: Boolean(s.feed)
+                },
+                done: {
+                    build: isCompleted ? true : Boolean(d.build),
+                    merge: isCompleted ? true : Boolean(d.merge),
+                    feed: isCompleted ? true : Boolean(d.feed)
                 }
             };
             onboardingMemCache = normalized;
@@ -2205,13 +2376,19 @@
 
     function saveOnboardingState(next) {
         if (!next) return;
+        const isCompleted = Boolean(next.completed);
         const normalized = {
-            completed: Boolean(next.completed),
+            completed: isCompleted,
             firstRunStarted: Boolean(next.firstRunStarted),
             shown: {
                 build: Boolean(next.shown && next.shown.build),
                 merge: Boolean(next.shown && next.shown.merge),
                 feed: Boolean(next.shown && next.shown.feed)
+            },
+            done: {
+                build: Boolean(next.done && next.done.build),
+                merge: Boolean(next.done && next.done.merge),
+                feed: Boolean(next.done && next.done.feed)
             }
         };
         onboardingMemCache = normalized;
@@ -2274,9 +2451,66 @@
         dom.onboardingToastEl.classList.remove('hidden');
     }
 
+    function syncOnboardingSpotlights() {
+        const st = G && G.state;
+        const spawnerEl = G && G.dom && G.dom.spawnerContainer;
+        const cells = (G && G.cellElements) || [];
+        if (spawnerEl) spawnerEl.classList.remove('onboarding-spotlight-ring');
+        for (let i = 0; i < cells.length; i++) {
+            if (cells[i]) {
+                cells[i].classList.remove('onboarding-spotlight-cell', 'onboarding-spotlight-tower');
+            }
+        }
+        if (!st || !st.onboardingActive || !st.onboardingStepId || !isMatchPhaseActive()) return;
+
+        const board = Array.isArray(st.board) ? st.board : [];
+        if (st.onboardingStepId === 'build') {
+            if (spawnerEl) spawnerEl.classList.add('onboarding-spotlight-ring');
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === null && cells[i] && TerrainSys.canBuildAt(i)) {
+                    cells[i].classList.add('onboarding-spotlight-cell');
+                }
+            }
+            return;
+        }
+        if (st.onboardingStepId === 'merge') {
+            const tier1Indices = [];
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] && (board[i].tier || 1) === 1) tier1Indices.push(i);
+            }
+            if (tier1Indices.length >= 2) {
+                let pair = null;
+                if (EvoSys && typeof EvoSys.canCombineTowers === 'function') {
+                    for (let a = 0; a < tier1Indices.length && !pair; a++) {
+                        for (let b = a + 1; b < tier1Indices.length; b++) {
+                            if (EvoSys.canCombineTowers(board[tier1Indices[a]], board[tier1Indices[b]])) {
+                                pair = [tier1Indices[a], tier1Indices[b]];
+                                break;
+                            }
+                        }
+                    }
+                }
+                const picks = pair || [tier1Indices[0], tier1Indices[1]];
+                picks.forEach((idx) => {
+                    if (cells[idx]) cells[idx].classList.add('onboarding-spotlight-tower');
+                });
+            }
+            return;
+        }
+        if (st.onboardingStepId === 'feed') {
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] && (board[i].tier || 1) >= 3 && cells[i]) {
+                    cells[i].classList.add('onboarding-spotlight-tower');
+                    break;
+                }
+            }
+        }
+    }
+
     function hideOnboardingToast() {
         if (G && G.state) G.state.onboardingStepId = null;
         if (G && G.dom && G.dom.onboardingToastEl) G.dom.onboardingToastEl.classList.add('hidden');
+        syncOnboardingSpotlights();
     }
 
     function dismissOnboarding(silent = false) {
@@ -2298,12 +2532,13 @@
         const st = G.state;
         if (!st || !st.onboardingActive || !isMatchPhaseActive()) return false;
         const ob = loadOnboardingState();
-        if (ob.completed || (ob.shown && ob.shown[stepId])) return false;
+        if (ob.completed || (ob.done && ob.done[stepId])) return false;
         if (!getOnboardingCopy(stepId)) return false;
         ob.shown[stepId] = true;
         saveOnboardingState(ob);
         st.onboardingStepId = stepId;
         renderOnboardingToast();
+        syncOnboardingSpotlights();
         return true;
     }
 
@@ -2311,30 +2546,37 @@
         const st = G.state;
         if (!st) return;
         const ob = loadOnboardingState();
-        if (stepId && ob.shown && !ob.shown[stepId]) {
-            ob.shown[stepId] = true;
+        if (!ob.done) ob.done = { build: false, merge: false, feed: false };
+        if (stepId) {
+            if (ob.shown) ob.shown[stepId] = true;
+            ob.done[stepId] = true;
         }
         if (st.onboardingStepId === stepId) {
             hideOnboardingToast();
         }
-        if (stepId === 'feed' || (ob.shown.build && ob.shown.merge && ob.shown.feed)) {
+        if (ob.done.build && ob.done.merge && ob.done.feed) {
             ob.completed = true;
             st.onboardingActive = false;
         }
         saveOnboardingState(ob);
+        syncOnboardingSpotlights();
     }
 
     function evaluateContextualOnboarding() {
         const st = G.state;
-        if (!st || !st.onboardingActive || !isMatchPhaseActive()) return;
+        if (!st || !st.onboardingActive || !isMatchPhaseActive()) {
+            syncOnboardingSpotlights();
+            return;
+        }
         const ob = loadOnboardingState();
         if (ob.completed) {
             st.onboardingActive = false;
             hideOnboardingToast();
             return;
         }
+        if (!ob.done) ob.done = { build: false, merge: false, feed: false };
         let totalTowers = 0;
-        let lowTierTowers = 0;
+        let tier1Towers = 0;
         let hasTier3Plus = false;
         const board = Array.isArray(st.board) ? st.board : [];
         for (let i = 0; i < board.length; i++) {
@@ -2342,15 +2584,44 @@
             if (!t) continue;
             totalTowers++;
             if ((t.tier || 1) >= 3) hasTier3Plus = true;
-            else lowTierTowers++;
+            if ((t.tier || 1) === 1) tier1Towers++;
         }
-        if (hasTier3Plus && !ob.shown.feed) {
+        if (hasTier3Plus && !ob.done.feed) {
             showOnboardingStep('feed');
             return;
         }
-        if (ob.shown.build && !ob.shown.merge && !st.onboardingStepId && (lowTierTowers >= 2 || totalTowers >= 2)) {
+        if (ob.done.build && !ob.done.merge && tier1Towers >= 2) {
             showOnboardingStep('merge');
+            return;
         }
+        if (!ob.done.build && totalTowers === 0) {
+            showOnboardingStep('build');
+            return;
+        }
+        syncOnboardingSpotlights();
+    }
+
+    function replayOnboardingTutorial() {
+        saveOnboardingState({
+            completed: false,
+            firstRunStarted: true,
+            shown: { build: false, merge: false, feed: false },
+            done: { build: false, merge: false, feed: false }
+        });
+        if (isGuideOpen()) closeGuide();
+        const st = G.state;
+        if (st && st.gameMode !== 'puzzle' && isMatchPhaseActive()) {
+            st.onboardingActive = true;
+            st.onboardingStepId = null;
+            const totalTowers = countBoardTowers(st);
+            if (totalTowers === 0) showOnboardingStep('build');
+            else evaluateContextualOnboarding();
+            if (!st.onboardingStepId) showOnboardingStep('build');
+            setStatusMsg('已重新開啟新手引導！跟隨光圈提示操作即可完成教學。', 'Tutorial restarted! Follow the spotlight hints to proceed.');
+        } else {
+            setStatusMsg('已重置新手引導，進入戰局後將重新顯示。', 'Tutorial reset! Hints will appear on your next match.');
+        }
+        syncOnboardingSpotlights();
     }
 
     function updateGuildDrawerUI() {
@@ -2360,7 +2631,6 @@
         const vis = getGuildFeatureVisibility(st);
         if (!vis.hasAnyGuildFeature) {
             st.guildDrawerOpen = false;
-            st.guildTimerHold = false;
             st.guildDrawerTempHold = false;
             dom.guildPanelEl.classList.add('hidden');
             if (dom.guildBodyEl) dom.guildBodyEl.classList.add('hidden');
@@ -2457,28 +2727,6 @@
                 `Blind Box Team Crit Bonus +${critPct}%${(st.fusionFruitCount || 0) > 0 ? ' · Universal Fruit Ready ★' : ''}`
             );
             dom.guildCritBadgeEl.classList.toggle('is-active', (st.teamCritBonusRate || 0) > 0 || (st.fusionFruitCount || 0) > 0);
-        }
-        if (dom.guildHoldTimerBtn) {
-            const holding = Boolean(st.guildTimerHold && isPrepOrInter);
-            dom.guildHoldTimerBtn.classList.toggle('is-holding', holding);
-            if (isPrepOrInter) {
-                dom.guildHoldTimerBtn.innerText = holding
-                    ? L('倒數：暫停', 'Timer: Held')
-                    : L('暫停倒數', 'Hold Timer');
-                dom.guildHoldTimerBtn.title = holding
-                    ? L('波間倒數已暫停（點擊恢復倒數）', 'Intermission timer held (click to resume)')
-                    : L('暫停備戰／波間倒數計時', 'Hold prep / intermission countdown');
-                dom.guildHoldTimerBtn.disabled = false;
-            } else {
-                dom.guildHoldTimerBtn.innerText = st.guildAutoHoldTimer
-                    ? L('自動暫停：開', 'Auto-Hold: ON')
-                    : L('自動暫停：關', 'Auto-Hold: OFF');
-                dom.guildHoldTimerBtn.title = L(
-                    '切換下一次進入波間整備時是否自動暫停倒數',
-                    'Toggle auto-holding intermission countdown between waves'
-                );
-                dom.guildHoldTimerBtn.disabled = !canAct;
-            }
         }
 
         // A. 元素股市 UI
@@ -2608,25 +2856,26 @@
                 )}`;
         }
         if (dom.blindBoxBuyBtn) {
+            const canTact = canPerformTacticalAction();
             if (hasMarketFree) {
                 dom.blindBoxBuyBtn.innerText = L('黑市免費盲盒 (1/1)', 'Market Free Box (1/1)');
-                dom.blindBoxBuyBtn.disabled = !isGameplayActive();
+                dom.blindBoxBuyBtn.disabled = !canTact;
             } else if (freeTokens > 0) {
                 dom.blindBoxBuyBtn.innerText = L(`免費開啟盲盒（代幣 ${freeTokens}）`, `Open Free Box (Token ${freeTokens})`);
-                dom.blindBoxBuyBtn.disabled = !isGameplayActive();
+                dom.blindBoxBuyBtn.disabled = !canTact;
             } else if (!boxUnlocked) {
                 dom.blindBoxBuyBtn.innerText = L('需解鎖命運枝 ① (300 ★)', 'Locked: Meta Fate #1');
                 dom.blindBoxBuyBtn.disabled = true;
             } else {
                 dom.blindBoxBuyBtn.innerText = L(`開啟命運盲盒 (${boxCost} 💰)`, `Open Blind Box (${boxCost} 💰)`);
-                dom.blindBoxBuyBtn.disabled = !isGameplayActive() || st.currentGold < boxCost;
+                dom.blindBoxBuyBtn.disabled = !canTact || st.currentGold < boxCost;
             }
         }
         if (dom.fusionFruitSlotBtn) {
             const hasFruit = (st.fusionFruitCount || 0) > 0;
             dom.fusionFruitSlotBtn.classList.toggle('has-fruit', hasFruit);
             dom.fusionFruitSlotBtn.classList.toggle('is-applying', Boolean(hasFruit && st.isApplyingFusionFruit));
-            dom.fusionFruitSlotBtn.disabled = !isGameplayActive() || !hasFruit;
+            dom.fusionFruitSlotBtn.disabled = !canPerformTacticalAction() || !hasFruit;
             if (!hasFruit) {
                 dom.fusionFruitSlotBtn.innerText = L('萬能融合果實 (0/1) · 暫無', 'Universal Fruit (0/1)');
                 dom.fusionFruitSlotBtn.title = L('萬能融合果實 (0/1)：可由盲盒 12% 機率或魔潮加碼獲勝獲得', 'Universal Fusion Fruit (0/1): Earned from Blind Box (12%) or Monster Surge clear');
@@ -2731,7 +2980,7 @@
         updateWaveForecastUI(); updateMonsterHoverCardUI();
         if (CodexSys && typeof CodexSys.updateRecipeTrackerUI === 'function') CodexSys.updateRecipeTrackerUI();
 
-        const activePlay = isGameplayActive();
+        const activePlay = canPerformTacticalAction();
         const shopTypes = getShopTowerTypes();
         if (!activePlay && st.pendingSpawnType) {
             st.pendingSpawnType = null;
@@ -2832,8 +3081,9 @@
     function spawnTowerAtCell(type, targetIndex) {
         const st = G.state;
         const towersDict = getTowersDict();
-        if (!isGameplayActive() || !towersDict[type]) return false;
+        if (!canPerformTacticalAction() || !towersDict[type]) return false;
         if (!TerrainSys.canBuildAt(targetIndex) || st.board[targetIndex] !== null) return false;
+        const wasZeroTowers = countBoardTowers(st) === 0;
 
         const deduct = EconSys.deductSummonCost(type, targetIndex);
         if (!deduct.ok) {
@@ -2866,7 +3116,15 @@
         st.board[targetIndex] = placedTower;
         st.buildTargetIndex = null;
         st.pendingSpawnType = null;
+        st.selectedObstacleIndex = null;
         st.inspectedMonsterId = null;
+        clearPendingSellConfirm();
+        if (wasZeroTowers && st.gameMode !== 'puzzle' && st.waveState === 'PREP' && st.currentWave === 1) {
+            const basePrepMs = CONFIG.INITIAL_PREP_MS || 6000;
+            st.waveTimerMs = (st.activeContracts && st.activeContracts.has('rapid_waves'))
+                ? Math.round(basePrepMs * 0.5)
+                : basePrepMs;
+        }
 
         const cfg = towersDict[placedTower.type] || towersDict[type];
         const terrainKey = TerrainSys.getTerrainAt(targetIndex);
@@ -2911,8 +3169,7 @@
         }
         completeOnboardingStep('build');
         evaluateContextualOnboarding();
-        Renderer.renderBoard([targetIndex]);
-        updateHUD();
+        syncTacticalBoardVisuals([targetIndex]);
         return true;
     }
 
@@ -2924,7 +3181,7 @@
     function handleShopCardClick(type) {
         const st = G.state;
         const towersDict = getTowersDict();
-        if (!isGameplayActive() || !towersDict[type]) return false;
+        if (!canPerformTacticalAction() || !towersDict[type]) return false;
 
         Backend.recordPlayerAction();
         const cost = EconSys.getSummonCost(type);
@@ -2950,7 +3207,9 @@
         }
 
         st.selectedIndex = null;
+        st.selectedObstacleIndex = null;
         st.inspectedMonsterId = null;
+        clearPendingSellConfirm();
         if (st.pendingSpawnType === type) {
             st.pendingSpawnType = null;
             setStatusMsg('已取消待放置模式。', 'Cancelled placement mode.');
@@ -2971,7 +3230,7 @@
     function handleHotkeySpawn(type) {
         const st = G.state;
         const towersDict = getTowersDict();
-        if (!isGameplayActive() || !towersDict[type]) return;
+        if (!canPerformTacticalAction() || !towersDict[type]) return;
         const cost = EconSys.getSummonCost(type);
         const btnEl = G.dom.spawnerBtns[type] && G.dom.spawnerBtns[type].btn;
         if (!EconSys.canAffordSummon(type)) {
@@ -2996,16 +3255,60 @@
         spawnTowerAtCell(type, targetIdx);
     }
 
-    function tryClearObstacleCell(index) {
+    function selectObstacleCell(index) {
         const st = G.state;
-        const terrainsDict = (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
         const terrainKey = TerrainSys.getTerrainAt(index);
-        if ((terrainKey !== 'obstacle' && terrainKey !== 'treasure_rock') || typeof TerrainSys.clearObstacleAt !== 'function') return false;
+        if (terrainKey !== 'obstacle' && terrainKey !== 'treasure_rock') return false;
+        clearPendingSellConfirm();
         if (st.isTouchMode) clearMonsterHoverLock();
         st.pendingSpawnType = null;
         st.selectedIndex = null;
         st.hoveredIndex = null;
         st.buildTargetIndex = null;
+        st.inspectedMonsterId = null;
+        if (st.selectedObstacleIndex === index) {
+            st.selectedObstacleIndex = null;
+            setStatusMsg('已取消選取巨岩。', 'Cleared boulder selection.');
+        } else {
+            st.selectedObstacleIndex = index;
+            const cost = (TerrainSys && typeof TerrainSys.getObstacleClearCost === 'function')
+                ? TerrainSys.getObstacleClearCost(index)
+                : 45;
+            const isTreasure = terrainKey === 'treasure_rock';
+            setStatusMsg(
+                isTreasure
+                    ? `已選中藏寶巨石：請點擊下方檢視列「開採岩石 (-${cost} 💰)」確認開採。`
+                    : `已選中古代巨岩：請點擊下方檢視列「開採岩石 (-${cost} 💰)」確認清除。`,
+                isTreasure
+                    ? `Treasure Boulder selected: Click "Clear Rock (-${cost} 💰)" below to mine.`
+                    : `Ancient Boulder selected: Click "Clear Rock (-${cost} 💰)" below to clear.`
+            );
+        }
+        Renderer.renderBoard([]);
+        Renderer.updateRangeIndicator();
+        updateHUD();
+        return true;
+    }
+
+    function confirmClearSelectedObstacle() {
+        const st = G.state;
+        if (!canPerformTacticalAction() || st.selectedObstacleIndex === null) return false;
+        Backend.recordPlayerAction();
+        return tryClearObstacleCell(st.selectedObstacleIndex);
+    }
+
+    function tryClearObstacleCell(index) {
+        const st = G.state;
+        const terrainsDict = (GameApp.data && GameApp.data.terrain && GameApp.data.terrain.TERRAIN_TYPES) || {};
+        const terrainKey = TerrainSys.getTerrainAt(index);
+        if ((terrainKey !== 'obstacle' && terrainKey !== 'treasure_rock') || typeof TerrainSys.clearObstacleAt !== 'function') return false;
+        clearPendingSellConfirm();
+        if (st.isTouchMode) clearMonsterHoverLock();
+        st.pendingSpawnType = null;
+        st.selectedIndex = null;
+        st.hoveredIndex = null;
+        st.buildTargetIndex = null;
+        const wasZeroTowers = countBoardTowers(st) === 0;
         const clearRes = TerrainSys.clearObstacleAt(index);
         if (!clearRes.ok) {
             if (clearRes.reason === 'insufficient_gold') {
@@ -3019,8 +3322,10 @@
                 );
             }
             Renderer.renderBoard([]);
+            updateTowerInspector();
             return true;
         }
+        st.selectedObstacleIndex = null;
         if (typeof Renderer.refreshCellTerrain === 'function') Renderer.refreshCellTerrain(index);
         const c = indexToCoords(index);
         const center = Renderer.getCellCenter(c.x, c.y);
@@ -3035,6 +3340,12 @@
                 );
             } else if (clearRes.treasureType === 'tower' && clearRes.spawnedTowerType) {
                 const tCfg = getTowersDict()[clearRes.spawnedTowerType] || { icon: '✨', name: clearRes.spawnedTowerType };
+                if (wasZeroTowers && st.gameMode !== 'puzzle' && st.waveState === 'PREP' && st.currentWave === 1) {
+                    const basePrepMs = CONFIG.INITIAL_PREP_MS || 6000;
+                    st.waveTimerMs = (st.activeContracts && st.activeContracts.has('rapid_waves'))
+                        ? Math.round(basePrepMs * 0.5)
+                        : basePrepMs;
+                }
                 Renderer.spawnFloatingNotice(L(`🪨 掘出 ${tCfg.name} ★★`, `🪨 Found ${tCfg.name} ★★`), center.left, center.top, 'pity-seed');
                 setStatusMsg(
                     `開採藏寶巨石（-${clearRes.cost} 💰）：發掘出【${tCfg.icon || ''} ${tCfg.name} ★★】（實付鎖定 ${clearRes.cost} 💰）！`,
@@ -3049,8 +3360,7 @@
                     `Treasure Boulder (-${clearRes.cost} 💰): Returned +${clearRes.totalPayout || clearRes.cost} 💰 (net +${clearRes.netGain || 0}${capNoteEn}).`
                 );
             }
-            Renderer.renderBoard([index]);
-            updateHUD();
+            syncTacticalBoardVisuals([index]);
             return true;
         }
         const revInfo = clearRes.revealedTerrain ? terrainsDict[clearRes.revealedTerrain] : null;
@@ -3066,8 +3376,7 @@
                 `Boulder cleared (-${clearRes.cost} 💰): Tile is now buildable.`
             );
         }
-        Renderer.renderBoard([index]);
-        updateHUD();
+        syncTacticalBoardVisuals([index]);
         return true;
     }
 
@@ -3078,41 +3387,7 @@
         Backend.recordPlayerAction();
         st.inspectedMonsterId = null;
 
-        if (!isGameplayActive()) {
-            if (st.isPaused && isMatchPhaseActive()) {
-                if (st.board[index] !== null && st.selectedIndex !== index) {
-                    st.selectedIndex = index; st.buildTargetIndex = null; st.pendingSpawnType = null;
-                    const t = st.board[index], terrain = TerrainSys.getTerrainAt(index);
-                    const tInfo = terrain ? terrainsDict[terrain] : null;
-                    const cellTag = getTerrainShortTagForCell(index, tInfo);
-                    setStatusMsg(
-                        `暫停檢視：【${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}】${cellTag ? `｜${cellTag}` : ''}（可切換索敵，恢復後可移塔或融合）。`,
-                        `Inspecting (Paused): ${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}${cellTag ? ` | ${cellTag}` : ''} (target mode adjustable).`
-                    );
-                } else {
-                    const nearMon = findMonsterNearCell(index);
-                    if (nearMon) {
-                        if (st.isTouchMode) {
-                            lockTouchMonsterInspect(nearMon);
-                            return;
-                        }
-                        st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
-                        st.inspectedMonsterId = nearMon.id;
-                        if (G.dom.msgText) G.dom.msgText.innerText = formatMonsterInspectText(nearMon);
-                    } else {
-                        st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
-                        if (st.isTouchMode) clearMonsterHoverLock();
-                        if (st.board[index] === null) {
-                            setStatusMsg('暫停中可點防禦塔／怪物檢視與切換索敵，按「繼續」或 Space 恢復操作。', 'Paused: click a tower/enemy to inspect, press Resume or Space to continue.');
-                        } else {
-                            setStatusMsg('已取消選取。', 'Selection cleared.');
-                        }
-                    }
-                }
-                Renderer.renderBoard([]);
-                Renderer.updateRangeIndicator();
-                updateTowerInspector();
-            }
+        if (!canPerformTacticalAction()) {
             return;
         }
 
@@ -3134,11 +3409,13 @@
                 spawnTowerAtCell(pendingType, index);
                 return;
             }
-            if (tryClearObstacleCell(index)) {
+            if (selectObstacleCell(index)) {
                 return;
             }
             if (st.board[index] !== null) {
+                clearPendingSellConfirm();
                 st.pendingSpawnType = null;
+                st.selectedObstacleIndex = null;
                 st.selectedIndex = index; st.buildTargetIndex = null;
                 const t = st.board[index], terrain = TerrainSys.getTerrainAt(index);
                 const tInfo = terrain ? terrainsDict[terrain] : null;
@@ -3161,7 +3438,9 @@
 
         if (st.selectedIndex === null) {
             if (st.board[index] !== null) {
+                clearPendingSellConfirm();
                 if (st.isTouchMode) clearMonsterHoverLock();
+                st.selectedObstacleIndex = null;
                 st.selectedIndex = index; st.buildTargetIndex = null;
                 const t = st.board[index], terrain = TerrainSys.getTerrainAt(index);
                 const tInfo = terrain ? terrainsDict[terrain] : null;
@@ -3171,8 +3450,9 @@
                     `Selected ${(towersDict[t.type] && towersDict[t.type].name) || t.type} ${Renderer.getTierStars(t.tier)}${cellTag ? ` | ${cellTag}` : ''}`
                 );
             } else if (TerrainSys.canBuildAt(index)) {
+                clearPendingSellConfirm();
                 if (st.isTouchMode) clearMonsterHoverLock();
-                st.selectedIndex = null; st.hoveredIndex = null;
+                st.selectedIndex = null; st.selectedObstacleIndex = null; st.hoveredIndex = null;
                 if (st.buildTargetIndex === index) {
                     st.buildTargetIndex = null;
                     setStatusMsg('已取消指定建造位置。', 'Cleared target build tile.');
@@ -3186,10 +3466,11 @@
                         `Selected tile (${c.x + 1},${c.y + 1})${cellTag ? ` (${cellTag})` : ''}. Click an element card below to build.`
                     );
                 }
-            } else if (tryClearObstacleCell(index)) {
+            } else if (selectObstacleCell(index)) {
                 return;
             } else if (index === G.map.endCellIndex) {
-                st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
+                clearPendingSellConfirm();
+                st.selectedIndex = null; st.selectedObstacleIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
                 const rootLv = TreeSys && typeof TreeSys.getTreasureRootLevel === 'function' ? TreeSys.getTreasureRootLevel() : (st.rootLevel || 0);
                 const curSpec = TreeSys && typeof TreeSys.getTreasureRootSpec === 'function' ? TreeSys.getTreasureRootSpec(rootLv) : { name: '未啟用' };
                 const nextSpec = TreeSys && typeof TreeSys.getNextTreasureRootSpec === 'function' ? TreeSys.getNextTreasureRootSpec() : null;
@@ -3202,7 +3483,8 @@
                     `World Tree [Treasure Roots Lv.${rootLv} ${curSpec.nameEn || curSpec.name}] | Est. +${estPayout.totalGain} 💰 (Cap ${estPayout.waveCap} 💰) | Sell Refund ${refundPct}%${nextSpec ? ` | Next: Lv.${nextSpec.level} (${nextSpec.cost} 💰)` : ' | Max Level'}.`
                 );
             } else {
-                st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
+                clearPendingSellConfirm();
+                st.selectedIndex = null; st.selectedObstacleIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
                 const nearMon = findMonsterNearCell(index);
                 if (nearMon) {
                     lockTouchMonsterInspect(nearMon);
@@ -3212,24 +3494,26 @@
                 }
             }
         } else if (st.selectedIndex === index) {
-            st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
+            clearPendingSellConfirm();
+            st.selectedIndex = null; st.selectedObstacleIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
             if (st.isTouchMode) clearMonsterHoverLock();
             setStatusMsg('已取消選取。', 'Selection cleared.');
         } else {
             const fromIdx = st.selectedIndex;
+            clearPendingSellConfirm();
             if (st.isTouchMode && G.map.pathCellIndices.has(index)) {
                 const nearMon = findMonsterNearCell(index);
                 if (nearMon) {
                     lockTouchMonsterInspect(nearMon);
                     return;
                 }
-                st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
+                st.selectedIndex = null; st.selectedObstacleIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
                 clearMonsterHoverLock();
                 Renderer.renderBoard([]);
                 Renderer.updateRangeIndicator();
                 return;
             }
-            st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
+            st.selectedIndex = null; st.selectedObstacleIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
             handleAction(fromIdx, index);
             return;
         }
@@ -3240,7 +3524,7 @@
     function handleAction(fromIndex, toIndex) {
         const st = G.state;
         const boardSize = CONFIG.BOARD_SIZE || 150;
-        if (!isGameplayActive()) return false;
+        if (!canPerformTacticalAction()) return false;
         if (fromIndex === null || toIndex === null || fromIndex === toIndex) { Renderer.renderBoard([]); return false; }
         if (fromIndex < 0 || fromIndex >= boardSize || toIndex < 0 || toIndex >= boardSize || !st.board[fromIndex]) return false;
         if (!TerrainSys.canBuildAt(toIndex)) {
@@ -3253,11 +3537,22 @@
             return false;
         }
 
+        clearPendingSellConfirm();
+        st.selectedObstacleIndex = null;
         Backend.recordPlayerAction();
         const fromTower = st.board[fromIndex], toTower = st.board[toIndex];
         if (toTower === null) {
             const moveCost = EconSys.getCombatMoveCost();
             if (!isRelocationFree()) {
+                if ((fromTower.repositionCooldownMs || 0) > 0) {
+                    const remSec = ((fromTower.repositionCooldownMs || 0) / 1000).toFixed(1);
+                    setStatusMsg(
+                        `防禦塔紮根冷卻中（剩餘 ${remSec}s），請稍候再調度移位。`,
+                        `Tower rooted (${remSec}s cooldown left); cannot relocate yet.`
+                    );
+                    Renderer.renderBoard([]);
+                    return false;
+                }
                 if (st.currentGold < moveCost) {
                     setStatusMsg(
                         `戰鬥期間調度塔位需花費 ${moveCost} 💰，金幣不足。`,
@@ -3267,27 +3562,31 @@
                     return false;
                 }
                 st.currentGold -= moveCost;
-                setStatusMsg(`戰術調度完成，花費 ${moveCost} 💰。`, `Relocated tower for ${moveCost} 💰.`);
+                fromTower.repositionCooldownMs = 1500;
+                setStatusMsg(
+                    `戰術調度完成（-${moveCost} 💰，紮根冷卻 1.5s）。`,
+                    `Relocated tower (-${moveCost} 💰, 1.5s root cooldown).`
+                );
             } else {
                 setStatusMsg('已免費移動防禦塔位置。', 'Relocated tower (free during prep).');
             }
+            // 鎖 2：移動後嚴格保留原塔既有攻擊冷卻（accMs / wakeupDelayMs 不變）
             st.board[toIndex] = fromTower;
             st.board[fromIndex] = null;
-            if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
             recordZonePlacementTelemetry(toIndex);
             evaluateContextualOnboarding();
-            Renderer.renderBoard([fromIndex, toIndex]);
-            updateHUD();
+            syncTacticalBoardVisuals([fromIndex, toIndex]);
             return true;
         }
 
+        // 優先級 1 & 2：先判定融合／轉職／升星／3★ 分岔 / 三元融合 / 3★~4★ 餵養充能
         const fusionPreview = EvoSys.getFusionResult(fromTower, toTower);
         if (fusionPreview && fusionPreview.requiresConfirmation) {
             openEvolutionConfirmModal(fromIndex, toIndex, fusionPreview);
             return true;
         }
 
-        const res = EvoSys.executeTowerFusion(fromIndex, toIndex);
+        const res = fusionPreview ? EvoSys.executeTowerFusion(fromIndex, toIndex) : null;
         if (res) {
             const { fusion, bonusHint } = res;
             const cfg = getTowersDict()[fusion.type] || { name: fusion.type };
@@ -3338,29 +3637,54 @@
             } else {
                 completeOnboardingStep('merge');
             }
-            if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
             evaluateContextualOnboarding();
-            Renderer.renderBoard([fromIndex, toIndex]);
-            updateHUD();
+            syncTacticalBoardVisuals([fromIndex, toIndex]);
             return true;
         }
-        const maxTier = (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || 5;
-        if (fromTower.tier >= maxTier || toTower.tier >= maxTier) {
-            setStatusMsg(
-                `${Renderer.getTierStars(maxTier)} 已達最高星級，無法繼續融合。`,
-                `${Renderer.getTierStars(maxTier)} has reached max tier and cannot merge further.`
-            );
-        } else if (EvoSys && typeof EvoSys.getIncompatibilityReason === 'function') {
-            const reason = EvoSys.getIncompatibilityReason(fromTower, toTower);
-            setStatusMsg(`${reason}（詳見世界樹圖譜）。`, `${reason} (see World Tree Codex).`);
-        } else {
-            setStatusMsg(
-                '該組合無法融合，請於「世界樹圖譜」確認轉職與升星規則。',
-                'Incompatible pair. Check World Tree Codex for transfer & merge rules.'
-            );
+
+        // 優先級 3（兜底）：非合成、非餵養之雙塔直接互換位置 (Swap)
+        const swapCost = EconSys.getCombatMoveCost();
+        if (!isRelocationFree()) {
+            const maxRootCd = Math.max(fromTower.repositionCooldownMs || 0, toTower.repositionCooldownMs || 0);
+            if (maxRootCd > 0) {
+                const remSec = (maxRootCd / 1000).toFixed(1);
+                setStatusMsg(
+                    `目標防禦塔紮根冷卻中（剩餘 ${remSec}s），暫時無法互換位置。`,
+                    `Tower rooted (${remSec}s cooldown left); cannot swap positions yet.`
+                );
+                Renderer.renderBoard([]);
+                return false;
+            }
+            if (st.currentGold < swapCost) {
+                setStatusMsg(
+                    `戰鬥中互換雙塔位置需花費 ${swapCost} 💰，金幣不足。`,
+                    `Swapping towers mid-wave costs ${swapCost} 💰 (insufficient Gold).`
+                );
+                Renderer.renderBoard([]);
+                return false;
+            }
+            st.currentGold -= swapCost;
+            fromTower.repositionCooldownMs = 1500;
+            toTower.repositionCooldownMs = 1500;
         }
-        Renderer.renderBoard([]);
-        return false;
+
+        // 嚴格保留兩座塔各自的既有攻擊冷卻（accMs / wakeupDelayMs / stun）
+        st.board[fromIndex] = toTower;
+        st.board[toIndex] = fromTower;
+        SoundEngine.playSpawn(1);
+        recordZonePlacementTelemetry(toIndex);
+        recordZonePlacementTelemetry(fromIndex);
+        if (!isRelocationFree()) {
+            setStatusMsg(
+                `雙塔互換位置完成（-${swapCost} 💰，雙塔紮根冷卻 1.5s）。`,
+                `Swapped tower positions (-${swapCost} 💰, 1.5s root cooldown).`
+            );
+        } else {
+            setStatusMsg('已免費互換兩座防禦塔位置。', 'Swapped tower positions (free during prep).');
+        }
+        evaluateContextualOnboarding();
+        syncTacticalBoardVisuals([fromIndex, toIndex]);
+        return true;
     }
 
     // ==================== 5B. 世界樹商會（A. 元素股市 / B. 命運種子盲盒 / C. 波次對賭懸賞） ====================
@@ -3379,7 +3703,6 @@
         const vis = getGuildFeatureVisibility(st);
         if (!vis.hasAnyGuildFeature) {
             st.guildDrawerOpen = false;
-            st.guildTimerHold = false;
             st.guildDrawerTempHold = false;
             if (forceState !== false) {
                 setStatusMsg(
@@ -3520,7 +3843,8 @@
     function openBlindBox(options = {}) {
         const st = G.state;
         const towersDict = getTowersDict();
-        if (!isGameplayActive() || !EconSys) return { ok: false, reason: 'inactive' };
+        if (!canPerformTacticalAction() || !EconSys) return { ok: false, reason: 'inactive' };
+        const wasZeroTowers = countBoardTowers(st) === 0;
         const canBox = !EconSys.canOpenBlindBox || EconSys.canOpenBlindBox();
         const useMarketFree = Boolean(st.blackmarketFreeBoxAvailable) && !Number.isFinite(options.costOverride);
         const useFreeToken = !useMarketFree && (st.blindBoxTokens || 0) > 0 && !Number.isFinite(options.costOverride);
@@ -3589,8 +3913,16 @@
         spawnedTower.investedGold = boxCost;
         st.board[targetIndex] = spawnedTower;
         st.selectedIndex = targetIndex;
+        st.selectedObstacleIndex = null;
         st.buildTargetIndex = null;
         st.pendingSpawnType = null;
+        clearPendingSellConfirm();
+        if (wasZeroTowers && st.gameMode !== 'puzzle' && st.waveState === 'PREP' && st.currentWave === 1) {
+            const basePrepMs = CONFIG.INITIAL_PREP_MS || 6000;
+            st.waveTimerMs = (st.activeContracts && st.activeContracts.has('rapid_waves'))
+                ? Math.round(basePrepMs * 0.5)
+                : basePrepMs;
+        }
 
         const cfg = towersDict[spawnedTower.type] || { icon: '🔥', name: spawnedTower.type };
         const coords = indexToCoords(targetIndex);
@@ -3619,9 +3951,7 @@
             `Blind Box (${costTagEn})${pityNoteEn} spawned ${cfg.icon} ${cfg.name} ${Renderer.getTierStars(roll.tier)} at (${coords.x + 1},${coords.y + 1}) (Invested ${boxCost} 💰, Refund ${refundPreview} 💰 | Team Crit +${critPct}%).`
         );
         evaluateContextualOnboarding();
-        if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
-        Renderer.renderBoard([targetIndex]);
-        updateHUD();
+        syncTacticalBoardVisuals([targetIndex]);
         return {
             ok: true,
             kind: 'tower',
@@ -3635,7 +3965,7 @@
     function applyFusionFruitAtCell(cellIndex, chosenBranchType = null) {
         const st = G.state;
         const towersDict = getTowersDict();
-        if (!isGameplayActive() || (st.fusionFruitCount || 0) <= 0) {
+        if (!canPerformTacticalAction() || (st.fusionFruitCount || 0) <= 0) {
             return { ok: false, reason: 'no_fruit' };
         }
         const targetTower = st.board[cellIndex];
@@ -3707,16 +4037,14 @@
             completeOnboardingStep('merge');
         }
         evaluateContextualOnboarding();
-        if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
-        Renderer.renderBoard([cellIndex]);
-        updateHUD();
+        syncTacticalBoardVisuals([cellIndex]);
         return { ok: true, result: res };
     }
 
     function handleFusionFruitSlotClick() {
         const st = G.state;
         const maxTier = (GameApp.data && GameApp.data.evolutions && GameApp.data.evolutions.MAX_TIER) || 5;
-        if (!isGameplayActive() || (st.fusionFruitCount || 0) <= 0) return false;
+        if (!canPerformTacticalAction() || (st.fusionFruitCount || 0) <= 0) return false;
         Backend.recordPlayerAction();
         holdIntermissionTimerIfPrep();
 
@@ -3929,8 +4257,7 @@
             );
             completeOnboardingStep('merge');
             evaluateContextualOnboarding();
-            Renderer.renderBoard([pending.fromIndex, pending.toIndex]);
-            updateHUD();
+            syncTacticalBoardVisuals([pending.fromIndex, pending.toIndex]);
             if (st.pendingBlessingWave !== null) {
                 const queuedWave = st.pendingBlessingWave;
                 st.pendingBlessingWave = null;
@@ -3989,7 +4316,7 @@
 
     // ==================== 6. 波次、勝負結算與主迴圈 ====================
     function startWave(waveNum, earlyBonus = 0) {
-        if (!isGameplayActive()) return;
+        if (!canPerformTacticalAction()) return;
         const st = G.state;
         const curMapSpec = WaveSys && typeof WaveSys.getCurrentMapSpec === 'function' ? WaveSys.getCurrentMapSpec() : null;
         const victoryWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
@@ -4455,9 +4782,10 @@
         }
         const mapSpec = WaveSys.getCurrentMapSpec();
         Backend.resetRunTelemetry(G.state.currentMapId, mapSpec.name);
-        ['startOverlayEl', 'victoryOverlayEl', 'gameOverOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl', 'metaTreeOverlayEl', 'evoConfirmOverlayEl'].forEach(k => {
+        ['startOverlayEl', 'victoryOverlayEl', 'gameOverOverlayEl', 'codexOverlayEl', 'guideOverlayEl', 'blessingOverlayEl', 'metaTreeOverlayEl', 'evoConfirmOverlayEl', 'systemMenuOverlayEl'].forEach(k => {
             if (G.dom[k]) G.dom[k].classList.add('hidden');
         });
+        if (G.state) G.state.isSystemMenuOpen = false;
         hideOnboardingToast();
         syncPauseUI();
         updateSeedPityUI();
@@ -4562,15 +4890,28 @@
             Renderer.stopLobbyAmbientCanvas();
         }
         const ob = loadOnboardingState();
-        ob.completed = true;
-        ob.firstRunStarted = true;
-        saveOnboardingState(ob);
-        G.state.onboardingActive = false;
-        hideOnboardingToast();
-        setStatusMsg(
-            `【${mapSpec.name}】拖曳下方元素卡至棋盤可建格召喚，或按 1/2/3/Q/W/E/B/Space 快速操作。`,
-            `[${mapSpec.name}] Drag element cards onto green tiles to build, or press 1/2/3/Q/W/E/B/Space.`
-        );
+        if (G.state.gameMode !== 'puzzle' && !ob.completed) {
+            ob.firstRunStarted = true;
+            saveOnboardingState(ob);
+            G.state.onboardingActive = true;
+            G.state.onboardingStepId = null;
+            if (!ob.done || !ob.done.build) showOnboardingStep('build');
+            else evaluateContextualOnboarding();
+        } else {
+            G.state.onboardingActive = false;
+            hideOnboardingToast();
+        }
+        if (G.state.gameMode === 'puzzle' && G.state.puzzleSpec) {
+            setStatusMsg(
+                `【${L(G.state.puzzleSpec.titleZh, G.state.puzzleSpec.titleEn)}】資金 ${G.state.currentGold} 💰，佈陣後點「立即開波」迎接單波挑戰！`,
+                `[${L(G.state.puzzleSpec.titleZh, G.state.puzzleSpec.titleEn)}] Gold ${G.state.currentGold} 💰 — build your defense and press Start Wave!`
+            );
+        } else {
+            setStatusMsg(
+                `【${mapSpec.name}】請先放置第 1 座防禦塔，或手動點擊「立即開波」。`,
+                `[${mapSpec.name}] Place your 1st tower to start the countdown, or click Start Wave.`
+            );
+        }
         Renderer.initBoard(); Renderer.renderBoard(); updateHUD(); updateSpeedButtonUI(); startMainLoop();
     }
 
@@ -4627,20 +4968,19 @@
             );
         } else {
             setStatusMsg(
-                `【${mapSpec.name}】${contractTagZh}第 1 波備戰開始，拖曳下方元素卡至空地佈置防線。`,
-                `[${mapSpec.name}]${contractTagEn} Wave 1 prep started. Drag element cards onto open tiles to build.`
+                `【${mapSpec.name}】${contractTagZh}請先放置第 1 座防禦塔，或手動點擊「立即開波」。`,
+                `[${mapSpec.name}]${contractTagEn} Place your 1st tower to start the countdown, or click Start Wave.`
             );
         }
         const ob = loadOnboardingState();
-        if (st.gameMode !== 'puzzle' && !ob.completed && !ob.firstRunStarted) {
+        if (st.gameMode !== 'puzzle' && !ob.completed) {
             ob.firstRunStarted = true;
             saveOnboardingState(ob);
             st.onboardingActive = true;
-            showOnboardingStep('build');
+            st.onboardingStepId = null;
+            if (!ob.done || !ob.done.build) showOnboardingStep('build');
+            else evaluateContextualOnboarding();
         } else {
-            ob.completed = true;
-            ob.firstRunStarted = true;
-            saveOnboardingState(ob);
             st.onboardingActive = false;
             hideOnboardingToast();
         }
@@ -4655,6 +4995,7 @@
         const baseInterMs = CONFIG.WAVE_INTERMISSION_MS || 4000;
         st.waveState = 'INTERMISSION';
         st.waveTimerMs = (st.activeContracts && st.activeContracts.has('rapid_waves')) ? Math.round(baseInterMs * 0.5) : baseInterMs;
+        resetAllTowerRepositionCooldowns();
         setStatusMsg('無盡挑戰模式已開啟，波數上限解除。', 'Endless Mode unlocked! Wave cap lifted.');
         setPauseState(false, { silent: true });
     }
@@ -4694,7 +5035,7 @@
         const intermissionMs = (st.activeContracts && st.activeContracts.has('rapid_waves')) ? Math.round(baseInterMs * 0.5) : baseInterMs;
 
         if (st.waveState === 'PREP' || st.waveState === 'INTERMISSION') {
-            if (!st.guildTimerHold) {
+            if (!st.guildTimerHold && !isWave1WaitingFirstTower(st)) {
                 const prevSec = Math.ceil(st.waveTimerMs / 1000);
                 st.waveTimerMs -= dtMs;
                 if (st.waveTimerMs <= 0) startWave(st.waveState === 'PREP' ? 1 : st.currentWave + 1);
@@ -4754,6 +5095,7 @@
                     st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
                     st.guildTimerHold = Boolean(st.guildAutoHoldTimer);
                     st.guildDrawerTempHold = false;
+                    resetAllTowerRepositionCooldowns();
                     setStatusMsg(
                         `第 ${st.currentWave} 波防禦完成${rootMsgZh}，完成進化選擇後將開啟枝枒祝福。`,
                         `Wave ${st.currentWave} cleared${rootMsgEn}! Blessing selection opens after evolution.`
@@ -4772,6 +5114,7 @@
             st.waveState = 'INTERMISSION'; st.waveTimerMs = intermissionMs;
             st.guildTimerHold = Boolean(st.guildAutoHoldTimer);
             st.guildDrawerTempHold = false;
+            resetAllTowerRepositionCooldowns();
             setStatusMsg(
                 `第 ${st.currentWave} 波防禦完成${rootMsgZh}，下一波將於 ${Math.ceil(intermissionMs / 1000)} 秒後開始。`,
                 `Wave ${st.currentWave} cleared${rootMsgEn}! Next wave begins in ${Math.ceil(intermissionMs / 1000)}s.`
@@ -4801,7 +5144,8 @@
         const st = G.state;
         const silent = Boolean(options && options.silent);
         const nextPaused = Boolean(paused);
-        if (nextPaused && !isMatchPhaseActive()) {
+        const canMatch = !st.isGameOver && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT' && !isCodexOpen() && !isGuideOpen();
+        if (nextPaused && !canMatch) {
             st.isPaused = false;
             syncPauseUI();
             return false;
@@ -4809,22 +5153,22 @@
         st.isPaused = nextPaused;
         if (st.isPaused) {
             st.forecastDrawerOpen = false;
-            st.guildDrawerOpen = false;
-            if (st.guildDrawerTempHold && !st.guildAutoHoldTimer) st.guildTimerHold = false;
-            st.guildDrawerTempHold = false;
             if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
             Renderer.clearTouchDragVisuals(); st.draggedIndex = null; st.hoveredIndex = null; Renderer.updateRangeIndicator();
-            if (!silent) {
+            if (typeof Renderer.updateAndRenderCanvasFX === 'function') {
+                Renderer.updateAndRenderCanvasFX(0);
+            }
+            if (!silent && !isSystemMenuOpen()) {
                 Backend.recordPlayerAction();
                 Backend.trackFeel('Feel:Pause', 1, { wave: st.currentWave });
                 setStatusMsg(
-                    '遊戲已暫停（可點防禦塔檢視資訊，按「繼續」或 Space 恢復）。',
-                    'Game Paused (Click a tower to inspect, press Resume or Space to continue).'
+                    '⏸ 戰術部署中：可建塔、合成、移位、互換與操作商會；點頂部標籤或按 [Space] 恢復。',
+                    '⏸ Tactical Pause: Build, merge, relocate, swap & use Guild freely. Click top pill or press [Space] to resume.'
                 );
             }
             updateHUD();
         } else {
-            if (!silent && isMatchPhaseActive()) {
+            if (!silent && canMatch) {
                 setStatusMsg('遊戲繼續，守護世界樹防線。', 'Game resumed. Defend the World Tree!');
             }
             updateHUD();
@@ -4838,9 +5182,44 @@
         setPauseState(!G.state.isPaused);
     }
 
+    function openSystemMenu() {
+        const st = G.state, dom = G.dom;
+        if (!dom.systemMenuOverlayEl || !isMatchPhaseActive() || isSystemMenuOpen()) return false;
+        toggleQuickRefPopover(false);
+        setLangMenuOpen(false);
+        st.forecastDrawerOpen = false;
+        st.guildDrawerOpen = false;
+        if (DragSys && typeof DragSys.cancelActiveDrag === 'function') {
+            DragSys.cancelActiveDrag({ silent: true });
+        }
+        st.pausedBeforeSystemMenu = Boolean(st.isPaused);
+        st.isSystemMenuOpen = true;
+        st.isPaused = true;
+        if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
+        dom.systemMenuOverlayEl.classList.remove('hidden');
+        updateSystemMenuUI();
+        updateHUD();
+        return true;
+    }
+
+    function closeSystemMenu(options = {}) {
+        const st = G.state, dom = G.dom;
+        if (!isSystemMenuOpen()) return false;
+        const restorePaused = Boolean(st.pausedBeforeSystemMenu);
+        st.isSystemMenuOpen = false;
+        st.pausedBeforeSystemMenu = false;
+        if (dom.systemMenuOverlayEl) dom.systemMenuOverlayEl.classList.add('hidden');
+        if (!options.skipPauseRestore && isMatchPhaseActive()) {
+            setPauseState(restorePaused, { silent: true });
+        } else {
+            updateHUD();
+        }
+        return true;
+    }
+
     function cycleSelectedTowerTargetMode() {
         const st = G.state;
-        if (!isMatchPhaseActive() || st.selectedIndex === null || st.board[st.selectedIndex] === null) return;
+        if (!canPerformTacticalAction() || st.selectedIndex === null || st.board[st.selectedIndex] === null) return;
         Backend.recordPlayerAction();
         const t = st.board[st.selectedIndex];
         const towersData = (GameApp.data && GameApp.data.towers) || {};
@@ -4857,27 +5236,58 @@
 
     function sellSelectedTower() {
         const st = G.state;
-        if (!isGameplayActive() || st.selectedIndex === null || st.board[st.selectedIndex] === null) return;
-        Backend.recordPlayerAction();
+        if (!canPerformTacticalAction() || st.selectedIndex === null || st.board[st.selectedIndex] === null) return;
         const sellIdx = st.selectedIndex, t = st.board[sellIdx], refund = EconSys.getTowerSellRefund(t);
         const cfg = getTowersDict()[t.type] || { name: t.type };
+        const tierNum = Number(t.tier) || 1;
+        if (tierNum >= 3) {
+            const nowMs = Date.now();
+            const isConfirmed = Boolean(
+                st.pendingSellConfirm
+                && st.pendingSellConfirm.index === sellIdx
+                && st.pendingSellConfirm.towerUid === t.uid
+                && nowMs < st.pendingSellConfirm.expiresAt
+            );
+            if (!isConfirmed) {
+                clearPendingSellConfirm();
+                const timerId = setTimeout(() => {
+                    if (G.state && G.state.pendingSellConfirm && G.state.pendingSellConfirm.towerUid === t.uid) {
+                        clearPendingSellConfirm();
+                        updateTowerInspector();
+                    }
+                }, 2500);
+                st.pendingSellConfirm = {
+                    index: sellIdx,
+                    towerUid: t.uid,
+                    expiresAt: nowMs + 2500,
+                    timerId
+                };
+                setStatusMsg(
+                    `防誤賣確認：請於 2.5 秒內再點一次出售按鈕，確認出售【${cfg.name} ${Renderer.getTierStars(tierNum)}】（+${refund} 💰）。`,
+                    `Sell Guard: Click Sell again within 2.5s to confirm selling ${cfg.name} ${Renderer.getTierStars(tierNum)} (+${refund} 💰).`
+                );
+                updateTowerInspector();
+                return;
+            }
+        }
+        clearPendingSellConfirm();
+        Backend.recordPlayerAction();
         if (t.isCrowned) {
             st.crownedUsedCount = Math.max(0, (st.crownedUsedCount || 0) - 1);
         }
         st.currentGold += refund; st.board[sellIdx] = null;
-        if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') AttackSys.recalculateLeylines();
-        st.selectedIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
+        st.selectedIndex = null; st.selectedObstacleIndex = null; st.hoveredIndex = null; st.buildTargetIndex = null;
         Backend.trackFeel('Economy:SellTower', refund, { towerType: t.type, tier: t.tier, refund });
         setStatusMsg(
             `已出售【${cfg.name} ${Renderer.getTierStars(t.tier)}】，退還 +${refund} 💰。`,
             `Sold ${cfg.name} ${Renderer.getTierStars(t.tier)} for +${refund} 💰.`
         );
-        Renderer.renderBoard([sellIdx]); updateHUD();
+        syncTacticalBoardVisuals([sellIdx]);
     }
 
     function infuseSelectedScionTower() {
         const st = G.state;
-        if (!isGameplayActive() || st.selectedIndex === null) return false;
+        if (!canPerformTacticalAction() || st.selectedIndex === null) return false;
         if (TreeSys && typeof TreeSys.isMetaNodeUnlocked === 'function' && !TreeSys.isMetaNodeUnlocked('ancient_1')) {
             setStatusMsg(
                 '【無盡靈脈灌注】需於主選單「世界樹年輪・古樹枝 ①」解鎖後才可使用。',
@@ -4915,15 +5325,17 @@
             `${cfg.name} ★★★★★ Vein Infusion #${nextK} (-${cost} 💰): +${totalBonusPct}% power bucket bonus!`
         );
         Renderer.renderCellTower(st.selectedIndex);
-        Renderer.renderBoard([]);
-        updateHUD();
+        syncTacticalBoardVisuals([]);
         return true;
     }
 
     function triggerEarlyNextWave() {
         const st = G.state;
-        if (!isGameplayActive() || (st.waveState !== 'PREP' && st.waveState !== 'INTERMISSION')) return;
+        if (!canPerformTacticalAction() || (st.waveState !== 'PREP' && st.waveState !== 'INTERMISSION')) return;
         Backend.recordPlayerAction();
+        if (st.isPaused) {
+            setPauseState(false, { silent: true });
+        }
         const bonus = EconSys.getEarlyWaveBonus();
         const targetWave = st.waveState === 'PREP' ? 1 : st.currentWave + 1;
         st.currentGold += bonus; st.totalGoldEarned += bonus;
@@ -5065,7 +5477,7 @@
     }
 
     [
-        ['inspectorInfuseBtn', infuseSelectedScionTower], ['inspectorTargetBtn', cycleSelectedTowerTargetMode], ['inspectorSellBtn', sellSelectedTower], ['nextWaveBtn', triggerEarlyNextWave],
+        ['inspectorInfuseBtn', infuseSelectedScionTower], ['inspectorTargetBtn', cycleSelectedTowerTargetMode], ['inspectorSellBtn', sellSelectedTower], ['inspectorObstacleClearBtn', confirmClearSelectedObstacle], ['nextWaveBtn', triggerEarlyNextWave],
         ['skillEntangleBtn', () => TreeSys.castEntangleSkill()], ['skillFrenzyBtn', () => TreeSys.castFrenzySkill()],
         ['skillHarvestBtn', () => TreeSys.castGoldenHarvestSkill()], ['guildHarvestBtn', () => TreeSys.castGoldenHarvestSkill()],
         ['blessingRerollBtn', () => { SoundEngine.ensureContext(); if (TreeSys && typeof TreeSys.rerollBlessingChoices === 'function') TreeSys.rerollBlessingChoices(); }],
@@ -5075,7 +5487,14 @@
         ['lobbyCodexBtn', () => { SoundEngine.ensureContext(); CodexSys.openCodex(); }],
         ['lobbyGuideBtn', () => { SoundEngine.ensureContext(); if (isGuideOpen()) closeGuide(); else openGuide(); }],
         ['pauseBtn', toggleCombatPause], ['pauseResumeBtn', () => { if (G.state.isPaused) setPauseState(false); }],
-        ['pauseMenuBtn', returnToMainMenu], ['soundBtn', () => SoundEngine.toggleMute()],
+        ['systemMenuBtn', () => { SoundEngine.ensureContext(); if (isSystemMenuOpen()) closeSystemMenu(); else openSystemMenu(); }],
+        ['systemMenuXBtn', () => closeSystemMenu()],
+        ['sysmenuResumeBtn', () => closeSystemMenu()],
+        ['sysmenuRestartBtn', () => { SoundEngine.ensureContext(); closeSystemMenu({ skipPauseRestore: true }); restartGame(); }],
+        ['sysmenuMainmenuBtn', () => { SoundEngine.ensureContext(); closeSystemMenu({ skipPauseRestore: true }); returnToMainMenu(); }],
+        ['sysmenuSoundBtn', () => { SoundEngine.ensureContext(); SoundEngine.toggleMute(); updateSystemMenuUI(); }],
+        ['sysmenuLangBtn', () => { SoundEngine.ensureContext(); if (GameApp.i18n) GameApp.i18n.toggleLang(); updateSystemMenuUI(); }],
+        ['soundBtn', () => SoundEngine.toggleMute()],
         ['langBtn', (e) => {
             if (e && e.stopPropagation) e.stopPropagation();
             SoundEngine.ensureContext();
@@ -5094,7 +5513,7 @@
             SoundEngine.ensureContext();
             toggleQuickRefPopover();
         }],
-        ['helpBtn', () => { if (isGuideOpen()) closeGuide(); else openGuide(); }], ['guideXBtn', closeGuide], ['guideCloseBtn', closeGuide], ['guideMenuBtn', () => { closeGuide(); returnToMainMenu(); }],
+        ['helpBtn', () => { if (isGuideOpen()) closeGuide(); else openGuide(); }], ['guideXBtn', closeGuide], ['guideCloseBtn', closeGuide], ['guideReplayTutorialBtn', () => { SoundEngine.ensureContext(); replayOnboardingTutorial(); }], ['guideMenuBtn', () => { closeGuide(); returnToMainMenu(); }],
         ['forecastToggleBtn', toggleForecastDrawer], ['speedBtn', cycleGameSpeed], ['startGameBtn', startGame],
         ['victoryRestartBtn', restartGame], ['victoryNextPuzzleBtn', startNextPuzzleTrial], ['victoryMenuBtn', returnToMainMenu], ['endlessBtn', continueEndlessMode],
         ['restartBtn', restartGame], ['gameoverMenuBtn', returnToMainMenu],
@@ -5172,6 +5591,11 @@
     if (G.dom.guideOverlayEl) {
         G.dom.guideOverlayEl.addEventListener('click', (e) => {
             if (e && e.target === G.dom.guideOverlayEl) closeGuide();
+        });
+    }
+    if (G.dom.systemMenuOverlayEl) {
+        G.dom.systemMenuOverlayEl.addEventListener('click', (e) => {
+            if (e && e.target === G.dom.systemMenuOverlayEl) closeSystemMenu();
         });
     }
 
@@ -5397,15 +5821,24 @@
                 if (hudLangOpen || startLangOpen) { e.preventDefault(); setLangMenuOpen(false); return; }
                 if (G.dom.quickRefPopoverEl && !G.dom.quickRefPopoverEl.classList.contains('hidden')) { e.preventDefault(); toggleQuickRefPopover(false); return; }
                 if (isOverlayVisible(G.dom.metaTreeOverlayEl)) { e.preventDefault(); closeMetaTreeModal(); return; }
-                if (DragSys.isDragging()) { e.preventDefault(); DragSys.cancelActiveDrag(); }
-                else if (isCodexOpen()) { e.preventDefault(); CodexSys.closeCodex(); }
-                else if (isGuideOpen()) { e.preventDefault(); closeGuide(); }
-                else if (st.guildDrawerOpen) { e.preventDefault(); toggleGuildDrawer(false); }
-                else if (st.forecastDrawerOpen) { e.preventDefault(); st.forecastDrawerOpen = false; updateWaveForecastUI(); }
-                else if (isMatchPhaseActive() && (st.selectedIndex !== null || st.buildTargetIndex !== null || st.pendingSpawnType !== null || st.isApplyingFusionFruit || st.inspectedMonsterId !== null)) {
-                    e.preventDefault(); st.selectedIndex = null; st.buildTargetIndex = null; st.pendingSpawnType = null; st.isApplyingFusionFruit = false; st.inspectedMonsterId = null;
+                if (DragSys.isDragging()) { e.preventDefault(); DragSys.cancelActiveDrag(); return; }
+                if (isSystemMenuOpen()) { e.preventDefault(); closeSystemMenu(); return; }
+                if (isCodexOpen()) { e.preventDefault(); CodexSys.closeCodex(); return; }
+                if (isGuideOpen()) { e.preventDefault(); closeGuide(); return; }
+                if (st.guildDrawerOpen) { e.preventDefault(); toggleGuildDrawer(false); return; }
+                if (st.forecastDrawerOpen) { e.preventDefault(); st.forecastDrawerOpen = false; updateWaveForecastUI(); return; }
+                if (isMatchPhaseActive() && (st.selectedIndex !== null || st.selectedObstacleIndex !== null || st.buildTargetIndex !== null || st.pendingSpawnType !== null || st.isApplyingFusionFruit || st.inspectedMonsterId !== null)) {
+                    e.preventDefault();
+                    clearPendingSellConfirm();
+                    st.selectedIndex = null; st.selectedObstacleIndex = null; st.buildTargetIndex = null; st.pendingSpawnType = null; st.isApplyingFusionFruit = false; st.inspectedMonsterId = null;
                     Renderer.renderBoard([]); updateHUD();
                     setStatusMsg('已取消選取與待放置狀態。', 'Selection and placement cancelled.');
+                    return;
+                }
+                if (isMatchPhaseActive() && !isAnyModalOpen()) {
+                    e.preventDefault();
+                    SoundEngine.ensureContext();
+                    openSystemMenu();
                 }
                 return;
             }
@@ -5421,7 +5854,11 @@
                     if (e.repeat) return;
                     if (t && typeof t.blur === 'function' && tag === 'BUTTON') t.blur();
                     SoundEngine.ensureContext();
-                    setPauseState(!st.isPaused);
+                    if (st.waveState === 'PREP' || st.waveState === 'INTERMISSION') {
+                        triggerEarlyNextWave();
+                    } else {
+                        setPauseState(!st.isPaused);
+                    }
                 }
                 return;
             }
@@ -5432,6 +5869,7 @@
                     return;
                 }
                 const blockingOverlay = isOverlayVisible(G.dom.startOverlayEl)
+                    || isSystemMenuOpen()
                     || isOverlayVisible(G.dom.blessingOverlayEl)
                     || isOverlayVisible(G.dom.victoryOverlayEl)
                     || isOverlayVisible(G.dom.gameOverOverlayEl);
@@ -5445,7 +5883,7 @@
             if (isAnyModalOpen() || !isMatchPhaseActive()) return;
             if (lowerKey === 'b' && !e.repeat) { e.preventDefault(); SoundEngine.ensureContext(); toggleGuildDrawer(); return; }
             if (key === 'Tab' || lowerKey === 's') { e.preventDefault(); SoundEngine.ensureContext(); cycleGameSpeed(); return; }
-            if (!isGameplayActive()) return;
+            if (!canPerformTacticalAction()) return;
 
             const shopTypes = getShopTowerTypes();
             const numIdx = ['1', '2', '3', '4', '5'].indexOf(key) !== -1
@@ -5476,6 +5914,8 @@
     G.callbacks = {
         isGameplayActive,
         isMatchPhaseActive,
+        canPerformTacticalAction,
+        syncOnboardingSpotlights,
         isRelocationFree,
         setPauseState,
         scheduleTimeout: scheduleGameTimeout,
@@ -5610,8 +6050,8 @@
             // 同步更新底部狀態文字（含暫停、待機或最近一筆雙語訊息）
             if (st.isPaused && isMatchPhaseActive()) {
                 setStatusMsg(
-                    '遊戲已暫停（可點防禦塔檢視資訊，按「繼續」或 Space 恢復）。',
-                    'Game Paused (Click a tower to inspect, press Resume or Space to continue).'
+                    '⏸ 戰術部署中：可建塔、合成、移位、互換與操作商會；點頂部標籤或按 [Space] 恢復。',
+                    '⏸ Tactical Pause: Build, merge, relocate, swap & use Guild freely. Click top pill or press [Space] to resume.'
                 );
             } else if (st.waveState === 'WAITING_START') {
                 setStatusMsg(

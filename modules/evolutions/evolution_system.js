@@ -742,6 +742,7 @@
             ? Math.max(defaultTargetU, Math.min(16, fusion.nextNutritionU))
             : defaultTargetU;
 
+        const isCombatNow = Boolean(st.waveState === 'SPAWNING' || st.waveState === 'CLEARING');
         const mergedTower = AttackSys.createTowerObj(targetType, fusion.tier, fromInv + toInv, carriedAcc, {
             targetMode: toTower.targetMode || fromTower.targetMode || 'first',
             totalDamage: mergedDamage,
@@ -750,7 +751,8 @@
             isCrowned: Boolean(fusion.tier >= 5 || targetCfg.isScion),
             infusionCount: (toTower.infusionCount || 0) + (fromTower.infusionCount || 0),
             lineagePath,
-            lineageIds
+            lineageIds,
+            wakeupDelayMs: isCombatNow ? 350 : 0
         });
         st.board[toIndex] = mergedTower;
         st.board[fromIndex] = null;
@@ -1002,6 +1004,7 @@
         const carriedAcc = Math.max(0, Math.min(intervalMs - 120, towerObj.accMs || 0));
 
         const targetCfg = getTowersDict()[targetType] || {};
+        const isCombatNow = Boolean(st.waveState === 'SPAWNING' || st.waveState === 'CLEARING');
         const upgradedTower = AttackSys.createTowerObj(targetType, preview.tier, keptInvestedGold, carriedAcc, {
             targetMode: towerObj.targetMode || 'first',
             totalDamage: keptDamage,
@@ -1010,7 +1013,8 @@
             isCrowned: Boolean(preview.tier >= 5 || targetCfg.isScion),
             infusionCount: towerObj.infusionCount || 0,
             lineagePath: prevPath,
-            lineageIds: prevIds
+            lineageIds: prevIds,
+            wakeupDelayMs: isCombatNow ? 350 : 0
         });
         st.board[cellIndex] = upgradedTower;
 

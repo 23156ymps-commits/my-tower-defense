@@ -922,7 +922,22 @@
             const speedBtnEl = document.getElementById('speed-btn');
             if (speedBtnEl) speedBtnEl.title = isEn ? 'Toggle Game Speed [Tab/S]' : '切換遊戲倍速 [Tab/S]';
             const pauseBtnEl = document.getElementById('pause-btn');
-            if (pauseBtnEl) pauseBtnEl.title = isEn ? 'Pause or Resume [Space]' : '暫停或繼續 [Space]';
+            if (pauseBtnEl) pauseBtnEl.title = isEn ? 'Tactical Pause / Resume [Space]' : '戰術暫停 / 恢復 [Space]';
+            const sysMenuBtnEl = document.getElementById('system-menu-btn');
+            if (sysMenuBtnEl) {
+                sysMenuBtnEl.innerText = isEn ? '☰ Menu' : '☰ 選單';
+                sysMenuBtnEl.title = isEn ? 'Open System Menu [Esc]' : '開啟系統選單 [Esc]';
+            }
+            const sysMenuXEl = document.getElementById('system-menu-x-btn');
+            if (sysMenuXEl) sysMenuXEl.setAttribute('aria-label', isEn ? 'Close System Menu' : '關閉系統選單');
+            setElText('system-menu-title', isEn ? 'System Menu' : '系統選單');
+            setElText('system-menu-subtitle', isEn
+                ? 'Battle paused & background locked. Choose a system action.'
+                : '戰局已暫停並鎖定背景操作，請選擇系統功能。');
+            setElText('sysmenu-resume-btn', isEn ? 'Resume Game' : '繼續遊戲');
+            setElText('sysmenu-restart-btn', isEn ? 'Restart Match' : '重新開始本局');
+            setElText('sysmenu-mainmenu-btn', isEn ? 'Change Map / Main Menu' : '切換地圖 / 回主大廳');
+            setElText('guide-replay-tutorial-btn', isEn ? 'Replay Tutorial' : '重新開啟新手引導');
             const soundBtnEl = document.getElementById('sound-btn');
             if (soundBtnEl) soundBtnEl.title = isEn ? 'Toggle Audio' : '切換音效';
 
@@ -1184,8 +1199,9 @@
             const contractsLabel = document.querySelector('#contracts-drawer .contracts-summary span:first-child');
             if (contractsLabel) contractsLabel.innerText = isEn ? 'Difficulty Contracts (Optional)' : '難度契約（選填挑戰）';
 
-            const pauseBannerText = document.querySelector('#pause-banner .pause-banner-text');
-            if (pauseBannerText) pauseBannerText.innerText = isEn ? 'Game Paused — Click Resume or press [Space]' : '遊戲已暫停 — 點擊繼續或按 [Space] 恢復';
+            setElText('pause-resume-btn', isEn
+                ? '⏸ Tactical Pause · Click to Resume [Space]'
+                : '⏸ 戰術部署中 · 點擊恢復 [Space]');
 
             const smcTitle = document.querySelector('#side-monster-card .side-panel-title');
             if (smcTitle) smcTitle.innerText = isEn ? 'Target Enemy Info' : '目標敵軍情報';
@@ -1249,8 +1265,8 @@
                 : '異系 1★+1★ ▸ 雙元 1★ (2U) ｜ 同種 1★+1★ ▸ 靈木主幹 2★ ｜ 同種 2★+2★ ▸ 冠枝 A/B 3★ (4U)<br>同脈 3★+3★（或 8U）▸ 雙生 4★ ｜ 雙元 2★/3★ ＋ 缺口純系 ▸ 三元傳奇 3★/4★ ｜ 三元 16U ▸ 全圖唯一 5★ 原初之核';
             const guideNote = document.getElementById('guide-hotkey-note') || document.querySelector('#guide-overlay .codex-note');
             if (guideNote) guideNote.innerHTML = isEn
-                ? 'Choose a World Tree Blessing every 3 waves; Bosses arrive every 5 waves &amp; on the final wave.<br>Hotkeys: <b>[1/2/3]</b> Summon | <b>[Q/W/E]</b> Skills | <b>[B]</b> Guild | <b>[T]</b> World Tree | <b>[Space]</b> Pause | <b>[Tab/S]</b> Speed | <b>[Esc]</b> Cancel'
-                : '每通過 3 波可獲世界樹枝枒祝福；每 5 波與最終波迎戰領主魔王。<br>熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W/E]</b> 技能 ｜ <b>[B]</b> 商會 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消';
+                ? 'Choose a World Tree Blessing every 3 waves; Bosses arrive every 5 waves &amp; on the final wave.<br>Hotkeys: <b>[1/2/3]</b> Summon | <b>[Q/W/E]</b> Skills | <b>[B]</b> Guild | <b>[T]</b> World Tree | <b>[Space]</b> Tactical Pause / Start Wave | <b>[Tab/S]</b> Speed | <b>[Esc]</b> Cancel / Menu'
+                : '每通過 3 波可獲世界樹枝枒祝福；每 5 波與最終波迎戰領主魔王。<br>熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W/E]</b> 技能 ｜ <b>[B]</b> 商會 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 戰術暫停／開波 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消／選單';
 
             // 勝敗結算彈窗靜態欄位 (#victory-overlay & #game-over-overlay)
             const goSub = document.querySelector('#game-over-overlay .modal-subtitle');

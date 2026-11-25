@@ -501,6 +501,18 @@
         return result;
     }
 
+    function rejectSkillIfTacticalPaused(st) {
+        if (!st || !st.isPaused) return false;
+        const canTact = G && G.callbacks && typeof G.callbacks.canPerformTacticalAction === 'function'
+            ? G.callbacks.canPerformTacticalAction()
+            : false;
+        if (!canTact) return false;
+        if (G.dom && G.dom.msgText) {
+            G.dom.msgText.innerText = L('請先解除暫停再施放世界樹技能。', 'Unpause first before casting World Tree skills.');
+        }
+        return true;
+    }
+
     /**
      * 主動技能 1：根鬚纏繞（全場敵人定身 2.5s + 易傷 20%）
      */
@@ -508,6 +520,7 @@
         const st = G.state;
         const skills = getTreeData().ACTIVE_SKILLS || {};
         const entCfg = skills.entangle || { cost: 40, cdMs: 8000, durationMs: 2500, vulnBonus: 0.20 };
+        if (rejectSkillIfTacticalPaused(st)) return false;
         if (!G.callbacks.isGameplayActive() || st.entangleCdMs > 0) return false;
         const hasLivingMonsters = st.monsters.some(m => m && m.hp > 0);
         if (!hasLivingMonsters) {
@@ -555,6 +568,7 @@
         const st = G.state;
         const skills = getTreeData().ACTIVE_SKILLS || {};
         const frzCfg = skills.frenzy || { cost: 60, cdMs: 12000, durationMs: 5000, speedBonus: 0.35 };
+        if (rejectSkillIfTacticalPaused(st)) return false;
         if (!G.callbacks.isGameplayActive()) return false;
         if (st.frenzyActiveMs > 0) {
             G.dom.msgText.innerText = L('自然狂熱效果持續中，無法重複施放。', 'Nature Frenzy is already active.');
@@ -598,6 +612,7 @@
         const st = G.state;
         const skills = getTreeData().ACTIVE_SKILLS || {};
         const harvCfg = skills.golden_harvest || { cost: 50, cdMs: 14000, baseGold: 25, perWaveGold: 3 };
+        if (rejectSkillIfTacticalPaused(st)) return false;
         if (!G.callbacks.isGameplayActive() || (st.harvestCdMs || 0) > 0) return false;
         if (st.dewEnergy < harvCfg.cost) {
             G.dom.msgText.innerText = L(`靈露不足，需要 ${harvCfg.cost} 靈露才能施放黃金豐收。`, `Not enough Dew: Golden Harvest requires ${harvCfg.cost} Dew.`);
