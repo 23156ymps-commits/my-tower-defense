@@ -63,45 +63,45 @@
             id: 'root_lv1',
             name: '汲取根鬚',
             nameEn: 'Siphon Roots',
-            cost: 45,
+            cost: 55,
             fixedWaveGold: 15,
             interestRate: 0,
             interestCap: 0,
             sellRefundRate: 0.70,
-            shortDesc: '每清完 1 波固定額外獲得 +15 💰',
-            shortDescEn: 'Each wave cleared grants +15 💰',
-            desc: '每清完 1 波固定額外獲得 +15 💰。',
-            descEn: 'Grants a fixed +15 💰 bonus after clearing each wave.'
+            shortDesc: '每清完 1 波固定額外獲得 +15 💰（獨立結算）',
+            shortDescEn: 'Each wave cleared grants +15 💰 (exempt from cap)',
+            desc: '每清完 1 波固定額外獲得 +15 💰，獨立結算不受單波軟上限截斷。',
+            descEn: 'Grants a fixed +15 💰 bonus after clearing each wave, exempt from the soft cap.'
         },
         2: {
             level: 2,
             id: 'root_lv2',
             name: '黃金根脈',
             nameEn: 'Golden Veins',
-            cost: 75,
+            cost: 90,
             fixedWaveGold: 32,
             interestRate: 0,
             interestCap: 0,
             sellRefundRate: 0.80,
-            shortDesc: '每波 +32 💰 · 全場出售退費率 70% → 80%',
-            shortDescEn: 'Wave End +32 💰 · Sell Refund 70% → 80%',
-            desc: '每清完 1 波固定額外獲得 +32 💰，且全場出售防禦塔退費率從 70% 提升為 80%。',
-            descEn: 'Grants +32 💰 per cleared wave and raises tower sell refund from 70% to 80%.'
+            shortDesc: '每波 +32 💰（獨立結算）· 出售退費 70% → 80%',
+            shortDescEn: 'Wave End +32 💰 (exempt) · Sell Refund 70% → 80%',
+            desc: '每清完 1 波獨立獲得 +32 💰（不受單波軟上限截斷），且全場出售防禦塔退費率從 70% 提升為 80%。',
+            descEn: 'Grants +32 💰 per cleared wave (exempt from soft cap) and raises tower sell refund from 70% to 80%.'
         },
         3: {
             level: 3,
             id: 'root_lv3',
             name: '複利樹心',
             nameEn: 'Compound Heart',
-            cost: 110,
+            cost: 125,
             fixedWaveGold: 42,
             interestRate: 0.08,
             interestCap: 35,
             sellRefundRate: 0.80,
-            shortDesc: '每波 +42 💰 ＋ 現金 8% 利息（上限 +35 💰，軟上限 22 + 8w）',
-            shortDescEn: 'Wave End +42 💰 + 8% Interest (cap +35 💰, soft cap 22 + 8w)',
-            desc: '每清完 1 波固定額外獲得 +42 💰 ＋ 當前持有現金的 8% 利息（單波利息部分上限 +35 💰，且受單波非戰鬥淨收益軟上限 22 + 8w 約束）。',
-            descEn: 'Grants +42 💰 + 8% cash interest per wave (interest cap +35 💰, bound by wave soft cap 22 + 8w).'
+            shortDesc: '每波 +42 💰 ＋ 8% 利息（上限 +35 💰，獨立結算）',
+            shortDescEn: 'Wave End +42 💰 + 8% Interest (cap +35 💰, exempt)',
+            desc: '每清完 1 波固定額外獲得 +42 💰 ＋ 當前持有現金的 8% 利息（單波利息部分上限 +35 💰，獨立結算不受單波軟上限截斷）。',
+            descEn: 'Grants +42 💰 + 8% cash interest per wave (interest cap +35 💰, exempt from the non-combat soft cap).'
         }
     };
 

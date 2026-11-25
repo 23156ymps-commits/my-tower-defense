@@ -169,7 +169,6 @@
 
         if (terrainKey === 'treasure_rock') {
             const roll = nextRand();
-            const canFruit = (G.state.fusionFruitCount || 0) <= 0;
             if (roll < 0.40) {
                 const rawNetBonus = 30;
                 let grantedNet = rawNetBonus;
@@ -193,13 +192,45 @@
                     revealedTerrain: null
                 };
             }
-            if (roll < 0.70 && canFruit) {
-                G.state.fusionFruitCount = 1;
+            if (roll < 0.70) {
+                const fruitRes = (EconSys && typeof EconSys.grantFusionFruit === 'function')
+                    ? EconSys.grantFusionFruit(1)
+                    : { storedCount: 1, overflowCount: 0, compensationGold: 0, count: 1, maxSlots: 3 };
+                if (fruitRes.overflowCount > 0) {
+                    return {
+                        ok: true,
+                        cost,
+                        isTreasureRock: true,
+                        treasureType: 'fruit_overflow',
+                        compensationGold: fruitRes.compensationGold,
+                        fruitCount: fruitRes.count,
+                        maxFruitSlots: fruitRes.maxSlots,
+                        revealedTerrain: null
+                    };
+                }
                 return {
                     ok: true,
                     cost,
                     isTreasureRock: true,
                     treasureType: 'fruit',
+                    fruitCount: fruitRes.count,
+                    maxFruitSlots: fruitRes.maxSlots,
+                    revealedTerrain: null
+                };
+            }
+            const capReached = (G.callbacks && typeof G.callbacks.isTowerCapReached === 'function')
+                ? G.callbacks.isTowerCapReached()
+                : false;
+            if (capReached) {
+                const compGold = cost + 30;
+                G.state.currentGold += compGold;
+                G.state.totalGoldEarned = (G.state.totalGoldEarned || 0) + compGold;
+                return {
+                    ok: true,
+                    cost,
+                    isTreasureRock: true,
+                    treasureType: 'tower_cap_gold',
+                    totalPayout: compGold,
                     revealedTerrain: null
                 };
             }

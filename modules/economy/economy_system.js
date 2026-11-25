@@ -20,7 +20,18 @@
         return (GameApp.data && GameApp.data.economy) || {};
     }
 
+    function isStandardizedNoMetaMode(stOverride = null) {
+        const st = stOverride || (G && G.state);
+        return Boolean(st && (st.gameMode === 'puzzle' || st.gameMode === 'daily'));
+    }
+
+    function isDailyMode(stOverride = null) {
+        const st = stOverride || (G && G.state);
+        return Boolean(st && st.gameMode === 'daily');
+    }
+
     function hasMetaNode(nodeId) {
+        if (isStandardizedNoMetaMode()) return false;
         const TreeSys = GameApp.systems && GameApp.systems.tree;
         if (TreeSys && typeof TreeSys.isMetaNodeUnlocked === 'function') {
             return TreeSys.isMetaNodeUnlocked(nodeId);
@@ -38,11 +49,11 @@
     }
 
     function canTradeStocks() {
-        return hasMetaNode('wealth_2');
+        return hasMetaNode('wealth_2') || isDailyMode();
     }
 
     function canOpenBlindBox() {
-        return hasMetaNode('fate_1');
+        return hasMetaNode('fate_1') || isDailyMode();
     }
 
     function canUseWager() {
@@ -192,7 +203,7 @@
     }
 
     /**
-     * 計算聚寶根鬚（Lv.0 → Lv.3）於指定波次的波末產出明細（受單波非戰鬥淨收益軟上限 22 + 8w 約束）
+     * 計算聚寶根鬚（Lv.0 → Lv.3）於指定波次的波末產出明細（獨立結算，不消耗也不受 22 + 8w 軟上限截斷）
      */
     function computeRootWaveIncome(rootLevel = null, currentGold = null, waveNum = null) {
         const d = getData();
@@ -223,7 +234,8 @@
                 interestGain: 0,
                 totalGain: 0,
                 isInterestCapped: false,
-                isSoftCapped: false
+                isSoftCapped: false,
+                exemptFromSoftCap: true
             };
         }
 
@@ -231,9 +243,6 @@
         const unClampedInterest = lv >= 3 ? Math.floor(gold * interestRate + 1e-9) : 0;
         const rawInterest = lv >= 3 ? Math.min(interestCap, unClampedInterest) : 0;
         const uncappedGain = fixedGain + rawInterest;
-        const totalGain = Math.min(waveCap, uncappedGain);
-        const baseGain = Math.min(waveCap, fixedGain);
-        const interestGain = Math.max(0, totalGain - baseGain);
 
         return {
             level: lv,
@@ -242,11 +251,12 @@
             rawInterest,
             uncappedGain,
             waveCap,
-            baseGain,
-            interestGain,
-            totalGain,
+            baseGain: fixedGain,
+            interestGain: rawInterest,
+            totalGain: uncappedGain,
             isInterestCapped: lv >= 3 && unClampedInterest > interestCap,
-            isSoftCapped: uncappedGain > waveCap
+            isSoftCapped: false,
+            exemptFromSoftCap: true
         };
     }
 
@@ -271,19 +281,122 @@
         return Boolean(st && st.currentGold >= getObstacleClearCost());
     }
 
-    function getCrownAwakenCost() {
+    function getFusionFruitMaxSlots() {
         const d = getData();
+        return Number.isFinite(d.FUSION_FRUIT_MAX_SLOTS) ? d.FUSION_FRUIT_MAX_SLOTS : 3;
+    }
+
+    function getFusionFruitOverflowGold() {
+        const d = getData();
+        return Number.isFinite(d.FUSION_FRUIT_OVERFLOW_GOLD) ? d.FUSION_FRUIT_OVERFLOW_GOLD : 80;
+    }
+
+    /**
+     * 授予萬能融合果實；若已達上限 3 顆，自動折現補償 +80 💰（不受單波軟上限截斷）
+     */
+    function grantFusionFruit(amount = 1) {
+        if (!G || !G.state) {
+            return { storedCount: 0, overflowCount: 0, compensationGold: 0, count: 0, maxSlots: getFusionFruitMaxSlots() };
+        }
+        const st = G.state;
+        const maxSlots = getFusionFruitMaxSlots();
+        const overflowGold = getFusionFruitOverflowGold();
+        const req = Math.max(1, Math.floor(Number(amount) || 1));
+        let storedCount = 0;
+        let overflowCount = 0;
+        let compensationGold = 0;
+        for (let i = 0; i < req; i++) {
+            const cur = Math.max(0, Math.floor(Number(st.fusionFruitCount) || 0));
+            if (cur < maxSlots) {
+                st.fusionFruitCount = cur + 1;
+                storedCount++;
+            } else {
+                overflowCount++;
+                compensationGold += overflowGold;
+            }
+        }
+        if (compensationGold > 0) {
+            st.currentGold += compensationGold;
+            st.totalGoldEarned = (st.totalGoldEarned || 0) + compensationGold;
+        }
         return {
-            gold: Number.isFinite(d.CROWN_AWAKEN_GOLD_COST) ? d.CROWN_AWAKEN_GOLD_COST : 220,
-            dew: Number.isFinite(d.CROWN_AWAKEN_DEW_COST) ? d.CROWN_AWAKEN_DEW_COST : 60
+            storedCount,
+            overflowCount,
+            compensationGold,
+            count: Math.max(0, Math.floor(Number(st.fusionFruitCount) || 0)),
+            maxSlots
         };
     }
 
-    function canAffordCrownAwaken() {
-        const st = G && G.state;
-        if (!st) return false;
-        const cost = getCrownAwakenCost();
-        return st.currentGold >= cost.gold && st.dewEnergy >= cost.dew;
+    function getTowerCapConfig() {
+        const d = getData();
+        const baseCap = Number.isFinite(d.BASE_TOWER_CAP) ? d.BASE_TOWER_CAP : 16;
+        const step = Number.isFinite(d.TOWER_CAP_STEP) ? d.TOWER_CAP_STEP : 2;
+        const costs = Array.isArray(d.TOWER_CAP_EXPANSION_COSTS) ? d.TOWER_CAP_EXPANSION_COSTS : [200, 350, 550];
+        return { baseCap, step, costs, maxExpansions: costs.length };
+    }
+
+    function getCurrentTowerCap(stOverride = null) {
+        const st = stOverride || (G && G.state);
+        const cfg = getTowerCapConfig();
+        const base = (st && Number.isFinite(st.towerCapOverride)) ? st.towerCapOverride : cfg.baseCap;
+        const exp = st ? Math.max(0, Math.min(cfg.maxExpansions, Math.floor(Number(st.towerCapExpansions) || 0))) : 0;
+        return base + exp * cfg.step;
+    }
+
+    function getNextTowerCapExpansionCost(stOverride = null) {
+        const st = stOverride || (G && G.state);
+        if (st && st.gameMode === 'puzzle') return null;
+        const cfg = getTowerCapConfig();
+        const exp = st ? Math.max(0, Math.floor(Number(st.towerCapExpansions) || 0)) : 0;
+        if (exp >= cfg.maxExpansions) return null;
+        return Number(cfg.costs[exp]) || null;
+    }
+
+    function expandTowerCap() {
+        if (!G || !G.state) return { ok: false, reason: 'no_runtime' };
+        const st = G.state;
+        if (st.gameMode === 'puzzle') return { ok: false, reason: 'puzzle_locked' };
+        const cfg = getTowerCapConfig();
+        const curExp = Math.max(0, Math.floor(Number(st.towerCapExpansions) || 0));
+        if (curExp >= cfg.maxExpansions) {
+            return { ok: false, reason: 'max_cap', cap: getCurrentTowerCap(st) };
+        }
+        const cost = Number(cfg.costs[curExp]);
+        if (!Number.isFinite(cost) || st.currentGold < cost) {
+            return { ok: false, reason: 'insufficient_gold', cost, cap: getCurrentTowerCap(st) };
+        }
+        st.currentGold -= cost;
+        st.towerCapExpansions = curExp + 1;
+        return {
+            ok: true,
+            cost,
+            expansions: st.towerCapExpansions,
+            cap: getCurrentTowerCap(st)
+        };
+    }
+
+    function isEndlessGoldSinkUnlocked(stOverride = null) {
+        const st = stOverride || (G && G.state);
+        const d = getData();
+        const minWave = Number.isFinite(d.ENDLESS_GOLD_SINK_MIN_WAVE) ? d.ENDLESS_GOLD_SINK_MIN_WAVE : 11;
+        return Boolean(st && st.isEndlessMode && (Number(st.currentWave) || 1) >= minWave);
+    }
+
+    function getGlobalTreeBoostCost(level = 0) {
+        const d = getData();
+        const base = Number.isFinite(d.GLOBAL_TREE_BOOST_BASE_COST) ? d.GLOBAL_TREE_BOOST_BASE_COST : 300;
+        const step = Number.isFinite(d.GLOBAL_TREE_BOOST_STEP_COST) ? d.GLOBAL_TREE_BOOST_STEP_COST : 150;
+        const n = Math.max(0, Math.floor(Number(level) || 0));
+        return base + step * n;
+    }
+
+    function getCrownRefineCost(level = 0) {
+        const d = getData();
+        const costs = Array.isArray(d.CROWN_REFINE_COSTS) ? d.CROWN_REFINE_COSTS : [250, 400, 550];
+        const lv = Math.max(0, Math.floor(Number(level) || 0));
+        if (lv >= costs.length) return null;
+        return Number(costs[lv]) || null;
     }
 
     function getEarlyWaveBonus(remainingMs = null) {
@@ -780,14 +893,8 @@
                 kind = 'tower';
                 tier = 2;
             } else if (r < tier3Cutoff) {
-                const fruitFull = Boolean(st && (st.fusionFruitCount || 0) >= 1 && !options.allowFruitOverflow);
-                if (fruitFull) {
-                    kind = 'tower';
-                    tier = 2;
-                } else {
-                    kind = 'fruit';
-                    tier = 0;
-                }
+                kind = 'fruit';
+                tier = 0;
             } else {
                 kind = 'tower';
                 tier = 3;
@@ -845,6 +952,8 @@
         st.fusionFruitCount = 0;
         st.isApplyingFusionFruit = false;
         st.blindBoxTokens = 0;
+        st.towerCapExpansions = 0;
+        st.globalTreeBoostLevel = 0;
         st.stocks = createInitialStockState();
     }
 
@@ -1060,21 +1169,21 @@
                 }
                 st.surgeWagerUsedCount = used + 1;
             }
-            const maxSlots = Number.isFinite(d.FUSION_FRUIT_MAX_SLOTS) ? d.FUSION_FRUIT_MAX_SLOTS : 1;
-            const prevFruits = st.fusionFruitCount || 0;
-            st.fusionFruitCount = Math.min(maxSlots, prevFruits + 1);
-            const fruitGained = st.fusionFruitCount - prevFruits;
+            const fruitGrant = grantFusionFruit(1);
+            const didOverflow = fruitGrant.overflowCount > 0;
             return {
                 type: 'monster_surge',
                 success: true,
-                fruitGained,
-                fusionFruitCount: st.fusionFruitCount,
-                summaryZh: fruitGained > 0
-                    ? `魔潮加碼守住：本波擊殺賞金 ×1.45 結算完成，獲得 +1 顆萬能融合果實`
-                    : `魔潮加碼守住：本波擊殺賞金 ×1.45 結算完成（萬能融合果實槽位已滿 ${st.fusionFruitCount}/${maxSlots}）`,
-                summaryEn: fruitGained > 0
-                    ? `Monster Surge Cleared: ×1.45 kill bounty & +1 Universal Fusion Fruit earned`
-                    : `Monster Surge Cleared: ×1.45 kill bounty (Universal Fruit slot full ${st.fusionFruitCount}/${maxSlots})`
+                fruitGained: fruitGrant.storedCount,
+                overflowCompensationGold: fruitGrant.compensationGold,
+                fusionFruitCount: fruitGrant.count,
+                maxFruitSlots: fruitGrant.maxSlots,
+                summaryZh: didOverflow
+                    ? `魔潮加碼守住：本波擊殺賞金 ×1.45 結算完成（果實庫存已滿 ${fruitGrant.count}/${fruitGrant.maxSlots}，自動折算為 +${fruitGrant.compensationGold} 💰）`
+                    : `魔潮加碼守住：本波擊殺賞金 ×1.45 結算完成，獲得 +1 顆萬能融合果實（${fruitGrant.count}/${fruitGrant.maxSlots}）`,
+                summaryEn: didOverflow
+                    ? `Monster Surge Cleared: ×1.45 kill bounty (Fruit inventory full ${fruitGrant.count}/${fruitGrant.maxSlots}, auto-converted to +${fruitGrant.compensationGold} 💰)`
+                    : `Monster Surge Cleared: ×1.45 kill bounty & +1 Universal Fusion Fruit (${fruitGrant.count}/${fruitGrant.maxSlots})`
             };
         }
 
@@ -1097,8 +1206,17 @@
         canAffordCombatMove,
         getObstacleClearCost,
         canAffordObstacleClear,
-        getCrownAwakenCost,
-        canAffordCrownAwaken,
+        getFusionFruitMaxSlots,
+        getFusionFruitOverflowGold,
+        grantFusionFruit,
+        getTowerCapConfig,
+        getCurrentTowerCap,
+        getNextTowerCapExpansionCost,
+        expandTowerCap,
+        isEndlessGoldSinkUnlocked,
+        getGlobalTreeBoostCost,
+        getCrownRefineCost,
+        isStandardizedNoMetaMode,
         getEarlyWaveBonus,
         computeKillGold,
         ensureWaveNonCombatLedger,

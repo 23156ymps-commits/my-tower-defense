@@ -454,6 +454,7 @@
             focusStacks: 0,
             isCrowned: Boolean(options.isCrowned || actualTier >= 5 || cfg.isScion),
             stunnedMs: Number.isFinite(options.stunnedMs) ? options.stunnedMs : 0,
+            refineLevel: Math.max(0, Math.min(3, Math.floor(Number(options.refineLevel) || 0))),
             repositionCooldownMs: Number.isFinite(options.repositionCooldownMs) ? Math.max(0, options.repositionCooldownMs) : 0,
             wakeupDelayMs: Number.isFinite(options.wakeupDelayMs)
                 ? Math.max(0, options.wakeupDelayMs)
@@ -534,6 +535,31 @@
     function getInfusionCost(k = 1) {
         const step = Math.max(1, Math.floor(Number(k) || 1));
         return 150 + 75 * step;
+    }
+
+    /**
+     * 無盡 W11+ 世界樹全局靈脈強化加成（併入 B_power 加法桶）：
+     *   Lv.1～5 每級 +8% (合計 +40%)；Lv.6 起每級 +5%
+     */
+    function b_treeBoost(level = 0) {
+        const lv = Math.max(0, Math.floor(Number(level) || 0));
+        if (lv <= 0) return 0;
+        const econData = (GameApp.data && GameApp.data.economy) || {};
+        const earlyRate = Number.isFinite(econData.GLOBAL_TREE_BOOST_EARLY_RATE) ? econData.GLOBAL_TREE_BOOST_EARLY_RATE : 0.08;
+        const lateRate = Number.isFinite(econData.GLOBAL_TREE_BOOST_LATE_RATE) ? econData.GLOBAL_TREE_BOOST_LATE_RATE : 0.05;
+        if (lv <= 5) return Number((earlyRate * lv).toFixed(4));
+        return Number((earlyRate * 5 + lateRate * (lv - 5)).toFixed(4));
+    }
+
+    /**
+     * 無盡 W11+ 4★ 古冠精煉加成（併入 B_power 加法桶）：每階 +10%（上限 3 階 +30%）
+     */
+    function b_refine(level = 0) {
+        const econData = (GameApp.data && GameApp.data.economy) || {};
+        const maxLv = Number.isFinite(econData.CROWN_REFINE_MAX_LEVEL) ? econData.CROWN_REFINE_MAX_LEVEL : 3;
+        const perLv = Number.isFinite(econData.CROWN_REFINE_BONUS_PER_LEVEL) ? econData.CROWN_REFINE_BONUS_PER_LEVEL : 0.10;
+        const lv = Math.max(0, Math.min(maxLv, Math.floor(Number(level) || 0)));
+        return Number((perLv * lv).toFixed(4));
     }
 
     /**
@@ -620,13 +646,25 @@
             : Math.max(leyBonus, primalLinkBonus);
         const b_leyline = Math.min(leylineCap, Math.max(0, rawLeyline));
 
-        const B_power = b_terrain + b_blessing + b_dividend + b_inf + b_leyline;
+        const treeBoostLv = Number.isFinite(options.globalTreeBoostLevel)
+            ? options.globalTreeBoostLevel
+            : ((G && G.state && Number(G.state.globalTreeBoostLevel)) || 0);
+        const b_treeBoostVal = Number.isFinite(options.b_treeBoost) ? Math.max(0, options.b_treeBoost) : b_treeBoost(treeBoostLv);
+
+        const refineLv = Number.isFinite(options.refineLevel)
+            ? options.refineLevel
+            : ((towerObj && (Number(towerObj.tier) || 1) === 4 && Number.isFinite(towerObj.refineLevel)) ? towerObj.refineLevel : 0);
+        const b_refineVal = Number.isFinite(options.b_refine) ? Math.max(0, options.b_refine) : b_refine(refineLv);
+
+        const B_power = b_terrain + b_blessing + b_dividend + b_inf + b_leyline + b_treeBoostVal + b_refineVal;
         return {
             b_terrain,
             b_blessing,
             b_dividend,
             b_infusion: b_inf,
             b_leyline,
+            b_treeBoost: b_treeBoostVal,
+            b_refine: b_refineVal,
             B_power
         };
     }
@@ -2725,6 +2763,8 @@
         recordTowerDamage,
         b_infusion,
         computeInfusionBonus: b_infusion,
+        b_treeBoost,
+        b_refine,
         getInfusionCost,
         computePowerBucket,
         getTowerInspectorStats,

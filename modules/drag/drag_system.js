@@ -210,6 +210,9 @@
      */
     function isShopDropValidAt(cellIndex) {
         if (cellIndex === null || cellIndex === undefined || !G || !G.state) return false;
+        if (G.callbacks && typeof G.callbacks.isTowerCapReached === 'function' && G.callbacks.isTowerCapReached()) {
+            return false;
+        }
         const TerrainSys = GameApp.systems && GameApp.systems.terrain;
         const canBuild = TerrainSys ? TerrainSys.canBuildAt(cellIndex) : !G.map.pathCellIndices.has(cellIndex);
         if (!canBuild || G.state.board[cellIndex] !== null) return false;
@@ -524,6 +527,17 @@
         const towersDict = getTowersDict();
         const tCfg = towersDict[towerType];
         if (!tCfg) return false;
+
+        if (G.callbacks && typeof G.callbacks.isTowerCapReached === 'function' && G.callbacks.isTowerCapReached()) {
+            if (G.dom.msgText) {
+                const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
+                const cap = typeof G.callbacks.getTowerCap === 'function' ? G.callbacks.getTowerCap() : 16;
+                G.dom.msgText.innerText = isEn
+                    ? `Tower cap reached (${cap}/${cap}). Merge, feed, sell, or expand slots.`
+                    : `已達塔位上限（${cap}/${cap}），可合成、餵養、賣塔或擴充槽位。`;
+            }
+            return false;
+        }
 
         if (GameApp.backend && typeof GameApp.backend.recordPlayerAction === 'function') {
             GameApp.backend.recordPlayerAction();

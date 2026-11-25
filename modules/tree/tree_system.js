@@ -42,8 +42,14 @@
         return { version: 1, honorPoints: 0, totalHonorEarned: 0, unlockedNodes: [] };
     }
 
+    function isStandardizedNoMetaMode(stOverride = null) {
+        const st = stOverride || (G && G.state);
+        return Boolean(st && (st.gameMode === 'puzzle' || st.gameMode === 'daily'));
+    }
+
     function isMetaNodeUnlocked(nodeId) {
         if (!nodeId) return true;
+        if (isStandardizedNoMetaMode()) return false;
         const st = getMetaTreeState();
         return Array.isArray(st.unlockedNodes) && st.unlockedNodes.includes(nodeId);
     }
@@ -238,7 +244,7 @@
             id: `root_lv${lv}`,
             name: lv === 1 ? '汲取根鬚' : (lv === 2 ? '黃金根脈' : (lv === 3 ? '複利樹心' : '未啟用')),
             nameEn: lv === 1 ? 'Siphon Roots' : (lv === 2 ? 'Golden Veins' : (lv === 3 ? 'Compound Heart' : 'Dormant Roots')),
-            cost: lv === 1 ? 45 : (lv === 2 ? 75 : (lv === 3 ? 110 : 0)),
+            cost: lv === 1 ? 55 : (lv === 2 ? 90 : (lv === 3 ? 125 : 0)),
             fixedWaveGold: lv === 1 ? 15 : (lv === 2 ? 32 : (lv === 3 ? 42 : 0)),
             interestRate: lv === 3 ? 0.08 : 0,
             interestCap: lv === 3 ? 35 : 0,
@@ -381,8 +387,8 @@
                 );
             } else {
                 G.dom.msgText.innerText = L(
-                    `已升級【聚寶根鬚 Lv.3 複利樹心】（-${cost} 💰）：每波固定 +42 💰 ＋ 當前現金 8% 利息（上限 +35 💰，受軟上限 22 + 8w 約束）。`,
-                    `Upgraded to Lv.3 Compound Heart (-${cost} 💰): +42 💰 + 8% cash interest per wave (interest cap +35 💰, wave cap 22 + 8w).`
+                    `已升級【聚寶根鬚 Lv.3 複利樹心】（-${cost} 💰）：每波獨立產出 +42 💰 ＋ 現金 8% 利息（利息上限 +35 💰，不受軟上限截斷）。`,
+                    `Upgraded to Lv.3 Compound Heart (-${cost} 💰): +42 💰 + 8% cash interest per wave (interest cap +35 💰, exempt from soft cap).`
                 );
             }
         }
@@ -400,7 +406,7 @@
     }
 
     /**
-     * 波末結算聚寶根鬚產出金幣（受單波非戰鬥淨收益軟上限 maxNonCombatGain(w) = 22 + 8w 約束）
+     * 波末結算聚寶根鬚產出金幣（固定產出與 Lv.3 利息獨立結算，不消耗也不受 22 + 8w 軟上限截斷；貪婪之根仍走軟上限）
      */
     function settleWaveRootIncome(waveNum = null) {
         if (!G || !G.state) return null;
@@ -418,29 +424,36 @@
                 fixedGain: spec.fixedWaveGold || 0,
                 rawInterest: lv >= 3 ? Math.min(35, Math.floor(Math.max(0, st.currentGold) * 0.08 + 1e-9)) : 0,
                 waveCap: 22 + 8 * w,
-                totalGain: Math.min(22 + 8 * w, (spec.fixedWaveGold || 0) + (lv >= 3 ? Math.min(35, Math.floor(Math.max(0, st.currentGold) * 0.08 + 1e-9)) : 0))
+                totalGain: (spec.fixedWaveGold || 0) + (lv >= 3 ? Math.min(35, Math.floor(Math.max(0, st.currentGold) * 0.08 + 1e-9)) : 0)
             };
 
-        const greedyBonus = getGreedyRootsWaveBonus();
-        const combinedRawTotal = (rawPayout.totalGain || 0) + greedyBonus;
-        const waveCap = rawPayout.waveCap || (22 + 8 * w);
-        if (EconSys && typeof EconSys.ensureWaveNonCombatLedger === 'function') {
-            EconSys.ensureWaveNonCombatLedger(w);
+        const baseGain = Math.max(0, Number(rawPayout.fixedGain) || 0);
+        const interestGain = Math.max(0, Number(rawPayout.rawInterest) || 0);
+        const rootGain = baseGain + interestGain;
+        if (rootGain > 0) {
+            st.currentGold += rootGain;
+            st.totalGoldEarned += rootGain;
         }
-        const alreadyNonCombat = Math.max(0, Number(st.waveNonCombatGold) || 0);
-        const remainingCap = Math.max(0, waveCap - alreadyNonCombat);
-        const grantedGold = Math.min(remainingCap, combinedRawTotal);
-        const rootPortion = Math.min(grantedGold, rawPayout.totalGain || 0);
-        const greedyGranted = Math.max(0, grantedGold - rootPortion);
-        const baseGain = Math.min(rootPortion, rawPayout.fixedGain || 0);
-        const interestGain = Math.max(0, rootPortion - baseGain);
-        const isSoftCapped = ((rawPayout.uncappedGain || rawPayout.totalGain) + greedyBonus) > remainingCap;
+
+        const greedyBonus = getGreedyRootsWaveBonus();
+        let greedyGranted = 0;
+        if (greedyBonus > 0) {
+            if (EconSys && typeof EconSys.recordNonCombatNetGain === 'function') {
+                const capRes = EconSys.recordNonCombatNetGain(greedyBonus, w);
+                greedyGranted = capRes.granted || 0;
+            } else {
+                greedyGranted = greedyBonus;
+            }
+            if (greedyGranted > 0) {
+                st.currentGold += greedyGranted;
+                st.totalGoldEarned += greedyGranted;
+            }
+        }
+
+        const grantedGold = rootGain + greedyGranted;
+        const waveCap = rawPayout.waveCap || (22 + 8 * w);
 
         if (grantedGold > 0) {
-            st.currentGold += grantedGold;
-            st.totalGoldEarned += grantedGold;
-            st.waveNonCombatGold = alreadyNonCombat + grantedGold;
-
             const Renderer = GameApp.renderer;
             if (Renderer && G.map && Array.isArray(G.map.waypoints) && G.map.waypoints.length > 0 && typeof Renderer.spawnFloatingNotice === 'function') {
                 const lastWp = G.map.waypoints[G.map.waypoints.length - 1];
@@ -470,35 +483,107 @@
                 summaryEn = `Treasure Roots: +${grantedGold} 💰`;
             }
         } else if (lv === 1) {
-            summaryZh = `聚寶根鬚 Lv.1（汲取根鬚）產出 +${grantedGold} 💰${greedyTagZh}`;
-            summaryEn = `Treasure Roots Lv.1 (Siphon Roots): +${grantedGold} 💰${greedyTagEn}`;
+            summaryZh = `聚寶根鬚 Lv.1（汲取根鬚）獨立產出 +${rootGain} 💰${greedyTagZh}`;
+            summaryEn = `Treasure Roots Lv.1 (Siphon Roots): +${rootGain} 💰${greedyTagEn}`;
         } else if (lv === 2) {
-            summaryZh = `聚寶根鬚 Lv.2（黃金根脈）產出 +${grantedGold} 💰${greedyTagZh}`;
-            summaryEn = `Treasure Roots Lv.2 (Golden Veins): +${grantedGold} 💰${greedyTagEn}`;
+            summaryZh = `聚寶根鬚 Lv.2（黃金根脈）獨立產出 +${rootGain} 💰${greedyTagZh}`;
+            summaryEn = `Treasure Roots Lv.2 (Golden Veins): +${rootGain} 💰${greedyTagEn}`;
         } else if (lv >= 3) {
-            const capNoteZh = isSoftCapped ? `，已觸發單波軟上限 ${waveCap} 💰` : '';
-            const capNoteEn = isSoftCapped ? `, wave soft cap ${waveCap} 💰 applied` : '';
-            summaryZh = `聚寶根鬚 Lv.3（複利樹心）產出 +${grantedGold} 💰（固定 +${baseGain} 💰 ＋ 8% 利息 +${interestGain} 💰${greedyTagZh}${capNoteZh}）`;
-            summaryEn = `Treasure Roots Lv.3 (Compound Heart): +${grantedGold} 💰 (Fixed +${baseGain} 💰 + 8% Interest +${interestGain} 💰${greedyTagEn}${capNoteEn})`;
+            summaryZh = `聚寶根鬚 Lv.3（複利樹心）獨立產出 +${rootGain} 💰（固定 +${baseGain} 💰 ＋ 8% 利息 +${interestGain} 💰${greedyTagZh}）`;
+            summaryEn = `Treasure Roots Lv.3 (Compound Heart): +${rootGain} 💰 (Fixed +${baseGain} 💰 + 8% Interest +${interestGain} 💰${greedyTagEn})`;
         }
 
         const result = {
             level: lv,
             wave: w,
-            fixedGain: rawPayout.fixedGain || 0,
-            rawInterest: rawPayout.rawInterest || 0,
-            uncappedGain: rawPayout.uncappedGain || 0,
+            fixedGain: baseGain,
+            rawInterest: interestGain,
+            uncappedGain: rootGain,
             waveCap,
             baseGain,
             interestGain,
             totalGain: grantedGold,
-            isSoftCapped,
+            isSoftCapped: false,
+            exemptFromSoftCap: true,
             shouldBroadcast,
             summaryZh,
             summaryEn
         };
         st.lastRootWavePayout = result;
         return result;
+    }
+
+    /**
+     * 無盡 W11+ 金幣回收池：世界樹全局靈脈強化（免年輪，併入 B_power）
+     */
+    function upgradeGlobalTreeBoost() {
+        if (!G || !G.state) return { ok: false, reason: 'no_runtime' };
+        const st = G.state;
+        const canTact = (G.callbacks && typeof G.callbacks.canPerformTacticalAction === 'function')
+            ? G.callbacks.canPerformTacticalAction()
+            : (!st.isGameOver && st.waveState !== 'WAITING_START' && st.waveState !== 'VICTORY');
+        if (!canTact) return { ok: false, reason: 'inactive' };
+        const EconSys = GameApp.systems && GameApp.systems.economy;
+        if (!EconSys || typeof EconSys.isEndlessGoldSinkUnlocked !== 'function' || !EconSys.isEndlessGoldSinkUnlocked(st)) {
+            if (G.dom && G.dom.msgText) {
+                G.dom.msgText.innerText = L(
+                    '【世界樹全局靈脈強化】需於無盡模式第 11 波（W11）後開放。',
+                    'Global Leyline Boost unlocks at Wave 11+ in Endless Mode.'
+                );
+            }
+            return { ok: false, reason: 'wave_locked' };
+        }
+        const curLv = Math.max(0, Math.floor(Number(st.globalTreeBoostLevel) || 0));
+        const cost = EconSys.getGlobalTreeBoostCost(curLv);
+        if (st.currentGold < cost) {
+            if (G.dom && G.dom.msgText) {
+                G.dom.msgText.innerText = L(
+                    `金幣不足，強化【世界樹全局靈脈 Lv.${curLv + 1}】需要 ${cost} 💰。`,
+                    `Not enough Gold: Global Leyline Boost Lv.${curLv + 1} requires ${cost} 💰.`
+                );
+            }
+            return { ok: false, reason: 'insufficient_gold', cost };
+        }
+        st.currentGold -= cost;
+        const nextLv = curLv + 1;
+        st.globalTreeBoostLevel = nextLv;
+
+        const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
+        const totalBonusPct = Math.round(((AttackSys && typeof AttackSys.b_treeBoost === 'function')
+            ? AttackSys.b_treeBoost(nextLv)
+            : (nextLv <= 5 ? nextLv * 0.08 : 0.40 + (nextLv - 5) * 0.05)) * 100);
+        const stepPct = nextLv <= 5 ? 8 : 5;
+
+        const Renderer = GameApp.renderer;
+        if (Renderer && G.map && Array.isArray(G.map.waypoints) && G.map.waypoints.length > 0) {
+            const lastWp = G.map.waypoints[G.map.waypoints.length - 1];
+            const tp = Renderer.getCellCenter(lastWp.x, lastWp.y);
+            Renderer.emitRingFX(tp.left, tp.top, G.boardMetrics.step * 1.8, '#D97724', 0.28, 420);
+            Renderer.emitParticleBurst(tp.left, tp.top, '#E0B43C', 12, 95);
+            if (typeof Renderer.spawnFloatingNotice === 'function') {
+                Renderer.spawnFloatingNotice(
+                    L(`全局靈脈 Lv.${nextLv} (+${totalBonusPct}%)`, `Global Leyline Lv.${nextLv} (+${totalBonusPct}%)`),
+                    tp.left, tp.top, 'pity-seed'
+                );
+            }
+        }
+        if (GameApp.audio && typeof GameApp.audio.playMerge === 'function') {
+            GameApp.audio.playMerge(Math.min(5, Math.max(2, nextLv)), true);
+        }
+        if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
+            GameApp.backend.recordPlayerAction();
+            GameApp.backend.trackFeel(`Tree:GlobalBoost:Lv${nextLv}`, cost, { level: nextLv, cost, wave: st.currentWave });
+        }
+        if (G.dom && G.dom.msgText) {
+            G.dom.msgText.innerText = L(
+                `已強化【世界樹全局靈脈 Lv.${nextLv}】（-${cost} 💰，本級 +${stepPct}%）：全場防禦塔基礎增傷區累計 +${totalBonusPct}%！`,
+                `Global Leyline Boost Lv.${nextLv} (-${cost} 💰, +${stepPct}%): All towers gain +${totalBonusPct}% Base Power Bonus!`
+            );
+        }
+        if (G.callbacks && typeof G.callbacks.updateHUD === 'function') {
+            G.callbacks.updateHUD();
+        }
+        return { ok: true, level: nextLv, cost, totalBonusPct };
     }
 
     function rejectSkillIfTacticalPaused(st) {
@@ -820,6 +905,7 @@
         bind,
         hasBlessing,
         getMetaTreeState,
+        isStandardizedNoMetaMode,
         isMetaNodeUnlocked,
         getMaxScionCrownLimit,
         getBloodPactPowerBonus,
@@ -845,6 +931,7 @@
         resetTreasureRoots,
         upgradeTreasureRoot,
         settleWaveRootIncome,
+        upgradeGlobalTreeBoost,
         triggerBlessingSelection,
         rerollBlessingChoices,
         selectBlessing

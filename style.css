@@ -374,6 +374,45 @@ summary:focus-visible,
 .hud-gold { color: var(--el-lightning); }
 .hud-dew { color: #9BD3E8; }
 
+.hud-tower-cap {
+    gap: 4px;
+    white-space: nowrap;
+}
+
+#tower-cap-display.is-cap-full {
+    color: #EE9B8F;
+    font-weight: 800;
+}
+
+.hud-cap-expand-btn {
+    min-height: 20px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--accent-cta);
+    background-color: #3A2A1C;
+    color: var(--el-lightning);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.14s ease, border-color 0.14s ease, opacity 0.14s ease;
+}
+
+.hud-cap-expand-btn:hover:not(:disabled) {
+    background-color: #4D3520;
+    border-color: var(--el-lightning);
+}
+
+.hud-cap-expand-btn:disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+}
+
+.hud-cap-expand-btn.hidden {
+    display: none;
+}
+
 .dew-bar-track {
     width: 32px;
     height: 8px;
@@ -735,6 +774,25 @@ summary:focus-visible,
     border-color: var(--el-fire);
     background-color: #2B1B19;
     color: #F4F1EA;
+}
+
+.std-mode-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background-color: #2A2419;
+    border: 1px solid #C89B3C;
+    color: #F2CA52;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.std-mode-pill.hidden {
+    display: none;
 }
 
 .recipe-tracker-pill {
@@ -1665,6 +1723,21 @@ body.map-frost .cell.path-cell {
     border: 1px solid var(--bg-canvas);
     pointer-events: none;
 }
+.tower-refine-badge {
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    z-index: 6;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    padding: 1px 4px;
+    border-radius: 4px;
+    background-color: #3D3117;
+    color: #F2CA52;
+    border: 1px solid #C89B3C;
+    pointer-events: none;
+}
 .tower.has-scion-aura::after {
     content: "";
     position: absolute;
@@ -2273,6 +2346,8 @@ body.map-frost .cell.path-cell {
 }
 .inspector-btn.infuse-btn { border-color: var(--accent-cta); background-color: #3A2A1C; color: var(--text-primary); }
 .inspector-btn.infuse-btn:hover:not(:disabled) { background-color: #4D3520; border-color: var(--el-lightning); }
+.inspector-btn.refine-btn { border-color: #C89B3C; background-color: #352D18; color: #F2CA52; }
+.inspector-btn.refine-btn:hover:not(:disabled) { background-color: #483C1F; border-color: #F2CA52; color: #FFF8DC; }
 .inspector-btn.obstacle-clear-btn:not(:disabled) {
     background-color: var(--accent-cta);
     border-color: var(--accent-cta);
@@ -2519,6 +2594,27 @@ body.map-frost .cell.path-cell {
         width: 100%;
         min-height: 36px;
     }
+}
+
+.endless-boost-panel {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background-color: #1B211E;
+    border: 1px solid #C89B3C;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.endless-boost-panel.hidden {
+    display: none;
+}
+
+.endless-boost-desc {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--text-secondary);
 }
 
 /* ==================== 5C. 世界樹商會 · 預設收合 1 行橫條 ＋ 向上展開 3 頁籤浮動抽屜 ==================== */
@@ -3817,6 +3913,28 @@ body.map-frost .cell.path-cell {
     border: 1px solid #5B6B62;
     color: #E0B43C;
     white-space: nowrap;
+}
+.std-mode-badge {
+    align-self: flex-start;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: #2A2419;
+    border: 1px solid #C89B3C;
+    color: #F2CA52;
+    white-space: nowrap;
+}
+.setup-std-notice {
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background-color: #2A2419;
+    border: 1px solid #C89B3C;
+    color: #F2CA52;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
 }
 .mode-card-desc {
     margin: 0;
@@ -5912,6 +6030,8 @@ html[lang="en"] .inspector-btn { font-size: 11px; }
     html[lang="en"] .hud-help-btn { min-width: 26px; gap: 3px; }
     html[lang="en"] .hud-help-btn .ui-ico { width: 13px; height: 13px; }
     html[lang="en"] .hud-lang-btn { padding: 2px 5px; gap: 3px; font-size: 11px; }
+    html[lang="en"] .hud-cap-expand-btn { padding: 1px 4px; font-size: 10px; }
+    html[lang="en"] .std-mode-pill { padding: 1px 5px; font-size: 10px; }
     html[lang="en"] .forecast-bar-main { gap: 6px; }
     html[lang="en"] .forecast-toggle-btn { padding: 1px 6px; gap: 4px; font-size: 11px; }
     html[lang="en"] .forecast-weak-chips { gap: 4px; font-size: 10.5px; }
@@ -5941,6 +6061,12 @@ html[lang="en"] .inspector-btn { font-size: 11px; }
         min-height: 40px;
         padding: 4px 7px;
         font-size: 11px;
+    }
+    .hud-cap-expand-btn,
+    html[lang="en"] .hud-cap-expand-btn {
+        min-height: 28px;
+        padding: 2px 6px;
+        font-size: 10.5px;
     }
     .hud-lang-btn,
     html[lang="en"] .hud-lang-btn {

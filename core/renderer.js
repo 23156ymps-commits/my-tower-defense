@@ -1801,6 +1801,12 @@
             infBadge.innerText = `+${towerObj.infusionCount}`;
             tower.appendChild(infBadge);
         }
+        if ((Number(towerObj.tier) || 1) === 4 && (towerObj.refineLevel || 0) > 0) {
+            const refBadge = document.createElement('span');
+            refBadge.className = 'tower-refine-badge num';
+            refBadge.innerText = `◆${towerObj.refineLevel}`;
+            tower.appendChild(refBadge);
+        }
 
         if (GameApp.systems && GameApp.systems.drag && typeof GameApp.systems.drag.bindBoardTowerElement === 'function') {
             GameApp.systems.drag.bindBoardTowerElement(tower, index, towerObj);

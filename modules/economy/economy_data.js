@@ -21,8 +21,6 @@
         COST_MAX: 80,                       // 單一元素召喚價格封頂上限 (80 金幣)
         SUMMON_COST_STEPS: [10, 18, 26, 35, 45, 55, 68, 80], // 平滑友善階梯定價曲線
         OBSTACLE_CLEAR_COST: 45,            // 地脈拓荒（爆破岩石障礙）固定花費
-        CROWN_AWAKEN_GOLD_COST: 220,        // （第 3 階段已整合進 5★ 神裔，保留欄位向後相容）
-        CROWN_AWAKEN_DEW_COST: 60,
         // ==================== 第 3 階段：5 星世界樹金字塔與漸進式吞噬充能 ====================
         FRUIT_FEED_NUTRITION_U: 4,          // 萬能融合果實用於 3★/4★ 塔時直接提供 +4U 營養
         SCION_AURA_RADIUS_CELLS: 2.2,       // 5★ 世界樹神裔周圍友軍光環半徑 (2.2 格)
@@ -38,10 +36,21 @@
         NON_COMBAT_GAIN_PER_WAVE: 8,        // 單波非戰鬥淨收益軟上限每波成長值：8 * w
         INFUSION_BASE_COST: 150,            // 無盡靈脈灌注第 k 次費用基礎值：150 + 75 * k
         INFUSION_STEP_COST: 75,             // 無盡靈脈灌注第 k 次費用步長：75 * k
-        TREASURE_ROOTS_COSTS: [0, 45, 75, 110],
+        TREASURE_ROOTS_COSTS: [0, 55, 90, 125],
         TREASURE_ROOTS_FIXED_GAIN: [0, 15, 32, 42],
         TREASURE_ROOTS_LV3_INTEREST_RATE: 0.08,
         TREASURE_ROOTS_LV3_INTEREST_CAP: 35,
+        BASE_TOWER_CAP: 16,                 // 棋盤精兵人口基礎上限 (16 座)
+        TOWER_CAP_STEP: 2,                  // 每次擴充 +2 塔位槽
+        TOWER_CAP_EXPANSION_COSTS: [200, 350, 550], // 16 → 18 → 20 → 22 擴充費用
+        ENDLESS_GOLD_SINK_MIN_WAVE: 11,     // 無盡 W11+ 金幣回收池解鎖波數
+        GLOBAL_TREE_BOOST_BASE_COST: 300,   // 世界樹全局靈脈強化費用：300 + 150 * n
+        GLOBAL_TREE_BOOST_STEP_COST: 150,
+        GLOBAL_TREE_BOOST_EARLY_RATE: 0.08, // Lv.1 ~ Lv.5 每級全場 B_power +8%
+        GLOBAL_TREE_BOOST_LATE_RATE: 0.05,  // Lv.6 起每級全場 B_power +5%
+        CROWN_REFINE_COSTS: [250, 400, 550],// 4★ 古冠精煉 1~3 階費用
+        CROWN_REFINE_BONUS_PER_LEVEL: 0.10, // 每階併入 B_power +10%
+        CROWN_REFINE_MAX_LEVEL: 3,
         // ==================== 第 2 階段：元素股市、命運種子盲盒與波次對賭懸賞 ====================
         STOCK_INITIAL_PRICE: 20,            // 三元素股初始價格 (20 金)
         STOCK_MIN_PRICE: 10,                // 股價下限 (10 金)
@@ -69,7 +78,8 @@
         BLIND_BOX_PITY_TIER3_CHANCE: 0.25,  // 第 4 抽保底觸發時，25% 機率直出 3★（75% 出 2★）
         BLIND_BOX_CRIT_BONUS_STEP: 0.015,   // 每次未出 2★ 以上為全隊疊加 +1.5% 暴擊率
         BLIND_BOX_CRIT_BONUS_CAP: 0.15,     // 全隊盲盒保底暴擊率上限 +15%
-        FUSION_FRUIT_MAX_SLOTS: 1,          // 萬能融合果實暫存槽位上限 (1 顆)
+        FUSION_FRUIT_MAX_SLOTS: 3,          // 萬能融合果實庫存上限 (3 顆)
+        FUSION_FRUIT_OVERFLOW_GOLD: 80,     // 滿 3/3 顆時溢出自動折現補償 (+80 💰，不受軟上限截斷)
         WAGER_ZERO_LEAK_STAKE: 40,          // 零封懸賞押注金幣 (40 金)
         WAGER_ZERO_LEAK_RETURN: 70,         // 零封懸賞成功返還總金幣 (70 金，淨賺 +30 金)
         WAGER_ZERO_LEAK_NET_PROFIT: 30,     // 零封懸賞成功淨利 (+30 金，受單波非戰鬥軟上限約束)
@@ -93,8 +103,6 @@
         COST_STEP: ECONOMY_DATA.COST_STEP,
         COST_MAX: ECONOMY_DATA.COST_MAX,
         OBSTACLE_CLEAR_COST: ECONOMY_DATA.OBSTACLE_CLEAR_COST,
-        CROWN_AWAKEN_GOLD_COST: ECONOMY_DATA.CROWN_AWAKEN_GOLD_COST,
-        CROWN_AWAKEN_DEW_COST: ECONOMY_DATA.CROWN_AWAKEN_DEW_COST,
         SELL_REFUND_RATE: ECONOMY_DATA.SELL_REFUND_RATE,
         COMBAT_MOVE_COST: ECONOMY_DATA.COMBAT_MOVE_COST
     });

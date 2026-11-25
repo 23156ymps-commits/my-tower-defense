@@ -33,6 +33,11 @@
                     <span id="wave-display" class="num">第 1 / 10 波</span>
                     <span id="wave-phase-tag" class="wave-phase-tag num">等待開始</span>
                 </div>
+                <div class="hud-item hud-tower-cap" id="hud-tower-cap" title="場上精兵人口上限（最多擴充至 22 座）">
+                    <span id="tower-cap-display" class="num">塔位 0/16</span>
+                    <button id="expand-tower-cap-btn" class="hud-cap-expand-btn num" type="button"
+                        title="擴充 +2 塔位槽位">+2槽 200💰</button>
+                </div>
                 <div class="hud-item hud-best" title="本圖最高紀錄"><span id="hud-best-label">最高</span> <span
                         id="best-wave-display" class="num">第 1 波</span>
                 </div>
@@ -118,6 +123,7 @@
                         <span id="forecast-toggle-indicator" class="forecast-chevron">▾</span>
                     </button>
                     <span id="weather-status-pill" class="weather-status-pill num">☀️ 熾陽季</span>
+                    <span id="std-mode-pill" class="std-mode-pill hidden">標準環境（無年輪）</span>
                     <div id="forecast-inline-summary" class="forecast-inline-summary"></div>
                     <div id="recipe-tracker-pill" class="recipe-tracker-pill hidden" role="status" aria-live="polite">
                         <button id="recipe-tracker-pill-open" class="recipe-tracker-pill-open num" type="button"></button>
@@ -350,6 +356,7 @@
                         <span id="inspector-range" class="inspector-stat num">射程 2.3</span>
                     </div>
                     <div class="inspector-actions">
+                        <button id="inspector-refine-btn" class="inspector-btn refine-btn num hidden" type="button"><span id="inspector-refine-text">精煉 ◆1 (250💰)</span></button>
                         <button id="inspector-infuse-btn" class="inspector-btn infuse-btn num hidden" type="button"><span id="inspector-infuse-text">靈脈灌注 (225 💰)</span></button>
                         <button id="inspector-target-btn" class="inspector-btn target-btn" type="button">索敵：最前</button>
                         <button id="inspector-sell-btn" class="inspector-btn sell-btn num" type="button">出售 (+7
@@ -378,6 +385,7 @@
                         <span id="guild-drawer-chevron" class="guild-chevron">▴</span>
                     </button>
                     <span id="guild-root-summary-badge" class="guild-meta-tag num">根鬚 Lv.0</span>
+                    <span id="guild-tree-boost-badge" class="guild-meta-tag num hidden">靈脈 +0%</span>
                     <span id="guild-noncombat-cap-badge" class="guild-meta-tag num">淨利 0/30</span>
                     <span id="guild-crit-bonus-badge" class="guild-meta-tag num">暴擊 +0.0%</span>
                 </div>
@@ -405,34 +413,49 @@
                                 <span id="tree-root-title" class="tree-root-title">世界樹 · 聚寶根鬚</span>
                                 <span id="tree-root-lv-badge" class="tree-root-lv-badge num">Lv.0 / Lv.3</span>
                                 <span id="tree-root-refund-badge" class="tree-root-meta-tag num">出售退費 70%</span>
-                                <span id="tree-root-yield-badge" class="tree-root-meta-tag tree-root-yield num">本波預估 +0 💰（軟上限 30 💰）</span>
+                                <span id="tree-root-yield-badge" class="tree-root-meta-tag tree-root-yield num">本波預估 +0 💰（獨立結算）</span>
                             </div>
                             <button id="tree-root-upgrade-btn" class="tree-root-upgrade-btn num" type="button">
-                                升級 Lv.1 汲取根鬚 (45 💰)
+                                升級 Lv.1 汲取根鬚 (55 💰)
                             </button>
                         </div>
                         <div id="tree-root-tiers" class="tree-root-tiers">
                             <button type="button" class="tree-root-tier-card is-next" data-root-tier="1">
                                 <div class="root-tier-head">
                                     <span class="root-tier-name">Lv.1 汲取根鬚</span>
-                                    <span class="root-tier-cost num">45 💰</span>
+                                    <span class="root-tier-cost num">55 💰</span>
                                 </div>
-                                <div class="root-tier-desc num">每清完 1 波固定額外獲得 +15 💰</div>
+                                <div class="root-tier-desc num">每清完 1 波固定額外獲得 +15 💰（獨立結算）</div>
                             </button>
                             <button type="button" class="tree-root-tier-card is-locked" data-root-tier="2">
                                 <div class="root-tier-head">
                                     <span class="root-tier-name">Lv.2 黃金根脈</span>
-                                    <span class="root-tier-cost num">75 💰</span>
+                                    <span class="root-tier-cost num">90 💰</span>
                                 </div>
-                                <div class="root-tier-desc num">每波 +32 💰 · 全場出售退費率 70% → 80%</div>
+                                <div class="root-tier-desc num">每波 +32 💰（獨立結算）· 出售退費率 70% → 80%</div>
                             </button>
                             <button type="button" class="tree-root-tier-card is-locked" data-root-tier="3">
                                 <div class="root-tier-head">
                                     <span class="root-tier-name">Lv.3 複利樹心</span>
-                                    <span class="root-tier-cost num">110 💰</span>
+                                    <span class="root-tier-cost num">125 💰</span>
                                 </div>
-                                <div class="root-tier-desc num">每波 +42 💰 ＋ 現金 8% 利息（上限 +35 💰，軟上限 22 + 8w）</div>
+                                <div class="root-tier-desc num">每波 +42 💰 ＋ 現金 8% 利息（上限 +35 💰，獨立結算）</div>
                             </button>
+                        </div>
+                    </div>
+                    <div id="world-tree-endless-boost-card" class="endless-boost-panel hidden" aria-label="無盡世界樹全局靈脈強化">
+                        <div class="tree-root-header">
+                            <div class="tree-root-title-wrap">
+                                <span id="endless-boost-title" class="tree-root-title">無盡 · 世界樹全局靈脈強化</span>
+                                <span id="endless-boost-lv-badge" class="tree-root-lv-badge num">Lv.0</span>
+                                <span id="endless-boost-bonus-badge" class="tree-root-meta-tag num">全場基礎增傷 +0%</span>
+                            </div>
+                            <button id="tree-endless-boost-btn" class="tree-root-upgrade-btn num" type="button">
+                                強化全局靈脈 Lv.1 (300 💰)
+                            </button>
+                        </div>
+                        <div id="endless-boost-desc" class="endless-boost-desc num">
+                            無盡 W11+ 開放（免年輪）· Lv.1～5 每級全場 +8%，Lv.6 起每級 +5%（併入基礎增傷區）
                         </div>
                     </div>
                 </div>
@@ -502,7 +525,7 @@
                                     開啟命運盲盒 (35 💰)
                                 </button>
                                 <button id="fusion-fruit-slot-btn" class="fusion-fruit-btn num" type="button" disabled>
-                                    萬能融合果實 (0/1) · 暫無果實
+                                    萬能融合果實 (0/3) · 暫無果實
                                 </button>
                             </div>
                         </div>
@@ -837,6 +860,7 @@
                                 <span id="mode-title-daily" class="mode-card-title">每日種子挑戰</span>
                                 <span id="mode-badge-daily" class="mode-card-badge num">同題競速</span>
                             </div>
+                            <div id="mode-std-daily" class="std-mode-badge">標準環境（無年輪）</div>
                             <p id="mode-desc-daily" class="mode-card-desc">以今日日期固定生成地圖、天氣、股市波動、盲盒與枝枒賜福序列，公平一戰。</p>
                             <div class="mode-card-foot">
                                 <span id="mode-meta-daily" class="mode-card-meta num">今日種子載入中</span>
@@ -854,6 +878,7 @@
                                 <span id="mode-title-puzzle" class="mode-card-title">世界樹殘局試煉</span>
                                 <span id="mode-badge-puzzle" class="mode-card-badge">單波解謎</span>
                             </div>
+                            <div id="mode-std-puzzle" class="std-mode-badge">標準環境（無年輪）</div>
                             <p id="mode-desc-puzzle" class="mode-card-desc">5 道固定資金與極端怪潮殘局，唯有算準元素相剋與轉職合成方能一次破局。</p>
                             <div class="mode-card-foot">
                                 <span id="mode-meta-puzzle" class="mode-card-meta num">已完成 0 / 5 關</span>
@@ -933,6 +958,7 @@
 
                     <!-- 每日種子簡報面板 -->
                     <div id="setup-daily-pane" class="setup-pane hidden">
+                        <div id="daily-std-notice" class="setup-std-notice">標準環境（無年輪）</div>
                         <div class="daily-briefing-card ornate-card">
                             <div class="daily-brief-row">
                                 <span id="daily-brief-date-k">挑戰日期</span>
@@ -955,11 +981,12 @@
                                 <strong id="daily-status-label" class="num">尚未挑戰</strong>
                             </div>
                         </div>
-                        <p id="daily-rule-note" class="daily-rule-note">今日所有波動（盲盒、股市雜訊、賜福抽卡、靈脈竊賊掉落）均鎖定同一種子序列，通關與敗陣結算皆會產生日期戰績卡。</p>
+                        <p id="daily-rule-note" class="daily-rule-note">今日所有波動（盲盒、股市雜訊、賜福抽卡）均鎖定同一種子序列與零年輪標準環境，通關與敗陣結算皆會產生日期戰績卡。</p>
                     </div>
 
                     <!-- 世界樹殘局選關面板 -->
                     <div id="setup-puzzle-pane" class="setup-pane hidden">
+                        <div id="puzzle-std-notice" class="setup-std-notice">標準環境（無年輪）</div>
                         <div id="puzzle-selector-grid" class="puzzle-selector-grid"></div>
                         <div id="puzzle-detail-box" class="puzzle-detail-box">
                             <div class="puzzle-detail-head">

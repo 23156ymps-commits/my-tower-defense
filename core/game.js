@@ -44,6 +44,7 @@
         ['inspectorLineageEl', 'inspector-lineage'],
         ['inspectorDpsEl', 'inspector-dps'], ['inspectorAoeDpsEl', 'inspector-aoe-dps'], ['inspectorTotalDmgEl', 'inspector-total-dmg'],
         ['inspectorRangeEl', 'inspector-range'], ['inspectorTerrainEl', 'inspector-terrain'], ['inspectorGrowthBadgeEl', 'inspector-growth-badge'],
+        ['inspectorRefineBtn', 'inspector-refine-btn'], ['inspectorRefineTextEl', 'inspector-refine-text'],
         ['inspectorInfuseBtn', 'inspector-infuse-btn'], ['inspectorInfuseTextEl', 'inspector-infuse-text'], ['inspectorTargetBtn', 'inspector-target-btn'], ['inspectorSellBtn', 'inspector-sell-btn'],
         ['inspectorObstacleEl', 'inspector-obstacle'], ['inspectorObstacleNameEl', 'inspector-obstacle-name'], ['inspectorObstacleDescEl', 'inspector-obstacle-desc'], ['inspectorObstacleClearBtn', 'inspector-obstacle-clear-btn'],
         ['evoConfirmOverlayEl', 'evo-confirm-overlay'], ['evoConfirmTitleEl', 'evo-confirm-title'],
@@ -56,7 +57,7 @@
         ['sysmenuResumeBtn', 'sysmenu-resume-btn'], ['sysmenuRestartBtn', 'sysmenu-restart-btn'], ['sysmenuMainmenuBtn', 'sysmenu-mainmenu-btn'],
         ['sysmenuSoundBtn', 'sysmenu-sound-btn'], ['sysmenuLangBtn', 'sysmenu-lang-btn'],
         ['addGoldBtn', 'add-gold-btn'], ['clearGoldBtn', 'clear-gold-btn'], ['nextWaveBtn', 'next-wave-btn'], ['speedBtn', 'speed-btn'],
-        ['goldDisplay', 'gold-display'], ['baseHpDisplay', 'base-hp-display'], ['dewDisplay', 'dew-display'], ['dewBarFillEl', 'dew-bar-fill'],
+        ['goldDisplay', 'gold-display'], ['hudTowerCapEl', 'hud-tower-cap'], ['towerCapDisplayEl', 'tower-cap-display'], ['expandTowerCapBtn', 'expand-tower-cap-btn'], ['baseHpDisplay', 'base-hp-display'], ['dewDisplay', 'dew-display'], ['dewBarFillEl', 'dew-bar-fill'],
         ['waveDisplay', 'wave-display'], ['wavePhaseTagEl', 'wave-phase-tag'], ['bestWaveDisplay', 'best-wave-display'], ['msgText', 'msg-text'],
         ['startOverlayEl', 'start-overlay'], ['mapSelectorGridEl', 'map-selector-grid'], ['mapRecordForestEl', 'map-record-forest'],
         ['mapRecordLavaEl', 'map-record-lava'], ['mapRecordFrostEl', 'map-record-frost'],
@@ -105,7 +106,7 @@
         ['terrainTooltipEl', 'terrain-tooltip'], ['towerTooltipEl', 'tower-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
         ['forecastToggleBtn', 'forecast-toggle-btn'], ['forecastBarTitleEl', 'forecast-bar-title'],
         ['forecastWeakChipsEl', 'forecast-weak-chips'],
-        ['forecastToggleIndicatorEl', 'forecast-toggle-indicator'], ['weatherStatusPillEl', 'weather-status-pill'], ['forecastInlineSummaryEl', 'forecast-inline-summary'],
+        ['forecastToggleIndicatorEl', 'forecast-toggle-indicator'], ['weatherStatusPillEl', 'weather-status-pill'], ['stdModePillEl', 'std-mode-pill'], ['forecastInlineSummaryEl', 'forecast-inline-summary'],
         ['forecastDetailDrawerEl', 'forecast-detail-drawer'],
         ['forecastCurrentHeaderEl', 'forecast-current-header'], ['forecastCurrentListEl', 'forecast-current-list'],
         ['forecastNextHeaderEl', 'forecast-next-header'], ['forecastNextListEl', 'forecast-next-list'],
@@ -124,9 +125,13 @@
         ['treeRootLvBadgeEl', 'tree-root-lv-badge'], ['treeRootRefundBadgeEl', 'tree-root-refund-badge'],
         ['treeRootYieldBadgeEl', 'tree-root-yield-badge'], ['treeRootUpgradeBtn', 'tree-root-upgrade-btn'],
         ['treeRootTiersEl', 'tree-root-tiers'],
+        ['endlessBoostCardEl', 'world-tree-endless-boost-card'], ['endlessBoostTitleEl', 'endless-boost-title'],
+        ['endlessBoostLvBadgeEl', 'endless-boost-lv-badge'], ['endlessBoostBonusBadgeEl', 'endless-boost-bonus-badge'],
+        ['endlessBoostBtn', 'tree-endless-boost-btn'], ['endlessBoostDescEl', 'endless-boost-desc'],
         ['guildPanelEl', 'world-tree-guild-panel'], ['guildToggleBtn', 'guild-drawer-toggle-btn'],
         ['guildTitleEl', 'guild-drawer-title'], ['guildChevronEl', 'guild-drawer-chevron'],
         ['guildRootSummaryBadgeEl', 'guild-root-summary-badge'],
+        ['guildTreeBoostBadgeEl', 'guild-tree-boost-badge'],
         ['guildNonCombatBadgeEl', 'guild-noncombat-cap-badge'], ['guildCritBadgeEl', 'guild-crit-bonus-badge'],
         ['guildHoldTimerBtn', 'guild-hold-timer-btn'], ['guildBodyEl', 'guild-drawer-body'],
         ['guildCloseBtn', 'guild-drawer-close-btn'],
@@ -366,6 +371,9 @@
             teamCritBonusRate: 0,
             fusionFruitCount: 0,
             isApplyingFusionFruit: false,
+            towerCapExpansions: 0,
+            towerCapOverride: null,
+            globalTreeBoostLevel: 0,
             activeWager: null,
             surgeWagerUsedCount: 0,
             waveLeakedCount: 0,
@@ -491,6 +499,80 @@
             if (st.board[i] !== null) cnt++;
         }
         return cnt;
+    }
+    function getTowerCap(st = G.state) {
+        if (EconSys && typeof EconSys.getCurrentTowerCap === 'function') {
+            return EconSys.getCurrentTowerCap(st);
+        }
+        const overrideCap = st ? Number(st.towerCapOverride) : 0;
+        if (Number.isFinite(overrideCap) && overrideCap > 0) return Math.round(overrideCap);
+        const exp = Math.max(0, Math.min(3, Math.floor(Number(st && st.towerCapExpansions) || 0)));
+        return 16 + exp * 2;
+    }
+    function isTowerCapReached(st = G.state) {
+        return countBoardTowers(st) >= getTowerCap(st);
+    }
+    function updateTowerCapUI() {
+        const dom = G.dom, st = G.state;
+        if (!dom.towerCapDisplayEl) return;
+        const cnt = countBoardTowers(st);
+        const cap = getTowerCap(st);
+        const isFull = cnt >= cap;
+        setDomText(dom.towerCapDisplayEl, L(`塔位 ${cnt}/${cap}`, `Towers ${cnt}/${cap}`));
+        dom.towerCapDisplayEl.classList.toggle('is-cap-full', isFull);
+        if (dom.hudTowerCapEl) {
+            dom.hudTowerCapEl.title = L(
+                `場上精兵人口：${cnt} / ${cap} 座（合成與互換不受上限阻擋）`,
+                `Board Tower Cap: ${cnt} / ${cap} (Merging & Swapping still allowed at cap)`
+            );
+        }
+        if (dom.expandTowerCapBtn) {
+            const nextCost = (EconSys && typeof EconSys.getNextTowerCapExpansionCost === 'function')
+                ? EconSys.getNextTowerCapExpansionCost(st)
+                : null;
+            const hideBtn = st.gameMode === 'puzzle' || nextCost === null;
+            dom.expandTowerCapBtn.classList.toggle('hidden', hideBtn);
+            if (!hideBtn) {
+                const canAfford = st.currentGold >= nextCost;
+                const canAct = canPerformTacticalAction();
+                dom.expandTowerCapBtn.innerText = L(`+2槽 ${nextCost}💰`, `+2 ${nextCost}💰`);
+                dom.expandTowerCapBtn.title = L(
+                    `擴充人口上限 +2 座（${cap} → ${cap + 2}），花費 ${nextCost} 💰`,
+                    `Expand tower cap +2 (${cap} → ${cap + 2}) for ${nextCost} 💰`
+                );
+                dom.expandTowerCapBtn.disabled = !canAct || !canAfford;
+                dom.expandTowerCapBtn.classList.toggle('insufficient-gold', !canAfford);
+            }
+        }
+    }
+    function handleExpandTowerCap() {
+        const st = G.state;
+        if (!canPerformTacticalAction() || !EconSys || typeof EconSys.expandTowerCap !== 'function') return false;
+        SoundEngine.ensureContext();
+        const res = EconSys.expandTowerCap();
+        if (!res.ok) {
+            if (res.reason === 'insufficient_gold') {
+                setStatusMsg(
+                    `擴充精兵人口上限需花費 ${res.cost} 💰，當前金幣不足。`,
+                    `Expanding tower cap requires ${res.cost} 💰 (insufficient Gold).`
+                );
+            } else if (res.reason === 'max_cap' || res.reason === 'maxed') {
+                setStatusMsg(
+                    `精兵人口上限已達最大值 ${res.cap} 座。`,
+                    `Tower cap is already at max (${res.cap}).`
+                );
+            }
+            updateHUD();
+            return false;
+        }
+        Backend.recordPlayerAction();
+        SoundEngine.playMerge(2, true);
+        setStatusMsg(
+            `已擴充場上精兵人口上限至 ${res.cap} 座（第 ${res.expansions}/3 次，花費 ${res.cost} 💰）。`,
+            `Expanded tower cap to ${res.cap} (${res.expansions}/3, -${res.cost} 💰).`
+        );
+        updateHUD();
+        return true;
     }
     function isWave1WaitingFirstTower(st = G.state) {
         return Boolean(st && st.gameMode !== 'puzzle' && st.waveState === 'PREP' && st.currentWave === 1 && countBoardTowers(st) === 0);
@@ -1501,7 +1583,7 @@
         const hasTower = st.selectedIndex !== null && st.board[st.selectedIndex] !== null && !st.isGameOver && st.waveState !== 'VICTORY' && st.waveState !== 'BLESSING_SELECT';
         if (!hasTower) {
             dom.inspectorActiveEl.classList.add('hidden');
-            if (dom.inspectorAwakenBtn) dom.inspectorAwakenBtn.classList.add('hidden');
+            if (dom.inspectorRefineBtn) dom.inspectorRefineBtn.classList.add('hidden');
             const obsTerrain = st.selectedObstacleIndex !== null ? TerrainSys.getTerrainAt(st.selectedObstacleIndex) : null;
             const hasObstacle = st.selectedObstacleIndex !== null
                 && (obsTerrain === 'obstacle' || obsTerrain === 'treasure_rock')
@@ -1551,7 +1633,8 @@
         dom.inspectorActiveEl.classList.remove('hidden');
         const starsStr = Renderer.getTierStars(towerObj.tier);
         const twinSuffix = cfg.isTwinCrown ? ' AB' : '';
-        setDomText(dom.inspectorNameEl, `${cfg.icon} ${cfg.name} ${starsStr}${twinSuffix}`);
+        const refineSuffix = (towerObj.tier === 4 && (towerObj.refineLevel || 0) > 0) ? ` ◆${towerObj.refineLevel}` : '';
+        setDomText(dom.inspectorNameEl, `${cfg.icon} ${cfg.name} ${starsStr}${twinSuffix}${refineSuffix}`);
         if (dom.inspectorLineageEl) {
             const lineageText = EvoSys && typeof EvoSys.getTowerLineagePathText === 'function'
                 ? EvoSys.getTowerLineagePathText(towerObj)
@@ -1609,15 +1692,40 @@
                 ? EvoSys.getNextStarTargetU(towerObj.tier)
                 : null;
             const showGrowth = (towerObj.tier === 3 || towerObj.tier === 4) && Boolean(nextU);
+            const curRefine = (towerObj.tier === 4) ? Math.max(0, Math.floor(Number(towerObj.refineLevel) || 0)) : 0;
             const showInfused = towerObj.tier >= 5 && (towerObj.infusionCount || 0) > 0;
-            dom.inspectorGrowthBadgeEl.classList.toggle('hidden', !showGrowth && !showInfused);
+            dom.inspectorGrowthBadgeEl.classList.toggle('hidden', !showGrowth && !showInfused && curRefine <= 0);
             if (showGrowth) {
-                dom.inspectorGrowthBadgeEl.innerText = L(`充能 ${curU}/${nextU}U`, `Feed ${curU}/${nextU}U`);
-                dom.inspectorGrowthBadgeEl.title = L(`基礎傷害 ${stats.baseDmg || ''}`, `Base DMG ${stats.baseDmg || ''}`);
+                const refTxt = curRefine > 0 ? ` · ◆${curRefine}` : '';
+                dom.inspectorGrowthBadgeEl.innerText = L(`充能 ${curU}/${nextU}U${refTxt}`, `Feed ${curU}/${nextU}U${refTxt}`);
+                dom.inspectorGrowthBadgeEl.title = L(`基礎傷害 ${stats.baseDmg || ''}${curRefine > 0 ? ` · 古冠精煉 +${curRefine * 10}%` : ''}`, `Base DMG ${stats.baseDmg || ''}${curRefine > 0 ? ` · Crown Refine +${curRefine * 10}%` : ''}`);
+            } else if (curRefine > 0) {
+                dom.inspectorGrowthBadgeEl.innerText = L(`精煉 ◆${curRefine} (+${curRefine * 10}%)`, `Refine ◆${curRefine} (+${curRefine * 10}%)`);
+                dom.inspectorGrowthBadgeEl.title = L(`4★ 古冠精煉戰力加成 +${curRefine * 10}%`, `4★ Crown Refine power bonus +${curRefine * 10}%`);
             } else if (showInfused) {
                 const infPct = Math.round((AttackSys.b_infusion ? AttackSys.b_infusion(towerObj.infusionCount) : 0) * 100);
                 dom.inspectorGrowthBadgeEl.innerText = L(`灌注 +${towerObj.infusionCount} (+${infPct}%)`, `Infuse +${towerObj.infusionCount} (+${infPct}%)`);
                 dom.inspectorGrowthBadgeEl.title = L(`靈脈灌注累計戰力加成 +${infPct}%`, `Total Vein Infusion bonus +${infPct}%`);
+            }
+        }
+        if (dom.inspectorRefineBtn) {
+            const endlessSinkOpen = Boolean(EconSys && typeof EconSys.isEndlessGoldSinkUnlocked === 'function' && EconSys.isEndlessGoldSinkUnlocked());
+            const showRefine = towerObj.tier === 4 && endlessSinkOpen;
+            dom.inspectorRefineBtn.classList.toggle('hidden', !showRefine);
+            if (showRefine) {
+                const curRef = Math.max(0, Math.floor(Number(towerObj.refineLevel) || 0));
+                const nextRefCost = EconSys.getCrownRefineCost ? EconSys.getCrownRefineCost(curRef) : null;
+                const refLabelEl = dom.inspectorRefineTextEl || dom.inspectorRefineBtn;
+                if (nextRefCost === null) {
+                    refLabelEl.innerText = L(`古冠滿階 ◆${curRef}`, `Refined Max ◆${curRef}`);
+                    dom.inspectorRefineBtn.title = L('4★ 古冠精煉已達上限（+30% 基礎傷害），升為 5★ 神裔將全額保留投資金額。', '4★ Crown Refine maxed (+30% power). Invested Gold carries over to 5★ merges.');
+                    dom.inspectorRefineBtn.disabled = true;
+                } else {
+                    const nextLv = curRef + 1;
+                    refLabelEl.innerText = L(`精煉 ◆${nextLv} (${nextRefCost}💰)`, `Refine ◆${nextLv} (${nextRefCost}💰)`);
+                    dom.inspectorRefineBtn.title = L(`古冠精煉 ◆${nextLv}：花費 ${nextRefCost} 💰 永久提升 +10% 戰力（無須年輪，可計入合成與賣塔投資）`, `Crown Refine ◆${nextLv}: Spend ${nextRefCost} 💰 for +10% power (carries over into 5★ merges)`);
+                    dom.inspectorRefineBtn.disabled = !canPerformTacticalAction() || st.currentGold < nextRefCost;
+                }
             }
         }
         if (dom.inspectorInfuseBtn) {
@@ -2173,6 +2281,8 @@
         if (!dom.treeRootPanelEl) return;
 
         const rootsUnlocked = !TreeSys || typeof TreeSys.isMetaNodeUnlocked !== 'function' || TreeSys.isMetaNodeUnlocked('wealth_1');
+        const endlessBoostOpen = Boolean(EconSys && typeof EconSys.isEndlessGoldSinkUnlocked === 'function' && EconSys.isEndlessGoldSinkUnlocked());
+        dom.treeRootPanelEl.classList.toggle('hidden', !rootsUnlocked);
         dom.treeRootPanelEl.classList.toggle('is-meta-locked', !rootsUnlocked);
         const rootLv = TreeSys && typeof TreeSys.getTreasureRootLevel === 'function' ? TreeSys.getTreasureRootLevel() : (st.rootLevel || 0);
         const curSpec = TreeSys && typeof TreeSys.getTreasureRootSpec === 'function'
@@ -2220,16 +2330,14 @@
                     'Locked · Unlock Meta Wealth Branch #1'
                 );
             } else if (rootLv >= 3) {
-                const capHintZh = estPayout.isSoftCapped ? `，已達軟上限 ${estPayout.waveCap} 💰` : `，軟上限 ${estPayout.waveCap} 💰`;
-                const capHintEn = estPayout.isSoftCapped ? `, Capped ${estPayout.waveCap} 💰` : `, Cap ${estPayout.waveCap} 💰`;
                 dom.treeRootYieldBadgeEl.innerText = L(
-                    `本波預估 +${estPayout.totalGain} 💰（固定 +${estPayout.baseGain} ＋ 利息 +${estPayout.interestGain}${capHintZh}）`,
-                    `Wave Est. +${estPayout.totalGain} 💰 (Fixed +${estPayout.baseGain} + Int +${estPayout.interestGain}${capHintEn})`
+                    `本波預估 +${estPayout.totalGain} 💰（固定 +${estPayout.baseGain} ＋ 利息 +${estPayout.interestGain}，獨立結算不佔軟上限）`,
+                    `Wave Est. +${estPayout.totalGain} 💰 (Fixed +${estPayout.baseGain} + Int +${estPayout.interestGain}, Cap-Exempt)`
                 );
             } else {
                 dom.treeRootYieldBadgeEl.innerText = L(
-                    `本波預估 +${estPayout.totalGain} 💰（單波軟上限 ${estPayout.waveCap} 💰）`,
-                    `Wave Est. +${estPayout.totalGain} 💰 (Soft Cap ${estPayout.waveCap} 💰)`
+                    `本波預估 +${estPayout.totalGain} 💰（獨立結算，不佔 ${estPayout.waveCap} 💰 軟上限）`,
+                    `Wave Est. +${estPayout.totalGain} 💰 (Exempt from ${estPayout.waveCap} 💰 Soft Cap)`
                 );
             }
         }
@@ -2284,6 +2392,43 @@
                 }
             });
         }
+
+        const boostLv = Math.max(0, Math.floor(Number(st.globalTreeBoostLevel) || 0));
+        const boostPct = Math.round((AttackSys && typeof AttackSys.b_treeBoost === 'function' ? AttackSys.b_treeBoost(boostLv) : 0) * 100);
+        const nextBoostCost = EconSys && typeof EconSys.getGlobalTreeBoostCost === 'function'
+            ? EconSys.getGlobalTreeBoostCost(boostLv)
+            : (300 + 150 * boostLv);
+        const nextStepPct = boostLv < 5 ? 8 : 5;
+        if (dom.guildTreeBoostBadgeEl) {
+            dom.guildTreeBoostBadgeEl.classList.toggle('hidden', !endlessBoostOpen);
+            dom.guildTreeBoostBadgeEl.classList.toggle('is-active', boostLv > 0);
+            dom.guildTreeBoostBadgeEl.innerText = L(`靈脈 +${boostPct}%`, `Leyline +${boostPct}%`);
+            dom.guildTreeBoostBadgeEl.title = L(`無盡全局靈脈強化 Lv.${boostLv} · 全塔基礎戰力 +${boostPct}%`, `Endless Global Leyline Lv.${boostLv} · All towers +${boostPct}% power`);
+        }
+        if (dom.endlessBoostCardEl) {
+            dom.endlessBoostCardEl.classList.toggle('hidden', !endlessBoostOpen);
+            if (endlessBoostOpen) {
+                if (dom.endlessBoostTitleEl) dom.endlessBoostTitleEl.innerText = L('無盡 · 世界樹全局靈脈強化', 'Endless · Global Leyline Boost');
+                if (dom.endlessBoostLvBadgeEl) dom.endlessBoostLvBadgeEl.innerText = `Lv.${boostLv}`;
+                if (dom.endlessBoostBonusBadgeEl) {
+                    dom.endlessBoostBonusBadgeEl.innerText = L(`全場基礎增傷 +${boostPct}%`, `Global Power +${boostPct}%`);
+                    dom.endlessBoostBonusBadgeEl.classList.toggle('is-active', boostLv > 0);
+                }
+                if (dom.endlessBoostBtn) {
+                    dom.endlessBoostBtn.innerText = L(
+                        `升級 Lv.${boostLv + 1} (+${nextStepPct}% · ${nextBoostCost} 💰)`,
+                        `Boost Lv.${boostLv + 1} (+${nextStepPct}% · ${nextBoostCost} 💰)`
+                    );
+                    dom.endlessBoostBtn.disabled = !canAct || st.currentGold < nextBoostCost;
+                }
+                if (dom.endlessBoostDescEl) {
+                    dom.endlessBoostDescEl.innerText = L(
+                        '無須年輪解鎖：Lv.1–5 每級 +8%、Lv.6 起每級 +5%，直接併入全場所有塔戰力桶（B_power）。',
+                        'No Meta Ring needed: +8%/lv (Lv.1-5), +5%/lv (Lv.6+) added directly to all towers B_power.'
+                    );
+                }
+            }
+        }
     }
 
     const STORAGE_ONBOARDING_KEY = 'merge_defense_onboarding_v1';
@@ -2299,6 +2444,8 @@
         const unlockedNodes = getUnlockedMetaNodesList();
         const hasAnyMetaRing = unlockedNodes.length > 0;
         const rootsUnlocked = Boolean(TreeSys && typeof TreeSys.isMetaNodeUnlocked === 'function' && TreeSys.isMetaNodeUnlocked('wealth_1'));
+        const endlessBoostVisible = Boolean(EconSys && typeof EconSys.isEndlessGoldSinkUnlocked === 'function' && EconSys.isEndlessGoldSinkUnlocked());
+        const rootsTabVisible = rootsUnlocked || endlessBoostVisible;
         const stocksUnlocked = Boolean(EconSys && typeof EconSys.canTradeStocks === 'function' && EconSys.canTradeStocks());
         const boxUnlocked = Boolean(EconSys && typeof EconSys.canOpenBlindBox === 'function' && EconSys.canOpenBlindBox());
         const freeTokens = Math.max(0, Number(st && st.blindBoxTokens) || 0);
@@ -2309,10 +2456,12 @@
         const fateTabVisible = boxVisible || wagerUnlocked;
         const netBadgeVisible = rootsUnlocked || stocksUnlocked;
         const critBadgeVisible = boxUnlocked || hasMarketFreeBox || (Number(st && st.teamCritBonusRate) || 0) > 0 || hasFruit;
-        const hasAnyGuildFeature = (hasAnyMetaRing && (rootsUnlocked || stocksUnlocked || fateTabVisible)) || freeTokens > 0 || hasMarketFreeBox || hasFruit;
+        const hasAnyGuildFeature = rootsTabVisible || stocksUnlocked || fateTabVisible || freeTokens > 0 || hasMarketFreeBox || hasFruit;
         return {
             hasAnyMetaRing,
             rootsUnlocked,
+            endlessBoostVisible,
+            rootsTabVisible,
             stocksUnlocked,
             boxUnlocked,
             boxVisible,
@@ -2670,17 +2819,19 @@
             dom.guildBodyEl.classList.toggle('hidden', !st.guildDrawerOpen);
         }
         const availableTabs = [];
-        if (vis.rootsUnlocked) availableTabs.push('roots');
+        if (vis.rootsTabVisible) availableTabs.push('roots');
         if (vis.stocksUnlocked) availableTabs.push('stocks');
         if (vis.fateTabVisible) availableTabs.push('fate');
         const activeTab = availableTabs.includes(st.guildActiveTab) ? st.guildActiveTab : (availableTabs[0] || 'roots');
         st.guildActiveTab = activeTab;
         if (dom.guildTabBtnRoots) {
             const isRoots = activeTab === 'roots';
-            dom.guildTabBtnRoots.classList.toggle('hidden', !vis.rootsUnlocked);
+            dom.guildTabBtnRoots.classList.toggle('hidden', !vis.rootsTabVisible);
             dom.guildTabBtnRoots.classList.toggle('is-active', isRoots);
             dom.guildTabBtnRoots.setAttribute('aria-selected', isRoots ? 'true' : 'false');
-            dom.guildTabBtnRoots.innerText = L('聚寶根鬚', 'Treasure Roots');
+            dom.guildTabBtnRoots.innerText = (!vis.rootsUnlocked && vis.endlessBoostVisible)
+                ? L('靈脈強化', 'Leyline')
+                : L('聚寶根鬚', 'Treasure Roots');
         }
         if (dom.guildTabBtnStocks) {
             const isStocks = activeTab === 'stocks';
@@ -2699,7 +2850,7 @@
         if (dom.guildCloseBtn) {
             dom.guildCloseBtn.innerText = L('收合 ×', 'Close ×');
         }
-        if (dom.guildTabRootsEl) dom.guildTabRootsEl.classList.toggle('hidden', !vis.rootsUnlocked || activeTab !== 'roots');
+        if (dom.guildTabRootsEl) dom.guildTabRootsEl.classList.toggle('hidden', !vis.rootsTabVisible || activeTab !== 'roots');
         if (dom.guildTabStocksEl) dom.guildTabStocksEl.classList.toggle('hidden', !vis.stocksUnlocked || activeTab !== 'stocks');
         if (dom.guildTabFateEl) dom.guildTabFateEl.classList.toggle('hidden', !vis.fateTabVisible || activeTab !== 'fate');
         if (dom.guildRootSummaryBadgeEl) {
@@ -2718,15 +2869,17 @@
             dom.guildNonCombatBadgeEl.classList.toggle('is-active', usedNonCombat >= waveCap);
         }
         const critPct = ((Number(st.teamCritBonusRate) || 0) * 100).toFixed(1);
+        const curFruitCnt = Math.max(0, Number(st.fusionFruitCount) || 0);
+        const maxFruitSlots = (EconSys && typeof EconSys.getFusionFruitMaxSlots === 'function') ? EconSys.getFusionFruitMaxSlots() : 3;
         if (dom.guildCritBadgeEl) {
             dom.guildCritBadgeEl.classList.toggle('hidden', !vis.critBadgeVisible);
-            const fruitBit = (st.fusionFruitCount || 0) > 0 ? L(' · 果實★', ' · Fruit★') : '';
+            const fruitBit = curFruitCnt > 0 ? L(` · 果實${curFruitCnt}/${maxFruitSlots}`, ` · Fruit ${curFruitCnt}/${maxFruitSlots}`) : '';
             dom.guildCritBadgeEl.innerText = L(`暴擊 +${critPct}%${fruitBit}`, `Crit +${critPct}%${fruitBit}`);
             dom.guildCritBadgeEl.title = L(
-                `盲盒累積全隊暴擊率 +${critPct}%${(st.fusionFruitCount || 0) > 0 ? ' · 持有萬能融合果實 ★' : ''}`,
-                `Blind Box Team Crit Bonus +${critPct}%${(st.fusionFruitCount || 0) > 0 ? ' · Universal Fruit Ready ★' : ''}`
+                `盲盒累積全隊暴擊率 +${critPct}%${curFruitCnt > 0 ? ` · 持有萬能融合果實 ${curFruitCnt}/${maxFruitSlots}` : ''}`,
+                `Blind Box Team Crit Bonus +${critPct}%${curFruitCnt > 0 ? ` · Universal Fruits ${curFruitCnt}/${maxFruitSlots}` : ''}`
             );
-            dom.guildCritBadgeEl.classList.toggle('is-active', (st.teamCritBonusRate || 0) > 0 || (st.fusionFruitCount || 0) > 0);
+            dom.guildCritBadgeEl.classList.toggle('is-active', (st.teamCritBonusRate || 0) > 0 || curFruitCnt > 0);
         }
 
         // A. 元素股市 UI
@@ -2872,19 +3025,32 @@
             }
         }
         if (dom.fusionFruitSlotBtn) {
-            const hasFruit = (st.fusionFruitCount || 0) > 0;
+            const fruitCnt = Math.max(0, Number(st.fusionFruitCount) || 0);
+            const maxFruits = (EconSys && typeof EconSys.getFusionFruitMaxSlots === 'function')
+                ? EconSys.getFusionFruitMaxSlots()
+                : 3;
+            const overflowGold = (EconSys && typeof EconSys.getFusionFruitOverflowGold === 'function')
+                ? EconSys.getFusionFruitOverflowGold()
+                : 80;
+            const hasFruit = fruitCnt > 0;
             dom.fusionFruitSlotBtn.classList.toggle('has-fruit', hasFruit);
             dom.fusionFruitSlotBtn.classList.toggle('is-applying', Boolean(hasFruit && st.isApplyingFusionFruit));
             dom.fusionFruitSlotBtn.disabled = !canPerformTacticalAction() || !hasFruit;
             if (!hasFruit) {
-                dom.fusionFruitSlotBtn.innerText = L('萬能融合果實 (0/1) · 暫無', 'Universal Fruit (0/1)');
-                dom.fusionFruitSlotBtn.title = L('萬能融合果實 (0/1)：可由盲盒 12% 機率或魔潮加碼獲勝獲得', 'Universal Fusion Fruit (0/1): Earned from Blind Box (12%) or Monster Surge clear');
+                dom.fusionFruitSlotBtn.innerText = L(`萬能融合果實 (0/${maxFruits}) · 暫無`, `Universal Fruit (0/${maxFruits})`);
+                dom.fusionFruitSlotBtn.title = L(
+                    `萬能融合果實 (0/${maxFruits})：盲盒、藏寶巨石與魔潮加碼可獲得；滿 ${maxFruits} 顆時自動折現 +${overflowGold} 💰`,
+                    `Universal Fruit (0/${maxFruits}): Earned from Blind Box, Boulder, or Surge Wager; auto-converts to +${overflowGold} 💰 when full`
+                );
             } else if (st.isApplyingFusionFruit) {
-                dom.fusionFruitSlotBtn.innerText = L('果實待套用 (1/1) · 點塔使用', 'Fruit Active (1/1) · Click Tower');
+                dom.fusionFruitSlotBtn.innerText = L(`果實待套用 (${fruitCnt}/${maxFruits}) · 點塔使用`, `Fruit Active (${fruitCnt}/${maxFruits}) · Click Tower`);
                 dom.fusionFruitSlotBtn.title = L('點選場上 1★～4★ 防禦塔直接升星或充能 +4U（再點取消）', 'Click a 1★-4★ tower to star up or feed +4U (click again to cancel)');
             } else {
-                dom.fusionFruitSlotBtn.innerText = L('萬能融合果實 (1/1) · 點選或拖曳', 'Universal Fruit (1/1) · Use / Drag');
-                dom.fusionFruitSlotBtn.title = L('點選或拖曳至場上 1★～4★ 塔直接升星或充能 +4U', 'Click or drag onto a 1★-4★ tower to star up or feed +4U');
+                dom.fusionFruitSlotBtn.innerText = L(`萬能融合果實 (${fruitCnt}/${maxFruits}) · 點選或拖曳`, `Universal Fruit (${fruitCnt}/${maxFruits}) · Use / Drag`);
+                dom.fusionFruitSlotBtn.title = L(
+                    `點選或拖曳至場上 1★～4★ 塔直接升星或充能 +4U（上限 ${maxFruits} 顆，溢滿折現 +${overflowGold} 💰）`,
+                    `Click or drag onto a 1★-4★ tower to star up or feed +4U (Max ${maxFruits}; overflow = +${overflowGold} 💰)`
+                );
             }
         }
 
@@ -2975,12 +3141,21 @@
                     ? L(`每日 W${st.currentWave}/${mapVWave}`, `Daily W${st.currentWave}/${mapVWave}`)
                     : L(`第 ${st.currentWave} / ${mapVWave} 波`, `Wave ${st.currentWave} / ${mapVWave}`))));
         setDomText(dom.bestWaveDisplay, L(`第 ${st.bestWave} 波`, `W${st.bestWave}`));
+        updateTowerCapUI();
+        if (dom.stdModePillEl) {
+            const isStd = Boolean(EconSys && typeof EconSys.isStandardizedNoMetaMode === 'function' && EconSys.isStandardizedNoMetaMode(st));
+            dom.stdModePillEl.classList.toggle('hidden', !isStd);
+            if (isStd) {
+                dom.stdModePillEl.innerText = L('標準環境（無年輪）', 'Standard (No Meta)');
+            }
+        }
         updateWavePhaseUI(); Renderer.updateWorldTreeVisualState(); updateSkillButtonsUI();
         updateSeedPityUI(); updateTreasureRootUI(); updateGuildDrawerUI(); updateTowerInspector(); updateBossStatusBar(); updateSoundButtonUI();
         updateWaveForecastUI(); updateMonsterHoverCardUI();
         if (CodexSys && typeof CodexSys.updateRecipeTrackerUI === 'function') CodexSys.updateRecipeTrackerUI();
 
         const activePlay = canPerformTacticalAction();
+        const capReached = isTowerCapReached(st);
         const shopTypes = getShopTowerTypes();
         if (!activePlay && st.pendingSpawnType) {
             st.pendingSpawnType = null;
@@ -2995,8 +3170,9 @@
                 ref.costEl.classList.toggle('cost-insufficient', isLowGold);
             }
             ref.btn.classList.toggle('btn-low-gold', isLowGold);
-            ref.btn.classList.toggle('btn-disabled', !activePlay || isLowGold);
-            ref.btn.classList.toggle('is-pending-spawn', Boolean(activePlay && !isLowGold && st.pendingSpawnType === type));
+            ref.btn.classList.toggle('btn-cap-full', capReached);
+            ref.btn.classList.toggle('btn-disabled', !activePlay || isLowGold || capReached);
+            ref.btn.classList.toggle('is-pending-spawn', Boolean(activePlay && !isLowGold && !capReached && st.pendingSpawnType === type));
         }
     }
 
@@ -3083,6 +3259,18 @@
         const towersDict = getTowersDict();
         if (!canPerformTacticalAction() || !towersDict[type]) return false;
         if (!TerrainSys.canBuildAt(targetIndex) || st.board[targetIndex] !== null) return false;
+        if (isTowerCapReached(st)) {
+            const cap = getTowerCap(st);
+            st.pendingSpawnType = null;
+            st.buildTargetIndex = null;
+            setStatusMsg(
+                `場上防禦塔已達人口上限 ${cap} 座：請先合成、餵養、互換、出售，或點 HUD [+2槽] 擴充人口。`,
+                `Tower cap reached (${cap}): Merge, feed, swap, sell towers, or click [+2] in HUD to expand.`
+            );
+            Renderer.renderBoard([]);
+            updateHUD();
+            return false;
+        }
         const wasZeroTowers = countBoardTowers(st) === 0;
 
         const deduct = EconSys.deductSummonCost(type, targetIndex);
@@ -3184,6 +3372,17 @@
         if (!canPerformTacticalAction() || !towersDict[type]) return false;
 
         Backend.recordPlayerAction();
+        if (isTowerCapReached(st)) {
+            const cap = getTowerCap(st);
+            st.pendingSpawnType = null;
+            setStatusMsg(
+                `場上防禦塔已達人口上限 ${cap} 座：無法再建造新塔（可合成、餵養、互換或擴充 [+2槽]）。`,
+                `Tower cap reached (${cap}): Cannot summon new towers (merge, feed, swap, or expand cap).`
+            );
+            Renderer.renderBoard([]);
+            updateHUD();
+            return false;
+        }
         const cost = EconSys.getSummonCost(type);
         const btnEl = G.dom.spawnerBtns[type] && G.dom.spawnerBtns[type].btn;
         if (!EconSys.canAffordSummon(type)) {
@@ -3231,6 +3430,14 @@
         const st = G.state;
         const towersDict = getTowersDict();
         if (!canPerformTacticalAction() || !towersDict[type]) return;
+        if (isTowerCapReached(st)) {
+            const cap = getTowerCap(st);
+            setStatusMsg(
+                `場上防禦塔已達人口上限 ${cap} 座：無法再召喚新塔（可合成、餵養或擴充 [+2槽]）。`,
+                `Tower cap reached (${cap}): Merge, feed, sell, or expand tower cap first.`
+            );
+            return;
+        }
         const cost = EconSys.getSummonCost(type);
         const btnEl = G.dom.spawnerBtns[type] && G.dom.spawnerBtns[type].btn;
         if (!EconSys.canAffordSummon(type)) {
@@ -3333,10 +3540,19 @@
         SoundEngine.playMerge(2, true);
         if (clearRes.isTreasureRock) {
             if (clearRes.treasureType === 'fruit') {
+                const maxF = (EconSys && typeof EconSys.getFusionFruitMaxSlots === 'function') ? EconSys.getFusionFruitMaxSlots() : 3;
+                const curF = Math.max(1, Number(clearRes.fruitCount) || Number(st.fusionFruitCount) || 1);
                 Renderer.spawnFloatingNotice(L('🍎 發掘萬能融合果實！', '🍎 Unearthed Universal Fruit!'), center.left, center.top, 'pity-seed');
                 setStatusMsg(
-                    `開採藏寶巨石（-${clearRes.cost} 💰）：掘出【萬能融合果實 ★】並存入槽位！`,
-                    `Treasure Boulder (-${clearRes.cost} 💰): Unearthed [Universal Fusion Fruit ★]!`
+                    `開採藏寶巨石（-${clearRes.cost} 💰）：掘出【萬能融合果實 ★】(${curF}/${maxF})！`,
+                    `Treasure Boulder (-${clearRes.cost} 💰): Unearthed [Universal Fusion Fruit ★] (${curF}/${maxF})!`
+                );
+            } else if (clearRes.treasureType === 'fruit_overflow') {
+                const compGold = clearRes.compensationGold || 80;
+                Renderer.spawnFloatingNotice(L(`🍎 滿槽折現 +${compGold} 💰`, `🍎 Fruit Overflow +${compGold} 💰`), center.left, center.top, 'pity-seed');
+                setStatusMsg(
+                    `開採藏寶巨石（-${clearRes.cost} 💰）：萬能果實槽已滿，自動折現為 +${compGold} 💰（不佔軟上限）！`,
+                    `Treasure Boulder (-${clearRes.cost} 💰): Fruit slots full, converted to +${compGold} 💰 (Cap-Exempt)!`
                 );
             } else if (clearRes.treasureType === 'tower' && clearRes.spawnedTowerType) {
                 const tCfg = getTowersDict()[clearRes.spawnedTowerType] || { icon: '✨', name: clearRes.spawnedTowerType };
@@ -3350,6 +3566,13 @@
                 setStatusMsg(
                     `開採藏寶巨石（-${clearRes.cost} 💰）：發掘出【${tCfg.icon || ''} ${tCfg.name} ★★】（實付鎖定 ${clearRes.cost} 💰）！`,
                     `Treasure Boulder (-${clearRes.cost} 💰): Unearthed ${tCfg.icon || ''} ${tCfg.name} ★★ (locked at ${clearRes.cost} 💰)!`
+                );
+            } else if (clearRes.treasureType === 'tower_cap_gold') {
+                const compTotal = clearRes.totalPayout || (clearRes.cost + 30);
+                Renderer.spawnFloatingNotice(L(`💰 滿編折現 +${compTotal}`, `💰 Cap Bonus +${compTotal}`), center.left, center.top, 'pity-seed');
+                setStatusMsg(
+                    `開採藏寶巨石（-${clearRes.cost} 💰）：掘出 2★ 古塔但場上已達人口上限，自動折現補償 +${compTotal} 💰！`,
+                    `Treasure Boulder (-${clearRes.cost} 💰): 2★ tower auto-converted at tower cap for +${compTotal} 💰!`
                 );
             } else {
                 const capNoteZh = clearRes.isSoftCapped ? '（淨利受軟上限約束）' : '';
@@ -3868,14 +4091,8 @@
             return { ok: false, reason: 'insufficient_gold', boxCost };
         }
 
-        const spot = AttackSys.pickSmartSpawnIndex('fire_bud');
-        if (!spot && options.forceOutcome !== 'fruit') {
-            setStatusMsg(
-                '棋盤可建造地塊已滿，請先融合或出售防禦塔騰出空間後再開啟盲盒。',
-                'No buildable tiles available. Merge or sell towers before opening a Blind Box.'
-            );
-            return { ok: false, reason: 'board_full', boxCost };
-        }
+        const capReached = isTowerCapReached(st);
+        const spot = capReached ? null : AttackSys.pickSmartSpawnIndex('fire_bud');
 
         if (useMarketFree) {
             st.blackmarketFreeBoxAvailable = false;
@@ -3888,20 +4105,49 @@
         const critPct = ((st.teamCritBonusRate || 0) * 100).toFixed(1);
 
         if (roll.kind === 'fruit') {
-            st.fusionFruitCount = 1;
+            const fruitRes = (EconSys && typeof EconSys.grantFusionFruit === 'function')
+                ? EconSys.grantFusionFruit(1)
+                : { storedCount: 1, overflowCount: 0, compensationGold: 0, count: Math.min(3, (st.fusionFruitCount || 0) + 1), maxSlots: 3 };
             SoundEngine.playMerge(2, true);
             const costLabel = useMarketFree
                 ? L('黑市免費盒', 'Market Free Box')
                 : (useFreeToken ? L('盲盒代幣', 'Box Token') : `-${boxCost} 💰`);
+            if (fruitRes.overflowCount > 0) {
+                setStatusMsg(
+                    `命運盲盒（${costLabel}）開出【萬能融合果實 ★】，因儲備已滿 (${fruitRes.count}/${fruitRes.maxSlots})，自動折現為 +${fruitRes.compensationGold} 💰（全隊暴擊 +${critPct}%）。`,
+                    `Blind Box (${costLabel}) rolled [Universal Fruit ★]; slots full (${fruitRes.count}/${fruitRes.maxSlots}), auto-converted to +${fruitRes.compensationGold} 💰 (Team Crit +${critPct}%).`
+                );
+                updateHUD();
+                return { ok: true, kind: 'fruit_overflow', compensationGold: fruitRes.compensationGold, boxCost, roll };
+            }
             setStatusMsg(
-                `命運盲盒（${costLabel}）開出【萬能融合果實 ★】！已存入槽位 (1/1)，全隊暴擊加成 +${critPct}%。`,
-                `Blind Box (${costLabel}) yielded [Universal Fusion Fruit ★]! Stored (1/1), Team Crit +${critPct}%.`
+                `命運盲盒（${costLabel}）開出【萬能融合果實 ★】！已存入槽位 (${fruitRes.count}/${fruitRes.maxSlots})，全隊暴擊加成 +${critPct}%。`,
+                `Blind Box (${costLabel}) yielded [Universal Fusion Fruit ★]! Stored (${fruitRes.count}/${fruitRes.maxSlots}), Team Crit +${critPct}%.`
             );
             updateHUD();
-            return { ok: true, kind: 'fruit', boxCost, roll };
+            return { ok: true, kind: 'fruit', fruitCount: fruitRes.count, maxSlots: fruitRes.maxSlots, boxCost, roll };
         }
 
-        const targetIndex = (options.targetIndex !== undefined && options.targetIndex !== null && TerrainSys.canBuildAt(options.targetIndex) && st.board[options.targetIndex] === null)
+        const hasExplicitSpot = options.targetIndex !== undefined && options.targetIndex !== null && TerrainSys.canBuildAt(options.targetIndex) && st.board[options.targetIndex] === null;
+        if (capReached || (!spot && !hasExplicitSpot)) {
+            const tierVal = roll.tier >= 3 ? 90 : (roll.tier === 2 ? 55 : 35);
+            const compGold = Math.max(boxCost, tierVal);
+            st.currentGold += compGold;
+            st.totalGoldEarned = (st.totalGoldEarned || 0) + compGold;
+            SoundEngine.playMerge(2, true);
+            const costTagZh = boxCost > 0 ? `-${boxCost} 💰` : (useMarketFree ? '黑市免費' : '免費代幣');
+            const costTagEn = boxCost > 0 ? `-${boxCost} 💰` : (useMarketFree ? 'Market Free' : 'Free Token');
+            const reasonZh = capReached ? '人口已滿' : '地塊已滿';
+            const reasonEn = capReached ? 'Tower Cap Full' : 'Board Full';
+            setStatusMsg(
+                `命運盲盒（${costTagZh}）抽中 ${roll.tier}★ 塔，因${reasonZh}自動折現為 +${compGold} 💰（全隊暴擊 +${critPct}%）。`,
+                `Blind Box (${costTagEn}) rolled ${roll.tier}★ tower; converted to +${compGold} 💰 (${reasonEn}, Team Crit +${critPct}%).`
+            );
+            updateHUD();
+            return { ok: true, kind: 'tower_cap_gold', compensationGold: compGold, boxCost, roll };
+        }
+
+        const targetIndex = hasExplicitSpot
             ? options.targetIndex
             : (spot ? spot.index : 0);
         const towerType = roll.towerType || (roll.tier === 3 ? 'fire_A' : (roll.tier === 2 ? 'fire_trunk' : 'fire_bud'));
@@ -4849,6 +5095,9 @@
                 st.baseHp = st.maxBaseHp;
                 st.dewEnergy = 0;
                 st.currentGold = Math.max(10, Number(trial.startGold) || 180);
+                const presetCnt = Array.isArray(trial.presetTowers) ? trial.presetTowers.length : 0;
+                st.towerCapOverride = Math.max(16, presetCnt + 2);
+                st.blessingRerollsLeft = 0;
                 if (EconSys && typeof EconSys.resetRunEconomyState === 'function') EconSys.resetRunEconomyState();
                 if (TreeSys && typeof TreeSys.resetTreasureRoots === 'function') TreeSys.resetTreasureRoots();
             }
@@ -5285,6 +5534,58 @@
         syncTacticalBoardVisuals([sellIdx]);
     }
 
+    function refineSelectedCrownTower() {
+        const st = G.state;
+        if (!canPerformTacticalAction() || st.selectedIndex === null) return false;
+        if (!EconSys || typeof EconSys.isEndlessGoldSinkUnlocked !== 'function' || !EconSys.isEndlessGoldSinkUnlocked()) {
+            setStatusMsg(
+                '【4★ 古冠精煉】僅於無盡模式第 11 波後開放。',
+                '4★ Crown Refine unlocks in Endless Mode Wave 11+.'
+            );
+            return false;
+        }
+        const towerObj = st.board[st.selectedIndex];
+        if (!towerObj || Number(towerObj.tier) !== 4) return false;
+
+        const curRef = Math.max(0, Math.floor(Number(towerObj.refineLevel) || 0));
+        const cost = EconSys.getCrownRefineCost ? EconSys.getCrownRefineCost(curRef) : null;
+        if (cost === null) {
+            setStatusMsg(
+                '此 4★ 防禦塔【古冠精煉】已達最高階 ◆3（+30% 戰力）。',
+                'This 4★ tower has reached max Crown Refine ◆3 (+30% power).'
+            );
+            return false;
+        }
+        if (st.currentGold < cost) {
+            setStatusMsg(
+                `古冠精煉 ◆${curRef + 1} 需花費 ${cost} 💰，當前金幣不足。`,
+                `Crown Refine ◆${curRef + 1} requires ${cost} 💰 (insufficient Gold).`
+            );
+            return false;
+        }
+
+        Backend.recordPlayerAction();
+        st.currentGold -= cost;
+        towerObj.refineLevel = curRef + 1;
+        towerObj.investedGold = (towerObj.investedGold || 0) + cost;
+
+        const c = indexToCoords(st.selectedIndex);
+        const center = Renderer.getCellCenter(c.x, c.y);
+        Renderer.emitRingFX(center.left, center.top, G.boardMetrics.step * 1.25, '#E0B43C', 0.25, 300);
+        Renderer.emitParticleBurst(center.left, center.top, '#E0B43C', 8, 85);
+        SoundEngine.playMerge(4, true);
+
+        const cfg = getTowersDict()[towerObj.type] || { name: towerObj.type };
+        const totalPct = towerObj.refineLevel * 10;
+        setStatusMsg(
+            `【${cfg.name} ★★★★】古冠精煉升至 ◆${towerObj.refineLevel}（-${cost} 💰），基礎戰力 +${totalPct}%！`,
+            `${cfg.name} ★★★★ Crown Refined to ◆${towerObj.refineLevel} (-${cost} 💰): +${totalPct}% B_power bonus!`
+        );
+        Renderer.renderCellTower(st.selectedIndex);
+        syncTacticalBoardVisuals([]);
+        return true;
+    }
+
     function infuseSelectedScionTower() {
         const st = G.state;
         if (!canPerformTacticalAction() || st.selectedIndex === null) return false;
@@ -5477,6 +5778,8 @@
     }
 
     [
+        ['expandTowerCapBtn', handleExpandTowerCap],
+        ['inspectorRefineBtn', refineSelectedCrownTower],
         ['inspectorInfuseBtn', infuseSelectedScionTower], ['inspectorTargetBtn', cycleSelectedTowerTargetMode], ['inspectorSellBtn', sellSelectedTower], ['inspectorObstacleClearBtn', confirmClearSelectedObstacle], ['nextWaveBtn', triggerEarlyNextWave],
         ['skillEntangleBtn', () => TreeSys.castEntangleSkill()], ['skillFrenzyBtn', () => TreeSys.castFrenzySkill()],
         ['skillHarvestBtn', () => TreeSys.castGoldenHarvestSkill()], ['guildHarvestBtn', () => TreeSys.castGoldenHarvestSkill()],
@@ -5522,6 +5825,12 @@
             SoundEngine.ensureContext();
             if (TreeSys && typeof TreeSys.upgradeTreasureRoot === 'function') {
                 TreeSys.upgradeTreasureRoot();
+            }
+        }],
+        ['endlessBoostBtn', () => {
+            SoundEngine.ensureContext();
+            if (TreeSys && typeof TreeSys.upgradeGlobalTreeBoost === 'function') {
+                TreeSys.upgradeGlobalTreeBoost();
             }
         }],
         ['guildToggleBtn', () => { SoundEngine.ensureContext(); toggleGuildDrawer(); }],
@@ -5927,11 +6236,14 @@
         handleCellClick,
         handleAction,
         spawnTowerAtCell,
+        getTowerCap,
+        isTowerCapReached,
         handleShopCardClick,
         handleStockTrade,
         openBlindBox,
         applyFusionFruitAtCell,
         handleFusionFruitSlotClick,
+        refineSelectedCrownTower,
         infuseSelectedScionTower,
         handleWagerSelect,
         toggleGuildDrawer,
@@ -6063,6 +6375,9 @@
             }
 
             renderOnboardingToast();
+            updateTowerCapUI();
+            updateTreasureRootUI();
+            updateGuildDrawerUI();
             updateHUD();
             updateSpeedButtonUI();
             updateSoundButtonUI();

@@ -1112,13 +1112,22 @@
             setElText('mode-desc-daily', isEn
                 ? 'Deterministic daily map, weather, stock noise, blind box & blessing seed for fair score runs.'
                 : '以今日日期固定生成地圖、天氣、股市波動、盲盒與枝枒賜福序列，公平一戰。');
+            setElText('mode-std-daily', isEn ? 'Standardized (No Meta Rings)' : '標準環境（無年輪）');
             setElText('mode-enter-daily', isEn ? 'Briefing ▸' : '查看簡報 ▸');
             setElText('mode-title-puzzle', isEn ? 'World Tree Trials' : '世界樹殘局試煉');
             setElText('mode-badge-puzzle', isEn ? '5 Tactical Trials' : '單波解謎');
             setElText('mode-desc-puzzle', isEn
                 ? '5 fixed-gold single-wave tactical puzzles. Solve elemental counters and high-tier merges to clear.'
                 : '5 道固定資金與極端怪潮殘局，唯有算準元素相剋與轉職合成方能一次破局。');
+            setElText('mode-std-puzzle', isEn ? 'Standardized (No Meta Rings)' : '標準環境（無年輪）');
             setElText('mode-enter-puzzle', isEn ? 'Enter Trials ▸' : '挑戰殘局 ▸');
+            setElText('std-mode-pill', isEn ? 'Standard (No Meta)' : '標準環境（無年輪）');
+            setElText('daily-std-notice', isEn
+                ? 'Standardized (No Meta Rings) · Base Stock (5% Fee) & 4-Pull Box Pity'
+                : '標準環境（無年輪）· 開放基礎股市 (5% 手續費) 與 4 抽盲盒保底');
+            setElText('puzzle-std-notice', isEn
+                ? 'Standardized (No Meta Rings) · Pure Fixed-Gold Tactical Solve'
+                : '標準環境（無年輪）· 禁用所有局外年輪，純粹考驗單波資源算術');
             setElText('lobby-setup-back-btn', isEn ? '← Back to Lobby' : '← 返回模式大廳');
             setElText('daily-brief-date-k', isEn ? 'Challenge Date' : '挑戰日期');
             setElText('daily-brief-seed-k', isEn ? 'Deterministic Seed' : '確定性種子碼');
@@ -1126,8 +1135,8 @@
             setElText('daily-brief-weather-k', isEn ? 'Forest Weather' : '今日林相天氣');
             setElText('daily-brief-status-k', isEn ? 'Daily Record' : '今日戰績');
             setElText('daily-rule-note', isEn
-                ? "All daily randomness (Blind Box, Stock noise, Blessings, Thief loot) uses today's fixed seed. Wins & losses stamp a dated scorecard."
-                : '今日所有波動（盲盒、股市雜訊、賜福抽卡、靈脈竊賊掉落）均鎖定同一種子序列，通關與敗陣結算皆會產生日期戰績卡。');
+                ? "Meta Tree Rings are disabled (Standardized). All daily randomness (Blind Box, Stock noise, Blessings) uses today's fixed seed. Wins & losses stamp a dated scorecard."
+                : '本模式鎖定為「標準環境（無年輪）」，今日所有隨機波動（盲盒、股市雜訊、賜福抽卡）均使用同一固定種子；通關與敗陣結算皆會產生日期戰績卡。');
             setElText('lobby-codex-btn', isEn ? 'World Tree Codex' : '世界樹圖譜');
             setElText('lobby-guide-btn', isEn ? 'Field Guide' : '戰術手冊');
             setElText('boss-entrance-kicker', isEn ? 'Boss Warning' : '領主警示');
