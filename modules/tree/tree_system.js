@@ -192,15 +192,22 @@
         if (!MonsterSys || typeof MonsterSys.spawnGroundHazard !== 'function' || !G || !G.boardMetrics) return false;
 
         const tc = getTreeConfig();
+        const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
+        const sourceEffDps = (AttackSys && typeof AttackSys.getTowerEffectiveDps === 'function')
+            ? AttackSys.getTowerEffectiveDps(towerObj)
+            : 0;
+        const origScorchDps = tc.BLESSING_SCORCH_DPS || 22;
         monster._scorchBrandIcdMs = 350;
         MonsterSys.spawnGroundHazard({
             type: 'scorch_trail',
             x: monster.pixelX,
             y: monster.pixelY,
             radiusPx: (tc.BLESSING_SCORCH_RADIUS_CELLS || 0.75) * G.boardMetrics.step,
-            dps: tc.BLESSING_SCORCH_DPS || 22,
+            dps: Math.max(origScorchDps, Math.round(sourceEffDps * 0.20)),
             durationMs: tc.BLESSING_SCORCH_DURATION_MS || 2500,
-            sourceTower: towerObj
+            sourceTower: towerObj,
+            sourceTowerId: towerObj.uid,
+            sourceEffDps
         });
         return true;
     }
@@ -396,6 +403,9 @@
         if (G.callbacks && typeof G.callbacks.updateHUD === 'function') {
             G.callbacks.updateHUD();
         }
+        if (G.callbacks && typeof G.callbacks.scheduleRunSave === 'function') {
+            G.callbacks.scheduleRunSave(400);
+        }
         return {
             ok: true,
             level: nextLv,
@@ -582,6 +592,9 @@
         }
         if (G.callbacks && typeof G.callbacks.updateHUD === 'function') {
             G.callbacks.updateHUD();
+        }
+        if (G.callbacks && typeof G.callbacks.scheduleRunSave === 'function') {
+            G.callbacks.scheduleRunSave(400);
         }
         return { ok: true, level: nextLv, cost, totalBonusPct };
     }
@@ -829,6 +842,27 @@
         if (G.dom.blessingOverlayEl) G.dom.blessingOverlayEl.classList.remove('hidden');
         GameApp.audio.playMagic('blessing');
         G.callbacks.updateHUD();
+        if (G.callbacks && typeof G.callbacks.saveRunSnapshotNow === 'function') {
+            G.callbacks.saveRunSnapshotNow();
+        }
+        return true;
+    }
+
+    function restorePendingBlessingChoices(choiceIds = []) {
+        const st = G && G.state;
+        if (!st) return false;
+        const blessingsMap = getTreeData().BLESSINGS_MAP || {};
+        const choices = Array.isArray(choiceIds)
+            ? choiceIds.map(id => blessingsMap[id]).filter(Boolean)
+            : [];
+        if (choices.length === 0) return false;
+        st.blessingChoices = choices;
+        st.isPaused = false;
+        st.waveState = 'BLESSING_SELECT';
+        if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
+        renderBlessingChoicesUI(choices);
+        if (G.dom && G.dom.blessingOverlayEl) G.dom.blessingOverlayEl.classList.remove('hidden');
+        G.callbacks.updateHUD();
         return true;
     }
 
@@ -853,6 +887,9 @@
             GameApp.backend.trackFeel('Tree:BlessingReroll', st.currentWave, { wave: st.currentWave });
         }
         GameApp.audio.playMagic('blessing');
+        if (G.callbacks && typeof G.callbacks.saveRunSnapshotNow === 'function') {
+            G.callbacks.saveRunSnapshotNow();
+        }
         return { ok: true, choices: nextChoices, rerollsLeft: st.blessingRerollsLeft };
     }
 
@@ -898,6 +935,9 @@
         );
         GameApp.audio.playMagic('blessing');
         G.callbacks.updateHUD();
+        if (G.callbacks && typeof G.callbacks.saveRunSnapshotNow === 'function') {
+            G.callbacks.saveRunSnapshotNow();
+        }
         G.callbacks.startMainLoop();
     }
 
@@ -933,6 +973,7 @@
         settleWaveRootIncome,
         upgradeGlobalTreeBoost,
         triggerBlessingSelection,
+        restorePendingBlessingChoices,
         rerollBlessingChoices,
         selectBlessing
     };

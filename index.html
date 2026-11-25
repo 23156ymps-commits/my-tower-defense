@@ -608,104 +608,182 @@
     <div id="guide-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="guide-title">
         <div class="modal-card guide-card">
             <div class="guide-header-bar">
-                <h1 id="guide-title" class="codex-title">戰術手冊與地形速查</h1>
-                <button id="guide-x-btn" class="modal-x-btn" type="button" aria-label="關閉戰術手冊">×</button>
+                <h1 id="guide-title" class="codex-title">戰術指南</h1>
+                <button id="guide-x-btn" class="modal-x-btn" type="button" aria-label="關閉戰術指南">×</button>
             </div>
-            <p class="modal-subtitle">掌握屬性相剋與特殊地形加成，穩固世界樹防線。</p>
+            <p id="guide-subtitle" class="modal-subtitle">掌握元素相剋、合成階梯與商會機制，穩固世界樹防線。</p>
 
-            <div class="guide-section">
-                <h2 class="guide-section-title">元素相剋速查</h2>
-                <ul class="panel-list">
-                    <li class="panel-row">
-                        <span class="panel-key">🔥 火塔 ▸ 蔓藤巨魔 / 史萊姆</span>
-                        <span class="panel-val num">175% 暴擊 · 破甲 30%</span>
-                    </li>
-                    <li class="panel-row">
-                        <span class="panel-key">❄️ 冰塔 ▸ 熔岩傀儡 / 疾風獵犬</span>
-                        <span class="panel-val num">175% 暴擊 · 緩速 45%</span>
-                    </li>
-                    <li class="panel-row">
-                        <span class="panel-key">⚡ 雷塔 ▸ 機械飛艇 / 重裝魔像</span>
-                        <span class="panel-val num">175% 暴擊 · 連鎖彈跳</span>
-                    </li>
-                    <li class="panel-row">
-                        <span class="panel-key">✨ 跨元素融合塔 ▸ 任一親和弱點</span>
-                        <span class="panel-val num">135% 親和增傷</span>
-                    </li>
-                </ul>
+            <div class="guide-tabs" role="tablist" aria-label="戰術指南頁籤">
+                <button id="guide-tab-btn-elements" class="guide-tab-btn is-active" type="button" role="tab" aria-selected="true" data-guide-tab="elements">元素相剋與地形</button>
+                <button id="guide-tab-btn-merge" class="guide-tab-btn" type="button" role="tab" aria-selected="false" data-guide-tab="merge">合成階梯與操作</button>
+                <button id="guide-tab-btn-endless" class="guide-tab-btn" type="button" role="tab" aria-selected="false" data-guide-tab="endless">靈露、商會與無盡</button>
             </div>
 
-            <div class="guide-section">
-                <h2 class="guide-section-title">戰術地形加成（懸停棋盤特殊格可檢視）</h2>
-                <ul class="panel-list">
-                    <li class="panel-row terrain-legend-row">
-                        <span class="terrain-swatch swatch-highground" aria-hidden="true"></span>
-                        <span class="panel-key">制高點</span>
-                        <span class="panel-val num">射程 +30%</span>
-                    </li>
-                    <li class="panel-row terrain-legend-row">
-                        <span class="terrain-swatch swatch-mana" aria-hidden="true"></span>
-                        <span class="panel-key">元素靈脈</span>
-                        <span class="panel-val num">攻速 +25%</span>
-                    </li>
-                    <li class="panel-row terrain-legend-row">
-                        <span class="terrain-swatch swatch-tree" aria-hidden="true"></span>
-                        <span class="panel-key">世界樹庇護所</span>
-                        <span class="panel-val num">依血量最高 +20% 傷害</span>
-                    </li>
-                </ul>
-            </div>
+            <div class="guide-tab-body">
+                <!-- 頁籤 1：元素相剋與地形 -->
+                <div id="guide-tab-elements" class="guide-tab-panel" role="tabpanel" aria-labelledby="guide-tab-btn-elements">
+                    <div class="guide-section">
+                        <h2 id="guide-t1-elem-title" class="guide-section-title">元素相剋與暴擊倍率</h2>
+                        <div class="guide-grid">
+                            <div class="guide-mini-card">
+                                <div id="guide-el-fire-k" class="guide-card-k">🔥 火系 ▸ 蔓藤巨魔 / 史萊姆 / 花妖</div>
+                                <div id="guide-el-fire-v" class="guide-card-v num">1.75× 弱點 (暴擊 1.25×) · 破甲抑療</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-el-ice-k" class="guide-card-k">❄️ 冰系 ▸ 熔岩傀儡 / 獵犬 / 影豹</div>
+                                <div id="guide-el-ice-v" class="guide-card-v num">1.75× 弱點 (暴擊 1.25×) · 緩速冰封 (-25% 治療)</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-el-thunder-k" class="guide-card-k">⚡ 雷系 ▸ 機械飛艇 / 魔像 / 聖盾</div>
+                                <div id="guide-el-thunder-v" class="guide-card-v num">1.75× 弱點 (暴擊 1.25×) · 連鎖破盾</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-el-multi-k" class="guide-card-k">✨ 雙元融合 / 🔺 三元與原初之核</div>
+                                <div id="guide-el-multi-v" class="guide-card-v num">雙元 1.35× 親和 · 三元全親和 1.26×</div>
+                            </div>
+                        </div>
+                    </div>
 
-            <div id="guide-leyline-weather-section" class="guide-section">
-                <h2 class="guide-section-title">鄰格靈脈陣法與動態天象（上限 2 連線 / +18%）</h2>
-                <ul class="panel-list">
-                    <li class="panel-row">
-                        <span class="panel-key">🔥+❄️ 對流 / ❄️+⚡ 超導 / 🔥+⚡ 過載</span>
-                        <span class="panel-val num">10% 破減 · +10% 速 · +10% 暴</span>
-                    </li>
-                    <li class="panel-row">
-                        <span class="panel-key">🔺 火冰雷三元陣法（最多 2 連線/+18%）</span>
-                        <span class="panel-val num">+15% 傷（基礎增傷區）＋ 1💧/1.5s</span>
-                    </li>
-                    <li class="panel-row">
-                        <span class="panel-key">☀️ 熾陽 / ❄️ 霜雪 / ⛈️ 雷暴 / 🌑 蝕月</span>
-                        <span class="panel-val num">每 3 波變天 · 聯動股價與掉落</span>
-                    </li>
-                </ul>
-            </div>
+                    <div class="guide-section">
+                        <h2 id="guide-t1-terrain-title" class="guide-section-title">戰術地形與岩石開採</h2>
+                        <ul class="panel-list">
+                            <li class="panel-row terrain-legend-row">
+                                <span class="terrain-swatch swatch-highground" aria-hidden="true"></span>
+                                <span id="guide-tr-hg-k" class="panel-key">⛰️ 制高點</span>
+                                <span id="guide-tr-hg-v" class="panel-val num">射程 +30%</span>
+                            </li>
+                            <li class="panel-row terrain-legend-row">
+                                <span class="terrain-swatch swatch-mana" aria-hidden="true"></span>
+                                <span id="guide-tr-mana-k" class="panel-key">✨ 元素靈脈</span>
+                                <span id="guide-tr-mana-v" class="panel-val num">攻速 +25%</span>
+                            </li>
+                            <li class="panel-row terrain-legend-row">
+                                <span class="terrain-swatch swatch-tree" aria-hidden="true"></span>
+                                <span id="guide-tr-tree-k" class="panel-key">🌿 世界樹庇護所</span>
+                                <span id="guide-tr-tree-v" class="panel-val num">依世界樹血量最高 +20% 傷害</span>
+                            </li>
+                            <li class="panel-row">
+                                <span id="guide-tr-stone-k" class="panel-key">⚡ 充能浮石 / 🪨 巨岩與藏寶石</span>
+                                <span id="guide-tr-stone-v" class="panel-val num">輪充 +40% 傷 · 先選點開採 45 💰</span>
+                            </li>
+                        </ul>
+                    </div>
 
-            <div id="guide-stage4-section" class="guide-section">
-                <h2 id="guide-stage4-title" class="guide-section-title">浮島裂隙 · 黑市開採 · W6+/W10+ 菁英詞條</h2>
-                <ul id="guide-stage4-list" class="panel-list">
-                    <li class="panel-row">
-                        <span id="guide-s4-k0" class="panel-key">⚡ 充能浮石 / 🌀 裂隙 A→B（雷鳴浮島）</span>
-                        <span id="guide-s4-v0" class="panel-val num">2 波輪充 +40% 傷 · 單向躍遷</span>
-                    </li>
-                    <li class="panel-row">
-                        <span id="guide-s4-k1" class="panel-key">🪨 藏寶巨石 / 🎁 免費盲盒（荒蕪黑市）</span>
-                        <span id="guide-s4-v1" class="panel-val num">45 💰 開採寶藏 · 每波 1 免費盒</span>
-                    </li>
-                    <li class="panel-row">
-                        <span id="guide-s4-k2" class="panel-key">🔱 W6+/W10+ 菁英詞條（含共振／庇護／稜鏡）</span>
-                        <span id="guide-s4-v2" class="panel-val num">範圍剋共振 · 破甲關庇護 · 複合剋稜鏡</span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="guide-section">
-                <h2 id="guide-evo-title" class="guide-section-title">轉職與升星金字塔（1★ → 5★ 16U）</h2>
-                <div id="guide-evo-note" class="codex-note guide-evo-note num">
-                    異系 1★+1★ ▸ 雙元 1★ (2U) ｜ 同種 1★+1★ ▸ 靈木主幹 2★ ｜ 同種 2★+2★ ▸ 冠枝 A/B 3★ (4U)<br>
-                    同脈 3★+3★（或 8U）▸ 雙生 4★ ｜ 雙元 2★/3★ ＋ 缺口純系 ▸ 三元傳奇 3★/4★ ｜ 三元 16U ▸ 全圖唯一 5★ 原初之核
+                    <div class="guide-section">
+                        <h2 id="guide-t1-weather-title" class="guide-section-title">四大動態天象（每 3 波輪替 / 每 5 波蝕月）</h2>
+                        <div class="guide-grid">
+                            <div class="guide-mini-card">
+                                <div id="guide-wt-sun-k" class="guide-card-k">☀️ 熾陽天象</div>
+                                <div id="guide-wt-sun-v" class="guide-card-v num">火射程 +0.4 / 灼燒 +25% · 🔥股看漲</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-wt-snow-k" class="guide-card-k">❄️ 霜雪天象</div>
+                                <div id="guide-wt-snow-v" class="guide-card-v num">敵速 -10% / 冰暴 +15% · ❄️股看漲</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-wt-storm-k" class="guide-card-k">⛈️ 雷暴天象</div>
+                                <div id="guide-wt-storm-v" class="guide-card-v num">每 6s 天雷劈最高血 · ⚡股高波動</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-wt-eclipse-k" class="guide-card-k">🌑 蝕月黑潮</div>
+                                <div id="guide-wt-eclipse-v" class="guide-card-v num">賞金與靈露 +30% · 盲盒 3★ 翻倍</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="guide-section">
-                <h2 class="guide-section-title">防線紀要與快捷鍵</h2>
-                <div id="guide-hotkey-note" class="codex-note">
-                    每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波迎戰領主魔王。<br>
-                    熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W/E]</b> 技能 ｜ <b>[B]</b> 商會 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜
-                    <b>[Esc]</b> 取消
+                <!-- 頁籤 2：合成階梯與操作 -->
+                <div id="guide-tab-merge" class="guide-tab-panel hidden" role="tabpanel" aria-labelledby="guide-tab-btn-merge">
+                    <div class="guide-section">
+                        <h2 id="guide-t2-ladder-title" class="guide-section-title">1★ → 5★ 合成階梯與創世配方</h2>
+                        <div class="guide-grid">
+                            <div class="guide-mini-card">
+                                <div id="guide-mg-1to2-k" class="guide-card-k">1★ + 1★（同系升星 / 異色轉職）</div>
+                                <div id="guide-mg-1to2-v" class="guide-card-v">同色進化 2★ 主幹；異色融合 1★ 雙元（後續 1★ 可直接灌注升 2★）。</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-mg-2to4-k" class="guide-card-k">2★ + 2★（A/B 冠枝）與 3★/4★ 餵養</div>
+                                <div id="guide-mg-2to4-v" class="guide-card-v">同種 2★ 合成可選 A/B 分支 3★；3★ 與 4★ 可直接吞噬低星充能累積星級單位。</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-mg-tri-k" class="guide-card-k">3 組三元素 3★ 創世融合配方</div>
+                                <div id="guide-mg-tri-v" class="guide-card-v num">💨蒸氣 2★ + ⚡雷 2★ ▸ ⛈️風暴<br>🔥火 2★ + 💠磁環 2★ ▸ 🌋熔爐<br>❄️冰 2★ + ☄️電漿 2★ ▸ ❄️稜鏡</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-mg-5star-k" class="guide-card-k">5★ 神裔與全圖唯一「原初之核」</div>
+                                <div id="guide-mg-5star-v" class="guide-card-v">三元 16U 升華為全圖限 1 座 5★ 原初之核；其餘 5★ 神裔全場上限 2 座（年輪可擴至 3 座）。</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-section">
+                        <h2 id="guide-t2-ctrl-title" class="guide-section-title">戰術操作與防呆規則</h2>
+                        <ul class="panel-list">
+                            <li class="panel-row">
+                                <span id="guide-ct-pause-k" class="panel-key">[Space] 戰術暫停 / [Esc] 選單</span>
+                                <span id="guide-ct-pause-v" class="panel-val">暫停中可建塔、合成、換位與開商會</span>
+                            </li>
+                            <li class="panel-row">
+                                <span id="guide-ct-swap-k" class="panel-key">非合成雙塔拖曳互換（Swap）</span>
+                                <span id="guide-ct-swap-v" class="panel-val">同圖或跨圖直接對調座標，休整期免費</span>
+                            </li>
+                            <li class="panel-row">
+                                <span id="guide-ct-sell-k" class="panel-key">3★ 以上兩段式賣塔防呆</span>
+                                <span id="guide-ct-sell-v" class="panel-val">2.5 秒內雙擊出售確認；保留 70%/80% 退費</span>
+                            </li>
+                            <li class="panel-row">
+                                <span id="guide-ct-keys-k" class="panel-key">快捷鍵：[1/2/3] 召喚 · [B] 商會 · [T] 圖譜 · [Tab/S] 倍速</span>
+                                <span id="guide-ct-keys-v" class="panel-val">首波放下第 1 座塔前不倒數，亦可手動開波</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 頁籤 3：靈露、商會與無盡 -->
+                <div id="guide-tab-endless" class="guide-tab-panel hidden" role="tabpanel" aria-labelledby="guide-tab-btn-endless">
+                    <div class="guide-section">
+                        <h2 id="guide-t3-dew-title" class="guide-section-title">世界樹靈露技能與祝福</h2>
+                        <ul class="panel-list">
+                            <li class="panel-row">
+                                <span id="guide-dw-q-k" class="panel-key">[Q] 根鬚纏繞（40 💧）</span>
+                                <span id="guide-dw-q-v" class="panel-val">定身全場敵軍 2.5s ＋ 易傷 +20%</span>
+                            </li>
+                            <li class="panel-row">
+                                <span id="guide-dw-w-k" class="panel-key">[W] 自然狂熱（60 💧）</span>
+                                <span id="guide-dw-w-v" class="panel-val">全場防禦塔攻速 +35%（持續 5s）</span>
+                            </li>
+                            <li class="panel-row">
+                                <span id="guide-dw-e-k" class="panel-key">[E] 黃金豐收（50 💧）</span>
+                                <span id="guide-dw-e-v" class="panel-val">即時採收波次金幣並重置全塔冷卻</span>
+                            </li>
+                            <li class="panel-row">
+                                <span id="guide-dw-b-k" class="panel-key">每 3 波世界樹枝枒祝福</span>
+                                <span id="guide-dw-b-v" class="panel-val">每局不重複三選一；另有鄰格靈脈陣法（+18% 上限）</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="guide-section">
+                        <h2 id="guide-t3-guild-title" class="guide-section-title">世界樹商會與精兵上限</h2>
+                        <div class="guide-grid">
+                            <div class="guide-mini-card">
+                                <div id="guide-gd-roots-k" class="guide-card-k">🌱 聚寶根鬚（55 / 90 / 125 💰）</div>
+                                <div id="guide-gd-roots-v" class="guide-card-v">波末獨立結算固定產出與 Lv.3 8% 利息（上限 +35 💰），不佔單波非戰鬥軟上限。</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-gd-stock-k" class="guide-card-k">📈 元素股市與波次對賭</div>
+                                <div id="guide-gd-stock-v" class="guide-card-v">持股提供對應元素增傷並聯動天象；「零封懸賞 / 魔潮加碼」可贏額外金幣與果實。</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-gd-box-k" class="guide-card-k">🎁 命運盲盒與萬能果實（上限 3 顆）</div>
+                                <div id="guide-gd-box-v" class="guide-card-v">盲盒第 4 抽保底 2★+（年輪可縮至 3 抽）；果實滿 3 顆再獲得時自動折現 +80 💰。</div>
+                            </div>
+                            <div class="guide-mini-card">
+                                <div id="guide-gd-endless-k" class="guide-card-k">🗼 精兵上限（16→22）與無盡 W11+</div>
+                                <div id="guide-gd-endless-v" class="guide-card-v">HUD 可擴充 3 次上限至 22 座；無盡 W11+ 開放「全局靈脈強化」與「4★ 古冠精煉 ◆1–◆3」。</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -815,6 +893,10 @@
 
                 <!-- Step 1：主大廳 4 大模式入口 -->
                 <section id="lobby-step-hub" class="lobby-step-hub" aria-label="遊戲模式選擇">
+                    <div id="lobby-resume-banner" class="lobby-resume-banner hidden">
+                        <button id="lobby-resume-btn" class="primary-cta-btn lobby-resume-btn" type="button">繼續上次進度</button>
+                        <button id="lobby-discard-save-btn" class="lobby-discard-btn" type="button">捨棄存檔</button>
+                    </div>
                     <div id="lobby-mode-grid" class="lobby-mode-grid">
                         <button type="button" id="mode-card-campaign" class="lobby-mode-card ornate-card selected"
                             data-mode="campaign">

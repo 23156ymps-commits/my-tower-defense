@@ -901,10 +901,31 @@
         dmgEl.classList.add('floating-dmg', toneClass);
         const weakLabel = (GameApp.i18n && typeof GameApp.i18n.pick === 'function') ? GameApp.i18n.pick('弱點!', 'WEAK!') : '弱點!';
         const affinityLabel = (GameApp.i18n && typeof GameApp.i18n.pick === 'function') ? GameApp.i18n.pick('親和', 'Affinity') : '親和';
-        dmgEl.innerText = isWeakness ? `${weakLabel} -${amount}` : (isAffinity ? `${affinityLabel} -${amount}` : `${tagPrefix}-${amount}`);
+        dmgEl.innerText = isWeakness
+            ? (tagPrefix ? `${tagPrefix}-${amount}` : `${weakLabel} -${amount}`)
+            : (isAffinity ? `${affinityLabel} -${amount}` : `${tagPrefix}-${amount}`);
         dmgEl.style.left = `${px + (Math.random() - 0.5) * 18}px`;
         dmgEl.style.top = `${py - 18 + (Math.random() - 0.5) * 8}px`;
         const durationMs = Math.round(720 / Math.max(1, clampNumber(G.state.gameSpeed, 1, 5, 1) * 0.75));
+        dmgEl.style.animationDuration = `${durationMs}ms`;
+        layer.appendChild(dmgEl);
+        G.callbacks.scheduleTimeout(() => dmgEl.remove(), durationMs);
+    }
+
+    function spawnDotDamageNumber(amount, px, py, tagPrefix = '🔥', isAffinity = false, isHighTone = false) {
+        const layer = G.dom.floatingLayerEl;
+        if (!layer || !Number.isFinite(amount) || amount <= 0) return;
+        const activeDmg = layer.getElementsByClassName('floating-dmg');
+        while (activeDmg.length >= 40 && activeDmg[0]) {
+            activeDmg[0].remove();
+        }
+        const dmgEl = document.createElement('div');
+        const toneClass = isHighTone ? 'weakness' : (isAffinity ? 'affinity' : 'normal');
+        dmgEl.classList.add('floating-dmg', toneClass);
+        dmgEl.innerText = `${tagPrefix || '🔥'}-${Math.round(amount)}`;
+        dmgEl.style.left = `${px + (Math.random() - 0.5) * 16}px`;
+        dmgEl.style.top = `${py - 20 + (Math.random() - 0.5) * 8}px`;
+        const durationMs = Math.round(760 / Math.max(1, clampNumber(G.state.gameSpeed, 1, 5, 1) * 0.75));
         dmgEl.style.animationDuration = `${durationMs}ms`;
         layer.appendChild(dmgEl);
         G.callbacks.scheduleTimeout(() => dmgEl.remove(), durationMs);
@@ -1232,8 +1253,21 @@
                     fxCtx.stroke();
                     fxCtx.restore();
                 }
-                if (!mon.isBoss && mon.eliteAffix === 'bulwark_aura' && typeof MonsterSysFx.isBulwarkAuraDisrupted === 'function' && !MonsterSysFx.isBulwarkAuraDisrupted(mon)) {
-                    const bSpec = mon.eliteAffixSpec || affixDb.bulwark_aura || {};
+                const hasAffix = (id) => (typeof MonsterSysFx.hasMonsterAffix === 'function' ? MonsterSysFx.hasMonsterAffix(mon, id) : mon.eliteAffix === id);
+                if (mon.isVanguard) {
+                    const vRad = 1.8 * stepPx;
+                    fxCtx.save();
+                    fxCtx.globalAlpha = 0.36;
+                    fxCtx.strokeStyle = '#E0B43C';
+                    fxCtx.lineWidth = 1.6;
+                    fxCtx.setLineDash([6, 4]);
+                    fxCtx.beginPath();
+                    fxCtx.arc(mon.pixelX, mon.pixelY, vRad, 0, Math.PI * 2);
+                    fxCtx.stroke();
+                    fxCtx.restore();
+                }
+                if (!mon.isBoss && hasAffix('bulwark_aura') && typeof MonsterSysFx.isBulwarkAuraDisrupted === 'function' && !MonsterSysFx.isBulwarkAuraDisrupted(mon)) {
+                    const bSpec = affixDb.bulwark_aura || mon.eliteAffixSpec || {};
                     const bRad = (Number(bSpec.auraRadiusCells) || 1.6) * stepPx;
                     fxCtx.save();
                     fillCircle2D(fxCtx, mon.pixelX, mon.pixelY, bRad, '#D98F3B', 0.08);
@@ -1246,7 +1280,7 @@
                     fxCtx.stroke();
                     fxCtx.restore();
                 }
-                if (!mon.isBoss && mon.eliteAffix === 'resonance_link' && typeof MonsterSysFx.getResonanceLinkTargets === 'function') {
+                if (!mon.isBoss && hasAffix('resonance_link') && typeof MonsterSysFx.getResonanceLinkTargets === 'function') {
                     const targets = MonsterSysFx.getResonanceLinkTargets(mon);
                     if (targets.length > 0) {
                         fxCtx.save();
@@ -1259,7 +1293,7 @@
                         fxCtx.restore();
                     }
                 }
-                if (!mon.isBoss && mon.eliteAffix === 'prismatic_ward') {
+                if (!mon.isBoss && hasAffix('prismatic_ward')) {
                     const pRad = Math.max(13, (m.cellW || 34) * 0.44);
                     const rot = ((st.elapsedPlayMs || 0) * 0.0022) % (Math.PI * 2);
                     const cols = [tk.elFire, tk.elIce, tk.elLightning];
@@ -1492,9 +1526,19 @@
             ? `<span class="m-armor-badge num${initBaseArmor > 0 ? '' : ' hidden'}">${initBaseArmor > 0 ? `${armorPrefix}${Math.round(initBaseArmor)}` : ''}</span>`
             : '';
         const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
-        const affixSpec = (!monster.isBoss && monster.eliteAffix) ? affixMap[monster.eliteAffix] : null;
-        const affixText = affixSpec ? (isEn ? (affixSpec.shortBadgeEn || affixSpec.nameEn) : (affixSpec.shortBadge || affixSpec.name)) : '';
-        const affixHtml = affixSpec ? `<span class="m-affix-badge affix-${affixSpec.id}">${affixText}</span>` : '';
+        const affixIds = (!monster.isBoss && Array.isArray(monster.eliteAffixes) && monster.eliteAffixes.length > 0)
+            ? monster.eliteAffixes
+            : ((!monster.isBoss && monster.eliteAffix) ? [monster.eliteAffix] : []);
+        const affixLabels = affixIds.map((id) => {
+            const af = affixMap[id];
+            return af ? (isEn ? (af.shortBadgeEn || af.nameEn) : (af.shortBadge || af.name)) : '';
+        }).filter(Boolean);
+        if (monster.isVanguard) {
+            affixLabels.unshift(isEn ? '🚩Van' : '🚩先鋒');
+        }
+        const primaryAffixId = affixIds[0] || (monster.isVanguard ? 'frenzied' : '');
+        const affixText = affixLabels.join('/');
+        const affixHtml = affixText ? `<span class="m-affix-badge affix-${primaryAffixId}">${affixText}</span>` : '';
         const weakCfg = getTowersDict()[monster.weakness];
         const weakText = (GameApp.i18n && typeof GameApp.i18n.getWeaknessLabel === 'function')
             ? GameApp.i18n.getWeaknessLabel(monster.weakness)
@@ -1601,10 +1645,17 @@
                 rec.bossBadgeEl.className = `m-boss-badge weak-${m.weakness}`;
                 rec.bossBadgeEl.innerText = `${isEnNow ? 'B·' : '王·弱'}${weakShort}`;
             }
-            if (rec.affixBadgeEl && rec.lastLang !== curLang && m.eliteAffix) {
+            if (rec.affixBadgeEl && rec.lastLang !== curLang && (m.eliteAffix || (Array.isArray(m.eliteAffixes) && m.eliteAffixes.length > 0) || m.isVanguard)) {
                 const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
-                const af = affixMap[m.eliteAffix];
-                if (af) rec.affixBadgeEl.innerText = isEnNow ? (af.shortBadgeEn || af.nameEn) : (af.shortBadge || af.name);
+                const afIds = (!m.isBoss && Array.isArray(m.eliteAffixes) && m.eliteAffixes.length > 0)
+                    ? m.eliteAffixes
+                    : ((!m.isBoss && m.eliteAffix) ? [m.eliteAffix] : []);
+                const afTexts = afIds.map((id) => {
+                    const af = affixMap[id];
+                    return af ? (isEnNow ? (af.shortBadgeEn || af.nameEn) : (af.shortBadge || af.name)) : '';
+                }).filter(Boolean);
+                if (m.isVanguard) afTexts.unshift(isEnNow ? '🚩Van' : '🚩先鋒');
+                if (afTexts.length > 0) rec.affixBadgeEl.innerText = afTexts.join('/');
             }
             rec.lastLang = curLang;
             if (rec.debuffStripEl) {
@@ -2367,9 +2418,15 @@
         const banner = G.dom.bossEntranceBannerEl;
         const isEn = Boolean(GameApp.i18n && typeof GameApp.i18n.isEnglish === 'function' && GameApp.i18n.isEnglish());
         if (G.dom.bossEntranceKickerEl) {
-            G.dom.bossEntranceKickerEl.innerText = isEn
-                ? `Wave ${waveNum} Boss Warning`
-                : `第 ${waveNum} 波 領主降臨`;
+            if (bossMeta.isDualBoss) {
+                G.dom.bossEntranceKickerEl.innerText = isEn
+                    ? `Wave ${waveNum} Twin Boss Warning`
+                    : `第 ${waveNum} 波 雙王來襲`;
+            } else {
+                G.dom.bossEntranceKickerEl.innerText = isEn
+                    ? `Wave ${waveNum} Boss Warning`
+                    : `第 ${waveNum} 波 領主降臨`;
+            }
         }
         if (G.dom.bossEntranceTitleEl) {
             G.dom.bossEntranceTitleEl.innerText = bossMeta.name || (isEn ? 'Apex Boss' : '領主魔王');
@@ -2378,9 +2435,17 @@
             const weakLabel = (GameApp.i18n && typeof GameApp.i18n.getWeaknessLabel === 'function')
                 ? GameApp.i18n.getWeaknessLabel(bossMeta.weakness)
                 : (bossMeta.weakness || '');
-            G.dom.bossEntranceSubEl.innerText = isEn
-                ? `Weak: ${weakLabel} · ARM ${bossMeta.armor || 0} · HP ${bossMeta.hp || 0}`
-                : `弱點：${weakLabel} · 護甲 ${bossMeta.armor || 0} · 生命 ${bossMeta.hp || 0}`;
+            if (bossMeta.isDualBoss && Array.isArray(bossMeta.bossList) && bossMeta.bossList.length >= 2) {
+                const b1 = bossMeta.bossList[0];
+                const b2 = bossMeta.bossList[1];
+                G.dom.bossEntranceSubEl.innerText = isEn
+                    ? `0.62× HP Each · 6s Stagger · ${b1.hp} / ${b2.hp} HP`
+                    : `雙領主各 0.62× 血量・間隔 6s 登場 (${b1.hp} / ${b2.hp} HP)`;
+            } else {
+                G.dom.bossEntranceSubEl.innerText = isEn
+                    ? `Weak: ${weakLabel} · ARM ${bossMeta.armor || 0} · HP ${bossMeta.hp || 0}`
+                    : `弱點：${weakLabel} · 護甲 ${bossMeta.armor || 0} · 生命 ${bossMeta.hp || 0}`;
+            }
         }
         banner.classList.remove('hidden', 'is-showing', 'weak-fire', 'weak-ice', 'weak-thunder');
         if (bossMeta.weakness) banner.classList.add(`weak-${bossMeta.weakness}`);
@@ -2558,6 +2623,7 @@
     emitHitFlash,
     emitRingFX,
     spawnDamageNumber,
+    spawnDotDamageNumber,
     spawnFloatingNotice,
     emitCanvasAttackFX,
     updateAndRenderCanvasFX,

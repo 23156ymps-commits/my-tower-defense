@@ -166,8 +166,12 @@
         }
         G.state.currentGold -= cost;
         G.map.terrainMap.delete(index);
+        if (!G.state.clearedObstacles || typeof G.state.clearedObstacles !== 'object') {
+            G.state.clearedObstacles = {};
+        }
 
         if (terrainKey === 'treasure_rock') {
+            G.state.clearedObstacles[index] = null;
             const roll = nextRand();
             if (roll < 0.40) {
                 const rawNetBonus = 30;
@@ -269,6 +273,7 @@
         if (revealedTerrain) {
             G.map.terrainMap.set(index, revealedTerrain);
         }
+        G.state.clearedObstacles[index] = revealedTerrain || null;
         return { ok: true, cost, isTreasureRock: false, revealedTerrain };
     }
 

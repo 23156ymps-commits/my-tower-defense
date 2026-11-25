@@ -974,7 +974,7 @@
                 pullDistanceCells: 0.65,
                 pullBurstMult: 1.25,
                 gravityVulnBonus: 0.12,
-                gravityVulnDurationMs: 2200
+                gravityVulnDurationMs: 2700
             }
         },
         magnet_B: {
@@ -1198,7 +1198,7 @@
         thunder_crown_B: { judgmentEveryN: 3, judgmentMult: 2.9, judgmentArmorPierce: 0.60, killCooldownRefundRatio: 0.55, killChargeBonus: 1 },
         steam_crown_A: { armorPierce: 0.75, splashRadiusCells: 1.65, splashRatio: 0.75, poolDurationMs: 3600, poolDps: 52, poolRadiusCells: 1.5 },
         steam_crown_B: { aoeRadiusCells: 1.9, aoeDamageRatio: 0.82, slowRate: 0.45, slowDurationMs: 3400, vulnBonus: 0.30, vulnDurationMs: 3600, mistKillGoldBonusRate: 0.15 },
-        magnet_crown_A: { aoeRadiusCells: 1.9, aoeDamageRatio: 0.88, slowRate: 0.58, slowDurationMs: 2800, pullEveryN: 2, pullDistanceCells: 0.85, pullBurstMult: 1.35, gravityVulnBonus: 0.18, gravityVulnDurationMs: 2600 },
+        magnet_crown_A: { aoeRadiusCells: 1.9, aoeDamageRatio: 0.88, slowRate: 0.58, slowDurationMs: 2800, pullEveryN: 2, pullDistanceCells: 0.85, pullBurstMult: 1.35, gravityVulnBonus: 0.18, gravityVulnDurationMs: 3100 },
         magnet_crown_B: { chainTargets: 4, chainRadiusCells: 2.9, chainDamageRatio: 0.82, shockDurationMs: 4200, shockBonusBase: 16, shockBonusPerWave: 3.2, shockIcdMs: 280 },
         plasma_crown_A: { maxStacks: 10, stackBonus: 0.16, highStackThreshold: 4, highStackArmorPierce: 0.55, switchDropStacks: 1 },
         plasma_crown_B: { maxStacks: 5, stackBonus: 0.15, refractTargets: 3, refractRadiusCells: 2.8, refractRatio: 0.58 }
@@ -1229,7 +1229,7 @@
         magnet_twin_AB: {
             aoeRadiusCells: 1.55, aoeDamageRatio: 0.76, slowRate: 0.45, slowDurationMs: 2400,
             pullEveryN: 3, pullDistanceCells: 0.45, pullBurstMult: 1.15,
-            gravityVulnBonus: 0.10, gravityVulnDurationMs: 2000,
+            gravityVulnBonus: 0.10, gravityVulnDurationMs: 2500,
             chainTargets: 3, chainRadiusCells: 2.6, chainDamageRatio: 0.70,
             shockDurationMs: 3500, shockBonusBase: 10, shockBonusPerWave: 2.5, shockIcdMs: 350
         },
@@ -1269,7 +1269,7 @@
         magnet_scion: {
             aoeRadiusCells: 1.75, aoeDamageRatio: 0.84, slowRate: 0.54, slowDurationMs: 2700,
             pullEveryN: 2, pullDistanceCells: 0.65, pullBurstMult: 1.25,
-            gravityVulnBonus: 0.15, gravityVulnDurationMs: 2400,
+            gravityVulnBonus: 0.15, gravityVulnDurationMs: 2900,
             chainTargets: 4, chainRadiusCells: 2.8, chainDamageRatio: 0.76,
             shockDurationMs: 4000, shockBonusBase: 14, shockBonusPerWave: 3.0, shockIcdMs: 300,
             hasScionAura: true, hasMapPulse: true

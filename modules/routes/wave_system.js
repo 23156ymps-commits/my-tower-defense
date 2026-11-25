@@ -197,7 +197,7 @@
     /**
      * 普通/精英雙段血量倍率曲線 M_hp(w)：
      *   1 <= w <= 10: 1 + 0.28 * (w - 1) + 0.062 * Math.pow(w - 1, 2)
-     *   w > 10:       8.542 * Math.pow(1.145, w - 10)
+     *   w > 10:       8.542 * Math.pow(1.128, w - 10)
      */
     function computeWaveHpScale(waveNum) {
         const wb = getRoutesData().WAVE_BALANCE || {};
@@ -208,7 +208,7 @@
             return 1 + linear * (w - 1) + quad * Math.pow(w - 1, 2);
         }
         const baseW10 = Number.isFinite(wb.ENDLESS_HP_BASE_W10) ? wb.ENDLESS_HP_BASE_W10 : 8.542;
-        const expBase = Number.isFinite(wb.ENDLESS_HP_EXP) ? wb.ENDLESS_HP_EXP : 1.145;
+        const expBase = Number.isFinite(wb.ENDLESS_HP_EXP) ? wb.ENDLESS_HP_EXP : 1.128;
         return baseW10 * Math.pow(expBase, w - 10);
     }
 
@@ -239,7 +239,20 @@
         return Math.min(armorCap, baseArmor + Math.round(perMilestone * m));
     }
 
-    function getBossSpecForWave(waveNum) {
+    function getEndlessEscalationInfo(waveNum) {
+        const isEndless = Boolean(G && G.state && G.state.isEndlessMode);
+        const w = Math.max(1, Math.floor(Number(waveNum) || 1));
+        if (!isEndless || w < 20) {
+            return { isDualAffix: false, isVanguardWave: false, isDualBossWave: false };
+        }
+        return {
+            isDualAffix: w >= 20,
+            isVanguardWave: w >= 25,
+            isDualBossWave: w >= 30 && (w % 10 === 0)
+        };
+    }
+
+    function getBossSpecForWave(waveNum, rosterOffset = 0) {
         const monstersData = (GameApp.data && GameApp.data.monsters) || {};
         const bossRoster = monstersData.BOSS_ROSTER || [];
         const monsterDb = monstersData.MONSTER_DATABASE || {};
@@ -249,7 +262,8 @@
         const milestoneIdx = (waveNum === victoryWave && victoryWave === 12 && bossRoster.length >= 3)
             ? 2
             : Math.max(0, Math.floor(waveNum / 5) - 1);
-        const template = bossRoster[milestoneIdx % Math.max(1, bossRoster.length)] || {
+        const rosterIdx = (milestoneIdx + Math.max(0, Math.floor(Number(rosterOffset) || 0))) % Math.max(1, bossRoster.length);
+        const template = bossRoster[rosterIdx] || {
             typeKey: 'wood', name: '腐朽古樹王', icon: '👹', weakness: 'fire', armorBase: 19, hpBase: 8487
         };
 
@@ -377,6 +391,7 @@
         } else {
             affixPool.push('bounty', 'frenzied', 'shield_regen');
         }
+        const escalationInfo = getEndlessEscalationInfo(waveNum);
         const eliteAffixCounts = {};
         const queue = [];
         let crisisSeq = 0;
@@ -393,13 +408,40 @@
                 armor = Math.max(armor, eliteArmor);
             }
             let eliteAffix = null;
+            const eliteAffixes = [];
             if (waveNum >= 6 && isElite) {
                 const affixRng = typeof createRng === 'function' ? createRng(`${affixSeedKey}:eliteAffix:${waveNum}:${i}`) : null;
                 const roll = affixRng ? affixRng() : (((waveNum * 7 + i * 13) % 97) / 97);
                 eliteAffix = affixPool[Math.floor(roll * affixPool.length) % affixPool.length];
+                eliteAffixes.push(eliteAffix);
                 eliteAffixCounts[eliteAffix] = (eliteAffixCounts[eliteAffix] || 0) + 1;
+
+                // W20+ 無盡深層異變：菁英怪抽取 2 項不重複詞條
+                if (escalationInfo.isDualAffix) {
+                    const secondPool = affixPool.filter(afId => afId !== eliteAffix);
+                    if (secondPool.length > 0) {
+                        const roll2 = affixRng ? affixRng() : (((waveNum * 11 + i * 29 + 5) % 97) / 97);
+                        const affix2 = secondPool[Math.floor(roll2 * secondPool.length) % secondPool.length];
+                        eliteAffixes.push(affix2);
+                        eliteAffixCounts[affix2] = (eliteAffixCounts[affix2] || 0) + 1;
+                    }
+                }
             }
-            queue.push({ typeKey, waveLevel: waveNum, hpScale, rewardBonus, isElite, eliteAffix, isBoss: false, armor, useAltRoute: hasAltRoute && (i % 2 === 1) });
+            // W25+ 無盡先鋒號角：前 3 隻先鋒獲得「霸體先鋒」（常駐韌性＋1.8格內友軍移速 +15%）
+            const isVanguard = Boolean(escalationInfo.isVanguardWave && i < 3);
+            queue.push({
+                typeKey,
+                waveLevel: waveNum,
+                hpScale,
+                rewardBonus,
+                isElite,
+                eliteAffix,
+                eliteAffixes,
+                isVanguard,
+                isBoss: false,
+                armor,
+                useAltRoute: hasAltRoute && (i % 2 === 1)
+            });
         }
 
         let hasThief = false;
@@ -422,14 +464,49 @@
 
         let bossMeta = null;
         if (hasBoss) {
-            const bossSpec = getBossSpecForWave(waveNum);
             const hpScaleGlobal = clampNumber(monsterRules.MONSTER_HP_SCALE ?? CONFIG.MONSTER_HP_SCALE ?? 1.0, 0.1, 20.0, 1.0);
-            queue.push({
-                typeKey: bossSpec.typeKey, waveLevel: waveNum, bossName: bossSpec.name, bossIcon: bossSpec.icon, hpScale: 1, rewardBonus,
-                isElite: true, isBoss: true, armor: bossSpec.armor, bossHp: bossSpec.hp, bossBaseDamage: bossSpec.baseDamage, bossReward: bossSpec.reward,
-                bossSpec, useAltRoute: false
-            });
-            bossMeta = { name: bossSpec.name, weakness: bossSpec.weakness, armor: bossSpec.armor, hp: Math.max(10, Math.round(bossSpec.hp * hpScaleGlobal)) };
+            if (escalationInfo.isDualBossWave) {
+                const bossSpec1 = getBossSpecForWave(waveNum, 0);
+                const bossSpec2 = getBossSpecForWave(waveNum, 1);
+                const hp1 = Math.max(10, Math.round(bossSpec1.hp * 0.62));
+                const hp2 = Math.max(10, Math.round(bossSpec2.hp * 0.62));
+                queue.push({
+                    typeKey: bossSpec1.typeKey, waveLevel: waveNum, bossName: bossSpec1.name, bossIcon: bossSpec1.icon, hpScale: 1, rewardBonus,
+                    isElite: true, isBoss: true, armor: bossSpec1.armor, bossHp: hp1, bossBaseDamage: bossSpec1.baseDamage, bossReward: bossSpec1.reward,
+                    bossSpec: bossSpec1, useAltRoute: false, bossIndex: 1, bossTotal: 2
+                });
+                queue.push({
+                    typeKey: bossSpec2.typeKey, waveLevel: waveNum, bossName: bossSpec2.name, bossIcon: bossSpec2.icon, hpScale: 1, rewardBonus,
+                    isElite: true, isBoss: true, armor: bossSpec2.armor, bossHp: hp2, bossBaseDamage: bossSpec2.baseDamage, bossReward: bossSpec2.reward,
+                    bossSpec: bossSpec2, useAltRoute: false, bossIndex: 2, bossTotal: 2, spawnDelayMs: 6000
+                });
+                const meta1 = { name: bossSpec1.name, weakness: bossSpec1.weakness, armor: bossSpec1.armor, hp: Math.max(10, Math.round(hp1 * hpScaleGlobal)) };
+                const meta2 = { name: bossSpec2.name, weakness: bossSpec2.weakness, armor: bossSpec2.armor, hp: Math.max(10, Math.round(hp2 * hpScaleGlobal)) };
+                bossMeta = {
+                    isDualBoss: true,
+                    bossCount: 2,
+                    bossList: [meta1, meta2],
+                    name: `${meta1.name} ＋ ${meta2.name}`,
+                    weakness: meta1.weakness,
+                    armor: meta1.armor,
+                    hp: meta1.hp
+                };
+            } else {
+                const bossSpec = getBossSpecForWave(waveNum, 0);
+                queue.push({
+                    typeKey: bossSpec.typeKey, waveLevel: waveNum, bossName: bossSpec.name, bossIcon: bossSpec.icon, hpScale: 1, rewardBonus,
+                    isElite: true, isBoss: true, armor: bossSpec.armor, bossHp: bossSpec.hp, bossBaseDamage: bossSpec.baseDamage, bossReward: bossSpec.reward,
+                    bossSpec, useAltRoute: false, bossIndex: 1, bossTotal: 1
+                });
+                bossMeta = {
+                    isDualBoss: false,
+                    bossCount: 1,
+                    name: bossSpec.name,
+                    weakness: bossSpec.weakness,
+                    armor: bossSpec.armor,
+                    hp: Math.max(10, Math.round(bossSpec.hp * hpScaleGlobal))
+                };
+            }
         }
         return {
             queue,
@@ -438,6 +515,7 @@
             eliteAffixCounts,
             bossMeta,
             crisisSpec,
+            escalationInfo,
             hasThief,
             spawnIntervalMs: Math.max(wb.SPAWN_INTERVAL_MIN_MS || 750, (wb.SPAWN_INTERVAL_BASE_MS || 1600) - (waveNum - 1) * (wb.SPAWN_INTERVAL_DECAY_MS || 65))
         };
@@ -459,6 +537,7 @@
         H_boss: computeBossHp,
         computeBossArmor,
         A_boss: computeBossArmor,
+        getEndlessEscalationInfo,
         getBossSpecForWave,
         getWaveNormalPool,
         buildWaveQueue

@@ -265,12 +265,18 @@
     function createSeededRng(seedInput) {
         let a = typeof seedInput === 'number' ? (seedInput >>> 0) : hashSeedString(seedInput);
         if (a === 0) a = 0x9e3779b9;
-        return function mulberry32() {
+        const mulberry32 = function () {
             a = (a + 0x6d2b79f5) >>> 0;
             let t = Math.imul(a ^ (a >>> 15), 1 | a);
             t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
             return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
         };
+        mulberry32.getState = () => a >>> 0;
+        mulberry32.setState = (stateVal) => {
+            const next = Number(stateVal) >>> 0;
+            a = next === 0 ? 0x9e3779b9 : next;
+        };
+        return mulberry32;
     }
 
     function getTodayDateKey(dateObj) {
@@ -328,6 +334,23 @@
         return typeof activeRunRng === 'function' ? activeRunRng() : Math.random();
     }
 
+    function getActiveRunRngState() {
+        if (typeof activeRunRng === 'function' && typeof activeRunRng.getState === 'function') {
+            return activeRunRng.getState();
+        }
+        return null;
+    }
+
+    function restoreActiveRunRngState(seedInput, stateVal = null) {
+        if (stateVal !== null && stateVal !== undefined && Number.isFinite(Number(stateVal))) {
+            const rng = createSeededRng(seedInput || Number(stateVal));
+            if (typeof rng.setState === 'function') rng.setState(Number(stateVal));
+            activeRunRng = rng;
+            return activeRunRng;
+        }
+        return setActiveRunRng(seedInput);
+    }
+
     GameApp.data = GameApp.data || {};
     GameApp.data.weather = GLOBAL_CONFIG.WEATHER_CATALOG;
     GameApp.config = GLOBAL_CONFIG;
@@ -343,6 +366,8 @@
         getDailyChallengeSpec,
         resolveWeatherForWave,
         setActiveRunRng,
+        getActiveRunRngState,
+        restoreActiveRunRngState,
         nextRunRandom
     };
 

@@ -270,6 +270,42 @@
         if (isCodexOpen()) renderCodexModal(currentCategory);
     }
 
+    function exportRunCodexState() {
+        return {
+            unlocked: Array.from(unlockedSet),
+            firstUnlocked: runFirstUnlockedIds.slice(),
+            trackedRecipeId: trackedRecipeNodeId || null
+        };
+    }
+
+    function restoreRunCodexState(snap = null) {
+        unlockedSet.clear();
+        runFirstUnlockedSet.clear();
+        runFirstUnlockedIds = [];
+        trackedRecipeNodeId = null;
+        syncDefaultUnlockedEntries();
+        if (snap && typeof snap === 'object') {
+            if (Array.isArray(snap.unlocked)) {
+                snap.unlocked.forEach((eid) => {
+                    if (typeof eid === 'string' && eid) unlockedSet.add(eid);
+                });
+            }
+            if (Array.isArray(snap.firstUnlocked)) {
+                snap.firstUnlocked.forEach((eid) => {
+                    if (typeof eid === 'string' && eid && !runFirstUnlockedSet.has(eid)) {
+                        runFirstUnlockedSet.add(eid);
+                        runFirstUnlockedIds.push(eid);
+                    }
+                });
+            }
+            if (typeof snap.trackedRecipeId === 'string' && snap.trackedRecipeId) {
+                trackedRecipeNodeId = snap.trackedRecipeId;
+            }
+        }
+        updateRecipeTrackerUI();
+        if (isCodexOpen()) renderCodexModal(currentCategory);
+    }
+
     function isEntryUnlocked(entryId, defaultUnlocked = false) {
         if (entryId === 'world_core') return true;
         if (unlockedSet.has(entryId)) return true;
@@ -1582,6 +1618,8 @@
     const CodexSystem = {
         bind,
         resetRunCodex,
+        exportRunCodexState,
+        restoreRunCodexState,
         isEntryUnlocked,
         unlockEntry,
         isCodexOpen,

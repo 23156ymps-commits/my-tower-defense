@@ -656,7 +656,9 @@
             : ((towerObj && (Number(towerObj.tier) || 1) === 4 && Number.isFinite(towerObj.refineLevel)) ? towerObj.refineLevel : 0);
         const b_refineVal = Number.isFinite(options.b_refine) ? Math.max(0, options.b_refine) : b_refine(refineLv);
 
-        const B_power = b_terrain + b_blessing + b_dividend + b_inf + b_leyline + b_treeBoostVal + b_refineVal;
+        const b_pierceSuppress = Number.isFinite(options.b_pierceSuppress) ? Math.max(0, options.b_pierceSuppress) : 0;
+
+        const B_power = b_terrain + b_blessing + b_dividend + b_inf + b_leyline + b_treeBoostVal + b_refineVal + b_pierceSuppress;
         return {
             b_terrain,
             b_blessing,
@@ -665,8 +667,31 @@
             b_leyline,
             b_treeBoost: b_treeBoostVal,
             b_refine: b_refineVal,
+            b_pierceSuppress,
             B_power
         };
+    }
+
+    /**
+     * Phase 4 統一等效每秒面板基準：
+     *   sourceEffDps = (D_tier × (1 + B_power)) / (effectiveCdMs / 1000)
+     * （不預先乘入 M_elem 或 B_vuln，避免副傷重複連乘）
+     */
+    function getTowerEffectiveDps(towerObj, cellIndex = null) {
+        if (!towerObj) return 0;
+        const idx = (cellIndex !== null && cellIndex !== undefined && Number.isFinite(Number(cellIndex)))
+            ? Number(cellIndex)
+            : ((G && G.state && Array.isArray(G.state.board)) ? G.state.board.indexOf(towerObj) : -1);
+        const cfg = getTowerCfg(towerObj.type, towerObj.tier) || {};
+        const D_tier = getBaseDamageForTower(towerObj, cfg);
+        const TerrainSys = GameApp.systems && GameApp.systems.terrain;
+        const terrainMult = (TerrainSys && idx >= 0) ? TerrainSys.getTowerTerrainDamageMult(idx) : 1.0;
+        const powerBucket = computePowerBucket(towerObj, null, {
+            terrainMult,
+            cellIndex: idx >= 0 ? idx : null
+        });
+        const effectiveCdMs = getTowerAttackInterval(towerObj, idx >= 0 ? idx : null);
+        return (D_tier * (1 + (powerBucket.B_power || 0))) / (Math.max(120, effectiveCdMs) / 1000);
     }
 
     function resolvePlasmaMaxStacks(fxParams = {}) {
@@ -972,8 +997,11 @@
 
         const A_eff = Math.max(0, A_base * (1 - R_shred) * (1 - P_pierce));
         const M_armor = Number.isFinite(options.M_armor) ? options.M_armor : (35 / (35 + A_eff));
+        const b_pierceSuppress = Number.isFinite(options.b_pierceSuppress)
+            ? Math.max(0, options.b_pierceSuppress)
+            : ((monster && P_pierce >= 0.35 && A_eff < 8) ? (P_pierce >= 0.50 ? 0.15 : 0.12) : 0);
 
-        const powerInfo = computePowerBucket(towerObj, monster, options);
+        const powerInfo = computePowerBucket(towerObj, monster, Object.assign({}, options, { b_pierceSuppress }));
         const B_power = Number.isFinite(options.B_power) ? options.B_power : powerInfo.B_power;
 
         const B_vuln = Number.isFinite(options.B_vuln)
@@ -1057,8 +1085,9 @@
             : 0;
         const totalCritRate = Math.min(critCap, Math.max(0, teamCritRate + leyCritBonus + weatherIceCrit));
         const critRoll = (GameApp.helpers && typeof GameApp.helpers.nextRunRandom === 'function') ? GameApp.helpers.nextRunRandom() : Math.random();
-        if (!result.isWeakness && totalCritRate > 0 && !options.disableRandomCrit && critRoll < totalCritRate) {
-            finalDamage = Math.max(1, Math.round(finalDamage * 1.5));
+        if (totalCritRate > 0 && !options.disableRandomCrit && critRoll < totalCritRate) {
+            const critMult = result.isWeakness ? 1.25 : 1.5;
+            finalDamage = Math.max(1, Math.round(finalDamage * critMult));
             isTeamCrit = true;
         }
         if (weatherType === 'eclipse') {
@@ -1077,8 +1106,13 @@
         }
 
         // W10+ 菁英「稜鏡護膜」：非弱點單元素 -25%，弱點／複合親和／三元融合 +20%
-        if (!monster.isBoss && monster.eliteAffix === 'prismatic_ward') {
-            const prismSpec = monster.eliteAffixSpec || affixDb.prismatic_ward || {};
+        const hasMonsterAffix = (affixId) => (
+            MonsterSys && typeof MonsterSys.hasMonsterAffix === 'function'
+                ? MonsterSys.hasMonsterAffix(monster, affixId)
+                : monster.eliteAffix === affixId
+        );
+        if (!monster.isBoss && hasMonsterAffix('prismatic_ward')) {
+            const prismSpec = affixDb.prismatic_ward || monster.eliteAffixSpec || {};
             if (result.isTriElement || result.isAffinity || result.isWeakness) {
                 finalDamage = Math.max(1, Math.round(finalDamage * (1 + (prismSpec.affinityWeakBonus ?? 0.20))));
             } else {
@@ -1095,10 +1129,10 @@
         }
 
         // W6+ 菁英「群體共振」：單體攻擊分攤 30% 至連結友軍；範圍／連鎖攻擊 +15% 增傷
-        if (!monster.isBoss && monster.eliteAffix === 'resonance_link' && !options._fromResonanceLink && MonsterSys && typeof MonsterSys.getResonanceLinkTargets === 'function') {
+        if (!monster.isBoss && hasMonsterAffix('resonance_link') && !options._fromResonanceLink && MonsterSys && typeof MonsterSys.getResonanceLinkTargets === 'function') {
             const linkedAllies = MonsterSys.getResonanceLinkTargets(monster);
             if (linkedAllies.length > 0) {
-                const linkSpec = monster.eliteAffixSpec || affixDb.resonance_link || {};
+                const linkSpec = affixDb.resonance_link || monster.eliteAffixSpec || {};
                 const aoeStyles = new Set([
                     'chain_lightning', 'aoe_mist', 'stun_pulse',
                     'fire_A_mortar', 'ice_A_permafrost', 'ice_B_icicle',
@@ -1255,7 +1289,9 @@
 
         const isEn = Boolean(GameApp.i18n && GameApp.i18n.isEnglish());
         const displayDmg = hpDmg > 0 ? hpDmg : shieldAbsorbed;
-        const critTag = isTeamCrit ? (isEn ? 'Crit ' : '暴擊 ') : '';
+        const critTag = isTeamCrit
+            ? (result.isWeakness ? (isEn ? 'WEAK CRIT! ' : '弱點暴擊! ') : (isEn ? 'Crit ' : '暴擊 '))
+            : '';
         const dmgTag = options.dmgTag || critTag || (shellReduced ? (isEn ? 'Shell ' : '甲殼 ') : (shieldAbsorbed > 0 && hpDmg === 0 ? (isEn ? 'Shield ' : '破盾 ') : ''));
         GameApp.renderer.spawnDamageNumber(displayDmg, result.isWeakness || isTeamCrit, monster.pixelX, monster.pixelY, dmgTag, result.isAffinity);
         if (monster.hp > 0 && (result.isWeakness || result.isAffinity) && typeof GameApp.renderer.triggerMonsterHitFlash === 'function') {
@@ -1826,14 +1862,19 @@
             applyHitToMonster(towerIndex, towerObj, target, { armorPierce });
             applySplashDamage(towerIndex, towerObj, targetPos, splashRadiusPx, target.id, { damageScale: splashRatio, armorPierce });
             if (MonsterSys && typeof MonsterSys.spawnGroundHazard === 'function') {
+                const sourceEffDps = getTowerEffectiveDps(towerObj, towerIndex);
+                const poolCoeff = (Number(towerObj.tier) || 1) >= 3 ? 0.34 : 0.30;
+                const origDps = fxParams.poolDps ?? 28;
                 MonsterSys.spawnGroundHazard({
                     type: 'steam_pool',
                     x: targetPos.left,
                     y: targetPos.top,
                     radiusPx: ((fxParams.poolRadiusCells ?? 1.3) + crownAoEBonus) * G.boardMetrics.step,
-                    dps: fxParams.poolDps ?? 28,
+                    dps: Math.max(origDps, Math.round(sourceEffDps * poolCoeff)),
                     durationMs: fxParams.poolDurationMs ?? 3000,
-                    sourceTower: towerObj
+                    sourceTower: towerObj,
+                    sourceTowerId: towerObj.uid,
+                    sourceEffDps
                 });
             }
             GameApp.renderer.emitCanvasAttackFX('steam', towerPos, targetPos, { splashRadiusPx });
@@ -1952,7 +1993,7 @@
             const pullCells = fxParams.pullDistanceCells ?? 0.65;
             const pullBurstMult = isPullPulse ? (fxParams.pullBurstMult ?? 1.25) : 1.0;
             const gravityVulnBonus = isPullPulse ? (Number(fxParams.gravityVulnBonus) || 0) : 0;
-            const gravityVulnDur = fxParams.gravityVulnDurationMs ?? 2200;
+            const gravityVulnDur = fxParams.gravityVulnDurationMs ?? 2700;
 
             const victims = G.state.monsters.filter(m =>
                 m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= radiusPx
@@ -2208,14 +2249,19 @@
                 });
             }
             if (MonsterSys && typeof MonsterSys.spawnGroundHazard === 'function') {
+                const sourceEffDps = getTowerEffectiveDps(towerObj, towerIndex);
+                const poolCoeff = (Number(towerObj.tier) || 1) >= 3 ? 0.34 : 0.30;
+                const origDps = fxParams.poolDps ?? 34;
                 MonsterSys.spawnGroundHazard({
                     type: 'steam_pool',
                     x: targetPos.left,
                     y: targetPos.top,
                     radiusPx: ((fxParams.poolRadiusCells ?? 1.35) + crownAoEBonus) * G.boardMetrics.step,
-                    dps: fxParams.poolDps ?? 34,
+                    dps: Math.max(origDps, Math.round(sourceEffDps * poolCoeff)),
                     durationMs: fxParams.poolDurationMs ?? 3000,
-                    sourceTower: towerObj
+                    sourceTower: towerObj,
+                    sourceTowerId: towerObj.uid,
+                    sourceEffDps
                 });
             }
             GameApp.renderer.emitCanvasAttackFX('steam', towerPos, targetPos, { splashRadiusPx: fogRadiusPx });
@@ -2233,7 +2279,7 @@
             const pullCells = fxParams.pullDistanceCells ?? 0.45;
             const pullBurstMult = isPullPulse ? (fxParams.pullBurstMult ?? 1.15) : 1.0;
             const gravityVulnBonus = isPullPulse ? (Number(fxParams.gravityVulnBonus) || 0) : 0;
-            const gravityVulnDur = fxParams.gravityVulnDurationMs ?? 2000;
+            const gravityVulnDur = fxParams.gravityVulnDurationMs ?? 2500;
 
             const victims = G.state.monsters.filter(m =>
                 m.hp > 0 && (m.isTargetable !== false || m.isStealthed) && Math.hypot(m.pixelX - targetPos.left, m.pixelY - targetPos.top) <= radiusPx
@@ -2311,21 +2357,28 @@
                 slowSourceId: 'storm_cloud'
             });
             if (MonsterSys && typeof MonsterSys.spawnGroundHazard === 'function') {
+                const sourceEffDps = getTowerEffectiveDps(towerObj, towerIndex);
+                const origCloudDps = fxParams.cloudDps ?? 58;
+                const origCapNorm = fxParams.martyrCapNormal ?? 420;
+                const origCapBoss = fxParams.martyrCapBoss ?? 650;
+                const scaledCap = Math.round(sourceEffDps * 3.5);
                 MonsterSys.spawnGroundHazard({
                     type: 'storm_cloud',
                     x: targetPos.left,
                     y: targetPos.top,
                     radiusPx: (fxParams.cloudRadiusCells ?? 2.2) * G.boardMetrics.step,
-                    dps: fxParams.cloudDps ?? 60.3,
+                    dps: Math.max(origCloudDps, Math.round(sourceEffDps * 0.38)),
                     durationMs: fxParams.cloudDurationMs ?? 3600,
                     armorPierce,
                     slowRate: fxParams.slowRate ?? 0.35,
                     slowDurationMs: fxParams.slowDurationMs ?? 2000,
                     martyrPct: fxParams.martyrPct ?? 0.15,
                     martyrRadiusPx: (fxParams.martyrRadiusCells ?? 1.5) * G.boardMetrics.step,
-                    martyrCapNormal: fxParams.martyrCapNormal ?? 420,
-                    martyrCapBoss: fxParams.martyrCapBoss ?? 650,
-                    sourceTower: towerObj
+                    martyrCapNormal: Math.max(origCapNorm, scaledCap),
+                    martyrCapBoss: Math.max(origCapBoss, scaledCap),
+                    sourceTower: towerObj,
+                    sourceTowerId: towerObj.uid,
+                    sourceEffDps
                 });
             }
             GameApp.renderer.emitCanvasAttackFX('storm_tri', towerPos, targetPos, {
@@ -2373,18 +2426,22 @@
                 }
             }
             if (MonsterSys && typeof MonsterSys.spawnGroundHazard === 'function') {
+                const sourceEffDps = getTowerEffectiveDps(towerObj, towerIndex);
+                const origAftershockDps = fxParams.aftershockDps ?? 30;
                 MonsterSys.spawnGroundHazard({
                     type: 'starforge_aftershock',
                     x: targetPos.left,
                     y: targetPos.top,
                     radiusPx: (fxParams.aftershockRadiusCells ?? 1.75) * G.boardMetrics.step,
-                    dps: fxParams.aftershockDps ?? 30,
+                    dps: Math.max(origAftershockDps, Math.round(sourceEffDps * 0.32)),
                     durationMs: fxParams.aftershockDurationMs ?? 2800,
                     armorPierce: fxParams.aftershockArmorPierce ?? 0.25,
                     slowRate: fxParams.aftershockSlowRate ?? 0.28,
                     slowDurationMs: fxParams.aftershockSlowDurationMs ?? 1200,
                     shredRate,
-                    sourceTower: towerObj
+                    sourceTower: towerObj,
+                    sourceTowerId: towerObj.uid,
+                    sourceEffDps
                 });
             }
             GameApp.renderer.emitCanvasAttackFX('starforge_tri', towerPos, targetPos, { splashRadiusPx: radiusPx });
@@ -2767,6 +2824,7 @@
         b_refine,
         getInfusionCost,
         computePowerBucket,
+        getTowerEffectiveDps,
         getTowerInspectorStats,
         getTowerHoverTooltipData,
         pickSmartSpawnIndex,

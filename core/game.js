@@ -67,6 +67,7 @@
         ['bossEntranceTitleEl', 'boss-entrance-title'], ['bossEntranceSubEl', 'boss-entrance-sub'],
         ['lobbyHonorBadgeEl', 'lobby-honor-badge'], ['lobbySoundBtn', 'lobby-sound-btn'],
         ['lobbyStepHubEl', 'lobby-step-hub'], ['lobbyModeGridEl', 'lobby-mode-grid'],
+        ['lobbyResumeBannerEl', 'lobby-resume-banner'], ['lobbyResumeBtn', 'lobby-resume-btn'], ['lobbyDiscardSaveBtn', 'lobby-discard-save-btn'],
         ['modeCardCampaignEl', 'mode-card-campaign'], ['modeCardEndlessEl', 'mode-card-endless'],
         ['modeCardDailyEl', 'mode-card-daily'], ['modeCardPuzzleEl', 'mode-card-puzzle'],
         ['modeMetaCampaignEl', 'mode-meta-campaign'], ['modeMetaEndlessEl', 'mode-meta-endless'],
@@ -413,6 +414,7 @@
             gameSpeed: keepSpeed,
             spawnCounts,
             board: Array(CONFIG.BOARD_SIZE || 150).fill(null), monsters: [], monsterIdCounter: 1,
+            clearedObstacles: {},
             groundHazards: [], dragTether: null, pendingEvolution: null, pendingBlessingWave: null,
             selectedIndex: null, selectedObstacleIndex: null, buildTargetIndex: null, pendingSpawnType: null, hoveredIndex: null,
             pendingSellConfirm: null,
@@ -425,6 +427,7 @@
             sessionId: nextSessionId, activeTimers: new Set(), pendingBolts: [], pendingOverchargeShots: [], towerPhaseSeq: 0,
             waveState: initialWaveState, waveTimerMs: initPrepMs,
             waveSpawnQueue: [], waveSpawnIntervalMs: wb.SPAWN_INTERVAL_BASE_MS || 1600, waveSpawnAccMs: 0,
+            waveBossTotal: 0,
             lastFrameTime: null, rafId: null
         };
     }
@@ -572,6 +575,7 @@
             `Expanded tower cap to ${res.cap} (${res.expansions}/3, -${res.cost} 💰).`
         );
         updateHUD();
+        scheduleRunSave(400);
         return true;
     }
     function isWave1WaitingFirstTower(st = G.state) {
@@ -602,6 +606,7 @@
             Renderer.updateAndRenderCanvasFX(0);
         }
         updateHUD();
+        scheduleRunSave(400);
     }
 
     function scheduleGameTimeout(callback, delayMs) {
@@ -931,6 +936,460 @@
         if (G.dom.setupPuzzlePaneEl) G.dom.setupPuzzlePaneEl.classList.toggle('hidden', selectedGameMode !== 'puzzle');
         updateLobbySetupHeader();
         updateMetaTreeEntryUI();
+        renderLobbyResumeBannerUI();
+    }
+
+    const RUN_SAVE_STORAGE_KEY = 'merge_defense_run_save_v1';
+    const RUN_SAVE_SCHEMA_VERSION = 1;
+    let runSaveDebounceTimer = null;
+    let currentGuideTab = 'elements';
+
+    function isRunSaveEligible(st = G.state) {
+        if (!st || st.isGameOver) return false;
+        if (st.gameMode !== 'campaign' && st.gameMode !== 'endless' && st.gameMode !== 'daily') return false;
+        if (st.waveState === 'VICTORY' || st.waveState === 'GAMEOVER' || st.waveState === 'WAITING_START') return false;
+        return st.waveState === 'INTERMISSION'
+            || st.waveState === 'BLESSING_SELECT'
+            || (st.waveState === 'PREP' && (Number(st.currentWave) || 1) >= 2);
+    }
+
+    function cloneSerializableStocks(stocksObj) {
+        const out = {};
+        if (!stocksObj || typeof stocksObj !== 'object') return out;
+        ['fire', 'ice', 'thunder'].forEach((k) => {
+            const s = stocksObj[k];
+            if (!s || typeof s !== 'object') return;
+            out[k] = {
+                element: String(s.element || k),
+                price: Number(s.price) || 20,
+                prevPrice: Number(s.prevPrice) || 20,
+                lastDelta: Number(s.lastDelta) || 0,
+                shares: Math.max(0, Math.floor(Number(s.shares) || 0)),
+                totalCost: Math.max(0, Number(s.totalCost) || 0),
+                weaknessRatio: Number.isFinite(Number(s.weaknessRatio)) ? Number(s.weaknessRatio) : (1 / 3),
+                muIntel: Number(s.muIntel) || 0,
+                trend: typeof s.trend === 'string' ? s.trend : 'neutral'
+            };
+        });
+        return out;
+    }
+
+    function buildRunSaveSnapshot(st = G.state) {
+        if (!isRunSaveEligible(st)) return null;
+        const boardEntries = [];
+        const board = Array.isArray(st.board) ? st.board : [];
+        for (let i = 0; i < board.length; i++) {
+            const t = board[i];
+            if (!t || typeof t !== 'object') continue;
+            boardEntries.push({
+                index: i,
+                uid: Math.max(1, Math.floor(Number(t.uid) || (i + 1))),
+                type: String(t.type),
+                tier: Math.max(1, Math.floor(Number(t.tier) || 1)),
+                nutritionU: Number.isFinite(Number(t.nutritionU)) ? Number(t.nutritionU) : undefined,
+                costShare: Number.isFinite(Number(t.costShare)) ? Number(t.costShare) : undefined,
+                lineagePath: Array.isArray(t.lineagePath) ? t.lineagePath.slice() : undefined,
+                infusionCount: Math.max(0, Math.floor(Number(t.infusionCount) || 0)),
+                refineLevel: Math.max(0, Math.min(3, Math.floor(Number(t.refineLevel) || 0))),
+                investedGold: Math.max(0, Math.floor(Number(t.investedGold) || 0)),
+                targetMode: typeof t.targetMode === 'string' ? t.targetMode : 'first',
+                totalDamage: Math.max(0, Number(t.totalDamage) || 0),
+                aimAngleDeg: Number.isFinite(Number(t.aimAngleDeg)) ? Number(t.aimAngleDeg) : 0,
+                isCrowned: Boolean(t.isCrowned)
+            });
+        }
+        const rngState = (GameApp.helpers && typeof GameApp.helpers.getActiveRunRngState === 'function')
+            ? GameApp.helpers.getActiveRunRngState()
+            : null;
+        return {
+            schemaVersion: RUN_SAVE_SCHEMA_VERSION,
+            savedAt: Date.now(),
+            gameMode: st.gameMode,
+            isEndlessMode: Boolean(st.isEndlessMode),
+            currentMapId: String(st.currentMapId || 'forest'),
+            dailyDateKey: st.gameMode === 'daily' ? String(st.dailyDateKey || getDailySpecSafe().dateKey) : null,
+            dailySeedCode: st.gameMode === 'daily' ? (Number(st.dailySeedCode) || null) : null,
+            activeContracts: Array.from(st.activeContracts || []),
+            currentWave: Math.max(1, Math.floor(Number(st.currentWave) || 1)),
+            waveState: st.waveState === 'BLESSING_SELECT' ? 'BLESSING_SELECT' : 'INTERMISSION',
+            waveTimerMs: Math.max(0, Math.round(Number(st.waveTimerMs) || (CONFIG.WAVE_INTERMISSION_MS || 4000))),
+            currentGold: Math.max(0, Math.floor(Number(st.currentGold) || 0)),
+            maxBaseHp: Math.max(1, Math.floor(Number(st.maxBaseHp) || 20)),
+            baseHp: Math.max(1, Math.floor(Number(st.baseHp) || 1)),
+            dewEnergy: Math.max(0, Number(st.dewEnergy) || 0),
+            rootLevel: Math.max(0, Math.floor(Number(st.rootLevel) || 0)),
+            sellRefundRate: Number(st.sellRefundRate) || 0.70,
+            infusionCount: Math.max(0, Math.floor(Number(st.infusionCount) || 0)),
+            dividendBonus: Number(st.dividendBonus) || 0,
+            blessingPowerBonus: Number(st.blessingPowerBonus) || 0,
+            waveNonCombatGold: Math.max(0, Number(st.waveNonCombatGold) || 0),
+            nonCombatLedgerWave: Math.max(1, Math.floor(Number(st.nonCombatLedgerWave) || (st.currentWave || 1))),
+            lastRootWavePayout: st.lastRootWavePayout ? { ...st.lastRootWavePayout } : null,
+            blindBox1StarStreak: Math.max(0, Math.floor(Number(st.blindBox1StarStreak) || 0)),
+            blindBoxTokens: Math.max(0, Math.floor(Number(st.blindBoxTokens) || 0)),
+            blackmarketFreeBoxAvailable: Boolean(st.blackmarketFreeBoxAvailable),
+            blackmarketFreeBoxWaveGranted: Math.max(0, Math.floor(Number(st.blackmarketFreeBoxWaveGranted) || 0)),
+            teamCritBonusRate: Math.max(0, Number(st.teamCritBonusRate) || 0),
+            fusionFruitCount: Math.max(0, Math.floor(Number(st.fusionFruitCount) || 0)),
+            towerCapExpansions: Math.max(0, Math.floor(Number(st.towerCapExpansions) || 0)),
+            towerCapOverride: (st.towerCapOverride !== null && Number.isFinite(Number(st.towerCapOverride))) ? Number(st.towerCapOverride) : null,
+            globalTreeBoostLevel: Math.max(0, Math.floor(Number(st.globalTreeBoostLevel) || 0)),
+            crownedUsedCount: Math.max(0, Math.floor(Number(st.crownedUsedCount) || 0)),
+            activeWager: st.activeWager ? String(st.activeWager) : null,
+            surgeWagerUsedCount: Math.max(0, Math.floor(Number(st.surgeWagerUsedCount) || 0)),
+            waveLeakedCount: Math.max(0, Math.floor(Number(st.waveLeakedCount) || 0)),
+            guildActiveTab: String(st.guildActiveTab || 'roots'),
+            guildAutoHoldTimer: Boolean(st.guildAutoHoldTimer),
+            blessingRerollsLeft: Math.max(0, Math.floor(Number(st.blessingRerollsLeft) || 0)),
+            seedPityCount: Math.max(0, Math.floor(Number(st.seedPityCount) || 0)),
+            activeBlessings: Array.from(st.activeBlessings || []),
+            blessingGrantedWaves: Array.from(st.blessingGrantedWaves || []).map(Number).filter(Number.isFinite),
+            blessingChoices: st.waveState === 'BLESSING_SELECT' ? (st.blessingChoices || []).map(b => b && b.id).filter(Boolean) : [],
+            pendingBlessingWave: (st.pendingBlessingWave !== null && Number.isFinite(Number(st.pendingBlessingWave))) ? Number(st.pendingBlessingWave) : null,
+            killsCount: Math.max(0, Math.floor(Number(st.killsCount) || 0)),
+            totalTeamDamage: Math.max(0, Number(st.totalTeamDamage) || 0),
+            totalGoldEarned: Math.max(0, Number(st.totalGoldEarned) || 0),
+            fusionCount: Math.max(0, Math.floor(Number(st.fusionCount) || 0)),
+            elapsedPlayMs: Math.max(0, Math.round(Number(st.elapsedPlayMs) || 0)),
+            peakTowerSnapshot: st.peakTowerSnapshot ? { ...st.peakTowerSnapshot } : null,
+            weatherType: String(st.weatherType || 'sun'),
+            weatherSeedOffset: Number(st.weatherSeedOffset) || 0,
+            spawnCounts: { ...(st.spawnCounts || { fire: 0, ice: 0, thunder: 0 }) },
+            stocks: cloneSerializableStocks(st.stocks),
+            towerUidCounter: Math.max(1, Math.floor(Number(st.towerUidCounter) || 1)),
+            clearedObstacles: (st.clearedObstacles && typeof st.clearedObstacles === 'object') ? { ...st.clearedObstacles } : {},
+            runSeedCode: (Number(st.runSeedCode) >>> 0),
+            rngState: Number.isFinite(rngState) ? rngState : null,
+            codex: (CodexSys && typeof CodexSys.exportRunCodexState === 'function') ? CodexSys.exportRunCodexState() : null,
+            board: boardEntries
+        };
+    }
+
+    function clearRunSaveSnapshot() {
+        if (runSaveDebounceTimer !== null) {
+            clearTimeout(runSaveDebounceTimer);
+            runSaveDebounceTimer = null;
+        }
+        try {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem(RUN_SAVE_STORAGE_KEY);
+            }
+        } catch (err) {
+            // 忽略私密瀏覽或儲存受限環境錯誤
+        }
+    }
+
+    function saveRunSnapshotNow() {
+        const snap = buildRunSaveSnapshot(G.state);
+        if (!snap) return false;
+        try {
+            if (typeof localStorage === 'undefined') return false;
+            localStorage.setItem(RUN_SAVE_STORAGE_KEY, JSON.stringify(snap));
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+
+    function scheduleRunSave(delayMs = 400) {
+        if (!isRunSaveEligible(G.state)) return;
+        if (runSaveDebounceTimer !== null) clearTimeout(runSaveDebounceTimer);
+        runSaveDebounceTimer = setTimeout(() => {
+            runSaveDebounceTimer = null;
+            saveRunSnapshotNow();
+        }, Math.max(0, Number(delayMs) || 400));
+    }
+
+    function loadRunSaveSnapshot() {
+        try {
+            if (typeof localStorage === 'undefined') return null;
+            const raw = localStorage.getItem(RUN_SAVE_STORAGE_KEY);
+            if (!raw || typeof raw !== 'string') return null;
+            const snap = JSON.parse(raw);
+            if (!snap || typeof snap !== 'object') {
+                clearRunSaveSnapshot();
+                return null;
+            }
+            if (snap.schemaVersion !== RUN_SAVE_SCHEMA_VERSION) {
+                clearRunSaveSnapshot();
+                return null;
+            }
+            if (snap.gameMode !== 'campaign' && snap.gameMode !== 'endless' && snap.gameMode !== 'daily') {
+                clearRunSaveSnapshot();
+                return null;
+            }
+            const maps = getMapsConfig();
+            if (!snap.currentMapId || !maps[snap.currentMapId]) {
+                clearRunSaveSnapshot();
+                return null;
+            }
+            if (snap.gameMode === 'daily') {
+                const todaySpec = getDailySpecSafe();
+                if (!snap.dailyDateKey || snap.dailyDateKey !== todaySpec.dateKey) {
+                    clearRunSaveSnapshot();
+                    return null;
+                }
+            }
+            if (!Number.isFinite(snap.currentWave) || snap.currentWave < 1 || !Number.isFinite(snap.currentGold) || snap.currentGold < 0 || !Number.isFinite(snap.baseHp) || snap.baseHp < 1 || !Number.isFinite(snap.maxBaseHp) || snap.maxBaseHp < 1) {
+                clearRunSaveSnapshot();
+                return null;
+            }
+            if (snap.waveState !== 'INTERMISSION' && snap.waveState !== 'BLESSING_SELECT') {
+                clearRunSaveSnapshot();
+                return null;
+            }
+            const boardSize = CONFIG.BOARD_SIZE || 150;
+            const towersDict = getTowersDict();
+            if (!Array.isArray(snap.board)) {
+                clearRunSaveSnapshot();
+                return null;
+            }
+            for (let i = 0; i < snap.board.length; i++) {
+                const entry = snap.board[i];
+                if (!entry || typeof entry !== 'object' || !Number.isInteger(entry.index) || entry.index < 0 || entry.index >= boardSize) {
+                    clearRunSaveSnapshot();
+                    return null;
+                }
+                if (typeof entry.type !== 'string' || !towersDict[entry.type]) {
+                    clearRunSaveSnapshot();
+                    return null;
+                }
+            }
+            return snap;
+        } catch (err) {
+            clearRunSaveSnapshot();
+            return null;
+        }
+    }
+
+    function renderLobbyResumeBannerUI() {
+        const banner = G.dom && G.dom.lobbyResumeBannerEl;
+        if (!banner) return;
+        const snap = loadRunSaveSnapshot();
+        if (!snap) {
+            banner.classList.add('hidden');
+            return;
+        }
+        const maps = getMapsConfig();
+        const mapName = (maps[snap.currentMapId] && maps[snap.currentMapId].name) || snap.currentMapId;
+        const modeTagZh = snap.gameMode === 'daily'
+            ? '每日挑戰'
+            : ((snap.isEndlessMode || snap.gameMode === 'endless') ? '無盡試煉' : '主線戰役');
+        const modeTagEn = snap.gameMode === 'daily'
+            ? 'Daily'
+            : ((snap.isEndlessMode || snap.gameMode === 'endless') ? 'Endless' : 'Campaign');
+        const waveVal = Math.max(1, Math.floor(Number(snap.currentWave) || 1));
+        const hpVal = Math.max(1, Math.floor(Number(snap.baseHp) || 1));
+        const maxHpVal = Math.max(hpVal, Math.floor(Number(snap.maxBaseHp) || hpVal));
+        if (G.dom.lobbyResumeBtn) {
+            G.dom.lobbyResumeBtn.innerText = L(
+                `繼續上次進度（${modeTagZh} · ${mapName} · 第 ${waveVal} 波 · ${hpVal}/${maxHpVal} ❤️）`,
+                `Resume Saved Run (${modeTagEn} · ${mapName} · W${waveVal} · ${hpVal}/${maxHpVal} ❤️)`
+            );
+        }
+        if (G.dom.lobbyDiscardSaveBtn) {
+            G.dom.lobbyDiscardSaveBtn.innerText = L('捨棄存檔', 'Discard Save');
+        }
+        banner.classList.remove('hidden');
+    }
+
+    function resumeSavedRun() {
+        const snap = loadRunSaveSnapshot();
+        if (!snap) {
+            renderLobbyResumeBannerUI();
+            return false;
+        }
+        const restoreWaveState = snap.waveState === 'BLESSING_SELECT' ? 'BLESSING_SELECT' : 'INTERMISSION';
+        resetMatchSession(restoreWaveState, 1);
+        const st = G.state;
+        st.gameMode = snap.gameMode;
+        st.isEndlessMode = Boolean(snap.isEndlessMode || snap.gameMode === 'endless');
+        st.currentMapId = snap.currentMapId;
+        st.dailyDateKey = snap.gameMode === 'daily' ? snap.dailyDateKey : null;
+        st.dailySeedCode = snap.gameMode === 'daily' ? snap.dailySeedCode : null;
+        WaveSys.applyMapConfig(st.currentMapId);
+
+        st.clearedObstacles = (snap.clearedObstacles && typeof snap.clearedObstacles === 'object') ? { ...snap.clearedObstacles } : {};
+        if (G.map && G.map.terrainMap) {
+            Object.entries(st.clearedObstacles).forEach(([idxStr, revealed]) => {
+                const idxNum = Number(idxStr);
+                if (!Number.isInteger(idxNum)) return;
+                G.map.terrainMap.delete(idxNum);
+                if (typeof revealed === 'string' && revealed) {
+                    G.map.terrainMap.set(idxNum, revealed);
+                }
+            });
+        }
+
+        st.activeContracts = new Set(snap.gameMode === 'daily' ? [] : (Array.isArray(snap.activeContracts) ? snap.activeContracts : []));
+        st.runSeedCode = Number.isFinite(Number(snap.runSeedCode)) ? (Number(snap.runSeedCode) >>> 0) : st.runSeedCode;
+        const seedInput = st.gameMode === 'daily' ? `daily:${st.dailyDateKey}` : st.runSeedCode;
+        if (GameApp.helpers && typeof GameApp.helpers.restoreActiveRunRngState === 'function' && Number.isFinite(snap.rngState)) {
+            GameApp.helpers.restoreActiveRunRngState(seedInput, snap.rngState);
+        } else {
+            setRng(seedInput);
+        }
+
+        st.currentWave = Math.max(1, Math.floor(Number(snap.currentWave) || 1));
+        st.waveTimerMs = Math.max(0, Math.round(Number(snap.waveTimerMs) || (CONFIG.WAVE_INTERMISSION_MS || 4000)));
+        st.currentGold = Math.max(0, Math.floor(Number(snap.currentGold) || 0));
+        st.maxBaseHp = Math.max(1, Math.floor(Number(snap.maxBaseHp) || 20));
+        st.baseHp = Math.max(1, Math.min(st.maxBaseHp, Math.floor(Number(snap.baseHp) || st.maxBaseHp)));
+        st.dewEnergy = Math.max(0, Number(snap.dewEnergy) || 0);
+        st.rootLevel = Math.max(0, Math.floor(Number(snap.rootLevel) || 0));
+        st.sellRefundRate = Number(snap.sellRefundRate) || (st.rootLevel >= 2 ? 0.80 : 0.70);
+        st.infusionCount = Math.max(0, Math.floor(Number(snap.infusionCount) || 0));
+        st.dividendBonus = Number(snap.dividendBonus) || 0;
+        st.blessingPowerBonus = Number(snap.blessingPowerBonus) || 0;
+        st.waveNonCombatGold = Math.max(0, Number(snap.waveNonCombatGold) || 0);
+        st.nonCombatLedgerWave = Math.max(1, Math.floor(Number(snap.nonCombatLedgerWave) || st.currentWave));
+        st.lastRootWavePayout = snap.lastRootWavePayout ? { ...snap.lastRootWavePayout } : null;
+        st.blindBox1StarStreak = Math.max(0, Math.floor(Number(snap.blindBox1StarStreak) || 0));
+        st.blindBoxTokens = Math.max(0, Math.floor(Number(snap.blindBoxTokens) || 0));
+        st.blackmarketFreeBoxAvailable = Boolean(snap.blackmarketFreeBoxAvailable);
+        st.blackmarketFreeBoxWaveGranted = Math.max(0, Math.floor(Number(snap.blackmarketFreeBoxWaveGranted) || 0));
+        st.teamCritBonusRate = Math.max(0, Number(snap.teamCritBonusRate) || 0);
+        st.fusionFruitCount = Math.max(0, Math.floor(Number(snap.fusionFruitCount) || 0));
+        st.towerCapExpansions = Math.max(0, Math.floor(Number(snap.towerCapExpansions) || 0));
+        st.towerCapOverride = (snap.towerCapOverride !== null && Number.isFinite(Number(snap.towerCapOverride))) ? Number(snap.towerCapOverride) : null;
+        st.globalTreeBoostLevel = Math.max(0, Math.floor(Number(snap.globalTreeBoostLevel) || 0));
+        st.crownedUsedCount = Math.max(0, Math.floor(Number(snap.crownedUsedCount) || 0));
+        st.activeWager = snap.activeWager ? String(snap.activeWager) : null;
+        st.surgeWagerUsedCount = Math.max(0, Math.floor(Number(snap.surgeWagerUsedCount) || 0));
+        st.waveLeakedCount = Math.max(0, Math.floor(Number(snap.waveLeakedCount) || 0));
+        st.guildActiveTab = typeof snap.guildActiveTab === 'string' ? snap.guildActiveTab : 'roots';
+        st.guildAutoHoldTimer = Boolean(snap.guildAutoHoldTimer);
+        st.guildTimerHold = true;
+        st.guildDrawerTempHold = false;
+        st.blessingRerollsLeft = Math.max(0, Math.floor(Number(snap.blessingRerollsLeft) || 0));
+        st.seedPityCount = Math.max(0, Math.floor(Number(snap.seedPityCount) || 0));
+        st.activeBlessings = new Set(Array.isArray(snap.activeBlessings) ? snap.activeBlessings : []);
+        st.blessingGrantedWaves = new Set(Array.isArray(snap.blessingGrantedWaves) ? snap.blessingGrantedWaves.map(Number).filter(Number.isFinite) : []);
+        st.pendingBlessingWave = (snap.pendingBlessingWave !== null && Number.isFinite(Number(snap.pendingBlessingWave))) ? Number(snap.pendingBlessingWave) : null;
+        st.killsCount = Math.max(0, Math.floor(Number(snap.killsCount) || 0));
+        st.totalTeamDamage = Math.max(0, Number(snap.totalTeamDamage) || 0);
+        st.totalGoldEarned = Math.max(0, Number(snap.totalGoldEarned) || 0);
+        st.fusionCount = Math.max(0, Math.floor(Number(snap.fusionCount) || 0));
+        st.elapsedPlayMs = Math.max(0, Math.round(Number(snap.elapsedPlayMs) || 0));
+        st.peakTowerSnapshot = snap.peakTowerSnapshot ? { ...snap.peakTowerSnapshot } : null;
+        st.weatherType = typeof snap.weatherType === 'string' ? snap.weatherType : resolveDefaultWeatherForMap(st.currentMapId);
+        st.weatherSeedOffset = Number(snap.weatherSeedOffset) || 0;
+        st.bestWave = Backend.getMapBestWave(st.currentMapId);
+        if (snap.spawnCounts && typeof snap.spawnCounts === 'object') {
+            Object.keys(snap.spawnCounts).forEach((k) => {
+                st.spawnCounts[k] = Math.max(0, Math.floor(Number(snap.spawnCounts[k]) || 0));
+            });
+        }
+        if (snap.stocks && typeof snap.stocks === 'object') {
+            ['fire', 'ice', 'thunder'].forEach((k) => {
+                if (snap.stocks[k] && st.stocks[k]) {
+                    Object.assign(st.stocks[k], snap.stocks[k]);
+                }
+            });
+        }
+
+        let maxUid = Math.max(1, Math.floor(Number(snap.towerUidCounter) || 1));
+        for (let i = 0; i < snap.board.length; i++) {
+            const entry = snap.board[i];
+            const tObj = AttackSys.createTowerObj(entry.type, entry.tier, entry.investedGold, null, {
+                keepRawType: true,
+                uid: entry.uid,
+                nutritionU: entry.nutritionU,
+                costShare: entry.costShare,
+                lineagePath: entry.lineagePath,
+                infusionCount: entry.infusionCount,
+                refineLevel: entry.refineLevel,
+                targetMode: entry.targetMode,
+                totalDamage: entry.totalDamage,
+                aimAngleDeg: entry.aimAngleDeg,
+                isCrowned: entry.isCrowned,
+                wakeupDelayMs: 0,
+                repositionCooldownMs: 0
+            });
+            st.board[entry.index] = tObj;
+            if (tObj.uid >= maxUid) maxUid = tObj.uid + 1;
+        }
+        st.towerUidCounter = maxUid;
+
+        if (CodexSys) {
+            if (snap.codex && typeof CodexSys.restoreRunCodexState === 'function') {
+                CodexSys.restoreRunCodexState(snap.codex);
+            }
+            if (typeof CodexSys.unlockEntry === 'function') {
+                for (let i = 0; i < st.board.length; i++) {
+                    if (st.board[i]) CodexSys.unlockEntry(`tower:${st.board[i].type}`);
+                }
+            }
+        }
+
+        st.onboardingActive = false;
+        hideOnboardingToast();
+
+        if (G.dom.startOverlayEl) G.dom.startOverlayEl.classList.add('hidden');
+        if (Renderer && typeof Renderer.stopLobbyAmbientCanvas === 'function') {
+            Renderer.stopLobbyAmbientCanvas();
+        }
+        if (Renderer && typeof Renderer.applyWeatherVisualClass === 'function') {
+            Renderer.applyWeatherVisualClass(st.weatherType);
+        }
+        Renderer.initBoard();
+        if (Renderer && typeof Renderer.syncChargedStoneVisuals === 'function') {
+            Renderer.syncChargedStoneVisuals(st.currentWave);
+        }
+        if (AttackSys && typeof AttackSys.recalculateLeylines === 'function') {
+            AttackSys.recalculateLeylines();
+        }
+        Renderer.renderBoard();
+        Renderer.updateRangeIndicator();
+        if (typeof updateWaveForecastUI === 'function') updateWaveForecastUI();
+        renderSpawnerButtons();
+        updateTowerCapUI();
+        updateTreasureRootUI();
+        updateGuildDrawerUI();
+        updateSeedPityUI();
+        updateSpeedButtonUI();
+        updateSoundButtonUI();
+
+        const mapSpec = WaveSys.getCurrentMapSpec();
+        Backend.resetRunTelemetry(st.currentMapId, mapSpec ? mapSpec.name : st.currentMapId);
+
+        let restoredBlessing = false;
+        if (restoreWaveState === 'BLESSING_SELECT' && TreeSys && typeof TreeSys.restorePendingBlessingChoices === 'function') {
+            restoredBlessing = TreeSys.restorePendingBlessingChoices(snap.blessingChoices || []);
+        }
+        if (!restoredBlessing) {
+            st.waveState = 'INTERMISSION';
+            setStatusMsg(
+                `已恢復存檔進度（第 ${st.currentWave} 波後休整期，已自動凍結倒數）；整備完成後可手動點擊「立即開波」。`,
+                `Resumed saved run after Wave ${st.currentWave} (countdown held). Adjust defenses and click Start Wave when ready.`
+            );
+            setPauseState(false, { silent: true });
+        } else {
+            setStatusMsg(
+                `已恢復存檔進度（第 ${st.currentWave} 波結束），請先完成世界樹枝枒祝福選擇。`,
+                `Resumed saved run after Wave ${st.currentWave}. Complete your World Tree Blessing choice.`
+            );
+        }
+        updateHUD();
+        return true;
+    }
+
+    function switchGuideTab(tabKey = 'elements') {
+        const valid = (tabKey === 'elements' || tabKey === 'merge' || tabKey === 'endless') ? tabKey : 'elements';
+        currentGuideTab = valid;
+        if (typeof document === 'undefined') return;
+        ['elements', 'merge', 'endless'].forEach((k) => {
+            const btn = document.getElementById(`guide-tab-btn-${k}`);
+            const panel = document.getElementById(`guide-tab-${k}`);
+            const active = k === valid;
+            if (btn) {
+                btn.classList.toggle('is-active', active);
+                btn.setAttribute('aria-selected', active ? 'true' : 'false');
+            }
+            if (panel) {
+                panel.classList.toggle('hidden', !active);
+            }
+        });
     }
 
     function showLobbyHub() {
@@ -1229,8 +1688,15 @@
         if (m.armorShredTimer > 0) status.push(`${L('破甲', 'Shred')} ${Math.round((m.armorShredRate || 0.3) * 100)}%`);
         const sep = L('｜', ' | ');
         const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
-        const af = (!m.isBoss && m.eliteAffix) ? affixMap[m.eliteAffix] : null;
-        const afTag = af ? `[${L(af.shortBadge || af.name, af.shortBadgeEn || af.nameEn)}] ` : '';
+        const afIds = (!m.isBoss && Array.isArray(m.eliteAffixes) && m.eliteAffixes.length > 0)
+            ? m.eliteAffixes
+            : ((!m.isBoss && m.eliteAffix) ? [m.eliteAffix] : []);
+        const afTags = afIds.map((id) => {
+            const af = affixMap[id];
+            return af ? `[${L(af.shortBadge || af.name, af.shortBadgeEn || af.nameEn)}]` : '';
+        }).filter(Boolean);
+        if (m.isVanguard) afTags.unshift(`[${L('🚩霸體先鋒', '🚩Vanguard')}]`);
+        const afTag = afTags.length > 0 ? `${afTags.join(' ')} ` : '';
         const stageSt = (MonsterSys && typeof MonsterSys.getMonsterStageTraitStatus === 'function') ? MonsterSys.getMonsterStageTraitStatus(m) : null;
         const stageTag = stageSt ? `${sep}${L(stageSt.name, stageSt.nameEn)}: ${L(stageSt.statusLabelZh, stageSt.statusLabelEn)}` : '';
         return `${m.icon || '👾'} ${afTag}${m.name}${sep}HP ${m.hp}/${m.maxHp}${sep}${L('護甲', 'ARM')} ${armorStr}${sep}${L('弱點', 'Weak')} ${weakStr}${stageTag}${status.length ? `${sep}${status.join(' · ')}` : ''}`;
@@ -1347,11 +1813,13 @@
         const shellLeft = m.shellHitsLeft || m.hardShellHitsLeft || 0;
         if (shellLeft > 0) list.push(`${L('甲殼減傷', 'Shell')} ×${shellLeft}`);
         if ((m.rootTimer || 0) > 0) list.push(`${L('定身', 'Root')} ${(m.rootTimer / 1000).toFixed(1)}s`);
-        if (MonsterSys && MonsterSys.isMonsterFrozen(m)) list.push(L('凍結', 'Frozen'));
+        if (MonsterSys && MonsterSys.isMonsterFrozen(m)) list.push(L('凍結 (-25%療)', 'Frozen (-25% Heal)'));
         else if (MonsterSys && MonsterSys.isMonsterSlowed(m)) {
             const effSlow = Math.round(MonsterSys.getMonsterEffectiveSlowRate(m) * 100);
             list.push(`${L('緩速', 'Slow')} ${effSlow}%`);
         }
+        if (m.isVanguard) list.push(L('🚩 霸體先鋒 (+15%速光環)', '🚩 Vanguard (+15% Spd Aura)'));
+        if (!m.isBoss && (m.ccResilienceMs || 0) > 0) list.push(`${L('韌性', 'CC Res')} ${(m.ccResilienceMs / 1000).toFixed(1)}s`);
         if (st.burn && st.burn.stacks > 0 && st.burn.durationMs > 0) list.push(`${L('灼燒', 'Burn')} ${st.burn.stacks}${L('層', 'stk')}`);
         if (st.shock && st.shock.durationMs > 0) list.push(L('感電', 'Shock'));
         if (st.grievousWound && st.grievousWound.durationMs > 0) list.push(L('重傷 -50%治療', 'Wound -50% Heal'));
@@ -1365,7 +1833,8 @@
         const afSt = (MonsterSys && typeof MonsterSys.getEliteAffixLiveStatus === 'function')
             ? MonsterSys.getEliteAffixLiveStatus(m)
             : null;
-        if (afSt && (m.eliteAffix === 'resonance_link' || m.eliteAffix === 'bulwark_aura' || m.eliteAffix === 'prismatic_ward')) {
+        const hasAffix = (id) => (MonsterSys && typeof MonsterSys.hasMonsterAffix === 'function' ? MonsterSys.hasMonsterAffix(m, id) : m.eliteAffix === id);
+        if (afSt && (hasAffix('resonance_link') || hasAffix('bulwark_aura') || hasAffix('prismatic_ward'))) {
             list.push(L(afSt.statusLabelZh, afSt.statusLabelEn));
         }
         return list;
@@ -1394,10 +1863,25 @@
                     ? 0
                     : Math.round((liveM.speed || 40) * (liveM.isStealthed ? 1.65 : 1.0) * slowFactor));
             const affixMap = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.ELITE_AFFIXES) || {};
-            const af = (!liveM.isBoss && liveM.eliteAffix) ? affixMap[liveM.eliteAffix] : null;
+            const afIds = (!liveM.isBoss && Array.isArray(liveM.eliteAffixes) && liveM.eliteAffixes.length > 0)
+                ? liveM.eliteAffixes
+                : ((!liveM.isBoss && liveM.eliteAffix) ? [liveM.eliteAffix] : []);
+            const afObjs = afIds.map(id => affixMap[id]).filter(Boolean);
             const liveStageArmor = Math.round(MonsterSys && typeof MonsterSys.getMonsterBaseArmorWithStage === 'function' ? MonsterSys.getMonsterBaseArmorWithStage(liveM) : (liveM.armor || 0));
             const stageTrait = (MonsterSys && typeof MonsterSys.getMonsterStageTraitStatus === 'function') ? MonsterSys.getMonsterStageTraitStatus(liveM) : null;
             const affixStatus = (MonsterSys && typeof MonsterSys.getEliteAffixLiveStatus === 'function') ? MonsterSys.getEliteAffixLiveStatus(liveM) : null;
+            const badgeZhParts = afObjs.map(af => af.shortBadge || af.name);
+            const badgeEnParts = afObjs.map(af => af.shortBadgeEn || af.nameEn || af.name);
+            if (liveM.isVanguard) {
+                badgeZhParts.unshift('🚩先鋒');
+                badgeEnParts.unshift('🚩Vanguard');
+            }
+            const descZhParts = afObjs.map(af => af.desc || '').filter(Boolean);
+            const descEnParts = afObjs.map(af => af.descEn || af.desc || '').filter(Boolean);
+            if (liveM.isVanguard) {
+                descZhParts.unshift('霸體先鋒：常駐抗拉扯韌性，並賦予 1.8 格內友軍移速 +15%。');
+                descEnParts.unshift('Vanguard: Permanent CC resilience + 1.8-cell +15% ally speed aura.');
+            }
             st.hoverLockMonster = {
                 id: liveM.id,
                 typeKey: liveM.typeKey,
@@ -1413,11 +1897,11 @@
                 effSpeed,
                 isBoss: Boolean(liveM.isBoss),
                 isElite: Boolean(liveM.isElite),
-                eliteAffix: liveM.eliteAffix || null,
-                affixBadge: af ? (af.shortBadge || af.name) : '',
-                affixBadgeEn: af ? (af.shortBadgeEn || af.nameEn) : '',
-                affixDesc: af ? (af.desc || '') : '',
-                affixDescEn: af ? (af.descEn || '') : '',
+                eliteAffix: liveM.eliteAffix || (liveM.isVanguard ? 'vanguard' : null),
+                affixBadge: badgeZhParts.join(' · '),
+                affixBadgeEn: badgeEnParts.join(' · '),
+                affixDesc: descZhParts.join(' / '),
+                affixDescEn: descEnParts.join(' / '),
                 affixStatus,
                 stageTrait,
                 bossMechanic: liveM.bossMechanic || '',
@@ -1775,19 +2259,36 @@
     function updateBossStatusBar() {
         const dom = G.dom, st = G.state;
         if (!dom.bossStatusBarEl) return;
-        const boss = st.monsters.find(m => m.isBoss && m.hp > 0);
+        const livingBosses = st.monsters.filter(m => m.isBoss && m.hp > 0);
+        let boss = livingBosses[0] || null;
+        if (livingBosses.length > 1 && MonsterSys && typeof MonsterSys.getMonsterProgress === 'function') {
+            let maxProg = -1;
+            for (let i = 0; i < livingBosses.length; i++) {
+                const prog = MonsterSys.getMonsterProgress(livingBosses[i]);
+                if (prog > maxProg) {
+                    maxProg = prog;
+                    boss = livingBosses[i];
+                }
+            }
+        }
         if (!boss || st.isGameOver || st.waveState === 'WAITING_START' || st.waveState === 'VICTORY') {
             dom.bossStatusBarEl.classList.add('hidden');
             dom.bossStatusBarEl.classList.remove('weak-fire', 'weak-ice', 'weak-thunder');
             setDomText(dom.bossBannerTitleEl, ''); setDomText(dom.bossBannerHpTextEl, '');
             return;
         }
+        const queuedBosses = Array.isArray(st.waveSpawnQueue) ? st.waveSpawnQueue.filter(q => q && q.isBoss).length : 0;
+        const remainingBosses = livingBosses.length + queuedBosses;
+        const totalBosses = Math.max(remainingBosses, Number(st.waveBossTotal) || 1);
+        const bossCountTag = totalBosses > 1
+            ? `${L(`雙王 ${remainingBosses}/${totalBosses}`, `Boss ${remainingBosses}/${totalBosses}`)} · `
+            : '';
         const weakCfg = getTowersDict()[boss.weakness], weakShort = weakCfg ? `${weakCfg.icon}${getWeaknessShortName(boss.weakness)}` : getWeaknessShortName(boss.weakness);
         const armorLabel = boss.armorShredTimer > 0 ? `🔥 ${Math.round(MonsterSys.getMonsterEffectiveArmor(boss))}/${boss.armor}` : `${L('甲', 'ARM')} ${boss.armor}`;
         dom.bossStatusBarEl.classList.remove('hidden', 'weak-fire', 'weak-ice', 'weak-thunder');
         if (weakCfg) dom.bossStatusBarEl.classList.add(`weak-${boss.weakness}`);
         const bossSep = L('｜', ' | ');
-        setDomText(dom.bossBannerTitleEl, `${boss.name}${bossSep}${L('弱', 'Weak')} ${weakShort}${bossSep}${armorLabel}`);
+        setDomText(dom.bossBannerTitleEl, `${bossCountTag}${boss.name}${bossSep}${L('弱', 'Weak')} ${weakShort}${bossSep}${armorLabel}`);
         setDomText(dom.bossBannerHpTextEl, `${boss.hp} / ${boss.maxHp}`);
         if (dom.bossBannerHpFillEl) dom.bossBannerHpFillEl.style.width = `${Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100))}%`;
     }
@@ -2051,9 +2552,13 @@
         } else if (plan.eliteCount > 0) {
             parts.push(`${L('菁英', 'Elite')} ×${plan.eliteCount}`);
         }
-        const crisisPrefix = plan.crisisSpec ? `[⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)}] ` : '';
-        const thiefNote = plan.hasThief ? ` · ${L('含靈脈竊賊', 'Includes Thief')}` : '';
-        return crisisPrefix + parts.join(' · ') + thiefNote;
+        const esc = plan.escalationInfo || {};
+        const escTags = [];
+        if (esc.isDualAffix) escTags.push(L('雙詞條菁英', 'Dual-Affix Elites'));
+        if (esc.isVanguardWave) escTags.push(L('🚩先鋒號角×3', '🚩Vanguard×3'));
+        if (esc.isDualBossWave) escTags.push(L('雙王 0.62×HP', 'Twin Bosses'));
+        const escNote = escTags.length > 0 ? ` · [${escTags.join('·')}]` : '';
+        return crisisPrefix + parts.join(' · ') + thiefNote + escNote;
     }
 
     function renderForecastListInto(headerEl, listEl, waveNum, prefixLabel, isFinalClear = false) {
@@ -2122,10 +2627,25 @@
                 : '';
             items.push(`<li class="forecast-meta num">${L(`含 ${plan.eliteCount} 隻護甲菁英（甲 ${plan.eliteArmor}）`, `Includes ${plan.eliteCount} ${plan.eliteCount === 1 ? 'Armored Elite' : 'Armored Elites'} (ARM ${plan.eliteArmor})`)}${afSummary}</li>`);
         }
+        if (plan.escalationInfo && (plan.escalationInfo.isDualAffix || plan.escalationInfo.isVanguardWave || plan.escalationInfo.isDualBossWave)) {
+            const escParts = [];
+            if (plan.escalationInfo.isDualAffix) escParts.push(L('W20+ 雙詞條菁英', 'W20+ Dual-Affix Elites'));
+            if (plan.escalationInfo.isVanguardWave) escParts.push(L('W25+ 先鋒號角 (前3隻霸體 +15%速)', 'W25+ Vanguard Horn (3x Res +15% Spd)'));
+            if (plan.escalationInfo.isDualBossWave) escParts.push(L('W30+ 雙王交錯來襲 (0.62×血/間隔6s)', 'W30+ Twin Bosses (0.62× HP / 6s)'));
+            items.push(`<li class="forecast-meta">🌋 ${L('無盡環境質變：', 'Endless Escalation: ')}${escParts.join(' · ')}</li>`);
+        }
         if (plan.bossMeta) {
-            const bWeak = towersDict[plan.bossMeta.weakness];
-            const bWeakStr = bWeak ? `${L('弱 ', 'Weak: ')}${getWeaknessShortName(plan.bossMeta.weakness)}` : '';
-            items.push(`<li class="forecast-item forecast-boss"><span>${L('王', 'Boss')} · ${plan.bossMeta.name}</span><span class="forecast-weak weak-${plan.bossMeta.weakness} num">${bWeakStr} · ${L('甲', 'ARM')} ${plan.bossMeta.armor}</span></li>`);
+            if (plan.bossMeta.isDualBoss && Array.isArray(plan.bossMeta.bossList)) {
+                plan.bossMeta.bossList.forEach((bm, bi) => {
+                    const bWeak = towersDict[bm.weakness];
+                    const bWeakStr = bWeak ? `${L('弱 ', 'Weak: ')}${getWeaknessShortName(bm.weakness)}` : '';
+                    items.push(`<li class="forecast-item forecast-boss"><span>${L(`雙王 ${bi + 1}/2`, `Boss ${bi + 1}/2`)} · ${bm.name}</span><span class="forecast-weak weak-${bm.weakness} num">${bWeakStr} · ${L('甲', 'ARM')} ${bm.armor}</span></li>`);
+                });
+            } else {
+                const bWeak = towersDict[plan.bossMeta.weakness];
+                const bWeakStr = bWeak ? `${L('弱 ', 'Weak: ')}${getWeaknessShortName(plan.bossMeta.weakness)}` : '';
+                items.push(`<li class="forecast-item forecast-boss"><span>${L('王', 'Boss')} · ${plan.bossMeta.name}</span><span class="forecast-weak weak-${plan.bossMeta.weakness} num">${bWeakStr} · ${L('甲', 'ARM')} ${plan.bossMeta.armor}</span></li>`);
+            }
         } else if (normalTotal > 0 && plan.eliteCount === 0) {
             items.push(`<li class="forecast-meta num">${L(`共 ${normalTotal} 隻敵軍進攻`, `${normalTotal} enemies incoming`)}</li>`);
         }
@@ -4038,6 +4558,7 @@
                 `Bought 1 ${label} (-${res.price} 💰). Holding ${res.shares}/10 (+${divPct}% element tower power).`
             );
             updateHUD();
+            scheduleRunSave(400);
             return res;
         }
 
@@ -4058,6 +4579,7 @@
                 `Sold 1 ${label} (${feePct}% fee ${res.fee} 💰, received +${res.payout} 💰${capNoteEn}). Remaining ${res.shares}/10 (+${divPct}%).`
             );
             updateHUD();
+            scheduleRunSave(400);
             return res;
         }
         return { ok: false, reason: 'invalid_action' };
@@ -4144,6 +4666,7 @@
                 `Blind Box (${costTagEn}) rolled ${roll.tier}★ tower; converted to +${compGold} 💰 (${reasonEn}, Team Crit +${critPct}%).`
             );
             updateHUD();
+            scheduleRunSave(400);
             return { ok: true, kind: 'tower_cap_gold', compensationGold: compGold, boxCost, roll };
         }
 
@@ -4372,6 +4895,7 @@
             );
         }
         updateHUD();
+        scheduleRunSave(400);
         return res;
     }
 
@@ -4610,6 +5134,7 @@
         st.waveSpawnQueue = plan.queue;
         st.waveSpawnIntervalMs = plan.spawnIntervalMs;
         st.waveSpawnAccMs = plan.spawnIntervalMs;
+        st.waveBossTotal = plan && plan.bossMeta ? (plan.bossMeta.bossCount || 1) : 0;
         st.waveState = 'SPAWNING';
         st.forecastDrawerOpen = false;
         st.guildDrawerOpen = false;
@@ -4625,32 +5150,49 @@
 
         const bonusMsgZh = earlyBonus > 0 ? `（⚡ 早鳥開波 +${earlyBonus} 💰）` : '';
         const bonusMsgEn = earlyBonus > 0 ? ` (⚡ Early Start +${earlyBonus} 💰)` : '';
+        const esc = plan.escalationInfo || {};
+        const escListZh = [];
+        const escListEn = [];
+        if (esc.isDualAffix) { escListZh.push('雙詞條菁英'); escListEn.push('Dual-Affix Elites'); }
+        if (esc.isVanguardWave) { escListZh.push('先鋒號角×3'); escListEn.push('Vanguard×3'); }
+        if (esc.isDualBossWave) { escListZh.push('雙王交錯登場'); escListEn.push('Twin Bosses'); }
+        const escTagZh = escListZh.length > 0 ? ` [${escListZh.join('·')}]` : '';
+        const escTagEn = escListEn.length > 0 ? ` [${escListEn.join('·')}]` : '';
         if (plan.crisisSpec) {
+            const cHintZh = plan.crisisSpec.counterHint || plan.crisisSpec.hintZh || '';
+            const cHintEn = plan.crisisSpec.counterHintEn || plan.crisisSpec.hintEn || '';
             const thiefSuffixZh = plan.hasThief ? '｜⚠️ 偵測到「🦊 靈脈竊賊」潛入！' : '';
             const thiefSuffixEn = plan.hasThief ? ' | ⚠️ Vein Thief detected!' : '';
             setStatusMsg(
-                `⚠️ 危機波 Wave ${waveNum}【${plan.crisisSpec.title}】來襲：${plan.crisisSpec.hintZh}${thiefSuffixZh}${bonusMsgZh}`,
-                `⚠️ Crisis Wave ${waveNum} [${plan.crisisSpec.titleEn}]: ${plan.crisisSpec.hintEn}${thiefSuffixEn}${bonusMsgEn}`
+                `⚠️ 危機波 Wave ${waveNum}【${plan.crisisSpec.title}】來襲：${cHintZh}${escTagZh}${thiefSuffixZh}${bonusMsgZh}`,
+                `⚠️ Crisis Wave ${waveNum} [${plan.crisisSpec.titleEn}]: ${cHintEn}${escTagEn}${thiefSuffixEn}${bonusMsgEn}`
             );
             Backend.trackFeel(`Wave:CrisisStart:${plan.crisisSpec.id}`, waveNum, { wave: waveNum, crisisId: plan.crisisSpec.id });
         } else if (plan.bossMeta) {
-            const bWeak = towersDict[plan.bossMeta.weakness] || { icon: '🔥', name: '火' };
-            const weakIcon = bWeak.icon + getWeaknessShortName(plan.bossMeta.weakness);
-            if (!st.isEndlessMode && waveNum === victoryWave) {
+            if (plan.bossMeta.isDualBoss) {
                 setStatusMsg(
-                    `最終決戰 Wave ${waveNum}/${victoryWave}：${plan.bossMeta.name}（弱 ${weakIcon} · 甲 ${plan.bossMeta.armor} · ${plan.bossMeta.hp} HP）來襲${bonusMsgZh}。`,
-                    `Final Wave ${waveNum}/${victoryWave}: ${plan.bossMeta.name} (Weak ${weakIcon} · ARM ${plan.bossMeta.armor} · ${plan.bossMeta.hp} HP) incoming${bonusMsgEn}!`
+                    `雙王來襲 Wave ${waveNum}：${plan.bossMeta.name}（各 0.62× 血量，第 2 隻 6 秒後登場）${escTagZh}${bonusMsgZh}。`,
+                    `Twin Boss Wave ${waveNum}: ${plan.bossMeta.name} (0.62× HP each, 2nd in 6s)${escTagEn}${bonusMsgEn}!`
                 );
             } else {
-                setStatusMsg(
-                    `魔王波 Wave ${waveNum}：${plan.bossMeta.name}（弱 ${weakIcon} · 甲 ${plan.bossMeta.armor}）來襲${bonusMsgZh}。`,
-                    `Boss Wave ${waveNum}: ${plan.bossMeta.name} (Weak ${weakIcon} · ARM ${plan.bossMeta.armor}) incoming${bonusMsgEn}!`
-                );
+                const bWeak = towersDict[plan.bossMeta.weakness] || { icon: '🔥', name: '火' };
+                const weakIcon = bWeak.icon + getWeaknessShortName(plan.bossMeta.weakness);
+                if (!st.isEndlessMode && waveNum === victoryWave) {
+                    setStatusMsg(
+                        `最終決戰 Wave ${waveNum}/${victoryWave}：${plan.bossMeta.name}（弱 ${weakIcon} · 甲 ${plan.bossMeta.armor} · ${plan.bossMeta.hp} HP）來襲${bonusMsgZh}。`,
+                        `Final Wave ${waveNum}/${victoryWave}: ${plan.bossMeta.name} (Weak ${weakIcon} · ARM ${plan.bossMeta.armor} · ${plan.bossMeta.hp} HP) incoming${bonusMsgEn}!`
+                    );
+                } else {
+                    setStatusMsg(
+                        `魔王波 Wave ${waveNum}：${plan.bossMeta.name}（弱 ${weakIcon} · 甲 ${plan.bossMeta.armor}）來襲${escTagZh}${bonusMsgZh}。`,
+                        `Boss Wave ${waveNum}: ${plan.bossMeta.name} (Weak ${weakIcon} · ARM ${plan.bossMeta.armor}) incoming${escTagEn}${bonusMsgEn}!`
+                    );
+                }
             }
         } else if (plan.eliteCount > 0) {
             setStatusMsg(
-                `第 ${waveNum} 波來襲：含高護甲菁英與機制怪，可善用火塔破甲或跨元素融合${bonusMsgZh}。`,
-                `Wave ${waveNum} incoming: Includes armored elites & special foes. Use Fire shred or hybrid fusions${bonusMsgEn}.`
+                `第 ${waveNum} 波來襲${escTagZh}：含高護甲菁英與機制怪，可善用火塔破甲或跨元素融合${bonusMsgZh}。`,
+                `Wave ${waveNum} incoming${escTagEn}: Includes armored elites & special foes. Use Fire shred or hybrid fusions${bonusMsgEn}.`
             );
         } else {
             const thiefSuffixZh = plan.hasThief ? '（偵測到 🦊 靈脈竊賊，擊殺掉厚獎！）' : '';
@@ -4775,6 +5317,9 @@
     function triggerVictory() {
         const st = G.state;
         if (st.isGameOver || st.waveState === 'VICTORY') return;
+        if (st.gameMode === 'daily' || st.gameMode === 'puzzle') {
+            clearRunSaveSnapshot();
+        }
         const { starsNum, stars, rankText } = buildVictoryOutcomeInfo(st);
 
         const honor = computeRunHonorSummary(st);
@@ -4925,6 +5470,7 @@
         const st = G.state;
         if (st.isGameOver && st.waveState === 'GAMEOVER') return;
         st.isGameOver = true;
+        clearRunSaveSnapshot();
         const honor = computeRunHonorSummary(st);
         const victoryWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
             ? WaveSys.getMapVictoryWave()
@@ -5103,7 +5649,7 @@
             }
             return WaveSys.getCurrentMapSpec();
         }
-        setRng(null);
+        setRng(st.runSeedCode);
         WaveSys.applyMapConfig(st.currentMapId);
         const mapSpec = WaveSys.getCurrentMapSpec();
         st.activeContracts = new Set(selectedContracts);
@@ -5122,6 +5668,7 @@
     }
 
     function restartGame() {
+        clearRunSaveSnapshot();
         const prevSnapshot = {
             gameMode: (G.state && G.state.gameMode) || selectedGameMode || 'campaign',
             dailyDateKey: G.state && G.state.dailyDateKey,
@@ -5165,6 +5712,9 @@
     }
 
     function returnToMainMenu() {
+        if (G.state && (G.state.waveState === 'VICTORY' || G.state.gameMode === 'daily' || G.state.gameMode === 'puzzle')) {
+            clearRunSaveSnapshot();
+        }
         if (GameApp.helpers && typeof GameApp.helpers.setActiveRunRng === 'function') {
             GameApp.helpers.setActiveRunRng(null);
         }
@@ -5176,6 +5726,7 @@
             Renderer.applyWeatherVisualClass(null);
         }
         showLobbyHub();
+        renderLobbyResumeBannerUI();
         renderMapSelectorUI();
         renderContractSelectorUI();
         renderDailyBriefingUI();
@@ -5191,6 +5742,7 @@
     function startGame() {
         const st = G.state;
         if (st.waveState !== 'WAITING_START') return;
+        clearRunSaveSnapshot();
         const mapSpec = configureRunModeState(st, null);
         if (CodexSys && typeof CodexSys.resetRunCodex === 'function') {
             CodexSys.resetRunCodex();
@@ -5247,6 +5799,7 @@
         resetAllTowerRepositionCooldowns();
         setStatusMsg('無盡挑戰模式已開啟，波數上限解除。', 'Endless Mode unlocked! Wave cap lifted.');
         setPauseState(false, { silent: true });
+        saveRunSnapshotNow();
     }
 
     function gameTick(timestamp) {
@@ -5292,8 +5845,13 @@
             }
         } else if (st.waveState === 'SPAWNING') {
             st.waveSpawnAccMs += dtMs;
-            while (st.waveSpawnAccMs >= st.waveSpawnIntervalMs && st.waveSpawnQueue.length > 0) {
-                st.waveSpawnAccMs -= st.waveSpawnIntervalMs;
+            while (st.waveSpawnQueue.length > 0) {
+                const nextEntry = st.waveSpawnQueue[0];
+                const reqInterval = (nextEntry && Number.isFinite(nextEntry.spawnDelayMs))
+                    ? nextEntry.spawnDelayMs
+                    : st.waveSpawnIntervalMs;
+                if (st.waveSpawnAccMs < reqInterval) break;
+                st.waveSpawnAccMs -= reqInterval;
                 MonsterSys.spawnMonsterFromEntry(st.waveSpawnQueue.shift());
                 if (st.waveSpawnQueue.length === 0) { st.waveState = 'CLEARING'; updateWavePhaseUI(); }
             }
@@ -5350,6 +5908,7 @@
                         `Wave ${st.currentWave} cleared${rootMsgEn}! Blessing selection opens after evolution.`
                     );
                     updateHUD();
+                    saveRunSnapshotNow();
                     return;
                 }
                 if (TreeSys.triggerBlessingSelection(st.currentWave)) {
@@ -5369,6 +5928,7 @@
                 `Wave ${st.currentWave} cleared${rootMsgEn}! Next wave begins in ${Math.ceil(intermissionMs / 1000)}s.`
             );
             updateHUD();
+            saveRunSnapshotNow();
         }
 
         if (st.monsters.length > 0) {
@@ -5676,6 +6236,7 @@
         st.pausedBeforeCodex = false;
         if (activeMatch) st.isPaused = true;
         if (G.dom.guideMenuBtn) G.dom.guideMenuBtn.classList.toggle('hidden', !activeMatch);
+        switchGuideTab(currentGuideTab || 'elements');
         G.dom.guideOverlayEl.classList.remove('hidden');
         if (G.dom.helpBtn) G.dom.helpBtn.setAttribute('aria-expanded', 'true');
         if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
@@ -5789,6 +6350,8 @@
         ['lobbySetupBackBtn', () => { SoundEngine.ensureContext(); showLobbyHub(); }],
         ['lobbyCodexBtn', () => { SoundEngine.ensureContext(); CodexSys.openCodex(); }],
         ['lobbyGuideBtn', () => { SoundEngine.ensureContext(); if (isGuideOpen()) closeGuide(); else openGuide(); }],
+        ['lobbyResumeBtn', () => { SoundEngine.ensureContext(); resumeSavedRun(); }],
+        ['lobbyDiscardSaveBtn', () => { SoundEngine.ensureContext(); clearRunSaveSnapshot(); renderLobbyResumeBannerUI(); }],
         ['pauseBtn', toggleCombatPause], ['pauseResumeBtn', () => { if (G.state.isPaused) setPauseState(false); }],
         ['systemMenuBtn', () => { SoundEngine.ensureContext(); if (isSystemMenuOpen()) closeSystemMenu(); else openSystemMenu(); }],
         ['systemMenuXBtn', () => closeSystemMenu()],
@@ -5967,6 +6530,12 @@
     });
 
     if (typeof document !== 'undefined') {
+        document.querySelectorAll('.guide-tab-btn').forEach((tabBtn) => {
+            tabBtn.addEventListener('click', () => {
+                SoundEngine.ensureContext();
+                switchGuideTab(tabBtn.dataset.guideTab || 'elements');
+            });
+        });
         document.addEventListener('click', (e) => {
             const target = e && e.target;
             if (target && target.closest && (target.closest('#lang-dropdown') || target.closest('#start-lang-dropdown'))) return;
@@ -6253,6 +6822,10 @@
         onMonsterLeaked,
         activateTouchMode,
         startMainLoop,
+        saveRunSnapshotNow,
+        scheduleRunSave,
+        clearRunSaveSnapshot,
+        resumeSavedRun,
         recordTowerDamage: AttackSys.recordTowerDamage
     };
 
@@ -6440,7 +7013,12 @@
         updateHUD,
         triggerVictory,
         triggerGameOver,
-        getMvpSummaryText
+        getMvpSummaryText,
+        saveRunSnapshotNow,
+        scheduleRunSave,
+        resumeSavedRun,
+        clearRunSaveSnapshot,
+        switchGuideTab
     };
 
     GameApp.core = GameApp.core || {};

@@ -30,10 +30,27 @@
         }
     }
 
+    const THROTTLE_MS = {
+        shot: 75,
+        hit: 70,
+        kill: 85,
+        ui: 45
+    };
+    const MAX_LOW_PRIORITY_VOICES = 12;
+
+    function getNowMs() {
+        if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+            return performance.now();
+        }
+        return Date.now();
+    }
+
     const SoundEngine = {
         ctx: null,
         isMuted: loadMutedPref(),
         lastGroupTime: {},
+        lastCategoryMs: {},
+        activeVoices: 0,
         onToggleCallback: null,
 
         setOnToggle(fn) {
@@ -58,6 +75,15 @@
             return this.ctx;
         },
 
+        canPlayCategory(catKey, minGapMs = null) {
+            const nowMs = getNowMs();
+            const gap = Number.isFinite(minGapMs) ? minGapMs : (THROTTLE_MS[catKey] || 60);
+            const prev = this.lastCategoryMs[catKey];
+            if (Number.isFinite(prev) && (nowMs - prev) < gap) return false;
+            this.lastCategoryMs[catKey] = nowMs;
+            return true;
+        },
+
         canPlayGroup(groupKey, minGapSec = 0.055) {
             if (!this.ctx) return false;
             const now = this.ctx.currentTime;
@@ -67,9 +93,10 @@
             return true;
         },
 
-        tone({ freq, freqEnd = null, type = 'sine', duration = 0.14, gain = 0.12, delay = 0 }) {
+        tone({ freq, freqEnd = null, type = 'sine', duration = 0.14, gain = 0.12, delay = 0, priority = 'high' }) {
             const ctx = this.ensureContext();
             if (!ctx) return;
+            if (priority === 'low' && this.activeVoices >= MAX_LOW_PRIORITY_VOICES) return;
 
             const now = ctx.currentTime + delay;
             const minVol = CONFIG.SFX_VOLUME_MIN || 0.08;
@@ -88,6 +115,15 @@
             env.gain.linearRampToValueAtTime(peakGain, now + 0.012);
             env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
+            this.activeVoices++;
+            let released = false;
+            const releaseVoice = () => {
+                if (released) return;
+                released = true;
+                this.activeVoices = Math.max(0, (this.activeVoices || 0) - 1);
+            };
+            osc.onended = releaseVoice;
+
             osc.connect(env);
             env.connect(ctx.destination);
             osc.start(now);
@@ -96,24 +132,25 @@
 
         playSpawn(tier = 1) {
             const base = tier >= 2 ? 523.25 : 440;
-            this.tone({ freq: base, freqEnd: base * 1.12, type: 'triangle', duration: 0.09, gain: 0.11, delay: 0 });
-            this.tone({ freq: base * 1.5, freqEnd: base * 1.55, type: 'sine', duration: 0.12, gain: 0.12, delay: 0.065 });
+            this.tone({ freq: base, freqEnd: base * 1.12, type: 'triangle', duration: 0.09, gain: 0.11, delay: 0, priority: 'high' });
+            this.tone({ freq: base * 1.5, freqEnd: base * 1.55, type: 'sine', duration: 0.12, gain: 0.12, delay: 0.065, priority: 'high' });
         },
 
         playMerge(tier = 2, isCrossElement = false) {
             const notes = tier >= 3 ? [523.25, 659.25, 783.99, 1046.5] : [440, 554.37, 659.25];
             if (isCrossElement) notes.push(tier >= 3 ? 1318.5 : 880);
             notes.forEach((f, idx) => {
-                this.tone({ freq: f, type: isCrossElement ? 'triangle' : 'sine', duration: 0.16, gain: 0.12, delay: idx * 0.055 });
+                this.tone({ freq: f, type: isCrossElement ? 'triangle' : 'sine', duration: 0.16, gain: 0.12, delay: idx * 0.055, priority: 'high' });
             });
         },
 
         /**
-         * 標籤驅動砲塔射擊音效：自動讀取 tower_data.js 中的 attackStyle，新角色無須改此處即可發聲
+         * 標籤驅動砲塔射擊音效（75ms 分類節流 ＋ 12 聲部並發保護，避免高倍速破音）
          */
         playTowerShot(towerType) {
             const ctx = this.ensureContext();
             if (!ctx) return;
+            if (!this.canPlayCategory('shot', THROTTLE_MS.shot)) return;
 
             const towersDict = GameApp.data && GameApp.data.towers && GameApp.data.towers.TOWERS;
             const towerCfg = towersDict && towersDict[towerType];
@@ -121,21 +158,42 @@
 
             if (style === 'burst_armor_break' || style === 'aoe_mist' || towerType === 'fire' || towerType === 'steam') {
                 if (!this.canPlayGroup('burst', 0.07)) return;
-                this.tone({ freq: style === 'aoe_mist' ? 230 : 185, freqEnd: 62, type: 'triangle', duration: 0.13, gain: 0.14 });
+                this.tone({ freq: style === 'aoe_mist' ? 230 : 185, freqEnd: 62, type: 'triangle', duration: 0.13, gain: 0.14, priority: 'low' });
             } else if (style === 'slow_control' || style === 'stun_pulse' || towerType === 'ice' || towerType === 'magnet') {
                 if (!this.canPlayGroup('frost', 0.07)) return;
-                this.tone({ freq: style === 'stun_pulse' ? 1050 : 1240, freqEnd: 1580, type: 'sine', duration: 0.10, gain: 0.09 });
+                this.tone({ freq: style === 'stun_pulse' ? 1050 : 1240, freqEnd: 1580, type: 'sine', duration: 0.10, gain: 0.09, priority: 'low' });
             } else {
                 if (!this.canPlayGroup('beam_bolt', 0.065)) return;
-                this.tone({ freq: style === 'pierce_beam' ? 1480 : 1280, freqEnd: 420, type: 'sawtooth', duration: 0.075, gain: 0.085 });
+                this.tone({ freq: style === 'pierce_beam' ? 1480 : 1280, freqEnd: 420, type: 'sawtooth', duration: 0.075, gain: 0.085, priority: 'low' });
             }
+        },
+
+        playHitFeedback(isCrit = false) {
+            const ctx = this.ensureContext();
+            if (!ctx) return;
+            if (!this.canPlayCategory('hit', THROTTLE_MS.hit)) return;
+            this.tone({
+                freq: isCrit ? 980 : 640,
+                freqEnd: isCrit ? 1280 : 520,
+                type: isCrit ? 'triangle' : 'sine',
+                duration: 0.055,
+                gain: isCrit ? 0.095 : 0.08,
+                priority: 'low'
+            });
+        },
+
+        playUiTick() {
+            const ctx = this.ensureContext();
+            if (!ctx) return;
+            if (!this.canPlayCategory('ui', THROTTLE_MS.ui)) return;
+            this.tone({ freq: 720, freqEnd: 880, type: 'sine', duration: 0.045, gain: 0.08, priority: 'low' });
         },
 
         playKill() {
             const ctx = this.ensureContext();
-            if (!ctx || !this.canPlayGroup('kill', 0.05)) return;
-            this.tone({ freq: 620, freqEnd: 920, type: 'sine', duration: 0.07, gain: 0.09, delay: 0 });
-            this.tone({ freq: 1175, freqEnd: 1480, type: 'triangle', duration: 0.09, gain: 0.10, delay: 0.045 });
+            if (!ctx || !this.canPlayCategory('kill', THROTTLE_MS.kill)) return;
+            this.tone({ freq: 620, freqEnd: 920, type: 'sine', duration: 0.07, gain: 0.09, delay: 0, priority: 'low' });
+            this.tone({ freq: 1175, freqEnd: 1480, type: 'triangle', duration: 0.09, gain: 0.10, delay: 0.045, priority: 'low' });
         },
 
         playMagic(kind = 'entangle') {

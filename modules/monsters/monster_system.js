@@ -49,7 +49,9 @@
                 spreadIntervalMs: 2000,
                 spreadRadiusCells: 1.2,
                 tickAccMs: 0,
-                sourceTower: null
+                sourceTower: null,
+                sourceTowerId: null,
+                sourceEffDps: 0
             },
             grievousWound: {
                 active: false,
@@ -67,16 +69,21 @@
                 bonusDamage: 12,
                 icdMs: 0,
                 icdMaxMs: 350,
-                sourceTower: null
+                sourceTower: null,
+                sourceTowerId: null,
+                sourceEffDps: 0
             },
             vuln: {},
             slow: {},
             resonanceElements: {},
             crownBurn: {
                 dps: 0,
+                maxBossDps: 120,
                 durationMs: 0,
                 tickAccMs: 0,
-                sourceTower: null
+                sourceTower: null,
+                sourceTowerId: null,
+                sourceEffDps: 0
             },
             thermalBrittle: {
                 stacks: 0,
@@ -94,7 +101,77 @@
         if (!monster.status.thermalBrittle) {
             monster.status.thermalBrittle = { stacks: 0, maxStacks: 5, durationMs: 0 };
         }
+        if (!Number.isFinite(monster.ccResilienceMs)) monster.ccResilienceMs = 0;
+        if (!Number.isFinite(monster.dotTextAcc)) monster.dotTextAcc = 0;
+        if (!Number.isFinite(monster.dotTextTimerMs)) monster.dotTextTimerMs = 0;
         return monster.status;
+    }
+
+    function hasMonsterAffix(monster, affixId) {
+        if (!monster || !affixId) return false;
+        if (Array.isArray(monster.eliteAffixes) && monster.eliteAffixes.length > 0) {
+            return monster.eliteAffixes.includes(affixId);
+        }
+        return monster.eliteAffix === affixId;
+    }
+
+    function hasActiveCcResilience(monster) {
+        if (!monster || monster.isBoss) return false;
+        return (monster.ccResilienceMs || 0) > 0 || Boolean(monster.isVanguard);
+    }
+
+    function resolveSourceTower(sourceTower, sourceTowerId = null) {
+        if (sourceTower && typeof sourceTower === 'object') return sourceTower;
+        if (sourceTowerId !== null && sourceTowerId !== undefined && G && G.state && Array.isArray(G.state.board)) {
+            for (let i = 0; i < G.state.board.length; i++) {
+                const t = G.state.board[i];
+                if (t && t.uid === sourceTowerId) return t;
+            }
+        }
+        return null;
+    }
+
+    function getSourceEffectiveDps(sourceTower, fallbackDps = 0) {
+        const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
+        const resolved = resolveSourceTower(sourceTower, null);
+        if (resolved && AttackSys && typeof AttackSys.getTowerEffectiveDps === 'function') {
+            return Math.max(0, Number(AttackSys.getTowerEffectiveDps(resolved)) || 0);
+        }
+        return Math.max(0, Number(fallbackDps) || 0);
+    }
+
+    function queueMonsterDotDamageText(monster, dmg, icon = '🔥', options = {}) {
+        if (!monster || !Number.isFinite(dmg) || dmg <= 0) return;
+        monster.dotTextAcc = (Number(monster.dotTextAcc) || 0) + Math.max(0, dmg);
+        if (icon && (!monster.dotTextIcon || options.priority)) {
+            monster.dotTextIcon = icon;
+        }
+        if (options.isAffinity) monster.dotTextAffinity = true;
+        if (options.isHighTone) monster.dotTextCritTone = true;
+    }
+
+    function flushMonsterDotDamageText(monster) {
+        if (!monster) return;
+        const rounded = Math.round(Number(monster.dotTextAcc) || 0);
+        if (rounded >= 1 && GameApp.renderer) {
+            if (typeof GameApp.renderer.spawnDotDamageNumber === 'function') {
+                GameApp.renderer.spawnDotDamageNumber(
+                    rounded,
+                    monster.pixelX,
+                    monster.pixelY,
+                    monster.dotTextIcon || '🔥',
+                    Boolean(monster.dotTextAffinity),
+                    Boolean(monster.dotTextCritTone)
+                );
+            } else if (typeof GameApp.renderer.spawnDamageNumber === 'function') {
+                GameApp.renderer.spawnDamageNumber(rounded, Boolean(monster.dotTextCritTone), monster.pixelX, monster.pixelY, monster.dotTextIcon || '🔥', Boolean(monster.dotTextAffinity));
+            }
+        }
+        monster.dotTextAcc = 0;
+        monster.dotTextTimerMs = 0;
+        monster.dotTextIcon = '';
+        monster.dotTextAffinity = false;
+        monster.dotTextCritTone = false;
     }
 
     function makeMonsterRecord(fields) {
@@ -115,6 +192,15 @@
             stunImmuneMs: 0,
             _stunPendingImmuneMs: 0,
             _pullIcdMs: 0,
+            ccResilienceMs: 0,
+            isVanguard: false,
+            eliteAffixes: [],
+            eliteAffixSpecs: [],
+            dotTextAcc: 0,
+            dotTextTimerMs: 0,
+            dotTextIcon: '',
+            dotTextAffinity: false,
+            dotTextCritTone: false,
             spawnWave: 1,
             stageTraitKey: null,
             stageTraitSpec: null,
@@ -217,17 +303,33 @@
 
         const monstersData = getMonstersData();
         const affixDb = monstersData.ELITE_AFFIXES || {};
-        const affixSpec = (entry.isElite && !entry.isBoss && entry.eliteAffix) ? (affixDb[entry.eliteAffix] || null) : null;
+        const rawAffixes = (entry.isElite && !entry.isBoss)
+            ? (Array.isArray(entry.eliteAffixes) && entry.eliteAffixes.length > 0
+                ? entry.eliteAffixes
+                : (entry.eliteAffix ? [entry.eliteAffix] : []))
+            : [];
+        const affixIds = [];
+        const affixSpecs = [];
+        for (let ai = 0; ai < rawAffixes.length; ai++) {
+            const afId = rawAffixes[ai];
+            if (afId && affixDb[afId] && !affixIds.includes(afId)) {
+                affixIds.push(afId);
+                affixSpecs.push(affixDb[afId]);
+            }
+        }
+        const affixSpec = affixSpecs[0] || null;
         const stageDb = monstersData.WAVE_STAGE_TRAITS || {};
         const rawStageSpec = (!entry.isBoss && !entry.isSplitChild && stageDb[entry.typeKey]) ? stageDb[entry.typeKey] : null;
         const stageSpec = (rawStageSpec && spawnWave >= (Number(rawStageSpec.minWave) || 5)) ? rawStageSpec : null;
         const hpMult = entry.isElite ? (wb.ELITE_HP_MULT || 2.1) : 1.0;
-        const affixSpeedMult = (affixSpec && affixSpec.id === 'frenzied') ? (affixSpec.speedMult || 1.22) : 1.0;
+        const frenziedSpec = affixSpecs.find(s => s && s.id === 'frenzied') || null;
+        const affixSpeedMult = frenziedSpec ? (frenziedSpec.speedMult || 1.22) : 1.0;
         const speedMult = (cfg.speedMult || 1.0) * (entry.isElite ? (wb.ELITE_SPEED_MULT || 0.85) : 1.0) * affixSpeedMult;
         const maxHp = Math.max(10, Math.round((cfg.baseHp || 68) * (entry.hpScale || 1) * hpMult * hpGlobal));
         let maxShield = cfg.shieldRatio > 0 ? Math.round(maxHp * cfg.shieldRatio) : 0;
-        if (affixSpec && affixSpec.id === 'shield_regen') {
-            const shieldAddRatio = maxShield > 0 ? (affixSpec.extraShieldRatio || 0.20) : (affixSpec.shieldRatio || 0.30);
+        const shieldRegenSpec = affixSpecs.find(s => s && s.id === 'shield_regen') || null;
+        if (shieldRegenSpec) {
+            const shieldAddRatio = maxShield > 0 ? (shieldRegenSpec.extraShieldRatio || 0.20) : (shieldRegenSpec.shieldRatio || 0.30);
             maxShield += Math.max(1, Math.round(maxHp * shieldAddRatio));
         }
         const reward = Math.max(1, Math.round(((cfg.baseReward || 10) + (entry.rewardBonus || 0)) * (entry.isElite ? (wb.ELITE_REWARD_MULT || 2.2) : 1.0)));
@@ -250,10 +352,13 @@
             stageTraitSpec: stageSpec,
             stageRegenTimerMs: stageSpec && stageSpec.regenIntervalMs ? stageSpec.regenIntervalMs : 0,
             stageFireSuppressMs: 0,
+            isVanguard: Boolean(entry.isVanguard),
             isElite: Boolean(entry.isElite),
-            eliteAffix: affixSpec ? affixSpec.id : null,
+            eliteAffix: affixIds[0] || null,
             eliteAffixSpec: affixSpec,
-            shieldRegenTimerMs: affixSpec && affixSpec.regenIntervalMs ? affixSpec.regenIntervalMs : 0,
+            eliteAffixes: affixIds,
+            eliteAffixSpecs: affixSpecs,
+            shieldRegenTimerMs: shieldRegenSpec && shieldRegenSpec.regenIntervalMs ? shieldRegenSpec.regenIntervalMs : 0,
             isBoss: false,
             isSplitChild: false,
             splitsOnDeath: Boolean(cfg.splitsOnDeath),
@@ -366,8 +471,10 @@
         const cum = monster.cumDist || (G && G.map && G.map.waypointCumDist);
         if (!wps || wps.length < 2 || !cum || cum.length < 2) return false;
 
+        const basePull = Math.max(0, Number(distanceCells) || 0.45);
+        const effPull = hasActiveCcResilience(monster) ? (basePull * 0.5) : basePull;
         const curDist = getMonsterProgress(monster);
-        const targetDist = Math.max(0, curDist - Math.max(0, Number(distanceCells) || 0.45));
+        const targetDist = Math.max(0, curDist - effPull);
 
         let segIdx = 0;
         for (let i = 0; i < cum.length - 1; i++) {
@@ -386,6 +493,7 @@
         monster.gridX = wpA.x + (wpB.x - wpA.x) * ratio;
         monster.gridY = wpA.y + (wpB.y - wpA.y) * ratio;
         monster._pullIcdMs = 700;
+        monster.ccResilienceMs = Math.max(monster.ccResilienceMs || 0, 2500);
         if (GameApp.renderer && typeof GameApp.renderer.getCellCenter === 'function') {
             const pos = GameApp.renderer.getCellCenter(monster.gridX, monster.gridY);
             monster.pixelX = pos.left + (monster.visualOffsetX || 0);
@@ -449,10 +557,15 @@
         const list = G.state.monsters;
         for (let i = 0; i < list.length; i++) {
             const src = list[i];
+            if (!src || src.hp <= 0 || src.isTargetable === false) continue;
+            const d = Math.hypot((monster.pixelX || 0) - (src.pixelX || 0), (monster.pixelY || 0) - (src.pixelY || 0));
+            if (src.isVanguard && d <= 1.8 * stepPx) {
+                maxBonus = Math.max(maxBonus, 0.15);
+            }
             if (!isHasteAuraActive(src)) continue;
             const spec = src.stageTraitSpec || stageDb[src.typeKey] || {};
             const radPx = (Number(spec.auraRadiusCells) || 1.5) * stepPx;
-            if (Math.hypot((monster.pixelX || 0) - (src.pixelX || 0), (monster.pixelY || 0) - (src.pixelY || 0)) <= radPx) {
+            if (d <= radPx) {
                 maxBonus = Math.max(maxBonus, Number(spec.speedBonus) || 0.14);
             }
         }
@@ -468,10 +581,10 @@
     }
 
     function getResonanceLinkTargets(monster) {
-        if (!monster || monster.isBoss || monster.hp <= 0 || monster.eliteAffix !== 'resonance_link') return [];
+        if (!monster || monster.isBoss || monster.hp <= 0 || !hasMonsterAffix(monster, 'resonance_link')) return [];
         if (isMonsterFrozen(monster) || (monster.rootTimer || 0) > 0 || (monster.stunTimer || 0) > 0) return [];
         if (!G || !G.state || !Array.isArray(G.state.monsters)) return [];
-        const afSpec = monster.eliteAffixSpec || ((getMonstersData().ELITE_AFFIXES || {}).resonance_link) || {};
+        const afSpec = ((getMonstersData().ELITE_AFFIXES || {}).resonance_link) || monster.eliteAffixSpec || {};
         const stepPx = (G.boardMetrics && G.boardMetrics.step) || 36;
         const radPx = (Number(afSpec.linkRadiusCells) || 1.8) * stepPx;
         const maxLinks = Math.max(1, Number(afSpec.maxLinks) || 2);
@@ -487,7 +600,7 @@
     }
 
     function isBulwarkAuraDisrupted(monster) {
-        if (!monster || monster.eliteAffix !== 'bulwark_aura') return false;
+        if (!monster || !hasMonsterAffix(monster, 'bulwark_aura')) return false;
         return (monster.armorShredTimer || 0) > 0 || getMonsterVulnerabilityBonus(monster) > 0.001;
     }
 
@@ -498,9 +611,9 @@
         let maxDr = 0;
         for (let i = 0; i < G.state.monsters.length; i++) {
             const src = G.state.monsters[i];
-            if (!src || src.id === monster.id || src.isBoss || src.hp <= 0 || src.eliteAffix !== 'bulwark_aura') continue;
+            if (!src || src.id === monster.id || src.isBoss || src.hp <= 0 || !hasMonsterAffix(src, 'bulwark_aura')) continue;
             if (isBulwarkAuraDisrupted(src)) continue;
-            const afSpec = src.eliteAffixSpec || affixDb.bulwark_aura || {};
+            const afSpec = affixDb.bulwark_aura || src.eliteAffixSpec || {};
             const radPx = (Number(afSpec.auraRadiusCells) || 1.6) * stepPx;
             if (Math.hypot((monster.pixelX || 0) - (src.pixelX || 0), (monster.pixelY || 0) - (src.pixelY || 0)) <= radPx) {
                 maxDr = Math.max(maxDr, Number(afSpec.auraDr) || 0.18);
@@ -523,8 +636,8 @@
         }
         const effSlowRate = getMonsterEffectiveSlowRate(monster);
         const stealthSpeedMult = monster.isStealthed ? (1 + ((monster.pantherSpec && monster.pantherSpec.stealthSpeedBonus) || 0.65)) : 1.0;
-        const frenziedSpec = (monster.eliteAffix === 'frenzied')
-            ? (monster.eliteAffixSpec || ((getMonstersData().ELITE_AFFIXES || {}).frenzied) || {})
+        const frenziedSpec = hasMonsterAffix(monster, 'frenzied')
+            ? (((getMonstersData().ELITE_AFFIXES || {}).frenzied) || monster.eliteAffixSpec || {})
             : null;
         const frenziedLowHpMult = (frenziedSpec && (monster.hp / Math.max(1, monster.maxHp)) < 0.50)
             ? (1 + (frenziedSpec.lowHpBonus || 0.15))
@@ -592,32 +705,38 @@
     }
 
     function getEliteAffixLiveStatus(monster) {
-        if (!monster || monster.isBoss || !monster.eliteAffix) return null;
-        const af = (getMonstersData().ELITE_AFFIXES || {})[monster.eliteAffix] || monster.eliteAffixSpec;
+        if (!monster || monster.isBoss) return null;
+        const affixList = (Array.isArray(monster.eliteAffixes) && monster.eliteAffixes.length > 0)
+            ? monster.eliteAffixes
+            : (monster.eliteAffix ? [monster.eliteAffix] : []);
+        if (affixList.length === 0) return null;
+        const affixDb = getMonstersData().ELITE_AFFIXES || {};
+        const primaryId = affixList[0];
+        const af = affixDb[primaryId] || monster.eliteAffixSpec;
         if (!af) return null;
-        if (monster.eliteAffix === 'resonance_link') {
+        if (hasMonsterAffix(monster, 'resonance_link')) {
             const links = getResonanceLinkTargets(monster);
             const severed = isMonsterFrozen(monster) || (monster.rootTimer || 0) > 0 || (monster.stunTimer || 0) > 0;
             return {
-                id: af.id,
+                id: 'resonance_link',
                 countered: severed,
                 linkCount: links.length,
                 statusLabelZh: severed ? '❄️連結中斷' : `🔗共振×${links.length}`,
                 statusLabelEn: severed ? '❄️Link Severed' : `🔗Link×${links.length}`
             };
         }
-        if (monster.eliteAffix === 'bulwark_aura') {
+        if (hasMonsterAffix(monster, 'bulwark_aura')) {
             const disrupted = isBulwarkAuraDisrupted(monster);
             return {
-                id: af.id,
+                id: 'bulwark_aura',
                 countered: disrupted,
                 statusLabelZh: disrupted ? '💔庇護關閉' : '🛡️庇護生效',
                 statusLabelEn: disrupted ? '💔Aegis Down' : '🛡️Aegis Active'
             };
         }
-        if (monster.eliteAffix === 'prismatic_ward') {
+        if (hasMonsterAffix(monster, 'prismatic_ward')) {
             return {
-                id: af.id,
+                id: 'prismatic_ward',
                 countered: false,
                 statusLabelZh: '🌈弱點/複合+20%',
                 statusLabelEn: '🌈Weak/Hybrid +20%'
@@ -841,28 +960,40 @@
     function applyCrownTrueBurn(monster, sourceTower = null, pctPerSec = 0.015, durationMs = 3000) {
         if (!monster || monster.hp <= 0) return;
         const st = ensureMonsterStatus(monster);
-        if (!st.crownBurn) st.crownBurn = { dps: 0, durationMs: 0, tickAccMs: 0, sourceTower: null };
-        const maxBossBurnPerSec = 120;
+        if (!st.crownBurn) st.crownBurn = { dps: 0, maxBossDps: 120, durationMs: 0, tickAccMs: 0, sourceTower: null, sourceTowerId: null, sourceEffDps: 0 };
+        const effDps = getSourceEffectiveDps(sourceTower, st.crownBurn.sourceEffDps);
+        const maxBossBurnPerSec = Math.max(120, Math.round(effDps * 0.45));
         const rawDps = Math.round((monster.maxHp || 100) * pctPerSec);
         const cappedDps = monster.isBoss ? Math.min(maxBossBurnPerSec, rawDps) : rawDps;
+        st.crownBurn.maxBossDps = Math.max(st.crownBurn.maxBossDps || 120, maxBossBurnPerSec);
         st.crownBurn.dps = Math.max(st.crownBurn.dps || 0, cappedDps);
         st.crownBurn.durationMs = Math.max(st.crownBurn.durationMs || 0, durationMs);
-        if (sourceTower) st.crownBurn.sourceTower = sourceTower;
+        if (sourceTower) {
+            st.crownBurn.sourceTower = sourceTower;
+            st.crownBurn.sourceTowerId = sourceTower.uid || st.crownBurn.sourceTowerId || null;
+            st.crownBurn.sourceEffDps = effDps;
+        }
     }
 
     /**
-     * 施加短暫暈眩（Boss 縮短至 0.15s 且結束後觸發 2.5s 暈眩免疫，防止無限連控）
+     * 施加短暫暈眩（Boss 縮短至 0.15s 且結束後觸發 2.5s 暈眩免疫；一般/菁英怪觸發後賦予 2.5s 抗拉扯韌性期）
      */
     function applyStunToMonster(monster, durationMs = 350, options = {}) {
         if (!monster || monster.hp <= 0 || monster.isTargetable === false) return false;
         if ((monster.stunImmuneMs || 0) > 0) return false;
-        const effDuration = monster.isBoss ? Math.min(options.bossDurationMs ?? 150, durationMs) : durationMs;
+        let effDuration = monster.isBoss ? Math.min(options.bossDurationMs ?? 150, durationMs) : durationMs;
+        if (!monster.isBoss && effDuration > 0 && hasActiveCcResilience(monster)) {
+            effDuration = Math.max(1, Math.round(effDuration * 0.5));
+        }
         if (effDuration <= 0) return false;
         if (monster.isBoss && (monster.stunTimer || 0) > 0) return false;
         monster.stunTimer = Math.max(monster.stunTimer || 0, effDuration);
         monster._stunPendingImmuneMs = monster.isBoss
             ? (options.bossImmuneMs ?? 2500)
             : (options.immuneMs ?? 0);
+        if (!monster.isBoss) {
+            monster.ccResilienceMs = Math.max(monster.ccResilienceMs || 0, 2500);
+        }
         return true;
     }
 
@@ -910,16 +1041,24 @@
         const b = st.burn;
         const maxStacks = Number(burnParams.burnMaxStacks) || b.maxStacks || 5;
         const addStacks = Math.max(1, Number(burnParams.addStacks) || 1);
+        const wasActive = b.durationMs > 0;
+        const effDps = getSourceEffectiveDps(sourceTower, burnParams.sourceEffDps);
+        const origCap = Number(burnParams.burnBossCapPerStack) || 35;
+        const scaledCap = Math.max(origCap, Math.round(effDps * 0.30));
 
         b.maxStacks = maxStacks;
-        b.stacks = Math.min(maxStacks, (b.durationMs > 0 ? b.stacks : 0) + addStacks);
+        b.stacks = Math.min(maxStacks, (wasActive ? b.stacks : 0) + addStacks);
         b.flatDps = Number(burnParams.burnFlatDps ?? burnParams.burnDps) || 8;
         b.pctMaxHp = Number(burnParams.burnPctMaxHp) || 0.0035;
-        b.bossCapPerStack = Number(burnParams.burnBossCapPerStack) || 35;
+        b.bossCapPerStack = wasActive ? Math.max(b.bossCapPerStack || 35, scaledCap) : scaledCap;
         b.durationMs = Math.max(b.durationMs || 0, Number(burnParams.burnDurationMs) || 5000);
         b.spreadIntervalMs = Number(burnParams.burnSpreadIntervalMs) || 2000;
         b.spreadRadiusCells = Number(burnParams.burnSpreadRadiusCells) || 1.2;
-        if (sourceTower) b.sourceTower = sourceTower;
+        if (sourceTower) {
+            b.sourceTower = sourceTower;
+            b.sourceTowerId = sourceTower.uid || b.sourceTowerId || null;
+            b.sourceEffDps = effDps;
+        }
     }
 
     function getMonsterBurnDps(monster) {
@@ -950,7 +1089,10 @@
         if (!monster || monster.hp <= 0 || !Number.isFinite(rawHeal) || rawHeal <= 0) return 0;
         const st = ensureMonsterStatus(monster);
         const gw = st.grievousWound;
-        const mult = (gw && gw.durationMs > 0) ? (1 - (gw.rate || 0.50)) : 1.0;
+        const fireAntiHeal = (gw && gw.durationMs > 0) ? (gw.rate || 0.50) : 0;
+        const freezeAntiHeal = isMonsterFrozen(monster) ? 0.25 : 0;
+        const effectiveAntiHeal = Math.max(fireAntiHeal, freezeAntiHeal);
+        const mult = Math.max(0, 1 - effectiveAntiHeal);
         const heal = Math.max(0, Math.round(rawHeal * mult));
         const before = monster.hp;
         monster.hp = Math.min(monster.maxHp, monster.hp + heal);
@@ -962,13 +1104,19 @@
         const st = ensureMonsterStatus(monster);
         const sh = st.shock;
         const curWave = Math.max(1, Number(G && G.state && G.state.currentWave) || 1);
-        const base = Number.isFinite(shockParams.shockBonusBase) ? Number(shockParams.shockBonusBase) : 10;
-        const perWave = Number.isFinite(shockParams.shockBonusPerWave) ? Number(shockParams.shockBonusPerWave) : 2.5;
-        const dynamicBonus = Number((base + perWave * curWave).toFixed(1));
+        const waveFloor = Math.round(16 + 3.2 * curWave);
+        const effDps = getSourceEffectiveDps(sourceTower, shockParams.sourceEffDps);
+        const scaledShock = Math.round(effDps * 0.25);
+        const wasActive = sh.durationMs > 0;
+        const newBonus = Math.max(waveFloor, scaledShock, Number(shockParams.shockBonusDamage) || 0);
         sh.durationMs = Math.max(sh.durationMs || 0, Number(shockParams.shockDurationMs) || 3500);
-        sh.bonusDamage = Math.max(dynamicBonus, Number(shockParams.shockBonusDamage) || 0);
+        sh.bonusDamage = wasActive ? Math.max(sh.bonusDamage || 0, newBonus) : newBonus;
         sh.icdMaxMs = Number(shockParams.shockIcdMs) || 350;
-        if (sourceTower) sh.sourceTower = sourceTower;
+        if (sourceTower) {
+            sh.sourceTower = sourceTower;
+            sh.sourceTowerId = sourceTower.uid || sh.sourceTowerId || null;
+            sh.sourceEffDps = effDps;
+        }
     }
 
     function isMonsterInFrostMist(monster) {
@@ -978,7 +1126,7 @@
     }
 
     /**
-     * 任何防禦塔命中感電怪時，觸發 +12 雷電附加傷（單怪 0.35s 內置冷卻）
+     * 任何防禦塔命中感電怪時，觸發感電附加傷（單怪 0.35s 內置冷卻；跳字計入 650ms DoT 彙總桶）
      */
     function tryTriggerShockBonusDamage(monster, attackerTower = null) {
         if (!monster || monster.hp <= 0 || monster.isTargetable === false) return 0;
@@ -986,21 +1134,20 @@
         const sh = st.shock;
         if (!sh || sh.durationMs <= 0 || sh.icdMs > 0) return 0;
 
-        const bonusDmg = Math.max(1, Math.round(sh.bonusDamage || 12));
+        const bonusDmg = Math.max(1, Math.round(sh.bonusDamage || 16));
         sh.icdMs = sh.icdMaxMs || 350;
 
         const hpBefore = monster.hp;
         monster.hp = Math.max(0, hpBefore - bonusDmg);
-        const creditTower = sh.sourceTower || attackerTower;
+        const dealt = Math.min(hpBefore, bonusDmg);
+        const creditTower = resolveSourceTower(sh.sourceTower, sh.sourceTowerId) || attackerTower;
         const AttackSys = GameApp.systems && GameApp.systems.towerAttack;
         if (AttackSys && creditTower) {
-            AttackSys.recordTowerDamage(creditTower, Math.min(hpBefore, bonusDmg), 'dot');
+            AttackSys.recordTowerDamage(creditTower, dealt, 'dot');
         }
-        if (GameApp.renderer && typeof GameApp.renderer.spawnDamageNumber === 'function') {
-            GameApp.renderer.spawnDamageNumber(bonusDmg, false, monster.pixelX, monster.pixelY, '⚡');
-        }
+        queueMonsterDotDamageText(monster, dealt, '⚡');
         if (monster.hp <= 0) {
-            handleMonsterKilled(monster, creditTower, bonusDmg);
+            handleMonsterKilled(monster, creditTower, bonusDmg, { isDotKill: true });
         }
         return bonusDmg;
     }
@@ -1103,8 +1250,11 @@
         const dps = Number(spec.dps) || 28;
         const durationMs = Number(spec.durationMs) || 3000;
 
-        if ((hazardType === 'storm_cloud' || hazardType === 'starforge_aftershock') && spec.sourceTower && spec.sourceTower.uid) {
-            const existing = list.find(h => h && h.type === hazardType && h.ownerUid === spec.sourceTower.uid);
+        const sourceTowerId = spec.sourceTowerId || (spec.sourceTower && spec.sourceTower.uid) || null;
+        const sourceEffDps = Math.max(0, Number(spec.sourceEffDps) || 0);
+
+        if ((hazardType === 'storm_cloud' || hazardType === 'starforge_aftershock') && sourceTowerId) {
+            const existing = list.find(h => h && h.type === hazardType && h.ownerUid === sourceTowerId);
             if (existing) {
                 existing.x = x;
                 existing.y = y;
@@ -1116,6 +1266,9 @@
                 existing.slowRate = Number(spec.slowRate) || (hazardType === 'storm_cloud' ? 0.35 : 0.28);
                 existing.slowDurationMs = Number(spec.slowDurationMs) || (hazardType === 'storm_cloud' ? 2000 : 1200);
                 existing.shredRate = Number(spec.shredRate) || existing.shredRate || 0;
+                if (spec.sourceTower) existing.sourceTower = spec.sourceTower;
+                existing.sourceTowerId = sourceTowerId;
+                existing.sourceEffDps = Math.max(existing.sourceEffDps || 0, sourceEffDps);
                 if (hazardType === 'storm_cloud') {
                     existing.martyrPct = Number(spec.martyrPct) || 0.15;
                     existing.martyrRadiusPx = Number(spec.martyrRadiusPx) || (1.5 * stepPx);
@@ -1135,6 +1288,8 @@
                 nearby.dps = Math.max(nearby.dps || 0, dps);
                 nearby.radiusPx = Math.max(nearby.radiusPx || 0, radiusPx);
                 if (spec.sourceTower) nearby.sourceTower = spec.sourceTower;
+                if (sourceTowerId) nearby.sourceTowerId = sourceTowerId;
+                nearby.sourceEffDps = Math.max(nearby.sourceEffDps || 0, sourceEffDps);
                 return nearby;
             }
         }
@@ -1160,7 +1315,9 @@
 
         const hazard = {
             type: hazardType,
-            ownerUid: (spec.sourceTower && spec.sourceTower.uid) || spec.ownerUid || null,
+            ownerUid: sourceTowerId || spec.ownerUid || null,
+            sourceTowerId,
+            sourceEffDps,
             x,
             y,
             radiusPx,
@@ -1216,6 +1373,7 @@
         if (!monster || monster._killHandled) return;
         monster._killHandled = true;
         monster._dead = true;
+        flushMonsterDotDamageText(monster);
         monster.hp = 0;
         monster.isTargetable = false;
 
@@ -1261,8 +1419,8 @@
 
         // 💰 W6+ 菁英「賞金首」詞條：額外掉落賞金（併入單波非戰鬥淨收益軟上限約束）
         let bountyAffixGold = 0;
-        if (monster.eliteAffix === 'bounty' && !monster.isBoss && EconSys && typeof EconSys.recordNonCombatNetGain === 'function') {
-            const affixSpec = monster.eliteAffixSpec || ((getMonstersData().ELITE_AFFIXES || {}).bounty) || {};
+        if (hasMonsterAffix(monster, 'bounty') && !monster.isBoss && EconSys && typeof EconSys.recordNonCombatNetGain === 'function') {
+            const affixSpec = ((getMonstersData().ELITE_AFFIXES || {}).bounty) || monster.eliteAffixSpec || {};
             const rawBounty = Math.max(1, Math.round((killGold || 10) * (affixSpec.goldRate ?? 0.85)) + (affixSpec.goldFlat ?? 12));
             const bRes = EconSys.recordNonCombatNetGain(rawBounty, st.currentWave);
             bountyAffixGold = bRes.granted || 0;
@@ -1525,14 +1683,14 @@
                     }
                     const before = m.hp;
                     m.hp = Math.max(0, before - dealtDmg);
-                    if (AttackSys && hz.sourceTower) {
-                        AttackSys.recordTowerDamage(hz.sourceTower, Math.min(before, dealtDmg), 'dot');
+                    const dealt = Math.min(before, dealtDmg);
+                    const creditTower = resolveSourceTower(hz.sourceTower, hz.sourceTowerId);
+                    if (AttackSys && creditTower) {
+                        AttackSys.recordTowerDamage(creditTower, dealt, 'dot');
                     }
-                    if (GameApp.renderer) {
-                        GameApp.renderer.spawnDamageNumber(dealtDmg, false, m.pixelX, m.pixelY, dmgIcon, isCloud || isAftershock);
-                    }
+                    queueMonsterDotDamageText(m, dealt, dmgIcon, { isAffinity: isCloud || isAftershock });
                     if (m.hp <= 0) {
-                        handleMonsterKilled(m, hz.sourceTower, dealtDmg, { isDotKill: true });
+                        handleMonsterKilled(m, creditTower, dealtDmg, { isDotKill: true });
                     }
                 }
             }
@@ -1580,6 +1738,9 @@
         }
         if ((m._pullIcdMs || 0) > 0) {
             m._pullIcdMs = Math.max(0, m._pullIcdMs - dtMs);
+        }
+        if ((m.ccResilienceMs || 0) > 0) {
+            m.ccResilienceMs = Math.max(0, m.ccResilienceMs - dtMs);
         }
         if ((m.stageFireSuppressMs || 0) > 0) {
             m.stageFireSuppressMs = Math.max(0, m.stageFireSuppressMs - dtMs);
@@ -1661,14 +1822,14 @@
                 const tickDmg = Math.max(1, Math.round(totalDps * 0.25));
                 const hpBefore = m.hp;
                 m.hp = Math.max(0, hpBefore - tickDmg);
-                if (AttackSys && b.sourceTower) {
-                    AttackSys.recordTowerDamage(b.sourceTower, Math.min(hpBefore, tickDmg), 'dot');
+                const dealt = Math.min(hpBefore, tickDmg);
+                const creditTower = resolveSourceTower(b.sourceTower, b.sourceTowerId);
+                if (AttackSys && creditTower) {
+                    AttackSys.recordTowerDamage(creditTower, dealt, 'dot');
                 }
-                if (GameApp.renderer) {
-                    GameApp.renderer.spawnDamageNumber(tickDmg, false, m.pixelX, m.pixelY, '🔥');
-                }
+                queueMonsterDotDamageText(m, dealt, '🔥');
                 if (m.hp <= 0) {
-                    handleMonsterKilled(m, b.sourceTower, tickDmg, { isDotKill: true });
+                    handleMonsterKilled(m, creditTower, tickDmg, { isDotKill: true });
                     return true; // 已死亡移除
                 }
             }
@@ -1687,25 +1848,35 @@
             cb.tickAccMs += dtMs;
             while (cb.tickAccMs >= 250 && m.hp > 0) {
                 cb.tickAccMs -= 250;
-                const maxBossBurnPerSec = 120;
+                const maxBossBurnPerSec = Math.max(120, Number(cb.maxBossDps) || 120);
                 const effectiveDps = m.isBoss ? Math.min(maxBossBurnPerSec, cb.dps) : cb.dps;
                 const tickDmg = Math.max(1, Math.round(effectiveDps * 0.25));
                 const hpBefore = m.hp;
                 m.hp = Math.max(0, hpBefore - tickDmg);
-                if (AttackSys && cb.sourceTower) {
-                    AttackSys.recordTowerDamage(cb.sourceTower, Math.min(hpBefore, tickDmg), 'dot');
+                const dealt = Math.min(hpBefore, tickDmg);
+                const creditTower = resolveSourceTower(cb.sourceTower, cb.sourceTowerId);
+                if (AttackSys && creditTower) {
+                    AttackSys.recordTowerDamage(creditTower, dealt, 'dot');
                 }
-                if (GameApp.renderer) {
-                    GameApp.renderer.spawnDamageNumber(tickDmg, true, m.pixelX, m.pixelY, '👑');
-                }
+                queueMonsterDotDamageText(m, dealt, '👑', { isHighTone: true });
                 if (m.hp <= 0) {
-                    handleMonsterKilled(m, cb.sourceTower, tickDmg, { isDotKill: true });
+                    handleMonsterKilled(m, creditTower, tickDmg, { isDotKill: true });
                     return true;
                 }
             }
             if (cb.durationMs === 0) {
                 cb.dps = 0;
                 cb.tickAccMs = 0;
+            }
+        }
+
+        // 8.5 DoT / 地面池傷害跳字彙總桶：每 650ms 彙總跳出一次合計數字（防洗屏與掉幀）
+        m.dotTextTimerMs = (Number(m.dotTextTimerMs) || 0) + dtMs;
+        if (m.dotTextTimerMs >= 650) {
+            if ((Number(m.dotTextAcc) || 0) >= 1) {
+                flushMonsterDotDamageText(m);
+            } else {
+                m.dotTextTimerMs = 0;
             }
         }
 
@@ -1770,8 +1941,8 @@
         }
 
         // 10.5 W6+ 菁英「護盾再生」詞條（每 2.5s 回復 4% 最大護盾；受灼燒重傷減半）
-        if (m.eliteAffix === 'shield_regen' && m.hp > 0 && (m.maxShield || 0) > 0) {
-            const afSpec = m.eliteAffixSpec || ((getMonstersData().ELITE_AFFIXES || {}).shield_regen) || {};
+        if (hasMonsterAffix(m, 'shield_regen') && m.hp > 0 && (m.maxShield || 0) > 0) {
+            const afSpec = ((getMonstersData().ELITE_AFFIXES || {}).shield_regen) || m.eliteAffixSpec || {};
             m.shieldRegenTimerMs = Math.max(0, (m.shieldRegenTimerMs || 0) - dtMs);
             if (m.shieldRegenTimerMs <= 0) {
                 m.shieldRegenTimerMs = afSpec.regenIntervalMs || 2500;
@@ -2012,6 +2183,9 @@
         createInitialStatusState,
         ensureMonsterStatus,
         makeMonsterRecord,
+        hasMonsterAffix,
+        hasActiveCcResilience,
+        flushMonsterDotDamageText,
         spawnMonsterFromEntry,
         spawnSplitMiniSlimes,
         getMonsterProgress,

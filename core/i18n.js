@@ -1225,57 +1225,82 @@
                 ? 'Grows from Core: 3 Base + 3 Hybrid ➔ 6 Trunks ➔ 12 Crowns + 3 Tri Legends ➔ Unique Primal Core 5★ ([T] pauses & inspects).'
                 : '由世界樹原核向上生長：3 基礎 ＋ 3 雙元 ➔ 6 主幹 ➔ 12 冠枝 ＋ 3 三元傳奇 ➔ 唯一 5★ 原初之核（按 [T] 隨時暫停檢視）。';
 
-            // 戰術手冊彈窗 (#guide-overlay)
-            const guideSub = document.querySelector('#guide-overlay .modal-subtitle');
-            if (guideSub) guideSub.innerText = isEn ? 'Master elemental counters and tactical terrains to defend the World Tree.' : '掌握屬性相剋與特殊地形加成，穩固世界樹防線。';
-            const guideTitles = Array.from(document.querySelectorAll('#guide-overlay .guide-section-title'))
-                .filter(el => el && el.id !== 'guide-stage4-title');
-            if (guideTitles[0]) guideTitles[0].innerText = isEn ? 'Elemental Counters' : '元素相剋速查';
-            if (guideTitles[1]) guideTitles[1].innerText = isEn ? 'Terrain Bonuses (Hover tile on board)' : '戰術地形加成（懸停棋盤特殊格可檢視）';
-            if (guideTitles[2]) guideTitles[2].innerText = isEn ? 'Adjacent Leylines & Dynamic Weather (Max 2 Links / +18%)' : '鄰格靈脈陣法與動態天象（上限 2 連線 / +18%）';
-            if (guideTitles[3]) guideTitles[3].innerText = isEn ? 'Evolution Pyramid (1★ → 5★ 16U)' : '轉職與升星金字塔（1★ → 5★ 16U）';
-            if (guideTitles[4]) guideTitles[4].innerText = isEn ? 'Summary & Hotkeys' : '防線紀要與快捷鍵';
-            const guideRows = document.querySelectorAll('#guide-overlay .panel-row');
-            const zhGuideRows = [
-                ['🔥 火塔 ▸ 蔓藤巨魔 / 史萊姆', '175% 暴擊 · 破甲 30%'],
-                ['❄️ 冰塔 ▸ 熔岩傀儡 / 疾風獵犬', '175% 暴擊 · 緩速 45%'],
-                ['⚡ 雷塔 ▸ 機械飛艇 / 重裝魔像', '175% 暴擊 · 連鎖彈跳'],
-                ['✨ 跨元素融合塔 ▸ 任一親和弱點', '135% 親和增傷'],
-                ['制高點', '射程 +30%'],
-                ['元素靈脈', '攻速 +25%'],
-                ['世界樹庇護所', '依血量最高 +20% 傷害'],
-                ['🔥+❄️ 對流 / ❄️+⚡ 超導 / 🔥+⚡ 過載', '10% 破減 · +10% 速 · +10% 暴'],
-                ['🔺 火冰雷三元陣法（最多 2 連線/+18%）', '+15% 傷（基礎增傷區）＋ 1💧/1.5s'],
-                ['☀️ 熾陽 / ❄️ 霜雪 / ⛈️ 雷暴 / 🌑 蝕月', '每 3 波變天 · 聯動股價與掉落']
-            ];
-            const enGuideRows = [
-                ['🔥 Fire ▸ Vine / Slime', '175% Crit · 30% Shred'],
-                ['❄️ Ice ▸ Lava / Hound', '175% Crit · 45% Slow'],
-                ['⚡ Thunder ▸ Airship / Golem', '175% Crit · Chain Arc'],
-                ['✨ Hybrid ▸ Affinity Weak', '135% Affinity DMG'],
-                ['Highground', 'Range +30%'],
-                ['Mana Vein', 'ATK Spd +25%'],
-                ['Tree Sanctuary', 'Up to +20% DMG by HP'],
-                ['🔥+❄️ Convect / ❄️+⚡ Super / 🔥+⚡ Over', '10% Shred/Slow · +10% Spd · +10% Crit'],
-                ['🔺 Tri-Formation (Max 2 Links / +18%)', '+15% DMG (Base Power Bonus) + 1💧/1.5s'],
-                ['☀️ Sun / ❄️ Snow / ⛈️ Storm / 🌑 Eclipse', '3-Wave Cycle · Stock & Drop Synergy']
-            ];
-            (isEn ? enGuideRows : zhGuideRows).forEach((pair, idx) => {
-                const row = guideRows[idx];
-                if (!row) return;
-                const kEl = row.querySelector('.panel-key');
-                const vEl = row.querySelector('.panel-val');
-                if (kEl) kEl.innerText = pair[0];
-                if (vEl) vEl.innerText = pair[1];
-            });
-            const guideEvoNote = document.getElementById('guide-evo-note');
-            if (guideEvoNote) guideEvoNote.innerHTML = isEn
-                ? 'Cross 1★+1★ ▸ Hybrid 1★ (2U) | Same 1★+1★ ▸ Trunk 2★ | Same 2★+2★ ▸ Crown A/B 3★ (4U)<br>Same-Lineage 3★+3★ (or 8U) ▸ Twin 4★ | Hybrid 2★/3★ + Missing Pure 2★/3★ ▸ Tri Legend 3★/4★ | Tri 16U ▸ Unique 5★ Primal Core'
-                : '異系 1★+1★ ▸ 雙元 1★ (2U) ｜ 同種 1★+1★ ▸ 靈木主幹 2★ ｜ 同種 2★+2★ ▸ 冠枝 A/B 3★ (4U)<br>同脈 3★+3★（或 8U）▸ 雙生 4★ ｜ 雙元 2★/3★ ＋ 缺口純系 ▸ 三元傳奇 3★/4★ ｜ 三元 16U ▸ 全圖唯一 5★ 原初之核';
-            const guideNote = document.getElementById('guide-hotkey-note') || document.querySelector('#guide-overlay .codex-note');
-            if (guideNote) guideNote.innerHTML = isEn
-                ? 'Choose a World Tree Blessing every 3 waves; Bosses arrive every 5 waves &amp; on the final wave.<br>Hotkeys: <b>[1/2/3]</b> Summon | <b>[Q/W/E]</b> Skills | <b>[B]</b> Guild | <b>[T]</b> World Tree | <b>[Space]</b> Tactical Pause / Start Wave | <b>[Tab/S]</b> Speed | <b>[Esc]</b> Cancel / Menu'
-                : '每通過 3 波可獲世界樹枝枒祝福；每 5 波與最終波迎戰領主魔王。<br>熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W/E]</b> 技能 ｜ <b>[B]</b> 商會 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 戰術暫停／開波 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消／選單';
+            // 戰術指南 3 頁籤雙語 (#guide-overlay)
+            setElText('guide-title', isEn ? 'Tactical Field Guide' : '戰術指南');
+            setElText('guide-subtitle', isEn ? 'Master elemental counters, merge ladders, and Guild economy to protect the World Tree.' : '掌握元素相剋、合成階梯與商會機制，穩固世界樹防線。');
+            setElText('guide-tab-btn-elements', isEn ? 'Elements & Terrain' : '元素相剋與地形');
+            setElText('guide-tab-btn-merge', isEn ? 'Merge & Controls' : '合成階梯與操作');
+            setElText('guide-tab-btn-endless', isEn ? 'Dew, Guild & Endless' : '靈露、商會與無盡');
+            setElText('guide-t1-elem-title', isEn ? 'Elemental Counters & Crit Scaling' : '元素相剋與暴擊倍率');
+            setElText('guide-el-fire-k', isEn ? '🔥 Fire ▸ Vine / Slime / Healer' : '🔥 火系 ▸ 蔓藤巨魔 / 史萊姆 / 花妖');
+            setElText('guide-el-fire-v', isEn ? '1.75× Weakness (1.25× Semi-Crit) · Armor Shred & Anti-Heal' : '1.75× 弱點 (暴擊 1.25×) · 破甲抑療');
+            setElText('guide-el-ice-k', isEn ? '❄️ Ice ▸ Lava / Hound / Panther' : '❄️ 冰系 ▸ 熔岩傀儡 / 獵犬 / 影豹');
+            setElText('guide-el-ice-v', isEn ? '1.75× Weakness (1.25× Semi-Crit) · Slow & Freeze (-25% Heal)' : '1.75× 弱點 (暴擊 1.25×) · 緩速冰封 (-25% 治療)');
+            setElText('guide-el-thunder-k', isEn ? '⚡ Thunder ▸ Airship / Golem / Guardian' : '⚡ 雷系 ▸ 機械飛艇 / 魔像 / 聖盾');
+            setElText('guide-el-thunder-v', isEn ? '1.75× Weakness (1.25× Semi-Crit) · Chain Arc & Shield Break' : '1.75× 弱點 (暴擊 1.25×) · 連鎖破盾');
+            setElText('guide-el-multi-k', isEn ? '✨ Dual Hybrid / 🔺 Tri-Element & Primal Core' : '✨ 雙元融合 / 🔺 三元與原初之核');
+            setElText('guide-el-multi-v', isEn ? 'Dual 1.35× Affinity · Tri/Primal 1.26× Full Affinity' : '雙元 1.35× 親和 · 三元全親和 1.26×');
+            setElText('guide-t1-terrain-title', isEn ? 'Tactical Terrain & Boulder Mining' : '戰術地形與岩石開採');
+            setElText('guide-tr-hg-k', isEn ? '⛰️ Highground' : '⛰️ 制高點');
+            setElText('guide-tr-hg-v', isEn ? 'Range +30%' : '射程 +30%');
+            setElText('guide-tr-mana-k', isEn ? '✨ Mana Vein' : '✨ 元素靈脈');
+            setElText('guide-tr-mana-v', isEn ? 'Attack Speed +25%' : '攻速 +25%');
+            setElText('guide-tr-tree-k', isEn ? '🌿 Tree Sanctuary' : '🌿 世界樹庇護所');
+            setElText('guide-tr-tree-v', isEn ? 'Up to +20% DMG by Tree HP' : '依世界樹血量最高 +20% 傷害');
+            setElText('guide-tr-stone-k', isEn ? '⚡ Floatstones / 🪨 Boulders & Treasure Rocks' : '⚡ 充能浮石 / 🪨 巨岩與藏寶石');
+            setElText('guide-tr-stone-v', isEn ? '+40% DMG Cycle · Click Rock & Mine 45 💰' : '輪充 +40% 傷 · 先選點開採 45 💰');
+            setElText('guide-t1-weather-title', isEn ? 'Four Dynamic Weathers (Rotates Every 3 Waves)' : '四大動態天象（每 3 波輪替 / 每 5 波蝕月）');
+            setElText('guide-wt-sun-k', isEn ? '☀️ Sunlit Blaze' : '☀️ 熾陽天象');
+            setElText('guide-wt-sun-v', isEn ? 'Fire Range +0.4 / Burn +25% · 🔥 Stock +Bias' : '火射程 +0.4 / 灼燒 +25% · 🔥股看漲');
+            setElText('guide-wt-snow-k', isEn ? '❄️ Frost Drift' : '❄️ 霜雪天象');
+            setElText('guide-wt-snow-v', isEn ? 'Enemy Spd -10% / Ice Crit +15% · ❄️ Stock +Bias' : '敵速 -10% / 冰暴 +15% · ❄️股看漲');
+            setElText('guide-wt-storm-k', isEn ? '⛈️ Tempest Surge' : '⛈️ 雷暴天象');
+            setElText('guide-wt-storm-v', isEn ? '6s Sky Bolt on Top-HP Foe · ⚡ Vol ×2' : '每 6s 天雷劈最高血 · ⚡股高波動');
+            setElText('guide-wt-eclipse-k', isEn ? '🌑 Eclipse Tide' : '🌑 蝕月黑潮');
+            setElText('guide-wt-eclipse-v', isEn ? 'Kill Gold & Dew +30% · Box 3★ Odds ×2' : '賞金與靈露 +30% · 盲盒 3★ 翻倍');
+
+            setElText('guide-t2-ladder-title', isEn ? '1★ → 5★ Merge Ladder & Tri Recipes' : '1★ → 5★ 合成階梯與創世配方');
+            setElText('guide-mg-1to2-k', isEn ? '1★ + 1★ (Same Star-Up / Cross Transfer)' : '1★ + 1★（同系升星 / 異色轉職）');
+            setElText('guide-mg-1to2-v', isEn ? 'Same-element merges into 2★ Trunk; cross-element creates 1★ Dual Hybrid (feed another 1★ to reach 2★).' : '同色進化 2★ 主幹；異色融合 1★ 雙元（後續 1★ 可直接灌注升 2★）。');
+            setElText('guide-mg-2to4-k', isEn ? '2★ + 2★ (A/B Crown Choice) & 3★/4★ Feeding' : '2★ + 2★（A/B 冠枝）與 3★/4★ 餵養');
+            setElText('guide-mg-2to4-v', isEn ? 'Merge same 2★ to pick Branch A or B 3★; 3★ & 4★ towers can absorb lower-star towers for Star Units.' : '同種 2★ 合成可選 A/B 分支 3★；3★ 與 4★ 可直接吞噬低星充能累積星級單位。');
+            const triGuideV = document.getElementById('guide-mg-tri-v');
+            if (triGuideV) {
+                triGuideV.innerHTML = isEn
+                    ? '💨Steam 2★ + ⚡Thunder 2★ ▸ ⛈️Storm<br>🔥Fire 2★ + 💠Magnet 2★ ▸ 🌋Starforge<br>❄️Ice 2★ + ☄️Plasma 2★ ▸ ❄️Prism'
+                    : '💨蒸氣 2★ + ⚡雷 2★ ▸ ⛈️風暴<br>🔥火 2★ + 💠磁環 2★ ▸ 🌋熔爐<br>❄️冰 2★ + ☄️電漿 2★ ▸ ❄️稜鏡';
+            }
+            setElText('guide-mg-tri-k', isEn ? '3 Tri-Element 3★ Genesis Recipes' : '3 組三元素 3★ 創世融合配方');
+            setElText('guide-mg-5star-k', isEn ? '5★ Scions & Unique Primal Core' : '5★ 神裔與全圖唯一「原初之核」');
+            setElText('guide-mg-5star-v', isEn ? 'Ascend Tri-Element to 16U for unique Primal Core (limit 1); Scions share a board cap of 2 (3 with Meta Ring).' : '三元 16U 升華為全圖限 1 座 5★ 原初之核；其餘 5★ 神裔全場上限 2 座（年輪可擴至 3 座）。');
+            setElText('guide-t2-ctrl-title', isEn ? 'Tactical Controls & Safety Guards' : '戰術操作與防呆規則');
+            setElText('guide-ct-pause-k', isEn ? '[Space] Tactical Pause / [Esc] Menu' : '[Space] 戰術暫停 / [Esc] 選單');
+            setElText('guide-ct-pause-v', isEn ? 'Build, merge, swap & use Guild freely while paused' : '暫停中可建塔、合成、換位與開商會');
+            setElText('guide-ct-swap-k', isEn ? 'Drag Non-Merge Towers to Swap' : '非合成雙塔拖曳互換（Swap）');
+            setElText('guide-ct-swap-v', isEn ? 'Exchange positions directly; free during Prep/Break' : '非合成配方直接對調座標，休整期免費');
+            setElText('guide-ct-sell-k', isEn ? '3★+ Two-Step Sell Confirmation' : '3★ 以上兩段式賣塔防呆');
+            setElText('guide-ct-sell-v', isEn ? 'Click Sell twice within 2.5s · 70%/80% Gold refund' : '2.5 秒內雙擊出售確認；保留 70%/80% 退費');
+            setElText('guide-ct-keys-k', isEn ? 'Hotkeys: [1/2/3] Summon · [B] Guild · [T] Codex · [Tab/S] Speed' : '快捷鍵：[1/2/3] 召喚 · [B] 商會 · [T] 圖譜 · [Tab/S] 倍速');
+            setElText('guide-ct-keys-v', isEn ? 'Wave 1 waits for your 1st tower before starting timer' : '首波放下第 1 座塔前不倒數，亦可手動開波');
+
+            setElText('guide-t3-dew-title', isEn ? 'World Tree Dew Skills & Blessings' : '世界樹靈露技能與祝福');
+            setElText('guide-dw-q-k', isEn ? '[Q] Root Entangle (40 💧)' : '[Q] 根鬚纏繞（40 💧）');
+            setElText('guide-dw-q-v', isEn ? 'Roots all enemies 2.5s + +20% DMG taken' : '定身全場敵軍 2.5s ＋ 易傷 +20%');
+            setElText('guide-dw-w-k', isEn ? '[W] Nature Frenzy (60 💧)' : '[W] 自然狂熱（60 💧）');
+            setElText('guide-dw-w-v', isEn ? '+35% Attack Speed to all towers for 5s' : '全場防禦塔攻速 +35%（持續 5s）');
+            setElText('guide-dw-e-k', isEn ? '[E] Golden Harvest (50 💧)' : '[E] 黃金豐收（50 💧）');
+            setElText('guide-dw-e-v', isEn ? 'Instant Wave Gold + reset all tower cooldowns' : '即時採收波次金幣並重置全塔冷卻');
+            setElText('guide-dw-b-k', isEn ? 'Blessings Every 3 Waves & Leylines' : '每 3 波世界樹枝枒祝福');
+            setElText('guide-dw-b-v', isEn ? 'Unique 1-of-3 picks + Adjacent Leyline (+18% DMG cap)' : '每局不重複三選一；另有鄰格靈脈陣法（+18% 上限）');
+            setElText('guide-t3-guild-title', isEn ? 'World Tree Guild & Endless W11+' : '世界樹商會與精兵上限');
+            setElText('guide-gd-roots-k', isEn ? '🌱 Treasure Roots (55 / 90 / 125 💰)' : '🌱 聚寶根鬚（55 / 90 / 125 💰）');
+            setElText('guide-gd-roots-v', isEn ? 'Pays fixed Gold + Lv.3 8% interest (cap +35 💰) independently of the non-combat soft cap.' : '波末獨立結算固定產出與 Lv.3 8% 利息（上限 +35 💰），不佔單波非戰鬥軟上限。');
+            setElText('guide-gd-stock-k', isEn ? '📈 Element Stocks & Wave Wagers' : '📈 元素股市與波次對賭');
+            setElText('guide-gd-stock-v', isEn ? 'Shares boost element power & track weather trends; Wagers award extra Gold & Universal Fruits.' : '持股提供對應元素增傷並聯動天象；「零封懸賞 / 魔潮加碼」可贏額外金幣與果實。');
+            setElText('guide-gd-box-k', isEn ? '🎁 Blind Box & Universal Fruit (3 Slots)' : '🎁 命運盲盒與萬能果實（上限 3 顆）');
+            setElText('guide-gd-box-v', isEn ? '4th-pull 2★+ pity (3rd with Meta Ring); Fruits convert to +80 💰 automatically when all 3 slots are full.' : '盲盒第 4 抽保底 2★+（年輪可縮至 3 抽）；果實滿 3 顆再獲得時自動折現 +80 💰。');
+            setElText('guide-gd-endless-k', isEn ? '🗼 Tower Cap (16→22) & Endless W11+' : '🗼 精兵上限（16→22）與無盡 W11+');
+            setElText('guide-gd-endless-v', isEn ? 'Expand board cap 3 times up to 22; Endless W11+ unlocks Global Leyline Boost & 4★ Crown Refine ◆1-◆3.' : 'HUD 可擴充 3 次上限至 22 座；無盡 W11+ 開放「全局靈脈強化」與「4★ 古冠精煉 ◆1–◆3」。');
 
             // 勝敗結算彈窗靜態欄位 (#victory-overlay & #game-over-overlay)
             const goSub = document.querySelector('#game-over-overlay .modal-subtitle');
@@ -1324,13 +1349,6 @@
             setElText('gameover-daily-share-title', isEn ? 'Daily Seed Scorecard' : '每日種子戰績卡');
             setElText('victory-daily-copy-btn', isEn ? 'Copy Scorecard' : '複製日期戰績卡');
             setElText('gameover-daily-copy-btn', isEn ? 'Copy Scorecard' : '複製日期戰績卡');
-            setElText('guide-stage4-title', isEn ? 'Float Isles · Black Market · W6+/W10+ Affixes' : '浮島裂隙 · 黑市開採 · W6+/W10+ 菁英詞條');
-            setElText('guide-s4-k0', isEn ? '⚡ Floatstones / 🌀 Rift A→B (Thunder Isles)' : '⚡ 充能浮石 / 🌀 裂隙 A→B（雷鳴浮島）');
-            setElText('guide-s4-v0', isEn ? '2-Wave +40% DMG · One-Way Warp' : '2 波輪充 +40% 傷 · 單向躍遷');
-            setElText('guide-s4-k1', isEn ? '🪨 Treasure Boulders / 🎁 Free Box (Black Market)' : '🪨 藏寶巨石 / 🎁 免費盲盒（荒蕪黑市）');
-            setElText('guide-s4-v1', isEn ? '45 💰 Mine · 1 Free Box/Wave' : '45 💰 開採寶藏 · 每波 1 免費盒');
-            setElText('guide-s4-k2', isEn ? '🔱 W6+/W10+ Elite Affixes (Link / Aegis / Prism)' : '🔱 W6+/W10+ 菁英詞條（含共振／庇護／稜鏡）');
-            setElText('guide-s4-v2', isEn ? 'AoE Breaks Link · Shred Disables Aegis · Tri Breaks Prism' : '範圍剋共振 · 破甲關庇護 · 複合剋稜鏡');
         }
 
         function getWeaknessLabel(weakness) {
