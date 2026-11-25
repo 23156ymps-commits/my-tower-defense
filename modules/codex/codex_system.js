@@ -21,6 +21,8 @@
     let selectedTreeNodeId = 'fire_bud';
     let trackedRecipeNodeId = null;
     let preserveTreeSelectionOnce = false;
+    let activeTreeFitFn = null;
+    let treeResizeBound = false;
     const CODEX_DISCOVERY_STORAGE_KEY = 'merge_defense_codex_discovered_v1';
     // Phase 5：圖鑑改為單局重置（僅保存於本局記憶體，開新局或重開一律重置為尚未合成）；另於本地記錄首次探索以驅動結算正回饋
     const unlockedSet = new Set();
@@ -207,6 +209,14 @@
         loadLifetimeDiscovered();
         syncDefaultUnlockedEntries();
         initCodexModalDom();
+        if (!treeResizeBound && typeof window !== 'undefined') {
+            treeResizeBound = true;
+            window.addEventListener('resize', () => {
+                if (isCodexOpen() && currentCategory === 'fusion' && typeof activeTreeFitFn === 'function') {
+                    activeTreeFitFn();
+                }
+            });
+        }
     }
 
     function syncDefaultUnlockedEntries() {
@@ -1140,7 +1150,10 @@
             pinching: false, pinchDist: 0, pinchScale: 0.55, pinchMidX: 0, pinchMidY: 0
         };
 
-        const getMinScale = (vpW) => (vpW < 640 ? Math.max(0.20, Math.min(0.45, vpW / TREE_VIEW_W)) : 0.50);
+        const getMinScale = (vpW, vpH = 380) => {
+            const fit = Math.min((Math.max(240, vpW) - 24) / TREE_VIEW_W, (Math.max(180, vpH) - 24) / TREE_VIEW_H);
+            return Math.max(0.18, Math.min(0.45, fit * 0.85));
+        };
 
         const clampView = () => {
             const vpW = viewportEl.clientWidth || 860;
@@ -1167,25 +1180,26 @@
             zoomBadgeEl.innerText = `${Math.round(viewState.scale * 100)}%`;
         };
 
-        const resetView = () => {
-            const vpW = viewportEl.clientWidth || 860;
-            const vpH = viewportEl.clientHeight || 420;
-            const fitScale = Math.min(vpW / TREE_VIEW_W, vpH / TREE_VIEW_H);
-            if (vpW < 640) {
-                // 窄螢幕初始以縱向樹幹完整入鏡且水平置中（原核～5★神裔一覽無遺）
-                const heightFit = (vpH / TREE_VIEW_H) * 0.96;
-                viewState.scale = Math.max(getMinScale(vpW), Math.min(0.40, heightFit));
-            } else {
-                viewState.scale = Math.max(0.50, Math.min(1.45, fitScale));
+        const fitToViewport = () => {
+            const vpW = viewportEl.clientWidth;
+            const vpH = viewportEl.clientHeight;
+            if (!vpW || !vpH) {
+                if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fitToViewport);
+                return;
             }
+            const padX = vpW < 640 ? 16 : 28;
+            const padY = vpW < 640 ? 16 : 24;
+            const fitScale = Math.min((vpW - padX) / TREE_VIEW_W, (vpH - padY) / TREE_VIEW_H);
+            viewState.scale = Math.max(0.18, Math.min(1.25, fitScale));
             viewState.panX = (vpW - TREE_VIEW_W * viewState.scale) * 0.5;
             viewState.panY = (vpH - TREE_VIEW_H * viewState.scale) * 0.5;
             applyViewTransform();
         };
+        activeTreeFitFn = fitToViewport;
 
         resetViewBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            resetView();
+            fitToViewport();
         });
 
         const handlePanMove = (clientX, clientY) => {
@@ -1254,7 +1268,7 @@
                 const rect = viewportEl.getBoundingClientRect();
                 const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY) || 1;
                 const prevScale = viewState.scale;
-                const minScale = getMinScale(viewportEl.clientWidth || 860);
+                const minScale = getMinScale(viewportEl.clientWidth || 860, viewportEl.clientHeight || 380);
                 const nextScale = Math.max(minScale, Math.min(1.45, viewState.pinchScale * (dist / viewState.pinchDist)));
                 const midX = ((t0.clientX + t1.clientX) * 0.5) - rect.left;
                 const midY = ((t0.clientY + t1.clientY) * 0.5) - rect.top;
@@ -1314,9 +1328,9 @@
         treeShellEl.appendChild(detailEl);
 
         if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(resetView);
+            requestAnimationFrame(fitToViewport);
         } else {
-            resetView();
+            fitToViewport();
         }
     }
 
@@ -1537,8 +1551,13 @@
         st.pausedBeforeCodex = wasGuideOpen ? st.pausedBeforeGuide : st.isPaused;
         st.pausedBeforeGuide = false;
         if (activeMatch) st.isPaused = true;
-        renderCodexModal(currentCategory || 'fusion');
         G.dom.codexOverlayEl.classList.remove('hidden');
+        renderCodexModal(currentCategory || 'fusion');
+        if (typeof requestAnimationFrame === 'function' && currentCategory === 'fusion') {
+            requestAnimationFrame(() => {
+                if (typeof activeTreeFitFn === 'function') activeTreeFitFn();
+            });
+        }
         if (st.rafId !== null) { cancelAnimationFrame(st.rafId); st.rafId = null; }
         if (GameApp.backend && typeof GameApp.backend.trackFeel === 'function') {
             GameApp.backend.recordPlayerAction();
@@ -1574,7 +1593,8 @@
         getTrackedRecipeId,
         computeRecipeTrackerStatus,
         updateRecipeTrackerUI,
-        getRunUnlockSummary
+        getRunUnlockSummary,
+        fitToViewport: () => { if (typeof activeTreeFitFn === 'function') activeTreeFitFn(); }
     };
 
     GameApp.systems = GameApp.systems || {};

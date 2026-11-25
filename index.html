@@ -43,6 +43,8 @@
                 <button id="pause-btn" class="hud-ctrl-btn hud-pause-btn" type="button" disabled
                     title="暫停或繼續 [Space]">暫停</button>
                 <button id="sound-btn" class="hud-ctrl-btn hud-sound-btn" type="button" title="切換音效">音效</button>
+                <button id="quick-ref-btn" class="hud-ctrl-btn hud-ref-btn" type="button" aria-expanded="false"
+                    aria-controls="quick-ref-popover" title="元素相剋、地形加成與三元素配方速查">速查</button>
                 <button id="help-btn" class="hud-ctrl-btn hud-help-btn" type="button" aria-expanded="false"
                     aria-label="開啟戰術手冊" title="開啟戰術手冊與屬性地形速查"><svg class="ui-ico ui-ico-help" viewBox="0 0 16 16"
                         aria-hidden="true">
@@ -73,6 +75,33 @@
                             <span class="lang-check" aria-hidden="true">✓</span>
                         </button>
                     </div>
+                </div>
+            </div>
+            <div id="quick-ref-popover" class="quick-ref-popover hidden" role="dialog" aria-label="速查面板">
+                <div class="qref-section">
+                    <h3 id="qref-counters-title" class="qref-title">元素相剋速查</h3>
+                    <ul id="qref-counters-list" class="qref-list">
+                        <li class="qref-row"><span>🔥 火 ▸ 蔓藤 / 史萊姆</span><span class="qref-val num">175%</span></li>
+                        <li class="qref-row"><span>❄️ 冰 ▸ 熔岩 / 獵犬</span><span class="qref-val num">175%</span></li>
+                        <li class="qref-row"><span>⚡ 雷 ▸ 飛艇 / 魔像</span><span class="qref-val num">175%</span></li>
+                        <li class="qref-row"><span>轉職 ▸ 親和 / 三元全親和</span><span class="qref-val num">135% / 126%</span></li>
+                    </ul>
+                </div>
+                <div class="qref-section">
+                    <h3 id="qref-terrain-title" class="qref-title">戰術地形加成</h3>
+                    <ul id="qref-terrain-list" class="qref-list">
+                        <li class="qref-row"><span class="qref-terrain-key"><span class="terrain-swatch swatch-highground" aria-hidden="true"></span><span>制高點</span></span><span class="qref-val num">射程 +30%</span></li>
+                        <li class="qref-row"><span class="qref-terrain-key"><span class="terrain-swatch swatch-mana" aria-hidden="true"></span><span>元素靈脈</span></span><span class="qref-val num">攻速 +25%</span></li>
+                        <li class="qref-row"><span class="qref-terrain-key"><span class="terrain-swatch swatch-tree" aria-hidden="true"></span><span>世界樹庇護</span></span><span class="qref-val num">傷 +20%</span></li>
+                    </ul>
+                </div>
+                <div class="qref-section">
+                    <h3 id="qref-tri-title" class="qref-title">三元 3★ 創世融合</h3>
+                    <ul id="qref-tri-list" class="qref-list">
+                        <li class="qref-row"><span>蒸氣 2★ + ⚡雷 2★</span><span class="qref-val num">天災風暴 3★</span></li>
+                        <li class="qref-row"><span>🔥火 2★ + 磁環 2★</span><span class="qref-val num">星界熔爐 3★</span></li>
+                        <li class="qref-row"><span>❄️冰 2★ + 電漿 2★</span><span class="qref-val num">零度稜鏡 3★</span></li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -196,6 +225,14 @@
                         </li>
                         <li class="side-panel-row"><span>同脈 4★ / 16U</span><span class="side-val num">神裔 5★</span>
                         </li>
+                    </ul>
+                </div>
+                <div class="side-panel-section">
+                    <h2 id="side-tri-title" class="side-panel-title">三元 3★ 創世融合</h2>
+                    <ul id="side-tri-list" class="side-panel-list">
+                        <li class="side-panel-row"><span>蒸氣 2★ + ⚡雷 2★</span><span class="side-val num">風暴 3★</span></li>
+                        <li class="side-panel-row"><span>🔥火 2★ + 磁環 2★</span><span class="side-val num">熔爐 3★</span></li>
+                        <li class="side-panel-row"><span>❄️冰 2★ + 電漿 2★</span><span class="side-val num">稜鏡 3★</span></li>
                     </ul>
                 </div>
             </aside>
@@ -596,7 +633,7 @@
                     </li>
                     <li class="panel-row">
                         <span class="panel-key">🔺 火冰雷三元陣法（最多 2 連線/+18%）</span>
-                        <span class="panel-val num">+15% 傷（B_power）＋ 1💧/1.5s</span>
+                        <span class="panel-val num">+15% 傷（基礎增傷區）＋ 1💧/1.5s</span>
                     </li>
                     <li class="panel-row">
                         <span class="panel-key">☀️ 熾陽 / ❄️ 霜雪 / ⛈️ 雷暴 / 🌑 蝕月</span>
@@ -929,7 +966,7 @@
             </div>
             <h1 id="victory-title" class="victory-title">防守成功 · 世界樹安然無恙</h1>
             <div id="victory-stars" class="victory-stars" aria-label="通關星級">★★★</div>
-            <p id="victory-rank-text" class="modal-subtitle">成功守護世界樹，擊退第 10 波腐朽古樹王。</p>
+            <p id="victory-rank-text" class="modal-subtitle">成功守護世界樹，抵禦最終波攻勢。</p>
             <div id="victory-mode-banner" class="outcome-mode-banner num hidden"></div>
             <div id="victory-unlock-banner" class="outcome-unlock-banner hidden" role="status" aria-live="polite"></div>
 

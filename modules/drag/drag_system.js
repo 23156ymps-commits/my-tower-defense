@@ -455,6 +455,15 @@
         return true;
     }
 
+    function hideBoardTooltipsNow() {
+        if (G && G.dom && G.dom.towerTooltipEl) {
+            G.dom.towerTooltipEl.classList.add('hidden');
+        }
+        if (GameApp.renderer && typeof GameApp.renderer.hideTerrainTooltip === 'function') {
+            GameApp.renderer.hideTerrainTooltip();
+        }
+    }
+
     function activateShopDragVisuals(clientX, clientY) {
         if (!activeDrag || activeDrag.dragSource !== 'shop' || activeDrag.isDragging || !G) return;
         const towersDict = getTowersDict();
@@ -467,6 +476,7 @@
         G.state.buildTargetIndex = null;
         G.state.pendingSpawnType = null;
         G.state.hoveredIndex = null;
+        hideBoardTooltipsNow();
         GameApp.renderer.renderBoard([]);
 
         activeDrag.ghostEl = createGhostElement(activeDrag.towerType, activeDrag.tier);
@@ -490,6 +500,7 @@
             GameApp.backend.recordPlayerAction();
         }
         cancelActiveDrag({ silent: true });
+        hideBoardTooltipsNow();
 
         activeDrag = {
             dragSource: 'board',
@@ -545,6 +556,7 @@
         if (activeDrag.dragSource === 'fruit' && !activeDrag.isDragging) {
             if (activeDrag.movedDistance > 10 || resolveCellIndexAtPoint(clientX, clientY) !== null) {
                 activeDrag.isDragging = true;
+                hideBoardTooltipsNow();
                 activeDrag.ghostEl = createFruitGhostElement();
                 positionGhostElement(activeDrag.ghostEl, clientX, clientY);
                 if (activeDrag.btnEl) activeDrag.btnEl.classList.add('dragging-card');
@@ -564,6 +576,7 @@
             G.state.buildTargetIndex = null;
             G.state.pendingSpawnType = null;
             G.state.hoveredIndex = null;
+            hideBoardTooltipsNow();
             if (activeDrag.towerEl) activeDrag.towerEl.classList.add('dragging');
             activeDrag.ghostEl = createGhostElement(activeDrag.towerType, activeDrag.tier);
             const scanSummary = scanAndHighlightBoardMergeTargets(activeDrag.sourceIndex, activeDrag.towerObj);
@@ -594,6 +607,7 @@
             const wasDragGesture = Boolean(drag.isDragging || dropDistance > 10 || targetIndex !== null);
             const validDrop = wasDragGesture && isFruitDropValidAt(targetIndex);
             cancelActiveDrag({ silent: true });
+        hideBoardTooltipsNow();
             if (!wasDragGesture) return;
             lastShopDragCompleteTs = performance.now();
             G.state.lastTouchDragEndTime = lastShopDragCompleteTs;
@@ -613,6 +627,7 @@
             const towerType = drag.towerType;
             const validDrop = wasDragGesture && isShopDropValidAt(targetIndex);
             cancelActiveDrag({ silent: true });
+        hideBoardTooltipsNow();
 
             if (!wasDragGesture) {
                 // 未達拖曳門檻且放開在卡片本體上：視為點擊事件，交由 click listener 處理雙模式建塔
@@ -664,6 +679,7 @@
             const wasDragging = drag.isDragging;
             const sourceIndex = drag.sourceIndex;
             cancelActiveDrag({ silent: true });
+        hideBoardTooltipsNow();
             if (wasDragging) {
                 G.state.lastTouchDragEndTime = performance.now();
                 if (targetIndex !== null && targetIndex !== sourceIndex && isBoardDropValidAt(sourceIndex, targetIndex)) {
@@ -757,6 +773,7 @@
             }
             if (activeDrag && activeDrag.dragSource === 'shop' && !activeDrag.isDragging && !activeDrag.handled) {
                 cancelActiveDrag({ silent: true });
+        hideBoardTooltipsNow();
             }
             if (activeDrag && activeDrag.isDragging) return;
             GameApp.audio.ensureContext();
@@ -929,6 +946,7 @@
             }
             if (activeDrag && activeDrag.dragSource === 'fruit' && !activeDrag.isDragging && !activeDrag.handled) {
                 cancelActiveDrag({ silent: true });
+        hideBoardTooltipsNow();
             }
             if (activeDrag && activeDrag.isDragging) return;
             GameApp.audio.ensureContext();

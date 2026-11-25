@@ -97,7 +97,7 @@
         ['newRecordBadgeEl', 'new-record-badge'], ['restartBtn', 'restart-btn'], ['gameoverMenuBtn', 'gameover-menu-btn'],
         ['gameoverRatingStatusEl', 'gameover-rating-status'], ['gameoverCopyReportBtn', 'gameover-copy-report-btn'],
         ['gameoverFeedbackToggle', 'gameover-feedback-toggle'], ['gameoverFeedbackBox', 'gameover-feedback-box'],
-        ['helpBtn', 'help-btn'], ['guideOverlayEl', 'guide-overlay'], ['guideXBtn', 'guide-x-btn'], ['guideCloseBtn', 'guide-close-btn'], ['guideMenuBtn', 'guide-menu-btn'],
+        ['helpBtn', 'help-btn'], ['quickRefBtn', 'quick-ref-btn'], ['quickRefPopoverEl', 'quick-ref-popover'], ['contractsDrawerEl', 'contracts-drawer'], ['guideOverlayEl', 'guide-overlay'], ['guideXBtn', 'guide-x-btn'], ['guideCloseBtn', 'guide-close-btn'], ['guideMenuBtn', 'guide-menu-btn'],
         ['terrainTooltipEl', 'terrain-tooltip'], ['towerTooltipEl', 'tower-tooltip'], ['waveForecastBarEl', 'wave-forecast-bar'],
         ['forecastToggleBtn', 'forecast-toggle-btn'], ['forecastBarTitleEl', 'forecast-bar-title'],
         ['forecastWeakChipsEl', 'forecast-weak-chips'],
@@ -189,6 +189,7 @@
     let selectedGameMode = 'campaign';
     let selectedPuzzleId = (Array.isArray(CONFIG.PUZZLE_TRIALS) && CONFIG.PUZZLE_TRIALS[0]) ? CONFIG.PUZZLE_TRIALS[0].id : 'puzzle_armor_breach';
     let lobbyViewStep = 'hub';
+    let contractsCollapseApplied = false;
 
     function resolveDefaultWeatherForMap(mapId) {
         if (mapId === 'frost') return 'snow';
@@ -539,6 +540,7 @@
     function renderMapSelectorUI() {
         const records = Backend.loadMapRecords();
         const career = Backend.loadCareerStats ? Backend.loadCareerStats() : { bestWaveOverall: 1, totalClears: 0 };
+        const isNovice = (Number(career.totalClears) || 0) === 0;
         if (G.dom.startCareerBannerEl) {
             const endlessSuffix = (career.endlessBestWave || 0) > 0
                 ? L(` · 無盡最高第 ${career.endlessBestWave} 波`, ` · Endless W${career.endlessBestWave}`)
@@ -548,11 +550,34 @@
                 `Best Wave ${career.bestWaveOverall || 1} · Clears ${career.totalClears || 0}${endlessSuffix}`
             );
         }
+        if (G.dom.contractsDrawerEl && isNovice && !contractsCollapseApplied && selectedContracts.size === 0) {
+            G.dom.contractsDrawerEl.open = false;
+            contractsCollapseApplied = true;
+        }
         if (G.dom.mapSelectorGridEl) {
             G.dom.mapSelectorGridEl.querySelectorAll('.map-card').forEach(card => {
-                const isSel = card.dataset.mapId === G.state.currentMapId;
+                const mapId = card.dataset.mapId;
+                const isSel = mapId === G.state.currentMapId;
+                const isRec = isNovice && mapId === 'forest';
                 card.classList.toggle('selected', isSel);
+                card.classList.toggle('is-recommended', isRec);
                 card.setAttribute('aria-pressed', isSel ? 'true' : 'false');
+                const topEl = card.querySelector('.map-card-top');
+                if (topEl) {
+                    let focusTag = topEl.querySelector('.novice-focus-tag');
+                    if (isNovice) {
+                        if (!focusTag) {
+                            focusTag = document.createElement('span');
+                            focusTag.className = 'novice-focus-tag';
+                            topEl.appendChild(focusTag);
+                        }
+                        focusTag.classList.toggle('is-rec', mapId === 'forest');
+                        focusTag.innerText = mapId === 'forest' ? L('新手推薦', 'Recommended') : L('進階', 'Advanced');
+                        focusTag.classList.remove('hidden');
+                    } else if (focusTag) {
+                        focusTag.classList.add('hidden');
+                    }
+                }
             });
         }
         const fmt = rec => L(
@@ -641,7 +666,7 @@
                 btn.type = 'button';
                 btn.className = `puzzle-trial-btn${isSel ? ' selected' : ''}${isCleared ? ' is-cleared' : ''}`;
                 btn.dataset.puzzleId = tr.id;
-                btn.innerHTML = `<span class="puzzle-btn-title">${L(tr.titleZh, tr.titleEn)}</span><span class="puzzle-btn-status">${isCleared ? L(`已破局 · 餘 ${rec.bestRemainingGold || 0} 💰`, `Cleared · ${rec.bestRemainingGold || 0} 💰`) : `${tr.startGold} 💰 · 1 ❤️`}</span>`;
+                btn.innerHTML = `<span class="puzzle-btn-title">${L(tr.titleZh, tr.titleEn)}</span><span class="puzzle-btn-status">${isCleared ? L(`已通關 · 剩餘 ${rec.bestRemainingGold || 0} 💰`, `Cleared · Best Left ${rec.bestRemainingGold || 0} 💰`) : `${tr.startGold} 💰 · 1 ❤️`}</span>`;
                 G.dom.puzzleSelectorGridEl.appendChild(btn);
             });
         }
@@ -694,7 +719,8 @@
         const campaignIds = ['forest', 'lava', 'frost', 'thunder_isles', 'blackmarket'];
         const clearedMaps = campaignIds.filter(id => records[id] && (records[id].bestStars || 0) > 0).length;
         const endlessUnlocked = Backend && typeof Backend.isEndlessUnlocked === 'function' ? Backend.isEndlessUnlocked() : clearedMaps > 0;
-        const career = Backend.loadCareerStats ? Backend.loadCareerStats() : { endlessBestWave: 0 };
+        const career = Backend.loadCareerStats ? Backend.loadCareerStats() : { endlessBestWave: 0, totalClears: 0 };
+        const isNovice = (Number(career.totalClears) || 0) === 0;
         const dailySpec = getDailySpecSafe();
         const dailyRecs = (Backend && typeof Backend.loadDailyRecords === 'function') ? Backend.loadDailyRecords() : {};
         const dailyRec = dailyRecs[dailySpec.dateKey];
@@ -734,6 +760,28 @@
         cards.forEach(([m, el]) => {
             if (el) el.classList.toggle('selected', selectedGameMode === m);
         });
+        if (G.dom.modeCardCampaignEl) {
+            G.dom.modeCardCampaignEl.classList.toggle('is-recommended', isNovice);
+        }
+        [G.dom.modeCardDailyEl, G.dom.modeCardPuzzleEl].forEach((el) => {
+            if (!el) return;
+            const headEl = el.querySelector('.mode-card-head');
+            if (!headEl) return;
+            let advTag = headEl.querySelector('.novice-adv-tag');
+            if (isNovice) {
+                if (!advTag) {
+                    advTag = document.createElement('span');
+                    advTag.className = 'novice-adv-tag';
+                    const badgeEl = headEl.querySelector('.mode-card-badge');
+                    if (badgeEl) headEl.insertBefore(advTag, badgeEl);
+                    else headEl.appendChild(advTag);
+                }
+                advTag.innerText = L('進階', 'Advanced');
+                advTag.classList.remove('hidden');
+            } else if (advTag) {
+                advTag.classList.add('hidden');
+            }
+        });
 
         const inSetup = lobbyViewStep === 'setup';
         if (G.dom.lobbyStepHubEl) G.dom.lobbyStepHubEl.classList.toggle('hidden', inSetup);
@@ -757,6 +805,7 @@
         }
         selectedGameMode = ['campaign', 'endless', 'daily', 'puzzle'].includes(mode) ? mode : 'campaign';
         lobbyViewStep = 'setup';
+        contractsCollapseApplied = false;
         if (selectedGameMode === 'daily') {
             const spec = getDailySpecSafe();
             WaveSys.applyMapConfig(spec.mapId);
@@ -770,6 +819,7 @@
             }
             renderPuzzleSelectorUI();
         } else {
+            WaveSys.applyMapConfig(G.state.currentMapId);
             G.state.weatherType = resolveDefaultWeatherForMap(G.state.currentMapId);
         }
         Renderer.initBoard();
@@ -1377,6 +1427,13 @@
         return rawTag;
     }
 
+    function formatCompactTotalDamage(val) {
+        const n = Math.max(0, Math.round(Number(val) || 0));
+        if (n >= 1000000) return `${(n / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
+        if (n >= 100000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+        return n.toLocaleString();
+    }
+
     function updateTowerInspector() {
         const dom = G.dom, st = G.state;
         if (!dom.inspectorEmptyEl || !dom.inspectorActiveEl) return;
@@ -1419,7 +1476,7 @@
             if (hasAoe) setDomText(dom.inspectorAoeDpsEl, `${stats.aoeLabel} ${stats.aoeDps}`);
         }
         if (dom.inspectorTotalDmgEl) {
-            setDomText(dom.inspectorTotalDmgEl, `${L('總傷', 'Dmg')} ${Math.round(towerObj.totalDamage || 0).toLocaleString()}`);
+            setDomText(dom.inspectorTotalDmgEl, `${L('總傷', 'Total')} ${formatCompactTotalDamage(towerObj.totalDamage || 0)}`);
         }
         setDomText(dom.inspectorRangeEl, `${L('射程', 'Rng')} ${stats.rangeStr}`);
         if (dom.inspectorTerrainEl) {
@@ -1735,13 +1792,13 @@
             ? WaveSys.getMapVictoryWave()
             : (CONFIG.VICTORY_WAVE || 10);
         if (isFinalClear) {
-            const isPuzzle = Boolean(G && G.state && G.state.gameMode === 'puzzle');
+            const isPuzzle = Boolean(G && G.state && (G.state.gameMode === 'puzzle' || (G.state.waveState === 'WAITING_START' && selectedGameMode === 'puzzle')));
             if (isPuzzle) {
-                headerEl.innerText = `${prefixLabel} · ${L('單波殘局試煉', 'Single-Wave Trial')}`;
-                listEl.innerHTML = `<li class="forecast-item forecast-boss">${L('本關僅 1 波，守住此波攻勢即可破局通關', 'Single-wave trial — hold this wave to clear')}</li>`;
+                headerEl.innerText = `${prefixLabel} · ${L('最終波（第 1 波）', 'Final Wave (Wave 1)')}`;
+                listEl.innerHTML = `<li class="forecast-item forecast-boss">${L('本關僅 1 波，守住第 1 波即可破局通關', 'Hold Wave 1 to win')}</li>`;
                 return;
             }
-            headerEl.innerText = `${prefixLabel} · ${L('已達最終波', 'Final Wave')}`;
+            headerEl.innerText = `${prefixLabel} · ${L(`最終波（第 ${mapVWave} 波）`, `Final Wave (Wave ${mapVWave})`)}`;
             listEl.innerHTML = `<li class="forecast-item forecast-boss">${L(`守住第 ${mapVWave} 波即可通關`, `Hold Wave ${mapVWave} to win`)}</li>`;
             return;
         }
@@ -1761,7 +1818,12 @@
         }
         const items = [];
         if (plan.crisisSpec) {
-            items.push(`<li class="forecast-crisis-item">⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)}${L('：', ': ')}${L(plan.crisisSpec.hintZh, plan.crisisSpec.hintEn)}</li>`);
+            const crisisHint = L(
+                plan.crisisSpec.counterHint || plan.crisisSpec.hintZh || '',
+                plan.crisisSpec.counterHintEn || plan.crisisSpec.hintEn || ''
+            );
+            const crisisBody = crisisHint ? `${L('：', ': ')}${crisisHint}` : '';
+            items.push(`<li class="forecast-crisis-item">⚠️ ${L(plan.crisisSpec.title, plan.crisisSpec.titleEn)}${crisisBody}</li>`);
         }
         const stageDb = (GameApp.data && GameApp.data.monsters && GameApp.data.monsters.WAVE_STAGE_TRAITS) || {};
         const stageHints = [];
@@ -2717,9 +2779,9 @@
             const cost = EconSys.getSummonCost(type);
             const roleLabel = data.shopRoleTag || data.roleTag || '';
             const compactRoleMap = {
-                fire_bud: L('破甲 25', 'Break 25'),
-                ice_bud: L('緩速 15', 'Slow 15'),
-                thunder_bud: L('連鎖 13', 'Chain 13')
+                fire_bud: L('攻 25 · 破甲 25%', 'ATK 25 · 25% Shred'),
+                ice_bud: L('攻 15 · 緩速 40%', 'ATK 15 · 40% Slow'),
+                thunder_bud: L('攻 13 · 連鎖 ×2', 'ATK 13 · Chain ×2')
             };
             const shortRoleLabel = compactRoleMap[type] || `${(roleLabel.split('·')[0] || '').trim()} ${data.damage || ''}`.trim();
             btn.innerHTML = `
@@ -4095,15 +4157,22 @@
         restartGame();
     }
 
-    function triggerVictory() {
-        const st = G.state;
-        if (st.isGameOver || st.waveState === 'VICTORY') return;
+    function buildVictoryOutcomeInfo(st) {
         const treeCfg = (GameApp.data && GameApp.data.tree && GameApp.data.tree.TREE_CONFIG) || {};
         const maxHp = st.maxBaseHp || treeCfg.INITIAL_BASE_HP || CONFIG.INITIAL_BASE_HP || 20;
         const victoryWave = (WaveSys && typeof WaveSys.getMapVictoryWave === 'function')
             ? WaveSys.getMapVictoryWave()
             : (CONFIG.VICTORY_WAVE || 10);
-        let starsNum = 1, stars = '★', rankText = L('驚險死守，於危急時刻擊退終極領主。', 'Close victory—repelled the final Wave Boss.');
+        const bossSpec = (WaveSys && typeof WaveSys.getBossSpecForWave === 'function')
+            ? WaveSys.getBossSpecForWave(victoryWave)
+            : null;
+        const bossName = (bossSpec && bossSpec.name) || L('最終波魔王', 'Final Wave Boss');
+
+        let starsNum = 1, stars = '★';
+        let rankText = L(
+            `驚險死守，於危急時刻擊退第 ${victoryWave} 波${bossName}。`,
+            `Close victory—repelled Wave ${victoryWave}'s ${bossName}.`
+        );
         if (st.gameMode === 'puzzle') {
             starsNum = 3;
             stars = '★★★';
@@ -4116,17 +4185,24 @@
             starsNum = 3;
             stars = '★★★';
             rankText = L(
-                `完美防守，世界樹滿血守護通關第 ${victoryWave} 波。`,
-                `Flawless defense—cleared Wave ${victoryWave} with full World Tree HP.`
+                `完美防守，世界樹滿血守護通關第 ${victoryWave} 波（${bossName}）。`,
+                `Flawless defense—cleared Wave ${victoryWave} (${bossName}) with full World Tree HP.`
             );
         } else if (st.baseHp >= Math.ceil(maxHp * 0.5)) {
             starsNum = 2;
             stars = '★★';
             rankText = L(
-                `穩固防線，成功守護世界樹擊敗第 ${victoryWave} 波魔王。`,
-                `Solid defense—World Tree protected and Wave ${victoryWave} Boss defeated.`
+                `穩固防線，成功守護世界樹擊敗第 ${victoryWave} 波${bossName}。`,
+                `Solid defense—World Tree protected and Wave ${victoryWave} ${bossName} defeated.`
             );
         }
+        return { starsNum, stars, rankText, victoryWave };
+    }
+
+    function triggerVictory() {
+        const st = G.state;
+        if (st.isGameOver || st.waveState === 'VICTORY') return;
+        const { starsNum, stars, rankText } = buildVictoryOutcomeInfo(st);
 
         const honor = computeRunHonorSummary(st);
         Backend.finalizeWaveFeel(st.currentWave);
@@ -4502,6 +4578,8 @@
         if (GameApp.helpers && typeof GameApp.helpers.setActiveRunRng === 'function') {
             GameApp.helpers.setActiveRunRng(null);
         }
+        toggleQuickRefPopover(false);
+        contractsCollapseApplied = false;
         resetMatchSession('WAITING_START', 1);
         WaveSys.applyMapConfig(G.state.currentMapId);
         if (Renderer && typeof Renderer.applyWeatherVisualClass === 'function') {
@@ -4648,7 +4726,7 @@
             }
             const extraSummariesZh = [];
             const extraSummariesEn = [];
-            if (rootPayout) {
+            if (rootPayout && rootPayout.shouldBroadcast !== false && (rootPayout.level > 0 || (rootPayout.totalGain || 0) > 0) && rootPayout.summaryZh && rootPayout.summaryEn) {
                 extraSummariesZh.push(rootPayout.summaryZh);
                 extraSummariesEn.push(rootPayout.summaryEn);
             }
@@ -4859,8 +4937,21 @@
         updateSpeedButtonUI();
     }
 
+    function toggleQuickRefPopover(forceOpen = null) {
+        const popEl = G.dom.quickRefPopoverEl;
+        const btnEl = G.dom.quickRefBtn;
+        if (!popEl) return;
+        const nextOpen = forceOpen === null ? popEl.classList.contains('hidden') : Boolean(forceOpen);
+        popEl.classList.toggle('hidden', !nextOpen);
+        if (btnEl) {
+            btnEl.classList.toggle('is-open', nextOpen);
+            btnEl.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+        }
+    }
+
     function openGuide() {
         if (!G.dom.guideOverlayEl || isGuideOpen()) return;
+        toggleQuickRefPopover(false);
         Backend.recordPlayerAction();
         const st = G.state;
         const wasCodexOpen = isCodexOpen();
@@ -4997,7 +5088,12 @@
             const isCurrentlyHidden = !G.dom.startLangMenuEl || G.dom.startLangMenuEl.classList.contains('hidden');
             setLangMenuOpen(isCurrentlyHidden, 'start');
         }],
-        ['codexBtn', () => CodexSys.openCodex()], ['codexCloseBtn', () => CodexSys.closeCodex()],
+        ['codexBtn', () => { toggleQuickRefPopover(false); CodexSys.openCodex(); }], ['codexCloseBtn', () => CodexSys.closeCodex()],
+        ['quickRefBtn', (e) => {
+            if (e && e.stopPropagation) e.stopPropagation();
+            SoundEngine.ensureContext();
+            toggleQuickRefPopover();
+        }],
         ['helpBtn', () => { if (isGuideOpen()) closeGuide(); else openGuide(); }], ['guideXBtn', closeGuide], ['guideCloseBtn', closeGuide], ['guideMenuBtn', () => { closeGuide(); returnToMainMenu(); }],
         ['forecastToggleBtn', toggleForecastDrawer], ['speedBtn', cycleGameSpeed], ['startGameBtn', startGame],
         ['victoryRestartBtn', restartGame], ['victoryNextPuzzleBtn', startNextPuzzleTrial], ['victoryMenuBtn', returnToMainMenu], ['endlessBtn', continueEndlessMode],
@@ -5237,6 +5333,11 @@
                     setLangMenuOpen(false);
                 }
             }
+            if (G.dom.quickRefPopoverEl && !G.dom.quickRefPopoverEl.classList.contains('hidden')) {
+                if (!tgt || !tgt.closest || (!tgt.closest('#quick-ref-popover') && !tgt.closest('#quick-ref-btn'))) {
+                    toggleQuickRefPopover(false);
+                }
+            }
             if (G.state.forecastDrawerOpen && (!tgt || !tgt.closest || !tgt.closest('#wave-forecast-bar'))) {
                 G.state.forecastDrawerOpen = false;
                 updateWaveForecastUI();
@@ -5294,6 +5395,7 @@
                 const hudLangOpen = G.dom.langMenuEl && !G.dom.langMenuEl.classList.contains('hidden');
                 const startLangOpen = G.dom.startLangMenuEl && !G.dom.startLangMenuEl.classList.contains('hidden');
                 if (hudLangOpen || startLangOpen) { e.preventDefault(); setLangMenuOpen(false); return; }
+                if (G.dom.quickRefPopoverEl && !G.dom.quickRefPopoverEl.classList.contains('hidden')) { e.preventDefault(); toggleQuickRefPopover(false); return; }
                 if (isOverlayVisible(G.dom.metaTreeOverlayEl)) { e.preventDefault(); closeMetaTreeModal(); return; }
                 if (DragSys.isDragging()) { e.preventDefault(); DragSys.cancelActiveDrag(); }
                 else if (isCodexOpen()) { e.preventDefault(); CodexSys.closeCodex(); }
@@ -5465,6 +5567,9 @@
                 renderMetaTreeModal();
             }
             if (st.waveState === 'VICTORY') {
+                const vInfo = buildVictoryOutcomeInfo(st);
+                setDomText(G.dom.victoryStarsEl, vInfo.stars);
+                setDomText(G.dom.victoryRankTextEl, vInfo.rankText);
                 syncVictoryActionButtonsUI();
                 renderOutcomeUnlockBanner('victory');
                 populateBattleRecap('victory');

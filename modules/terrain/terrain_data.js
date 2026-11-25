@@ -106,7 +106,7 @@
             isSpecial: true,
             isDynamic: true,
             shortTag: '每 2 波輪流充能 · 傷害 +40%',
-            tooltip: '⚡ 充能浮石：每 2 波輪流點亮 1 座浮石，進駐發光浮石的防禦塔獲得 +40% 傷害加成（併入 B_power）',
+            tooltip: '⚡ 充能浮石：每 2 波輪流點亮 1 座浮石，進駐發光浮石的防禦塔獲得 +40% 傷害加成（併入基礎增傷區）',
             swatchClass: 'swatch-charged-stone',
             rangeMult: 1.0,
             attackSpeedMult: 1.0,

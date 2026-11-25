@@ -26,21 +26,21 @@
     const EN_TOWERS = {
         fire_bud: {
             name: 'Fire Bud', shortName: 'Fire 1★',
-            shopRoleTag: '25% Shred · 25',
+            shopRoleTag: 'ATK 25 · 25% Shred',
             roleSummary: 'Single Armor Shred (25%)',
             tooltipSummary: 'Hits shred 25% target armor for 3.0s',
             lineagePath: '🔥 Fire Bud'
         },
         ice_bud: {
             name: 'Ice Bud', shortName: 'Ice 1★',
-            shopRoleTag: '40% Slow · 15',
+            shopRoleTag: 'ATK 15 · 40% Slow',
             roleSummary: 'Slow Control (40%)',
             tooltipSummary: 'Slows target by 40% for 2.0s',
             lineagePath: '❄️ Ice Bud'
         },
         thunder_bud: {
             name: 'Thunder Bud', shortName: 'Thunder 1★',
-            shopRoleTag: 'Chain ×2 · 13',
+            shopRoleTag: 'ATK 13 · Chain ×2',
             roleSummary: '2-Target Lightning Chain',
             tooltipSummary: 'Arcs to 2 targets; +30% vs Air/Armor',
             lineagePath: '⚡ Thunder Bud'
@@ -514,14 +514,14 @@
         mana_vein: { name: '✨ Mana Vein', shortTag: 'Spd +25%', tooltip: 'Mana Vein: Tower Attack Speed +25%' },
         world_tree: { name: '🌿 Tree Sanctuary', shortTag: 'DMG +20% max', tooltip: 'Sanctuary: Up to +20% DMG based on Tree HP' },
         obstacle: { name: '🪨 Ancient Boulder', shortTag: '45 💰 Clear', tooltip: 'Ancient Boulder: Click to clear for 45 💰 and unearth terrain' },
-        charged_stone: { name: '⚡ Charging Floatstone', shortTag: '+40% DMG Cycle', tooltip: 'Rotates 1 glowing stone every 2 waves: tower on glowing stone gains +40% DMG (Power Bonus).' },
+        charged_stone: { name: '⚡ Charging Floatstone', shortTag: '+40% DMG Cycle', tooltip: 'Rotates 1 glowing stone every 2 waves: tower on glowing stone gains +40% DMG (Base Power Bonus).' },
         treasure_rock: { name: '🪨 Treasure Boulder', shortTag: '45 💰 Mine', tooltip: 'Click to mine for 45 💰: yields Gold (soft-capped), Universal Fruit, or a random 2★ tower.' },
         teleport_rift: { name: '🌀 One-Way Teleport Rift (A → B)', shortTag: 'Thunder Isles Rift', tooltip: 'Enemies stepping onto Entry A warp straight to Exit B along the second island.' },
         elite_affixes: { name: '🔱 W6+ / W10+ Elite Affixes', shortTag: 'Bounty · Frenzied · Regen · Link · Aegis · Prism', tooltip: 'W6+ Elites roll Bounty, Frenzied, Shield Regen, or Resonance Link (AoE counter); W10+/Endless adds Vanguard Aegis (Shred/Vuln shuts down) and Prismatic Ward (Weakness/Hybrid/Tri bonus DMG).' },
         leyline_links: {
             name: '🔗 Adjacent Leyline Links',
             shortTag: 'Max 2 Links · +18% Cap',
-            tooltip: 'Adjacent (4-dir) cross-element links: 🔥+❄️ Convection (10% Shred+Slow), ❄️+⚡ Superconduct (+10% Spd), 🔥+⚡ Overload (+10% Crit), 🔺 Tri-Formation: +15% DMG (Power Bonus) + 1💧/1.5s (cap 12/wave). Max 2 links & +18% DMG per tower.'
+            tooltip: 'Adjacent (4-dir) cross-element links: 🔥+❄️ Convection (10% Shred+Slow), ❄️+⚡ Superconduct (+10% Spd), 🔥+⚡ Overload (+10% Crit), 🔺 Tri-Formation: +15% DMG (Base Power Bonus) + 1💧/1.5s (cap 12/wave). Max 2 links & +18% DMG per tower.'
         },
         weather_sun: {
             name: '☀️ Sunlit Blaze',
@@ -988,13 +988,71 @@
                     ['同脈 4★ / 16U', '神裔 5★']
                 ];
                 const en2 = [
-                    ['Cross 1★ + 1★', 'Job 1★'],
-                    ['Same / Infuse 1★', 'Star 2★'],
-                    ['Same 2★ + 2★', 'Crown 3★'],
-                    ['Same 3★ / Feed', 'Crown·Twin 4★'],
-                    ['Same 4★ / 16U', 'Scion 5★']
+                    ['Cross 1★+1★', 'Hybrid 1★'],
+                    ['Same / Infuse 1★', 'Trunk 2★'],
+                    ['Same 2★+2★', 'Crown 3★'],
+                    ['3★ Pair / Feed', '4★ Crown/Twin'],
+                    ['4★ Pair / 16U', '5★ Scion']
                 ];
                 (isEn ? en2 : zh2).forEach((pair, idx) => {
+                    if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
+                    rows[idx].children[0].innerText = pair[0];
+                    rows[idx].children[1].innerText = pair[1];
+                });
+            }
+            setElText('side-tri-title', isEn ? 'Tri-Element 3★ Fusions' : '三元 3★ 創世融合');
+            const sideTriList = document.getElementById('side-tri-list');
+            if (sideTriList) {
+                const rows = sideTriList.querySelectorAll('.side-panel-row');
+                const zhTri = [['蒸氣 2★ + ⚡雷 2★', '風暴 3★'], ['🔥火 2★ + 磁環 2★', '熔爐 3★'], ['❄️冰 2★ + 電漿 2★', '稜鏡 3★']];
+                const enTri = [['Steam 2★ + ⚡Bolt 2★', 'Storm 3★'], ['🔥Fire 2★ + Magnet 2★', 'Starforge 3★'], ['❄️Ice 2★ + Plasma 2★', 'Prism 3★']];
+                (isEn ? enTri : zhTri).forEach((pair, idx) => {
+                    if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
+                    rows[idx].children[0].innerText = pair[0];
+                    rows[idx].children[1].innerText = pair[1];
+                });
+            }
+
+            const qRefBtn = document.getElementById('quick-ref-btn');
+            if (qRefBtn) {
+                qRefBtn.innerText = isEn ? 'Ref' : '速查';
+                qRefBtn.title = isEn ? 'Quick Reference: Counters, Terrain & Tri-Element Recipes' : '元素相剋、地形加成與三元素配方速查';
+                qRefBtn.setAttribute('aria-label', qRefBtn.title);
+            }
+            const qRefPop = document.getElementById('quick-ref-popover');
+            if (qRefPop) qRefPop.setAttribute('aria-label', isEn ? 'Quick Reference Panel' : '速查面板');
+            setElText('qref-counters-title', isEn ? 'Elemental Counters' : '元素相剋速查');
+            setElText('qref-terrain-title', isEn ? 'Terrain Bonuses' : '戰術地形加成');
+            setElText('qref-tri-title', isEn ? 'Tri-Element 3★ Fusions' : '三元 3★ 創世融合');
+            const qRefCounters = document.getElementById('qref-counters-list');
+            if (qRefCounters) {
+                const rows = qRefCounters.querySelectorAll('.qref-row');
+                const zhQ0 = [['🔥 火 ▸ 蔓藤 / 史萊姆', '175%'], ['❄️ 冰 ▸ 熔岩 / 獵犬', '175%'], ['⚡ 雷 ▸ 飛艇 / 魔像', '175%'], ['轉職 ▸ 親和 / 三元全親和', '135% / 126%']];
+                const enQ0 = [['🔥 Fire ▸ Vine / Slime', '175%'], ['❄️ Ice ▸ Lava / Hound', '175%'], ['⚡ Thunder ▸ Air / Golem', '175%'], ['Hybrid / Tri-Element', '135% / 126%']];
+                (isEn ? enQ0 : zhQ0).forEach((pair, idx) => {
+                    if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
+                    rows[idx].children[0].innerText = pair[0];
+                    rows[idx].children[1].innerText = pair[1];
+                });
+            }
+            const qRefTerrain = document.getElementById('qref-terrain-list');
+            if (qRefTerrain) {
+                const rows = qRefTerrain.querySelectorAll('.qref-row');
+                const zhQ1 = [['制高點', '射程 +30%'], ['元素靈脈', '攻速 +25%'], ['世界樹庇護', '傷 +20%']];
+                const enQ1 = [['Highground', 'Rng +30%'], ['Mana Vein', 'Spd +25%'], ['Sanctuary', 'DMG +20%']];
+                (isEn ? enQ1 : zhQ1).forEach((pair, idx) => {
+                    if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
+                    const labelSpan = rows[idx].children[0].querySelector('span:last-child');
+                    if (labelSpan) labelSpan.innerText = pair[0];
+                    rows[idx].children[1].innerText = pair[1];
+                });
+            }
+            const qRefTri = document.getElementById('qref-tri-list');
+            if (qRefTri) {
+                const rows = qRefTri.querySelectorAll('.qref-row');
+                const zhQ2 = [['蒸氣 2★ + ⚡雷 2★', '天災風暴 3★'], ['🔥火 2★ + 磁環 2★', '星界熔爐 3★'], ['❄️冰 2★ + 電漿 2★', '零度稜鏡 3★']];
+                const enQ2 = [['Steam 2★ + ⚡Bolt 2★', 'Stormtree 3★'], ['🔥Fire 2★ + Magnet 2★', 'Starforge 3★'], ['❄️Ice 2★ + Plasma 2★', 'Zero Prism 3★']];
+                (isEn ? enQ2 : zhQ2).forEach((pair, idx) => {
                     if (!rows[idx] || !rows[idx].children[0] || !rows[idx].children[1]) return;
                     rows[idx].children[0].innerText = pair[0];
                     rows[idx].children[1].innerText = pair[1];
@@ -1053,7 +1111,7 @@
             setElText('daily-brief-weather-k', isEn ? 'Forest Weather' : '今日林相天氣');
             setElText('daily-brief-status-k', isEn ? 'Daily Record' : '今日戰績');
             setElText('daily-rule-note', isEn
-                ? 'All daily randomness (Blind Box, Stock noise, Blessings, Thief loot) uses today’s fixed seed. Wins & losses stamp a dated scorecard.'
+                ? "All daily randomness (Blind Box, Stock noise, Blessings, Thief loot) uses today's fixed seed. Wins & losses stamp a dated scorecard."
                 : '今日所有波動（盲盒、股市雜訊、賜福抽卡、靈脈竊賊掉落）均鎖定同一種子序列，通關與敗陣結算皆會產生日期戰績卡。');
             setElText('lobby-codex-btn', isEn ? 'World Tree Codex' : '世界樹圖譜');
             setElText('lobby-guide-btn', isEn ? 'Field Guide' : '戰術手冊');
@@ -1068,9 +1126,16 @@
             setElText('guide-close-btn', isEn ? 'Back to Battle' : '返回戰場');
             setElText('guide-menu-btn', isEn ? 'Change Map / Main Menu' : '切換地圖 / 返回封面');
             setElText('victory-title', isEn ? 'Victory · World Tree Protected' : '防守成功 · 世界樹安然無恙');
-            setElText('victory-rank-text', isEn
-                ? 'Protected the World Tree and repelled the Wave 10 Blighted Treant King.'
-                : '成功守護世界樹，擊退第 10 波腐朽古樹王。');
+            const rtWaveSys = GameApp.systems && GameApp.systems.wave;
+            const rtState = GameApp.runtime && GameApp.runtime.state;
+            const dynVWave = (rtWaveSys && typeof rtWaveSys.getMapVictoryWave === 'function') ? rtWaveSys.getMapVictoryWave() : 10;
+            const dynBoss = (rtWaveSys && typeof rtWaveSys.getBossSpecForWave === 'function') ? rtWaveSys.getBossSpecForWave(dynVWave) : null;
+            const dynBossName = (dynBoss && dynBoss.name) || (isEn ? 'Final Wave Boss' : '最終波魔王');
+            if (!(rtState && rtState.gameMode === 'puzzle')) {
+                setElText('victory-rank-text', isEn
+                    ? `Protected the World Tree and repelled the Wave ${dynVWave} ${dynBossName}.`
+                    : `成功守護世界樹，擊退第 ${dynVWave} 波${dynBossName}。`);
+            }
             setElText('victory-next-puzzle-btn', isEn ? 'Next Trial ▸' : '挑戰下一試煉 ▸');
             setElText('victory-restart-btn', isEn ? 'Restart' : '重新開始');
             setElText('endless-btn', isEn ? 'Endless Mode' : '繼續無盡挑戰');
@@ -1155,7 +1220,7 @@
                 ['元素靈脈', '攻速 +25%'],
                 ['世界樹庇護所', '依血量最高 +20% 傷害'],
                 ['🔥+❄️ 對流 / ❄️+⚡ 超導 / 🔥+⚡ 過載', '10% 破減 · +10% 速 · +10% 暴'],
-                ['🔺 火冰雷三元陣法（最多 2 連線/+18%）', '+15% 傷（B_power）＋ 1💧/1.5s'],
+                ['🔺 火冰雷三元陣法（最多 2 連線/+18%）', '+15% 傷（基礎增傷區）＋ 1💧/1.5s'],
                 ['☀️ 熾陽 / ❄️ 霜雪 / ⛈️ 雷暴 / 🌑 蝕月', '每 3 波變天 · 聯動股價與掉落']
             ];
             const enGuideRows = [
@@ -1167,7 +1232,7 @@
                 ['Mana Vein', 'ATK Spd +25%'],
                 ['Tree Sanctuary', 'Up to +20% DMG by HP'],
                 ['🔥+❄️ Convect / ❄️+⚡ Super / 🔥+⚡ Over', '10% Shred/Slow · +10% Spd · +10% Crit'],
-                ['🔺 Tri-Formation (Max 2 Links / +18%)', '+15% DMG (Power Bonus) + 1💧/1.5s'],
+                ['🔺 Tri-Formation (Max 2 Links / +18%)', '+15% DMG (Base Power Bonus) + 1💧/1.5s'],
                 ['☀️ Sun / ❄️ Snow / ⛈️ Storm / 🌑 Eclipse', '3-Wave Cycle · Stock & Drop Synergy']
             ];
             (isEn ? enGuideRows : zhGuideRows).forEach((pair, idx) => {
@@ -1184,8 +1249,8 @@
                 : '異系 1★+1★ ▸ 雙元 1★ (2U) ｜ 同種 1★+1★ ▸ 靈木主幹 2★ ｜ 同種 2★+2★ ▸ 冠枝 A/B 3★ (4U)<br>同脈 3★+3★（或 8U）▸ 雙生 4★ ｜ 雙元 2★/3★ ＋ 缺口純系 ▸ 三元傳奇 3★/4★ ｜ 三元 16U ▸ 全圖唯一 5★ 原初之核';
             const guideNote = document.getElementById('guide-hotkey-note') || document.querySelector('#guide-overlay .codex-note');
             if (guideNote) guideNote.innerHTML = isEn
-                ? 'Choose a World Tree Blessing every 3 waves; Bosses arrive on Wave 5 &amp; 10.<br>Hotkeys: <b>[1/2/3]</b> Summon | <b>[Q/W/E]</b> Skills | <b>[B]</b> Guild | <b>[T]</b> World Tree | <b>[Space]</b> Pause | <b>[Tab/S]</b> Speed | <b>[Esc]</b> Cancel'
-                : '每通過 3 波可獲世界樹枝枒祝福；第 5 與第 10 波迎戰領主魔王。<br>熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W/E]</b> 技能 ｜ <b>[B]</b> 商會 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消';
+                ? 'Choose a World Tree Blessing every 3 waves; Bosses arrive every 5 waves &amp; on the final wave.<br>Hotkeys: <b>[1/2/3]</b> Summon | <b>[Q/W/E]</b> Skills | <b>[B]</b> Guild | <b>[T]</b> World Tree | <b>[Space]</b> Pause | <b>[Tab/S]</b> Speed | <b>[Esc]</b> Cancel'
+                : '每通過 3 波可獲世界樹枝枒祝福；每 5 波與最終波迎戰領主魔王。<br>熱鍵：<b>[1/2/3]</b> 召喚 ｜ <b>[Q/W/E]</b> 技能 ｜ <b>[B]</b> 商會 ｜ <b>[T]</b> 世界樹圖譜 ｜ <b>[Space]</b> 暫停 ｜ <b>[Tab/S]</b> 倍速 ｜ <b>[Esc]</b> 取消';
 
             // 勝敗結算彈窗靜態欄位 (#victory-overlay & #game-over-overlay)
             const goSub = document.querySelector('#game-over-overlay .modal-subtitle');

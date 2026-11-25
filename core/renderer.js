@@ -244,6 +244,18 @@
             `<ellipse cx="32" cy="38" rx="17" ry="12" fill="rgba(0,0,0,0.38)"/><circle cx="32" cy="28" r="20" fill="none" stroke="#E0B43C" stroke-width="2"/><path d="M22,46 Q25,28 32,12 Q39,28 42,46 Z" fill="#2D5A3D" stroke="#E0B43C" stroke-width="1.6"/><circle cx="32" cy="21" r="7.5" fill="#E0B43C" stroke="#1B211E" stroke-width="1.5"/><circle cx="21" cy="29" r="3.6" fill="${tk.elFire}" stroke="#1B211E" stroke-width="1.2"/><circle cx="43" cy="29" r="3.6" fill="${tk.elIce}" stroke="#1B211E" stroke-width="1.2"/><circle cx="32" cy="38" r="3.8" fill="${tk.elLightning}" stroke="#1B211E" stroke-width="1.2"/>`
     };
 
+    function getTwinCrownColors(family, tk) {
+        const map = {
+            fire: [tk.elFire, tk.elLightning],
+            ice: [tk.elIce, tk.textPrimary],
+            thunder: [tk.elLightning, tk.elIce],
+            steam: [tk.elFire, tk.elIce],
+            magnet: [tk.elIce, tk.elLightning],
+            plasma: [tk.elFire, tk.elLightning]
+        };
+        return map[family] || [tk.accentCta, tk.elLightning];
+    }
+
     function createTowerSvgParts(type, tier = 1) {
         const tk = getThemeTokens();
         const pal = getTowerPaletteForType(type, tk);
@@ -252,11 +264,15 @@
         const baseSvgHtml = buildLineageBaseSvg(family, pal, effTier, branchCode, tk);
         const headKey = resolveTowerHeadStyleKey(type, family, branchCode);
         const headBuilder = TOWER_HEAD_TEMPLATES[headKey] || TOWER_HEAD_TEMPLATES[family] || ((t, tokens) => buildParametricTowerHeadSvg(type, t, tokens));
-        const crestSvg = effTier >= 5 || isScion
-            ? `<circle cx="32" cy="32" r="28" fill="none" stroke="#E0B43C" stroke-width="1.6" stroke-dasharray="6 3"/><polygon points="24,8 28,13 32,4 36,13 40,8 38,16 26,16" fill="#E0B43C" stroke="#1B211E" stroke-width="1.2"/>`
-            : (effTier >= 4
-                ? `<circle cx="32" cy="32" r="27" fill="none" stroke="${isTwinCrown ? '#D97724' : '#E0B43C'}" stroke-width="1.3" stroke-dasharray="${isTwinCrown ? '4 2' : '8 3'}"/>`
-                : '');
+        let crestSvg = '';
+        if (effTier >= 5 || isScion) {
+            crestSvg = `<circle cx="32" cy="32" r="28" fill="none" stroke="#E0B43C" stroke-width="1.6" stroke-dasharray="6 3"/><polygon points="24,8 28,13 32,4 36,13 40,8 38,16 26,16" fill="#E0B43C" stroke="#1B211E" stroke-width="1.2"/>`;
+        } else if (effTier === 4 && isTwinCrown) {
+            const [cA, cB] = getTwinCrownColors(family, tk);
+            crestSvg = `<path d="M12,52 A28,28 0 0,1 52,12" fill="none" stroke="${cA}" stroke-width="2.6" stroke-linecap="round"/><path d="M52,12 A28,28 0 0,1 12,52" fill="none" stroke="${cB}" stroke-width="2.6" stroke-linecap="round"/><polygon points="52,7 55,12 52,17 49,12" fill="#F2CA52" stroke="#1B211E" stroke-width="1"/><polygon points="12,47 15,52 12,57 9,52" fill="#F2CA52" stroke="#1B211E" stroke-width="1"/>`;
+        } else if (effTier === 4) {
+            crestSvg = `<polygon points="20,6 44,6 58,20 58,44 44,58 20,58 6,44 6,20" fill="none" stroke="#F2CA52" stroke-width="2.1"/><polygon points="32,2 36,7 32,12 28,7" fill="#F2CA52" stroke="#1B211E" stroke-width="1"/><polygon points="32,53 35,58 32,62 29,58" fill="#F2CA52" stroke="#1B211E" stroke-width="0.9"/><polygon points="4,32 8,29 12,32 8,35" fill="#F2CA52" stroke="#1B211E" stroke-width="0.9"/><polygon points="60,32 56,29 52,32 56,35" fill="#F2CA52" stroke="#1B211E" stroke-width="0.9"/>`;
+        }
         return { baseSvgHtml, headSvgHtml: `<svg class="tower-head-svg" viewBox="0 0 64 64" aria-hidden="true">${headBuilder(effTier, tk, branchCode)}${crestSvg}</svg>` };
     }
 
@@ -518,11 +534,20 @@
             circle2D(ctx, 32, 36, 5.2, tk.accentCta, tk.elLightning, 1.5);
         }
 
-        if (effTier >= 4) {
-            circle2D(ctx, 32, 32, 27.5, null, (effTier >= 5 || isScion) ? '#E0B43C' : (isTwinCrown ? '#D97724' : '#B8C2BC'), effTier >= 5 ? 2.2 : 1.5);
-            if (effTier >= 5 || isScion) {
-                poly2D(ctx, [[23, 8], [28, 13], [32, 4], [36, 13], [41, 8], [39, 16], [25, 16]], '#E0B43C', '#1B211E', 1.2);
-            }
+        if (effTier >= 5 || isScion) {
+            circle2D(ctx, 32, 32, 27.5, null, '#E0B43C', 2.2);
+            poly2D(ctx, [[23, 8], [28, 13], [32, 4], [36, 13], [41, 8], [39, 16], [25, 16]], '#E0B43C', '#1B211E', 1.2);
+        } else if (effTier === 4 && isTwinCrown) {
+            const [cA, cB] = getTwinCrownColors(family, tk);
+            ctx.beginPath(); ctx.arc(32, 32, 27.5, Math.PI * 0.75, Math.PI * 1.75);
+            ctx.strokeStyle = cA; ctx.lineWidth = 2.6; ctx.stroke();
+            ctx.beginPath(); ctx.arc(32, 32, 27.5, -Math.PI * 0.25, Math.PI * 0.75);
+            ctx.strokeStyle = cB; ctx.lineWidth = 2.6; ctx.stroke();
+            poly2D(ctx, [[51, 8], [54, 12], [51, 16], [48, 12]], '#F2CA52', '#1B211E', 1);
+            poly2D(ctx, [[13, 48], [16, 52], [13, 56], [10, 52]], '#F2CA52', '#1B211E', 1);
+        } else if (effTier === 4) {
+            poly2D(ctx, [[20, 6], [44, 6], [58, 20], [58, 44], [44, 58], [20, 58], [6, 44], [6, 20]], null, '#F2CA52', 2.1);
+            poly2D(ctx, [[32, 2], [36, 7], [32, 12], [28, 7]], '#F2CA52', '#1B211E', 1);
         }
     }
 
@@ -1680,13 +1705,19 @@
         if (scionAura && scionAura.active) tower.classList.add('has-scion-aura');
         if ((towerObj.stunnedMs || 0) > 0) tower.classList.add('stunned');
 
-        const palTier = getTowerPaletteForType(towerObj.type, getThemeTokens());
+        const tkTier = getThemeTokens();
+        const palTier = getTowerPaletteForType(towerObj.type, tkTier);
         if (towerObj.tier === 3 || towerObj.tier === 4) {
             const tierRing = document.createElement('div');
-            tierRing.className = `tower-tier-ring tier-ring-${towerObj.tier}${isTwinCrown ? ' is-twin' : ''}`;
+            tierRing.className = `tower-tier-ring tier-ring-${towerObj.tier}${towerObj.tier === 4 ? (isTwinCrown ? ' is-twin' : ' is-mastery') : ''}`;
             tierRing.setAttribute('aria-hidden', 'true');
             tierRing.style.setProperty('--tier-ring-color', (palTier && palTier.rune) || '#D97724');
             tierRing.style.setProperty('--tier-ring-secondary', (palTier && palTier.glow) || '#E0B43C');
+            if (towerObj.tier === 4 && isTwinCrown) {
+                const [twinA, twinB] = getTwinCrownColors(family, tkTier);
+                tierRing.style.setProperty('--twin-color-a', twinA);
+                tierRing.style.setProperty('--twin-color-b', twinB);
+            }
             tower.appendChild(tierRing);
         }
         if (towerObj.tier >= 5) {
@@ -1793,7 +1824,7 @@
     const TERRAIN_SVG_BY_TYPE = {
         highground: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><defs><pattern id="hgHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(224,180,60,0.28)" stroke-width="1.6"/></pattern></defs><rect x="2" y="2" width="60" height="60" rx="4" fill="url(#hgHatch)"/><polygon points="12,50 25,20 35,34 45,16 52,50" fill="rgba(224,180,60,0.24)" stroke="rgba(242,208,96,0.78)" stroke-width="1.8" stroke-linejoin="round"/><polyline points="18,44 27,28 35,38 43,25 48,44" fill="none" stroke="rgba(244,241,234,0.48)" stroke-width="1.8" stroke-linejoin="round"/></svg>',
         mana_vein: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="rgba(74,158,191,0.18)" stroke="rgba(118,200,232,0.76)" stroke-width="1.8" stroke-dasharray="5 3"/><circle cx="32" cy="32" r="14" fill="none" stroke="rgba(118,200,232,0.72)" stroke-width="1.6"/><polygon points="32,14 46,32 32,50 18,32" fill="rgba(74,158,191,0.26)" stroke="rgba(214,238,247,0.72)" stroke-width="1.6"/><circle cx="32" cy="32" r="4.5" fill="rgba(155,211,232,0.88)"/></svg>',
-        world_tree: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="rgba(78,154,104,0.18)" stroke="rgba(116,196,144,0.78)" stroke-width="1.8"/><path d="M32 12 C43 20 47 32 32 52 C17 32 21 20 32 12 Z" fill="rgba(78,154,104,0.28)" stroke="rgba(184,224,196,0.74)" stroke-width="1.6"/><line x1="32" y1="16" x2="32" y2="50" stroke="rgba(220,242,226,0.68)" stroke-width="1.6"/><path d="M32 25 L40 20 M32 33 L41 28 M32 25 L24 20 M32 33 L23 28" stroke="rgba(220,242,226,0.62)" stroke-width="1.6" stroke-linecap="round"/></svg>',
+        world_tree: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><path d="M7,18 V7 H18 M46,7 H57 V18 M7,46 V57 H18 M57,46 V57 H46" fill="none" stroke="rgba(130,218,160,0.92)" stroke-width="2.6" stroke-linecap="round"/><circle cx="32" cy="32" r="18" fill="rgba(78,154,104,0.14)" stroke="rgba(116,196,144,0.64)" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M32 16 C39 22 41 31 32 46 C23 31 25 22 32 16 Z" fill="rgba(78,154,104,0.22)" stroke="rgba(184,224,196,0.68)" stroke-width="1.4"/><line x1="32" y1="20" x2="32" y2="44" stroke="rgba(220,242,226,0.58)" stroke-width="1.4"/></svg>',
         obstacle: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><polygon points="10,48 18,22 33,16 48,24 54,48 40,54 20,54" fill="rgba(82,98,90,0.70)" stroke="rgba(200,211,204,0.68)" stroke-width="1.8"/><polyline points="18,22 31,34 48,24" fill="none" stroke="rgba(244,241,234,0.40)" stroke-width="1.6"/></svg>',
         charged_stone: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><polygon points="20,6 44,6 58,20 58,44 44,58 20,58 6,44 6,20" fill="rgba(74,158,191,0.16)" stroke="rgba(118,200,232,0.72)" stroke-width="1.8"/><polygon points="35,14 23,34 32,34 29,50 41,30 32,30" fill="rgba(224,180,60,0.88)" stroke="#1B211E" stroke-width="1.2"/></svg>',
         treasure_rock: '<svg class="terrain-svg" viewBox="0 0 64 64" aria-hidden="true"><polygon points="10,48 18,20 34,14 50,23 54,48 39,55 19,54" fill="rgba(78,72,56,0.84)" stroke="rgba(224,180,60,0.82)" stroke-width="1.8"/><polygon points="28,25 38,24 41,35 31,42 24,35" fill="rgba(224,180,60,0.78)" stroke="#1B211E" stroke-width="1.3"/><polyline points="18,20 28,25 34,14" fill="none" stroke="rgba(244,241,234,0.42)" stroke-width="1.4"/></svg>'
@@ -1801,7 +1832,7 @@
 
     const PATH_ARROW_SVG = '<svg class="path-arrow-svg" viewBox="0 0 16 16" aria-hidden="true"><polyline points="5.5,3 11,8 5.5,13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const START_CELL_SVG = '<svg class="cell-marker-svg" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 26 V12 A8 8 0 0 1 24 12 V26" fill="rgba(244,241,234,0.12)" stroke="#B8C2BC" stroke-width="1.8"/><line x1="6" y1="26" x2="26" y2="26" stroke="#B8C2BC" stroke-width="1.8" stroke-linecap="round"/><polyline points="13,13 18,17 13,21" fill="none" stroke="#F4F1EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    const TREE_CELL_SVG = '<svg class="cell-marker-svg" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5 C23 11 25 18 16 24 C7 18 9 11 16 5 Z" fill="rgba(78,154,104,0.42)" stroke="#B8C2BC" stroke-width="1.6"/><rect x="14" y="22" width="4" height="6" rx="1" fill="#8C6A4A"/></svg>';
+    const TREE_CELL_SVG = '<svg class="cell-marker-svg" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="rgba(224,180,60,0.18)" stroke="#E0B43C" stroke-width="1.7"/><circle cx="18" cy="18" r="10.5" fill="rgba(78,154,104,0.34)" stroke="#A8D5B5" stroke-width="1.2"/><path d="M18 5.5 C24.5 11.5 26 17.5 18 24 C10 17.5 11.5 11.5 18 5.5 Z" fill="#4E9A68" stroke="#F4F1EA" stroke-width="1.3"/><circle cx="18" cy="15.5" r="2.7" fill="#E0B43C" stroke="#1B211E" stroke-width="1"/><rect x="15.5" y="23" width="5" height="5.5" rx="1.2" fill="#9E6E42" stroke="#1B211E" stroke-width="1"/></svg>';
 
     function syncChargedStoneVisuals(waveNum = null) {
         if (!G || !G.map || !Array.isArray(G.cellElements)) return;
@@ -1850,10 +1881,22 @@
                     cell.appendChild(marker);
                 } else if (index === map.endCellIndex) {
                     cell.classList.add('path-end');
+                    cell.title = isEn ? 'World Tree Core (Base Goal · Unbuildable)' : '世界樹核心（終點基地 · 不可建塔）';
                     const marker = document.createElement('span');
-                    marker.classList.add('cell-marker');
+                    marker.classList.add('cell-marker', 'end-core-marker');
                     marker.innerHTML = TREE_CELL_SVG;
                     cell.appendChild(marker);
+                    const coreBadge = document.createElement('span');
+                    coreBadge.className = 'end-core-badge num';
+                    coreBadge.innerText = isEn ? 'BASE' : '核心';
+                    cell.appendChild(coreBadge);
+                    const hpTrack = document.createElement('span');
+                    hpTrack.className = 'end-core-hp-track';
+                    hpTrack.setAttribute('aria-hidden', 'true');
+                    const hpFill = document.createElement('span');
+                    hpFill.className = 'end-core-hp-fill';
+                    hpTrack.appendChild(hpFill);
+                    cell.appendChild(hpTrack);
                 } else if (map.teleportRift && index === map.teleportRift.fromIndex) {
                     cell.classList.add('path-rift-a');
                     cell.title = isEn ? 'One-Way Rift Entry A ▸ Warps monsters directly to B' : '單向傳送裂隙起點 A ▸ 敵軍踏入直接傳送至 B';
@@ -1995,16 +2038,33 @@
     function positionBoardTooltip(tipEl, coords, isInvalid = false) {
         if (!tipEl || !coords) return;
         const center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
-        const isTopRow = coords.y <= 1;
-        tipEl.classList.toggle('tooltip-below', isTopRow);
+        const rows = CONFIG.BOARD_ROWS || 10;
+        const stageW = m.stageW || (G.dom && G.dom.boardStageEl ? G.dom.boardStageEl.clientWidth : 600) || 600;
+        const stageH = m.stageH || (G.dom && G.dom.boardStageEl ? G.dom.boardStageEl.clientHeight : 400) || 400;
+
         tipEl.classList.toggle('tooltip-invalid', Boolean(isInvalid));
         tipEl.classList.remove('hidden');
 
-        const tipW = tipEl.offsetWidth || 184;
+        const tipW = tipEl.offsetWidth || 196;
+        const tipH = tipEl.offsetHeight || 68;
+        const gap = Math.max(12, (m.cellH || 34) * 0.56);
+        const spaceAbove = center.top - gap;
+        const spaceBelow = stageH - (center.top + gap);
+        const isLowerHalf = coords.y >= Math.floor(rows / 2);
+        const placeBelow = !isLowerHalf && (coords.y <= 1 || (spaceAbove < tipH + 6 && spaceBelow > spaceAbove));
+
+        tipEl.classList.toggle('tooltip-below', placeBelow);
+
         const halfW = Math.ceil(tipW / 2) + 6;
-        const stageW = m.stageW || 600;
         const clampedX = Math.max(halfW, Math.min(Math.max(halfW, stageW - halfW), center.left));
-        const topPx = isTopRow ? (center.top + m.cellH * 0.56) : (center.top - m.cellH * 0.56);
+        let topPx = placeBelow ? (center.top + gap) : (center.top - gap);
+        if (placeBelow) {
+            const maxTop = Math.max(6, stageH - tipH - 6);
+            topPx = Math.max(6, Math.min(maxTop, topPx));
+        } else {
+            const minTop = Math.min(stageH - 6, tipH + 6);
+            topPx = Math.max(minTop, Math.min(stageH - 6, topPx));
+        }
 
         tipEl.style.left = `${clampedX}px`;
         tipEl.style.top = `${topPx}px`;
@@ -2164,8 +2224,11 @@
                 terrainTipAutoHideTimer = null;
             }
             const coords = indexToCoords(idx), center = getCellCenter(coords.x, coords.y), m = G.boardMetrics;
-            const clampedX = Math.max(76, Math.min((m.stageW || 600) - 76, center.left));
-            const topPx = coords.y <= 1 ? (center.top + m.cellH * 0.65) : (center.top - m.cellH * 0.72);
+            const stageW = m.stageW || 600;
+            const stageH = m.stageH || 400;
+            const clampedX = Math.max(76, Math.min(Math.max(76, stageW - 76), center.left));
+            const rawTop = coords.y <= 1 ? (center.top + m.cellH * 0.65) : (center.top - m.cellH * 0.72);
+            const topPx = Math.max(18, Math.min(Math.max(18, stageH - 18), rawTop));
             tipEl.style.left = `${clampedX}px`;
             tipEl.style.top = `${topPx}px`;
             tipEl.classList.remove('hidden');
@@ -2229,7 +2292,15 @@
         const isHealthy = st.baseHp >= healthyMin, isWarn = st.baseHp >= warningMin;
         const stateClass = isHealthy ? 'tree-healthy' : (isWarn ? 'tree-warning' : 'tree-critical');
         const hudClass = isHealthy ? '' : (isWarn ? 'hp-warning' : 'hp-critical');
-        if (treeCell) { treeCell.classList.remove('tree-healthy', 'tree-warning', 'tree-critical'); treeCell.classList.add(stateClass); }
+        if (treeCell) {
+            treeCell.classList.remove('tree-healthy', 'tree-warning', 'tree-critical');
+            treeCell.classList.add(stateClass);
+            const hpFillEl = treeCell.querySelector('.end-core-hp-fill');
+            if (hpFillEl) {
+                const hpPct = Math.max(0, Math.min(100, (st.baseHp / Math.max(1, maxHp)) * 100));
+                hpFillEl.style.width = `${hpPct.toFixed(1)}%`;
+            }
+        }
         if (hpHudEl) { hpHudEl.classList.remove('hp-warning', 'hp-critical'); if (hudClass) hpHudEl.classList.add(hudClass); }
     }
 

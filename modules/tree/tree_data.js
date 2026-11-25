@@ -263,7 +263,7 @@
             cost: 350,
             name: '解鎖靈脈灌注',
             nameEn: 'Unlock Vein Infusion',
-            desc: '為 5★ 世界樹神裔開放無盡靈脈灌注，可花費金幣強化 B_power 戰力桶。',
+            desc: '為 5★ 世界樹神裔開放無盡靈脈灌注，可花費金幣強化基礎增傷區戰力。',
             descEn: 'Unlocks Endless Vein Infusion for 5★ World Tree Scions.'
         },
         ancient_2: {

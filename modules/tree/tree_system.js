@@ -456,9 +456,20 @@
 
         const greedyTagZh = greedyGranted > 0 ? `＋貪婪之根 +${greedyGranted} 💰` : '';
         const greedyTagEn = greedyGranted > 0 ? ` + Greedy Roots +${greedyGranted} 💰` : '';
-        let summaryZh = `聚寶根鬚 Lv.0 產出 +${grantedGold} 💰${greedyTagZh}`;
-        let summaryEn = `Treasure Roots Lv.0: +${grantedGold} 💰${greedyTagEn}`;
-        if (lv === 1) {
+        let summaryZh = '';
+        let summaryEn = '';
+        let shouldBroadcast = true;
+        if (lv <= 0) {
+            if (grantedGold <= 0) {
+                shouldBroadcast = false;
+            } else if (greedyGranted > 0) {
+                summaryZh = `貪婪之根產出 +${greedyGranted} 💰`;
+                summaryEn = `Greedy Roots: +${greedyGranted} 💰`;
+            } else {
+                summaryZh = `聚寶根鬚產出 +${grantedGold} 💰`;
+                summaryEn = `Treasure Roots: +${grantedGold} 💰`;
+            }
+        } else if (lv === 1) {
             summaryZh = `聚寶根鬚 Lv.1（汲取根鬚）產出 +${grantedGold} 💰${greedyTagZh}`;
             summaryEn = `Treasure Roots Lv.1 (Siphon Roots): +${grantedGold} 💰${greedyTagEn}`;
         } else if (lv === 2) {
@@ -482,6 +493,7 @@
             interestGain,
             totalGain: grantedGold,
             isSoftCapped,
+            shouldBroadcast,
             summaryZh,
             summaryEn
         };
